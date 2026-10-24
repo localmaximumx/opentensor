@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Copy, Check, Play, FileCode, Terminal, Sparkles } from 'lucide-react';
+import { Copy, Check, ArrowDownToLine, FileCode, Terminal, Sparkles } from 'lucide-react';
 import { MathView } from './MathView';
 
 interface SolutionViewerProps {
@@ -135,11 +135,11 @@ export const SolutionViewer: React.FC<SolutionViewerProps> = ({ solution, onAppl
   };
 
   return (
-    <div className="space-y-5 animate-fadeIn">
+    <div className="space-y-3 sm:space-y-4 animate-fadeIn">
       {/* Explanation walkthrough if present */}
       {explanation && (
-        <div className="rounded-xl border border-border/70 bg-card/40 p-4 shadow-xs">
-          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border/50 text-xs font-semibold text-foreground/90 uppercase tracking-wider">
+        <div className="rounded-xl border border-border/70 bg-card/40 p-3 sm:p-4 shadow-xs">
+          <div className="flex items-center gap-2 mb-2 sm:mb-3 pb-2 border-b border-border/50 text-xs font-semibold text-foreground/90 uppercase tracking-wider">
             <Sparkles className="w-3.5 h-3.5 text-[#93C572]" />
             <span>Algorithm & Approach</span>
           </div>
@@ -151,53 +151,41 @@ export const SolutionViewer: React.FC<SolutionViewerProps> = ({ solution, onAppl
       {code ? (
         <div className="rounded-xl border border-border/80 bg-[#0d1117] overflow-hidden shadow-md">
           {/* Top header bar */}
-          <div className="flex items-center justify-between px-4 py-2.5 bg-[#161b22] border-b border-[#30363d] select-none">
-            <div className="flex items-center gap-2.5">
-              <FileCode className="w-4 h-4 text-[#93C572]" />
+          <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 bg-[#161b22] border-b border-[#30363d] select-none">
+            <div className="flex items-center gap-2">
+              <FileCode className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#93C572]" />
               <span className="font-mono text-xs font-semibold text-foreground">solution.py</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30">
-                Python 3
+              <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30">
+                Py3
               </span>
               <span className="text-[11px] text-muted-foreground/70 hidden sm:inline">
                 {lineCount} {lineCount === 1 ? 'line' : 'lines'}
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={handleCopy}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-[#21262d] hover:bg-[#30363d] text-muted-foreground hover:text-foreground transition-colors border border-[#30363d]"
+                className="inline-flex items-center justify-center p-1.5 rounded-md text-xs font-medium bg-[#21262d] hover:bg-[#30363d] text-muted-foreground hover:text-foreground transition-colors border border-[#30363d]"
                 title="Copy reference code"
               >
                 {copied ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-emerald-400">Copied</span>
-                  </>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
                 ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copy</span>
-                  </>
+                  <Copy className="w-3.5 h-3.5" />
                 )}
               </button>
 
               {onApplySolution && (
                 <button
                   onClick={handleApply}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-[#93C572] hover:bg-[#a5db82] text-black transition-colors shadow-xs"
-                  title="Insert directly into editor"
+                  className="inline-flex items-center justify-center p-1.5 rounded-md text-xs font-semibold bg-[#93C572] hover:bg-[#a5db82] text-black transition-colors shadow-xs"
+                  title="Apply to Editor"
                 >
                   {applied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Applied!</span>
-                    </>
+                    <Check className="w-3.5 h-3.5" />
                   ) : (
-                    <>
-                      <Play className="w-3.5 h-3.5" />
-                      <span>Apply to Editor</span>
-                    </>
+                    <ArrowDownToLine className="w-3.5 h-3.5" />
                   )}
                 </button>
               )}
@@ -205,10 +193,10 @@ export const SolutionViewer: React.FC<SolutionViewerProps> = ({ solution, onAppl
           </div>
 
           {/* Code Body with Line Numbers */}
-          <div className="flex overflow-x-auto p-4 custom-scrollbar bg-[#0d1117]">
+          <div className="flex overflow-x-auto p-2.5 sm:p-4 custom-scrollbar bg-[#0d1117]">
             {/* Line Numbers Gutter */}
             <div
-              className="select-none text-right pr-4 text-muted-foreground/30 font-mono text-xs leading-relaxed border-r border-[#30363d]/60 flex flex-col shrink-0"
+              className="select-none text-right pr-2.5 sm:pr-4 text-muted-foreground/30 font-mono text-xs leading-relaxed border-r border-[#30363d]/60 flex flex-col shrink-0"
               aria-hidden="true"
             >
               {Array.from({ length: lineCount }).map((_, i) => (
@@ -219,7 +207,7 @@ export const SolutionViewer: React.FC<SolutionViewerProps> = ({ solution, onAppl
             </div>
 
             {/* Code Content */}
-            <div className="pl-4 font-mono text-xs leading-relaxed overflow-x-visible shrink-0 min-w-0">
+            <div className="pl-2.5 sm:pl-4 font-mono text-xs leading-relaxed overflow-x-visible shrink-0 min-w-0">
               <pre className="m-0 p-0 bg-transparent text-[#e6edf3] font-mono whitespace-pre">
                 <code
                   dangerouslySetInnerHTML={{ __html: highlightedHtml }}
@@ -231,7 +219,7 @@ export const SolutionViewer: React.FC<SolutionViewerProps> = ({ solution, onAppl
         </div>
       ) : (
         !explanation && (
-          <div className="p-4 rounded-xl border border-border/80 bg-muted/20">
+          <div className="p-3 sm:p-4 rounded-xl border border-border/80 bg-muted/20">
             <p className="text-xs text-muted-foreground leading-relaxed">
               Solution walkthrough is being formulated for this problem.
             </p>

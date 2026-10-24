@@ -461,22 +461,56 @@ export const ProblemSolverPage: React.FC = () => {
           />
         )}
 
-        {/* Mobile View Selector (< md) */}
-        <div className="md:hidden flex items-center justify-between px-3 py-2 bg-card border-b border-border/80 text-xs shrink-0 z-20">
-          <div className="flex items-center gap-1 bg-secondary/80 p-0.5 rounded-lg border border-border/60">
+        {/* Mobile View Selector & Action Bar (< md) */}
+        <div className="md:hidden flex items-center justify-between px-2 sm:px-3 py-1.5 bg-card border-b border-border/80 text-xs shrink-0 z-20 gap-1.5">
+          {/* Problem Nav: Prev / Next & Drawer */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => setIsDrawerOpen(true)}
+              className="p-1 rounded-md border border-border/80 bg-secondary/50 text-muted-foreground hover:text-foreground active:scale-95 transition-all"
+              title="Browse problems"
+            >
+              <PanelLeft className="w-3.5 h-3.5 text-[#93C572]" />
+            </button>
+            {prevSlug ? (
+              <Link
+                to={prevSlug.startsWith('/') ? prevSlug : `/problems/${prevSlug}`}
+                className="p-1 rounded-md border border-border/80 bg-secondary/50 text-foreground hover:bg-secondary active:scale-95 transition-all"
+                title="Previous problem"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </Link>
+            ) : (
+              <span className="p-1 rounded-md border border-border/40 text-muted-foreground/30"><ChevronLeft className="w-3.5 h-3.5" /></span>
+            )}
+            {nextSlug ? (
+              <Link
+                to={nextSlug.startsWith('/') ? nextSlug : `/problems/${nextSlug}`}
+                className="p-1 rounded-md border border-border/80 bg-secondary/50 text-foreground hover:bg-secondary active:scale-95 transition-all"
+                title="Next problem"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            ) : (
+              <span className="p-1 rounded-md border border-border/40 text-muted-foreground/30"><ChevronRight className="w-3.5 h-3.5" /></span>
+            )}
+          </div>
+
+          {/* 3-way Tab switcher */}
+          <div className="flex items-center gap-0.5 bg-secondary/80 p-0.5 rounded-lg border border-border/60">
             <button
               onClick={() => setMobileActivePanel('problem')}
-              className={`px-3 py-1 rounded-md font-semibold transition-all ${
+              className={`px-2 py-1 rounded-md font-semibold transition-all text-xs ${
                 mobileActivePanel === 'problem'
                   ? 'bg-background text-[#93C572] shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              Description
+              Desc
             </button>
             <button
               onClick={() => setMobileActivePanel('code')}
-              className={`px-3 py-1 rounded-md font-semibold transition-all ${
+              className={`px-2 py-1 rounded-md font-semibold transition-all text-xs ${
                 mobileActivePanel === 'code'
                   ? 'bg-background text-[#38BDF8] shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
@@ -486,7 +520,7 @@ export const ProblemSolverPage: React.FC = () => {
             </button>
             <button
               onClick={() => setMobileActivePanel('console')}
-              className={`px-3 py-1 rounded-md font-semibold transition-all ${
+              className={`px-2 py-1 rounded-md font-semibold transition-all text-xs ${
                 mobileActivePanel === 'console'
                   ? 'bg-background text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
@@ -496,22 +530,24 @@ export const ProblemSolverPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          {/* Actions: Run & Submit */}
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={handleRun}
               disabled={isRunning}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-secondary hover:bg-accent border border-border text-foreground text-xs font-medium disabled:opacity-50"
               title="Run code"
             >
-              <Play className="w-3 h-3 fill-current" />
+              <Play className="w-3 h-3 fill-current text-[#93C572]" />
               <span>Run</span>
             </button>
             <button
               onClick={handleSubmit}
               disabled={isRunning}
-              className="inline-flex items-center gap-1 px-3 py-1 rounded-md bg-[#93C572] hover:bg-[#85b964] text-black text-xs font-bold disabled:opacity-50 shadow-xs"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#93C572] hover:bg-[#85b964] text-black text-xs font-bold disabled:opacity-50 shadow-xs"
               title="Submit code"
             >
+              <Send className="w-3 h-3" />
               <span>Submit</span>
             </button>
           </div>
@@ -526,12 +562,12 @@ export const ProblemSolverPage: React.FC = () => {
         >
           
           {/* Navigation / Tab bar */}
-          <nav className="flex items-center justify-between px-3 md:px-4 h-12 border-b border-border text-sm bg-secondary/30 flex-shrink-0">
-            <div className="flex items-center gap-2 sm:gap-3 h-full">
+          <nav className="flex items-center justify-between px-2 sm:px-3 md:px-4 h-11 md:h-12 border-b border-border text-xs sm:text-sm bg-secondary/30 flex-shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-3 h-full">
               {/* Browse Problems Sidebar Button (Handles Assessment, Research paper, and Problems catalog) */}
               <button
                 onClick={() => setIsDrawerOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/80 bg-background/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors text-xs font-medium shadow-xs"
+                className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/80 bg-background/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors text-xs font-medium shadow-xs"
                 title={
                   currentAssessment
                     ? `Assessment: ${currentAssessment.name}`
@@ -555,120 +591,120 @@ export const ProblemSolverPage: React.FC = () => {
                 )}
               </button>
 
-              <div className="h-4 w-px bg-border/60" />
+              <div className="hidden md:block h-4 w-px bg-border/60" />
 
               <button
                 onClick={() => setActiveTab('description')}
-                className={`h-full border-b-2 font-medium transition-colors flex items-center gap-1.5 ${
+                className={`h-full border-b-2 font-medium transition-colors flex items-center gap-1 sm:gap-1.5 px-2 sm:px-1 ${
                   activeTab === 'description'
                     ? 'border-[#93C572] text-foreground font-semibold'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
-                Description
+                <span>Description</span>
               </button>
               <button
                 onClick={() => setActiveTab('theory')}
-                className={`h-full border-b-2 font-medium transition-colors flex items-center gap-1.5 ${
+                className={`h-full border-b-2 font-medium transition-colors flex items-center gap-1 sm:gap-1.5 px-2 sm:px-1 ${
                   activeTab === 'theory'
                     ? 'border-[#93C572] text-foreground font-semibold'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <BookOpen className="w-3.5 h-3.5" />
-                Theory
+                <span>Theory</span>
               </button>
               <button
                 onClick={() => setActiveTab('solution')}
-                className={`h-full border-b-2 font-medium transition-colors flex items-center gap-1.5 ${
+                className={`h-full border-b-2 font-medium transition-colors flex items-center gap-1 sm:gap-1.5 px-2 sm:px-1 ${
                   activeTab === 'solution'
                     ? 'border-[#93C572] text-foreground font-semibold'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Lightbulb className="w-3.5 h-3.5" />
-                Solution
+                <span>Solution</span>
               </button>
             </div>
 
-          {/* Prev / Next controls */}
-          <div className="flex items-center gap-1">
-            {prevSlug ? (
-              <Link
-                to={prevSlug.startsWith('/') ? prevSlug : `/problems/${prevSlug}`}
-                className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                title="Previous problem"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Link>
-            ) : (
-              <span className="p-1 text-muted-foreground/30"><ChevronLeft className="w-4 h-4" /></span>
-            )}
+            {/* Prev / Next controls for desktop (mobile has them in top bar) */}
+            <div className="hidden md:flex items-center gap-1">
+              {prevSlug ? (
+                <Link
+                  to={prevSlug.startsWith('/') ? prevSlug : `/problems/${prevSlug}`}
+                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  title="Previous problem"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Link>
+              ) : (
+                <span className="p-1 text-muted-foreground/30"><ChevronLeft className="w-4 h-4" /></span>
+              )}
 
-            {nextSlug ? (
-              <Link
-                to={nextSlug.startsWith('/') ? nextSlug : `/problems/${nextSlug}`}
-                className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                title="Next problem"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            ) : (
-              <span className="p-1 text-muted-foreground/30"><ChevronRight className="w-4 h-4" /></span>
-            )}
-          </div>
-        </nav>
+              {nextSlug ? (
+                <Link
+                  to={nextSlug.startsWith('/') ? nextSlug : `/problems/${nextSlug}`}
+                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  title="Next problem"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              ) : (
+                <span className="p-1 text-muted-foreground/30"><ChevronRight className="w-4 h-4" /></span>
+              )}
+            </div>
+          </nav>
 
-        {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto p-6 problem-scrollbar">
-          {activeTab === 'description' && (
-            <div className="space-y-6">
-              
-              {/* Header: Title, Tags, Difficulty */}
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h1 className="text-xl md:text-2xl font-bold text-foreground">
-                    {problem.title.replace(/^#\s*/, '').replace(/<[^>]+>/g, '')}
-                  </h1>
-                  <div className="mt-2.5 flex flex-wrap gap-1.5 items-center">
-                    {(problem.tags || []).map(t => (
-                      <span key={t} className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-secondary/50 px-2.5 py-0.5 text-xs text-muted-foreground">
-                        <Tag className="w-3 h-3 text-muted-foreground" />
-                        {t}
-                      </span>
-                    ))}
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto p-3 sm:p-5 md:p-6 pb-24 sm:pb-20 md:pb-8 problem-scrollbar">
+            {activeTab === 'description' && (
+              <div className="space-y-4 sm:space-y-6">
+                
+                {/* Header: Title, Tags, Difficulty */}
+                <div className="flex items-start justify-between gap-2 sm:gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
+                      {problem.title.replace(/^#\s*/, '').replace(/<[^>]+>/g, '')}
+                    </h1>
+                    <div className="mt-2 sm:mt-2.5 flex flex-wrap gap-1.5 items-center">
+                      {(problem.tags || []).map(t => (
+                        <span key={t} className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-secondary/50 px-2 sm:px-2.5 py-0.5 text-xs text-muted-foreground">
+                          <Tag className="w-3 h-3 text-muted-foreground" />
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {getDifficultyBadge(problem.difficulty || 'Medium')}
+                    {isSolved && (
+                      <button
+                        onClick={() => {
+                          if (slug) {
+                            unmarkProblemSolved(slug);
+                            unmarkUserProblemSolved(slug, currentUser?.id);
+                            setIsSolved(false);
+                            setSolvedSet((prev) => {
+                              const next = new Set(prev);
+                              next.delete(slug);
+                              return next;
+                            });
+                          }
+                        }}
+                        title="Click to mark as unsolved"
+                        className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-red-400 bg-emerald-500/10 hover:bg-red-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 hover:border-red-500/30 font-medium transition-colors cursor-pointer group"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 group-hover:hidden" />
+                        <span className="group-hover:hidden">Solved</span>
+                        <span className="hidden group-hover:inline">Unmark</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {getDifficultyBadge(problem.difficulty || 'Medium')}
-                  {isSolved && (
-                    <button
-                      onClick={() => {
-                        if (slug) {
-                          unmarkProblemSolved(slug);
-                          unmarkUserProblemSolved(slug, currentUser?.id);
-                          setIsSolved(false);
-                          setSolvedSet((prev) => {
-                            const next = new Set(prev);
-                            next.delete(slug);
-                            return next;
-                          });
-                        }
-                      }}
-                      title="Click to mark as unsolved"
-                      className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-red-400 bg-emerald-500/10 hover:bg-red-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 hover:border-red-500/30 font-medium transition-colors cursor-pointer group"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5 group-hover:hidden" />
-                      <span className="group-hover:hidden">Solved</span>
-                      <span className="hidden group-hover:inline">Unmark</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="border-b border-border/60" />
+                <div className="border-b border-border/60" />
 
               {/* Problem Description & Math */}
               <div>
@@ -809,7 +845,7 @@ export const ProblemSolverPage: React.FC = () => {
       >
         
         {/* Editor Toolbar */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border/80 bg-card flex-shrink-0">
+        <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b border-border/80 bg-card flex-shrink-0">
           <div className="flex items-center gap-2">
             <button
               onClick={handleResetCode}
@@ -817,7 +853,7 @@ export const ProblemSolverPage: React.FC = () => {
               title="Reset to starter code"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Reset
+              <span className="hidden sm:inline">Reset</span>
             </button>
             <button
               onClick={handleCopyCode}
@@ -825,8 +861,12 @@ export const ProblemSolverPage: React.FC = () => {
               title="Copy code"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? 'Copied' : 'Copy'}
+              <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
             </button>
+
+            <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30">
+              Py3
+            </span>
 
             {/* Profile / Guest Status Badge */}
             {currentUser ? (
@@ -849,7 +889,8 @@ export const ProblemSolverPage: React.FC = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Run & Submit (Hidden on mobile < md because the top mobile bar has them!) */}
+          <div className="hidden md:flex items-center gap-2">
             {/* Run Button */}
             <button
               onClick={handleRun}
@@ -888,7 +929,7 @@ export const ProblemSolverPage: React.FC = () => {
               lineNumbers: 'on',
               roundedSelection: true,
               automaticLayout: true,
-              padding: { top: 12, bottom: 12 }
+              padding: { top: 8, bottom: 8 }
             }}
           />
         </div>
@@ -942,7 +983,7 @@ export const ProblemSolverPage: React.FC = () => {
           </div>
 
           {/* Bottom Panel Content */}
-          <div className="flex-1 p-4 overflow-y-auto problem-scrollbar font-mono text-xs">
+          <div className="flex-1 p-3 sm:p-4 pb-24 md:pb-4 overflow-y-auto problem-scrollbar font-mono text-xs">
             {bottomTab === 'testcase' && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">

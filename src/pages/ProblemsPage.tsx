@@ -147,7 +147,7 @@ export const ProblemsPage: React.FC = () => {
 
   return (
     <div className="h-full overflow-y-auto bg-background text-foreground custom-scrollbar">
-      <div className="container mx-auto px-4 py-6 grid grid-cols-12 gap-6 lg:gap-10 max-w-7xl">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-24 sm:pb-8 grid grid-cols-12 gap-4 lg:gap-10 max-w-7xl">
         
         {/* Left Sidebar */}
         <aside className="col-span-12 lg:col-span-3 hidden lg:flex flex-col gap-4">
@@ -209,10 +209,10 @@ export const ProblemsPage: React.FC = () => {
         <section className="col-span-12 lg:col-span-9">
           
           {/* Top Topics Filter */}
-          <div className="flex flex-wrap items-center gap-1.5 mb-4 overflow-x-auto pb-1 custom-scrollbar">
+          <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 flex-nowrap sm:flex-wrap no-scrollbar">
             <button
               onClick={() => { setSelectedTopic('All'); setCurrentPage(1); }}
-              className={`inline-flex h-7 items-center rounded-full px-3 text-xs font-medium transition-colors ${
+              className={`inline-flex h-7 shrink-0 whitespace-nowrap items-center rounded-full px-3 text-xs font-medium transition-colors ${
                 selectedTopic === 'All'
                   ? 'bg-brand-soft bg-[#93C572]/15 text-[#93C572] font-semibold border border-[#93C572]/30'
                   : 'bg-secondary/40 text-muted-foreground hover:bg-secondary hover:text-foreground'
@@ -224,7 +224,7 @@ export const ProblemsPage: React.FC = () => {
               <button
                 key={t.name}
                 onClick={() => { setSelectedTopic(t.name); setCurrentPage(1); }}
-                className={`inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs transition-colors ${
+                className={`inline-flex h-7 shrink-0 whitespace-nowrap items-center gap-1.5 rounded-full px-3 text-xs transition-colors ${
                   selectedTopic === t.name
                     ? 'bg-brand-soft bg-[#93C572]/15 text-[#93C572] font-semibold border border-[#93C572]/30'
                     : 'bg-secondary/40 text-foreground/75 hover:bg-secondary hover:text-foreground'
@@ -256,14 +256,14 @@ export const ProblemsPage: React.FC = () => {
           </div>
 
           {/* Category Icons Row */}
-          <div className="mb-4 flex items-center gap-1.5 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap custom-scrollbar">
+          <div className="mb-4 flex items-center gap-1.5 overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 flex-nowrap sm:flex-wrap no-scrollbar">
             {categories.map((c) => {
               const active = selectedCategory === c.id;
               return (
                 <button
                   key={c.id}
                   onClick={() => { setSelectedCategory(c.id as Category); setCurrentPage(1); }}
-                  className={`relative inline-flex h-9 min-w-0 items-center gap-1.5 rounded-full text-[13px] font-medium transition-colors px-3 ${
+                  className={`relative inline-flex h-9 shrink-0 whitespace-nowrap min-w-0 items-center gap-1.5 rounded-full text-[13px] font-medium transition-colors px-3 ${
                     active
                       ? 'ring-1 ring-inset bg-[#e9eee9] dark:bg-[#181d19] ring-[#879688]/40 dark:ring-[#dde5de]/30 text-foreground'
                       : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
@@ -325,11 +325,11 @@ export const ProblemsPage: React.FC = () => {
 
           {/* Problems Table */}
           <div className="bg-card dark:bg-background/50 backdrop-blur-xl border border-border/70 dark:border-white/[0.06] rounded-xl overflow-hidden shadow-sm">
-            <div className="grid grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1fr)_5rem] gap-3 px-4 py-3 bg-secondary/70 dark:bg-muted/30 border-b border-border text-xs font-semibold text-foreground/65 dark:text-muted-foreground">
-              <div className="text-center">Status</div>
+            <div className="grid grid-cols-[1.5rem_1fr_1.5rem] md:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1fr)_5rem] gap-2 sm:gap-3 px-3 sm:px-4 py-3 bg-secondary/70 dark:bg-muted/30 border-b border-border text-xs font-semibold text-foreground/65 dark:text-muted-foreground">
+              <div className="text-center">#</div>
               <div className="min-w-0">Problem</div>
               <div className="hidden md:block min-w-0">Topics</div>
-              <div className="text-left">Difficulty</div>
+              <div className="text-center md:text-left">Diff</div>
             </div>
 
             {loading ? (
@@ -348,7 +348,7 @@ export const ProblemsPage: React.FC = () => {
                   return (
                     <div
                       key={p.slug}
-                      className="relative grid grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1fr)_5rem] gap-3 px-4 h-14 items-center hover:bg-secondary/40 dark:hover:bg-accent/40 transition-colors group"
+                      className="relative grid grid-cols-[1.5rem_1fr_1.5rem] md:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1fr)_5rem] gap-2 sm:gap-3 px-3 sm:px-4 h-13 sm:h-14 items-center hover:bg-secondary/40 dark:hover:bg-accent/40 transition-colors group"
                     >
                       {/* Left accent bar on hover */}
                       <span className="absolute left-0 top-2.5 bottom-2.5 w-0.5 rounded-r-full bg-[#93C572] opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -356,18 +356,18 @@ export const ProblemsPage: React.FC = () => {
                       {/* Status Icon */}
                       <div className="flex justify-center">
                         {isSolved ? (
-                          <Check className="w-4 h-4 text-emerald-400" />
+                          <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
                         ) : (
-                          <span className="text-sm text-muted-foreground/60">-</span>
+                          <span className="text-xs sm:text-sm text-muted-foreground/60">-</span>
                         )}
                       </div>
 
                       {/* Problem Number + Title */}
-                      <div className="min-w-0 flex items-center gap-2">
-                        <span className="text-muted-foreground text-sm font-mono shrink-0">{p.sortOrder}.</span>
+                      <div className="min-w-0 flex items-center gap-1.5 sm:gap-2">
+                        <span className="text-muted-foreground text-xs sm:text-sm font-mono shrink-0">{p.sortOrder}.</span>
                         <Link
                           to={`/problems/${p.slug}`}
-                          className="min-w-0 flex-1 text-foreground text-sm hover:text-[#93C572] transition-colors truncate font-medium"
+                          className="min-w-0 flex-1 text-foreground text-xs sm:text-sm hover:text-[#93C572] transition-colors truncate font-medium"
                           title={p.title}
                         >
                           {p.title}
@@ -393,9 +393,21 @@ export const ProblemsPage: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Difficulty */}
-                      <div className="flex justify-start">
-                        {getDifficultyBadge(p.difficulty)}
+                      {/* Difficulty: Dot on mobile, full badge on md+ */}
+                      <div className="flex justify-center md:justify-start">
+                        <span
+                          className={`md:hidden w-2.5 h-2.5 rounded-full shrink-0 ${
+                            p.difficulty === 'Easy'
+                              ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]'
+                              : p.difficulty === 'Medium'
+                              ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.7)]'
+                              : 'bg-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.7)]'
+                          }`}
+                          title={p.difficulty}
+                        />
+                        <div className="hidden md:block">
+                          {getDifficultyBadge(p.difficulty)}
+                        </div>
                       </div>
                     </div>
                   );
