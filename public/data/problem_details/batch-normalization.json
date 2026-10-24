@@ -1,0 +1,978 @@
+{
+  "id": "batch-normalization",
+  "title": "Batch Normalization (Forward)",
+  "description": "Implement the training-time BatchNorm forward pass. For input shape $(N,D)$, normalize each feature over the batch axis. For input shape $(N,C,H,W)$, normalize each channel over the batch and spatial axes.\n\n$$\n\\mu = \\frac{1}{m} \\sum_{i=1}^{m} x_i\n$$\n\n$$\n\\sigma^2 = \\frac{1}{m} \\sum_{i=1}^{m}(x_i-\\mu)^2\n$$\n\n$$\n\\hat{x}_i = \\frac{x_i-\\mu}{\\sqrt{\\sigma^2+\\varepsilon}}\n$$\n\n$$\ny_i = \\gamma\\hat{x}_i+\\beta\n$$\n\nHere, $m$ is the number of values in one feature or channel, $\\mu$ is its mean, $\\sigma^2$ is its population variance, $\\varepsilon$ is eps, and $\\gamma$ and $\\beta$ are per-feature or per-channel scale and shift values. Return the normalized result as a NumPy array with the same shape as x.",
+  "seoDescription": "Implement the batch-normalization forward pass in NumPy using feature-wise statistics, scale, shift, and numerical stability.",
+  "examples": [
+    "Input: x = [[1, 2], [3, 6], [5, 10]], gamma = [1, 0.5], beta = [0, 1], eps = 1e-5\n\nOutput: [[-1.224743, 0.387628], [0.0, 1.0], [1.224743, 1.612372]]\n\nExplanation: Each column is normalized across the three rows, then scaled by its gamma and shifted by its beta.",
+    "Input: x = [[[[1]], [[2]]], [[[3]], [[4]]]], gamma = [1, 0.5], beta = [0, -1], eps = 1e-5\n\nOutput: [[[[-0.999995]], [[-1.499998]]], [[[0.999995]], [[-0.500002]]]]"
+  ],
+  "requirements": "* For two-dimensional input, reduce over axis 0\n* For four-dimensional input, reduce over axes 0, 2, and 3\n* Use population variance and include eps inside the square root\n* Broadcast gamma and beta across the non-channel dimensions\n* Return a NumPy array with the same shape as x",
+  "theory": "## Understanding the Theory: Batch Normalization (Forward)\n\n### Core Intuition: Why Do We Need This?\nLinear algebra is the foundational mathematical language of artificial intelligence. Image pixels, word embeddings, and hidden representations are all structured as multi-dimensional vectors and matrices. **Batch Normalization (Forward)** allows machine learning practitioners to project representations into informative subspaces, rotate coordinate frames, or decompose complex transformations into simpler geometric building blocks.\n\nIn this problem, the objective is to implement **Batch Normalization (Forward)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\mu = \\frac{1}{m} \\sum_{i=1}^{m} x_i\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Dimensionality & Subspaces**: Orthogonal projections and low-rank factorizations compress massive feature vectors while preserving maximum variance.\n* **Condition Numbers & Inversion**: Inverting ill-conditioned matrices (matrices with near-zero determinants) causes numerical explosion; regularization (e.g. Ridge / Tikhonov) stabilizes these systems.\n* **Tensor Core Acceleration**: Modern hardware accelerators (GPUs and TPUs) are specialized matrix multiplication engines; formulating operations linearly maximizes throughput.",
+  "hints": [
+    "Use keepdims=True when computing the mean and variance.",
+    "For four-dimensional input, reshape gamma and beta to (1, C, 1, 1)."
+  ],
+  "constraints": "* x has shape $(N,D)$ or $(N,C,H,W)$\n* gamma and beta each contain D values for two-dimensional input or C values for four-dimensional input\n* eps is positive\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef batch_norm_forward(x: list, gamma: list, beta: list, eps: float = 1e-5) -> np.ndarray:\n    \"\"\"\n    Returns a NumPy array with the same shape as x.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-10-21T18:37:16.418Z",
+  "updatedAt": "2026-03-18T20:09:26.665Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef batch_norm_forward(x: list, gamma: list, beta: list, eps: float = 1e-5) -> np.ndarray:\n    arr = np.asarray(x, dtype=float)\n    g = np.asarray(gamma, dtype=float)\n    b = np.asarray(beta, dtype=float)\n    if arr.ndim == 2:\n        mean = arr.mean(axis=0)\n        var = arr.var(axis=0)\n        x_hat = (arr - mean) / np.sqrt(var + eps)\n        out = g * x_hat + b\n    elif arr.ndim == 4:\n        mean = arr.mean(axis=(0, 2, 3), keepdims=True)\n        var = arr.var(axis=(0, 2, 3), keepdims=True)\n        x_hat = (arr - mean) / np.sqrt(var + eps)\n        out = g.reshape(1, -1, 1, 1) * x_hat + b.reshape(1, -1, 1, 1)\n    else:\n        mean = arr.mean(axis=0)\n        var = arr.var(axis=0)\n        out = g * ((arr - mean) / np.sqrt(var + eps)) + b\n    return np.round(out, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "BatchNormalizationProblemViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "2D case (N,D)",
+      "inputs": {
+        "x": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            6
+          ],
+          [
+            5,
+            10
+          ]
+        ],
+        "eps": 1e-05,
+        "beta": [
+          0,
+          1
+        ],
+        "gamma": [
+          1,
+          0.5
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          -1.224743,
+          0.387628
+        ],
+        [
+          0.0,
+          1.0
+        ],
+        [
+          1.224743,
+          1.612372
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "4D case (N,C,H,W)",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ]
+            ],
+            [
+              [
+                2
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                3
+              ]
+            ],
+            [
+              [
+                4
+              ]
+            ]
+          ]
+        ],
+        "eps": 1e-05,
+        "beta": [
+          0,
+          -1
+        ],
+        "gamma": [
+          1,
+          0.5
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            [
+              -0.999995
+            ]
+          ],
+          [
+            [
+              -1.499998
+            ]
+          ]
+        ],
+        [
+          [
+            [
+              0.999995
+            ]
+          ],
+          [
+            [
+              -0.500002
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "batch-normalization-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          [
+            2,
+            4
+          ],
+          [
+            6,
+            12
+          ],
+          [
+            10,
+            20
+          ]
+        ],
+        "eps": 0.0,
+        "beta": [
+          0,
+          2
+        ],
+        "gamma": [
+          2,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          -2.44949,
+          0.775255
+        ],
+        [
+          0.0,
+          2.0
+        ],
+        [
+          2.44949,
+          3.224745
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            5
+          ]
+        ],
+        "eps": 0.0,
+        "beta": [
+          0,
+          0
+        ],
+        "gamma": [
+          0,
+          0.25
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          -0.306186
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.306186
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            -1,
+            -2
+          ],
+          [
+            -3,
+            -6
+          ],
+          [
+            -5,
+            -10
+          ]
+        ],
+        "eps": -0.0,
+        "beta": [
+          0,
+          -1
+        ],
+        "gamma": [
+          -1,
+          -0.5
+        ]
+      },
+      "expectedOutput": [
+        [
+          -1.224745,
+          -1.612372
+        ],
+        [
+          0.0,
+          -1.0
+        ],
+        [
+          1.224745,
+          -0.387628
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            3,
+            6
+          ],
+          [
+            9,
+            18
+          ],
+          [
+            15,
+            30
+          ]
+        ],
+        "eps": 0.0,
+        "beta": [
+          0,
+          3
+        ],
+        "gamma": [
+          3,
+          1.5
+        ]
+      },
+      "expectedOutput": [
+        [
+          -3.674235,
+          1.162883
+        ],
+        [
+          0.0,
+          3.0
+        ],
+        [
+          3.674235,
+          4.837117
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            2.0,
+            3.0
+          ],
+          [
+            4.0,
+            7.0
+          ],
+          [
+            6.0,
+            11.0
+          ]
+        ],
+        "eps": 1.00001,
+        "beta": [
+          1.0,
+          2.0
+        ],
+        "gamma": [
+          2.0,
+          1.5
+        ]
+      },
+      "expectedOutput": [
+        [
+          -1.088929,
+          0.243381
+        ],
+        [
+          1.0,
+          2.0
+        ],
+        [
+          3.088929,
+          3.756619
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            0.0
+          ],
+          [
+            1.0,
+            4.0
+          ],
+          [
+            3.0,
+            8.0
+          ]
+        ],
+        "eps": -1.99999,
+        "beta": [
+          -2.0,
+          -1.0
+        ],
+        "gamma": [
+          -1.0,
+          -1.5
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.449471,
+          1.038097
+        ],
+        [
+          -2.0,
+          -1.0
+        ],
+        [
+          -4.449471,
+          -3.038097
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            2,
+            1
+          ],
+          [
+            6,
+            3
+          ],
+          [
+            10,
+            5
+          ]
+        ],
+        "eps": 0.0,
+        "beta": [
+          1,
+          0
+        ],
+        "gamma": [
+          0.5,
+          1
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.387628,
+          -1.224745
+        ],
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.612372,
+          1.224745
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            -1,
+            -2
+          ],
+          [
+            -3,
+            -6
+          ],
+          [
+            -5,
+            -10
+          ]
+        ],
+        "eps": -1e-05,
+        "beta": [
+          0,
+          -1
+        ],
+        "gamma": [
+          -1,
+          -0.5
+        ]
+      },
+      "expectedOutput": [
+        [
+          -1.224747,
+          -1.612373
+        ],
+        [
+          0.0,
+          -1.0
+        ],
+        [
+          1.224747,
+          -0.387627
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            10,
+            20
+          ],
+          [
+            30,
+            60
+          ],
+          [
+            50,
+            100
+          ]
+        ],
+        "eps": 0.0001,
+        "beta": [
+          0,
+          10
+        ],
+        "gamma": [
+          10,
+          5.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          -12.247446,
+          3.876276
+        ],
+        [
+          0.0,
+          10.0
+        ],
+        [
+          12.247446,
+          16.123724
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "eps": 0.0,
+        "beta": [
+          0,
+          0
+        ],
+        "gamma": [
+          0,
+          0.05
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          -0.070711
+        ],
+        [
+          0.0,
+          0.035355
+        ],
+        [
+          0.0,
+          0.035355
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            6.0,
+            7.0
+          ],
+          [
+            8.0,
+            11.0
+          ],
+          [
+            10.0,
+            15.0
+          ]
+        ],
+        "eps": 5.00001,
+        "beta": [
+          5.0,
+          6.0
+        ],
+        "gamma": [
+          6.0,
+          5.5
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.666112,
+          0.441799
+        ],
+        [
+          5.0,
+          6.0
+        ],
+        [
+          9.333888,
+          11.558201
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            9
+          ],
+          [
+            8,
+            15
+          ]
+        ],
+        "eps": 0.0,
+        "beta": [
+          0,
+          2
+        ],
+        "gamma": [
+          2,
+          0.75
+        ]
+      },
+      "expectedOutput": [
+        [
+          -2.13809,
+          1.081441
+        ],
+        [
+          -0.534522,
+          2.0
+        ],
+        [
+          2.672612,
+          2.918559
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            -2,
+            -4
+          ],
+          [
+            -6,
+            -12
+          ],
+          [
+            -10,
+            -20
+          ]
+        ],
+        "eps": -0.0,
+        "beta": [
+          0,
+          -2
+        ],
+        "gamma": [
+          -2,
+          -1.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          -2.44949,
+          -3.224745
+        ],
+        [
+          0.0,
+          -2.0
+        ],
+        [
+          2.44949,
+          -0.775255
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "eps": 0.0,
+        "beta": [
+          0,
+          0
+        ],
+        "gamma": [
+          0,
+          0.125
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          -0.176777
+        ],
+        [
+          0.0,
+          0.088388
+        ],
+        [
+          0.0,
+          0.088388
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            2.0,
+            5.0
+          ],
+          [
+            4.0,
+            9.0
+          ]
+        ],
+        "eps": -0.99999,
+        "beta": [
+          -1.0,
+          0.0
+        ],
+        "gamma": [
+          0.0,
+          -0.5
+        ]
+      },
+      "expectedOutput": [
+        [
+          -1.0,
+          0.643267
+        ],
+        [
+          -1.0,
+          0.0
+        ],
+        [
+          -1.0,
+          -0.643267
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            4,
+            8
+          ],
+          [
+            12,
+            24
+          ],
+          [
+            20,
+            40
+          ]
+        ],
+        "eps": 0.0,
+        "beta": [
+          0,
+          4
+        ],
+        "gamma": [
+          4,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          -4.898979,
+          1.55051
+        ],
+        [
+          0.0,
+          4.0
+        ],
+        [
+          4.898979,
+          6.44949
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            4,
+            8
+          ]
+        ],
+        "eps": 0.0,
+        "beta": [
+          0,
+          1
+        ],
+        "gamma": [
+          1,
+          0.375
+        ]
+      },
+      "expectedOutput": [
+        [
+          -1.069045,
+          0.599108
+        ],
+        [
+          -0.267261,
+          0.899777
+        ],
+        [
+          1.336306,
+          1.501115
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-normalization-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            5,
+            10
+          ],
+          [
+            15,
+            30
+          ],
+          [
+            25,
+            50
+          ]
+        ],
+        "eps": 0.0001,
+        "beta": [
+          0,
+          5
+        ],
+        "gamma": [
+          5,
+          2.5
+        ]
+      },
+      "expectedOutput": [
+        [
+          -6.12372,
+          1.938138
+        ],
+        [
+          0.0,
+          5.0
+        ],
+        [
+          6.12372,
+          8.061862
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "batch_norm_forward",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": "[[1.0, 2.0], [3.0, 6.0]]",
+        "description": "Input array (N,D) or (N,C,H,W)"
+      },
+      {
+        "name": "gamma",
+        "type": "array",
+        "example": "[1.0, 0.5]",
+        "description": "Scale parameter"
+      },
+      {
+        "name": "beta",
+        "type": "array",
+        "example": "[0.0, 1.0]",
+        "description": "Shift parameter"
+      },
+      {
+        "name": "eps",
+        "type": "number",
+        "example": "1e-5",
+        "description": "Small constant for numerical stability (default: 1e-5)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "dropout-training",
+    "he-initialization",
+    "xavier-initialization",
+    "linear-layer-forward",
+    "simple-cnn-layer"
+  ],
+  "tags": [
+    "Neural Networks"
+  ],
+  "prevId": "linear-lr-scheduler",
+  "nextId": "hinge-loss",
+  "slug": "batch-normalization",
+  "cleanTitle": "Batch Normalization (Forward)",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/batch-normalization",
+  "localUrl": "http://localhost:3000/problems/batch-normalization",
+  "studyPlan": null
+}

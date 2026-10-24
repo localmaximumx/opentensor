@@ -1,0 +1,909 @@
+{
+  "id": "naive-bayes-bernoulli",
+  "title": "Naive Bayes Log-Likelihood (Bernoulli)",
+  "description": "Train a Bernoulli Naive Bayes model on binary features and return the unnormalized log posterior for every test sample and class.\n\n$$\n\\theta_{jc}=\\frac{N_{jc}+1}{N_c+2}\n$$\n\n$$\n\\log \\widetilde{P}(c\\mid\\mathbf{x})=\\log P(c)+\\sum_{j=1}^{D}\\left[x_j\\log\\theta_{jc}+(1-x_j)\\log(1-\\theta_{jc})\\right]\n$$\n\nHere, $N_c$ is the number of training samples in class $c$, $N_{jc}$ counts class-$c$ samples whose feature $j$ is one, and $D$ is the feature count. The added one and two implement Laplace smoothing. Order output columns by ascending class label, round values to four decimals, and return a NumPy array of shape (n_test, n_classes).",
+  "seoDescription": "Compute Bernoulli Naive Bayes log-likelihoods from binary features, class priors, and feature probabilities.",
+  "examples": [
+    "Input: X_train = [[1, 0], [0, 1]], y_train = [1, 0], X_test = [[1, 0]]\n\nOutput: [[-2.8904, -1.5041]]\n\nExplanation: The columns correspond to classes 0 and 1, and the observed feature pattern is more likely under class 1.",
+    "Input: X_train = [[1, 0], [1, 1], [0, 0], [0, 1]], y_train = [0, 0, 1, 1], X_test = [[1, 0], [0, 1]]\n\nOutput: [[-1.674, -2.7726], [-2.7726, -1.674]]"
+  ],
+  "requirements": "* Estimate class priors from training frequencies\n* Apply Laplace smoothing to every Bernoulli feature probability\n* Include contributions from both present and absent features in log space\n* Return a NumPy array rounded to four decimals",
+  "theory": "## Understanding the Theory: Naive Bayes Log-Likelihood (Bernoulli)\n\n### Core Intuition: Why Do We Need This?\nReal-world data is inherently stochastic and incomplete. Probability theory and statistics provide principled methods to quantify uncertainty, model data-generating distributions, and evaluate confidence in empirical predictions. **Naive Bayes Log-Likelihood (Bernoulli)** computes statistical moments, likelihoods, or uncertainty metrics across observation samples.\n\nIn this problem, the objective is to implement **Naive Bayes Log-Likelihood (Bernoulli)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\theta_{jc}=\\frac{N_{jc}+1}{N_c+2}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Log-Space Calculations**: Probabilities can be extremely small; computing log-likelihoods prevents floating-point underflow when multiplying many probability densities.\n* **Maximum Likelihood Estimation**: Many machine learning loss functions (like Cross-Entropy and Mean Squared Error) directly derive from minimizing negative log-likelihood under specific distributional assumptions.\n* **Outlier Sensitivity**: High-order moments (skewness and kurtosis) reveal distribution heavy-tails, signaling when robust statistics or clipping are necessary.",
+  "hints": [
+    "Use np.unique(y_train, return_counts=True) to obtain sorted classes and priors.",
+    "For one class, X_train[y_train == label].sum(axis=0) gives all feature-one counts.",
+    "Evaluate the Bernoulli terms with matrix multiplication against np.log(theta) and np.log1p(-theta)."
+  ],
+  "constraints": "* Training and test features contain only 0 and 1\n* Training labels contain at least one sample per represented class\n* Use NumPy only",
+  "difficulty": "Hard",
+  "starterCode": "import numpy as np\n\ndef naive_bayes_bernoulli(X_train: list, y_train: list, X_test: list) -> np.ndarray:\n    \"\"\"\n    Returns a NumPy array of log posteriors.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-09T14:33:45.816Z",
+  "updatedAt": "2026-08-23T10:06:15.807Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport math\nimport numpy as np\n\ndef naive_bayes_bernoulli(X_train: list, y_train: list, X_test: list) -> np.ndarray:\n    Xt = np.array(X_train, dtype=int)\n    yt = np.array(y_train, dtype=int)\n    Xte = np.array(X_test, dtype=int)\n    classes = np.unique(yt)\n    classes.sort()\n    stats = {}\n    N = len(Xt)\n    for c in classes:\n        Xc = Xt[yt == c]\n        prior = len(Xc) / N\n        p_feat = (np.sum(Xc, axis=0) + 1.0) / (len(Xc) + 2.0)\n        stats[c] = (prior, p_feat)\n    all_logps = []\n    for x in Xte:\n        logps = []\n        for c in classes:\n            prior, p_feat = stats[c]\n            logp = math.log(prior) + np.sum(x * np.log(p_feat) + (1 - x) * np.log(1.0 - p_feat))\n            logps.append(round(float(logp), 4))\n        all_logps.append(logps)\n    return np.array(all_logps)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "NaiveBayesBernoulliViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Basic 2 samples",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          1,
+          0
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          -2.8904,
+          -1.5041
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Symmetric classes",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          -1.674,
+          -2.7726
+        ],
+        [
+          -2.7726,
+          -1.674
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          1,
+          0
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8904,
+          -1.5041
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -1.674,
+          -2.7726
+        ],
+        [
+          -2.7726,
+          -1.674
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          1,
+          0
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8904,
+          -1.5041
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -1.674,
+          -2.7726
+        ],
+        [
+          -2.7726,
+          -1.674
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          1,
+          0
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8904,
+          -1.5041
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -1.674,
+          -2.7726
+        ],
+        [
+          -2.7726,
+          -1.674
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          1,
+          0
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8904,
+          -1.5041
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -1.674,
+          -2.7726
+        ],
+        [
+          -2.7726,
+          -1.674
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          1,
+          0
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8904,
+          -1.5041
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -1.674,
+          -2.7726
+        ],
+        [
+          -2.7726,
+          -1.674
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          1,
+          0
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8904,
+          -1.5041
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -1.674,
+          -2.7726
+        ],
+        [
+          -2.7726,
+          -1.674
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          1,
+          0
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8904,
+          -1.5041
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -1.674,
+          -2.7726
+        ],
+        [
+          -2.7726,
+          -1.674
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          1,
+          0
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8904,
+          -1.5041
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -1.674,
+          -2.7726
+        ],
+        [
+          -2.7726,
+          -1.674
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          1,
+          0
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8904,
+          -1.5041
+        ]
+      ]
+    },
+    {
+      "id": "naive-bayes-bernoulli-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X_test": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -1.674,
+          -2.7726
+        ],
+        [
+          -2.7726,
+          -1.674
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "naive_bayes_bernoulli",
+    "parameters": [
+      {
+        "name": "X_train",
+        "type": "array",
+        "example": "[[1, 0], [0, 1]]",
+        "description": "Binary training features {0,1}, shape (n_train, d)"
+      },
+      {
+        "name": "y_train",
+        "type": "array",
+        "example": "[1, 0]",
+        "description": "Training class labels"
+      },
+      {
+        "name": "X_test",
+        "type": "array",
+        "example": "[[1, 0]]",
+        "description": "Binary test features {0,1}, shape (n_test, d)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "gaussian-naive-bayes",
+    "bernoulli-pmf",
+    "bigram-probabilities",
+    "logistic-regression-training",
+    "gini-impurity"
+  ],
+  "tags": [
+    "Classic ML"
+  ],
+  "prevId": "knn-distance",
+  "nextId": "information-gain",
+  "slug": "naive-bayes-bernoulli",
+  "cleanTitle": "Naive Bayes Log-Likelihood (Bernoulli)",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/naive-bayes-bernoulli",
+  "localUrl": "http://localhost:3000/problems/naive-bayes-bernoulli",
+  "studyPlan": null
+}

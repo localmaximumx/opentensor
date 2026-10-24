@@ -1,0 +1,835 @@
+{
+  "catalogId": "python:optim-dropout",
+  "id": "optim-dropout",
+  "sourceId": "optim-dropout",
+  "slug": "optim-dropout",
+  "source": "python",
+  "category": "numpy",
+  "title": "Dropout from Scratch",
+  "difficulty": "Hard",
+  "tags": [
+    "Optimization",
+    "Neural Networks"
+  ],
+  "isFree": false,
+  "planId": "math-optimization",
+  "planTitle": "Optimization",
+  "sectionId": "math-optimization-regularization",
+  "sortOrder": 505,
+  "seoDescription": "Train a two-layer NumPy classifier with inverted dropout and report held-out accuracy after every epoch.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Apply inverted dropout to input activations given drop probability p and binary retention mask.\n\nBy scaling activations during forward propagation by 1 / (1 - p), the test-time forward pass requires zero arithmetic overhead or manual scaling factors.\n\n### Mathematical Formulation\n$$\ny = \\begin{cases} \\frac{m \\odot x}{1 - p} & \\text{if training} \\\\ x & \\text{if inference} \\end{cases}\n$$\n\n### Step-by-Step Implementation\n1. Check training phase flag; return original activations unchanged during inference\n2. Scale retained activations by 1 / (1 - p) to preserve expected activation magnitude\n3. Return modulated activations rounded to 4 decimal places\n\n### Returns\nNested list representing activation matrix after inverted dropout.",
+  "theory": "## Understanding the Theory: Dropout from Scratch\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization problem: we want to find parameter values that minimize the loss function across training samples. Because loss landscapes in deep learning are non-convex with ravines, saddle points, and plateaus, simple gradient descent can get stuck or oscillate. **Dropout from Scratch** accelerates convergence and stabilizes parameter trajectories.\n\nBy scaling activations during forward propagation by 1 / (1 - p), the test-time forward pass requires zero arithmetic overhead or manual scaling factors. In this problem, the goal is to: apply inverted dropout to input activations given drop probability p and binary retention mask.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\ny = \\begin{cases} \\frac{m \\odot x}{1 - p} & \\text{if training} \\\\ x & \\text{if inference} \\end{cases}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Check training phase flag; return original activations unchanged during inference\n2. **Phase 2**: Scale retained activations by 1 / (1 - p) to preserve expected activation magnitude\n3. **Phase 3**: Return modulated activations rounded to 4 decimal places\n\n### Practical Machine Learning Applications & Nuances\n* **Escaping Ravines**: Momentum methods accumulate velocity across successive steps, helping the optimizer push through flat regions and dampening high-frequency oscillations.\n* **Adaptive Learning Rates**: Algorithms like Adam scale learning rates per parameter, giving infrequent features larger updates and preventing exploding updates on frequent features.\n* **Gradient Regularization**: Techniques like gradient clipping and weight decay prevent exploding gradients and encourage simpler, more generalizable model weights.",
+  "examples": [
+    "Input: x = [[1.0, 2.0], [3.0, 4.0]], mask = [[1.0, 0.0], [1.0, 1.0]], p = 0.5, training = true\n\nOutput: [[2.0, 0.0], [6.0, 8.0]]\n\nExplanation: Evaluated optim_dropout under standard test conditions."
+  ],
+  "requirements": "* Function must be named `optim_dropout`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `optim_dropout`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef optim_dropout(x: list, mask: list, p: float = 0.5, training: bool = True) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Dropout from Scratch** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef optim_dropout(x: list, mask: list, p: float = 0.5, training: bool = True) -> list:\n    arr_x = np.array(x, dtype=float)\n    if not training or p >= 1.0: return np.round(arr_x, 4).tolist()\n    return np.round((arr_x * np.array(mask, dtype=float)) / (1.0 - p), 4).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "2x2 training dropout",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "optim-dropout-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-dropout-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "mask": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "p": 0.5,
+        "training": true
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          6.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "optim_dropout",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

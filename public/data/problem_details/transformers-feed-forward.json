@@ -1,0 +1,2164 @@
+{
+  "id": "transformers-feed-forward",
+  "title": "Feed-Forward Network",
+  "description": "Implement the position-wise feed-forward network used in the Transformer.\n\n$$\n\\operatorname{FFN}(x) = \\operatorname{ReLU}(xW_1 + b_1)W_2 + b_2\n$$\n\nHere, W1 expands from model width to hidden width, b1 is the hidden bias, W2 projects back to model width, and b2 is the output bias. Return a NumPy float64 array with the same leading dimensions and model width as x.",
+  "seoDescription": "Implement the Transformer's position-wise feed-forward network with two linear projections and a ReLU activation.",
+  "examples": [
+    "Input: x = [[[1.0, 0.5, -0.5, 2.0]]], W1: (4,8), b1: (8,), W2: (8,4), b2: (4,)\n\nOutput: [[[-0.0271, -0.1309, 0.3779, 0.9302]]]\n\nExplanation: The input is projected to a higher-dimensional hidden space via W1+b1, ReLU clips negative activations to zero, then W2+b2 projects back to the original dimension.",
+    "Input: x = [[[1.0, -1.0, 0.5], [0.0, 2.0, -1.0]]], W1: (3,6), b1: (6,), W2: (6,3), b2: (3,)\n\nOutput: [[[-0.2502, -0.1218, -0.1188], [-0.0221, -0.2764, -0.5222]]]",
+    "Input: x = [[[3.0, 1.0]]], W1: (2,4), b1: (4,), W2: (4,2), b2: (2,)\n\nOutput: [[[0.0479, -0.6016]]]"
+  ],
+  "requirements": "- Use NumPy float64 array operations.\n- Apply W1 and b1 to the final axis.\n- Apply ReLU before W2.\n- Return the unrounded result.",
+  "theory": "# <span style=\"font-size: 20px;\">Position-wise Feed-Forward Network</span>\n\n<span style=\"font-size: 14px;\">The position-wise feed-forward network (FFN) is the other major sublayer in each Transformer block, paired with multi-head self-attention. It consists of two linear transformations with a ReLU activation in between: $\\text{FFN}(x) = \\max(0,\\, xW_1 + b_1)W_2 + b_2$. The FFN is applied to each position independently and identically, acting as a per-token two-layer MLP that expands the representation to a higher dimension, applies a nonlinearity, and contracts back. In Vaswani et al. (2017), the model dimension is $d_{\\text{model}} = 512$ and the inner dimension is $d_{ff} = 2048$, giving a 4x expansion ratio.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">The position-wise FFN is a two-layer fully connected network applied independently to the representation at each sequence position. \"Position-wise\" means the same weight matrices $W_1$, $b_1$, $W_2$, $b_2$ are shared across all positions in the sequence, but there is no information flow between positions within this sublayer. Each token's $d_{\\text{model}}$-dimensional vector is processed in isolation.</span>\n\n<span style=\"font-size: 14px;\">The architecture is straightforward: the first linear layer projects from $d_{\\text{model}}$ to a larger dimension $d_{ff}$, a ReLU activation introduces nonlinearity, and the second linear layer projects back from $d_{ff}$ to $d_{\\text{model}}$. This expand-activate-contract pattern gives each token access to a wider computational workspace before compressing the result back to the model's working dimension.</span>\n\n<span style=\"font-size: 14px;\">In the Transformer block, the FFN always follows the multi-head attention sublayer. Both sublayers are wrapped with residual connections and layer normalization: $\\text{LayerNorm}(x + \\text{Sublayer}(x))$. The FFN receives attention-processed representations and refines them token by token.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n### <span style=\"font-size: 14px;\">The FFN Formula</span>\n\n<span style=\"font-size: 14px;\">Given an input vector $x \\in \\mathbb{R}^{d_{\\text{model}}}$ at a single position, the feed-forward network computes:</span>\n\n$$\n\\text{FFN}(x) = \\max(0,\\, xW_1 + b_1)\\, W_2 + b_2\n$$\n\n<span style=\"font-size: 14px;\">Breaking this into its three stages:</span>\n\n* <span style=\"font-size: 14px;\">**Expand:** Compute $h = xW_1 + b_1$, where $W_1 \\in \\mathbb{R}^{d_{\\text{model}} \\times d_{ff}}$ and $b_1 \\in \\mathbb{R}^{d_{ff}}$. This projects the input from dimension $d_{\\text{model}}$ to $d_{ff}$.</span>\n* <span style=\"font-size: 14px;\">**ReLU:** Compute $a = \\max(0, h)$, applying the rectified linear unit element-wise. Every negative component is zeroed out; positive components pass through unchanged.</span>\n* <span style=\"font-size: 14px;\">**Contract:** Compute $\\text{FFN}(x) = aW_2 + b_2$, where $W_2 \\in \\mathbb{R}^{d_{ff} \\times d_{\\text{model}}}$ and $b_2 \\in \\mathbb{R}^{d_{\\text{model}}}$. This projects back from $d_{ff}$ to $d_{\\text{model}}$.</span>\n\n### <span style=\"font-size: 14px;\">Dimensions in the Original Transformer</span>\n\n<span style=\"font-size: 14px;\">Vaswani et al. set $d_{\\text{model}} = 512$ and $d_{ff} = 2048$. The parameter count for one FFN sublayer: $W_1$ has $512 \\times 2048 = 1{,}048{,}576$ parameters, $b_1$ has $2048$, $W_2$ has $2048 \\times 512 = 1{,}048{,}576$ parameters, $b_2$ has $512$. Total: $2{,}099{,}712$ parameters per sublayer. With 6 encoder and 6 decoder layers, the FFN sublayers alone account for roughly $25.2$ million parameters.</span>\n\n### <span style=\"font-size: 14px;\">Batch and Sequence Dimensions</span>\n\n<span style=\"font-size: 14px;\">In practice, the input is a tensor $X \\in \\mathbb{R}^{B \\times T \\times d_{\\text{model}}}$ where $B$ is the batch size and $T$ is the sequence length. The FFN applies identically across both the $B$ and $T$ dimensions. This is equivalent to reshaping to $(BT) \\times d_{\\text{model}}$, applying a standard two-layer MLP, and reshaping back.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why 4x Expansion</span>\n\n### <span style=\"font-size: 14px;\">Increased Computational Capacity</span>\n\n<span style=\"font-size: 14px;\">The expansion from $d_{\\text{model}}$ to $4 \\cdot d_{\\text{model}}$ gives the FFN a much richer intermediate space. With 2048 hidden units, the network can represent a far more complex function of the 512-dimensional input. Each hidden unit detects a different linear pattern, and ReLU selectively activates a subset, effectively choosing which features are relevant for each token.</span>\n\n### <span style=\"font-size: 14px;\">Bottleneck Architecture</span>\n\n<span style=\"font-size: 14px;\">The expand-contract design is a bottleneck: the first projection scatters the input into a diverse set of feature detectors, ReLU sparsifies the representation by zeroing out roughly half the dimensions, and the second projection combines the surviving features back into $d_{\\text{model}}$ space. This forces the network to learn an efficient encoding rather than simply memorizing the expanded representation.</span>\n\n### <span style=\"font-size: 14px;\">The 4x Ratio Is Empirical</span>\n\n<span style=\"font-size: 14px;\">The ratio $d_{ff} / d_{\\text{model}} = 4$ was chosen by Vaswani et al. based on experimental results, not derived from theory. GPT-3 maintains this convention. Models using gated activations like SwiGLU (e.g., LLaMA) typically use $d_{ff} = \\frac{8}{3} \\cdot d_{\\text{model}}$ to keep parameter count similar despite the additional gating projection. The key insight is that the FFN needs a meaningfully larger hidden dimension to provide sufficient capacity, but the exact multiplier is tunable.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Position-Wise Application</span>\n\n### <span style=\"font-size: 14px;\">Same Weights at Every Position</span>\n\n<span style=\"font-size: 14px;\">The FFN uses exactly the same parameters $W_1, b_1, W_2, b_2$ at every sequence position. Position 0 and position 511 are processed by the identical function. Vaswani et al. describe this as equivalent to two $1 \\times 1$ convolutions: one with 2048 output channels, then one with 512 output channels. The kernel size of 1 means each position is processed independently, with no spatial receptive field.</span>\n\n### <span style=\"font-size: 14px;\">No Cross-Position Interaction</span>\n\n<span style=\"font-size: 14px;\">Within the FFN sublayer, position $i$ has absolutely no access to positions $j \\neq i$. All cross-position communication happens exclusively in the multi-head attention sublayer. This clean separation is a defining architectural choice: attention handles token-to-token interaction (the \"mixing\" step), and the FFN handles per-token transformation (the \"processing\" step).</span>\n\n### <span style=\"font-size: 14px;\">Computational Parallelism</span>\n\n<span style=\"font-size: 14px;\">Because positions are independent within the FFN, all $T$ positions can be processed simultaneously as a single batched matrix multiplication. There is no sequential dependency, making the FFN perfectly parallelizable on GPUs. This contrasts with recurrent architectures where each timestep depends on the previous hidden state.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why ReLU</span>\n\n### <span style=\"font-size: 14px;\">Simplicity and Effectiveness</span>\n\n<span style=\"font-size: 14px;\">ReLU ($\\max(0, x)$) is the simplest widely-used nonlinear activation. It has zero computational overhead beyond a comparison, introduces sparsity by zeroing out negative values, and its gradient is trivially 0 or 1. At the time of publication (2017), ReLU was the dominant activation function in deep learning, making it a natural default choice.</span>\n\n### <span style=\"font-size: 14px;\">The Role of Nonlinearity</span>\n\n<span style=\"font-size: 14px;\">Without the ReLU between the two linear layers, the FFN would collapse to a single linear transformation: $(xW_1 + b_1)W_2 + b_2 = x(W_1 W_2) + (b_1 W_2 + b_2)$. This is just $xW + b$, so the two-layer network would have no more expressive power than a single linear layer. ReLU breaks this linearity, enabling the FFN to approximate nonlinear functions. The nonlinearity is what makes the expansion to $d_{ff}$ meaningful.</span>\n\n### <span style=\"font-size: 14px;\">Later Replacements</span>\n\n<span style=\"font-size: 14px;\">Subsequent models replaced ReLU with smoother alternatives. GPT-2 uses GELU (Hendrycks and Gimpel, 2016), which provides a smooth probabilistic gate instead of a hard cutoff at zero. LLaMA and Mistral use SwiGLU (Shazeer, 2020), a gated activation that multiplies two projections element-wise with a SiLU nonlinearity. The FFN structure (expand, activate, contract) remains the same; only the activation function changes.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n### <span style=\"font-size: 14px;\">Vaswani et al. (2017)</span>\n\n<span style=\"font-size: 14px;\">In \"Attention Is All You Need,\" Section 3.3 states: \"In addition to attention sub-layers, each of the layers in our encoder and decoder contains a fully connected feed-forward network, which is applied to each position separately and identically. This consists of two linear transformations with a ReLU activation in between.\" The paper specifies $d_{\\text{model}} = 512$, $d_{ff} = 2048$ for the base model, and $d_{\\text{model}} = 1024$, $d_{ff} = 4096$ for the big model.</span>\n\n### <span style=\"font-size: 14px;\">Analogy to 1x1 Convolutions</span>\n\n<span style=\"font-size: 14px;\">The paper notes that the position-wise FFN \"can also be described as two convolutions with kernel size 1.\" A $1 \\times 1$ convolution over a sequence treats each position independently and transforms the channel dimension, exactly like a shared linear layer applied at every position. This connection was intuitive for researchers from the CNN literature, where $1 \\times 1$ convolutions (Network-in-Network, Lin et al. 2013) were already well established.</span>\n\n### <span style=\"font-size: 14px;\">Different Parameters Across Layers</span>\n\n<span style=\"font-size: 14px;\">While the FFN shares parameters across positions within a layer, different Transformer layers have different FFN parameters. The paper states: \"While the linear transformations are the same across different positions, they use different parameters from layer to layer.\" Each layer learns a different nonlinear transformation of the per-token representation.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Consider a minimal example with $d_{\\text{model}} = 4$ and $d_{ff} = 8$ to trace the full computation for a single position.</span>\n\n### <span style=\"font-size: 14px;\">Setup</span>\n\n<span style=\"font-size: 14px;\">Input: $x = [1.0,\\; -0.5,\\; 0.3,\\; 0.8]$ (shape $1 \\times 4$). Let $b_1 = \\mathbf{0}$ for clarity. After the first linear layer $h = xW_1$:</span>\n\n$$\nh = [2.1,\\; -0.7,\\; 1.4,\\; -1.2,\\; 0.0,\\; 0.9,\\; -0.3,\\; 1.8]\n$$\n\n### <span style=\"font-size: 14px;\">Apply ReLU</span>\n\n<span style=\"font-size: 14px;\">$a = \\max(0, h)$ element-wise:</span>\n\n$$\na = [2.1,\\; 0.0,\\; 1.4,\\; 0.0,\\; 0.0,\\; 0.9,\\; 0.0,\\; 1.8]\n$$\n\n<span style=\"font-size: 14px;\">Four of eight dimensions survive (indices 0, 2, 5, 7). The other four are zeroed out -- a 50% sparsity rate, typical for ReLU on zero-mean inputs.</span>\n\n### <span style=\"font-size: 14px;\">Contract Back</span>\n\n<span style=\"font-size: 14px;\">Multiply by $W_2$ (shape $8 \\times 4$) and add $b_2$. Only the rows of $W_2$ at indices 0, 2, 5, 7 contribute. Suppose the output is:</span>\n\n$$\n\\text{FFN}(x) = [0.7,\\; -0.2,\\; 1.1,\\; 0.4]\n$$\n\n### <span style=\"font-size: 14px;\">Residual Connection</span>\n\n<span style=\"font-size: 14px;\">The Transformer adds the residual: $\\text{output} = \\text{LayerNorm}(x + \\text{FFN}(x)) = \\text{LayerNorm}([1.7,\\; -0.7,\\; 1.4,\\; 1.2])$. The FFN refines the token's representation while the skip connection preserves the original signal.</span>\n\n### <span style=\"font-size: 14px;\">Key Observations</span>\n\n* <span style=\"font-size: 14px;\">The input was 4-dimensional, expanded to 8-dimensional, then compressed back to 4-dimensional.</span>\n* <span style=\"font-size: 14px;\">ReLU created sparsity, selecting which expanded features survive.</span>\n* <span style=\"font-size: 14px;\">The entire computation was local to one position -- no other token was involved.</span>\n* <span style=\"font-size: 14px;\">The zero entries in $a$ mean only a subset of $W_2$'s rows contributed, making the output a position-dependent linear combination of selected learned features.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The FFN's Role in the Transformer</span>\n\n### <span style=\"font-size: 14px;\">Attention Mixes, FFN Processes</span>\n\n<span style=\"font-size: 14px;\">The Transformer block alternates between two fundamentally different operations. Multi-head attention allows every position to gather information from all other positions, producing a context-aware representation. The FFN then applies a nonlinear transformation to each token independently. Attention is about communication between tokens; the FFN is about computation within each token.</span>\n\n### <span style=\"font-size: 14px;\">The FFN as a Key-Value Memory</span>\n\n<span style=\"font-size: 14px;\">Interpretability research (Geva et al., 2021) has shown that FFN layers function as implicit key-value memories. Each row of $W_1$ acts as a \"key\" that matches certain input patterns (triggering a high pre-ReLU activation), and the corresponding column of $W_2$ acts as a \"value\" added to the output when that key matches. ReLU determines which keys are active. This explains why FFNs store factual knowledge: specific $W_1$ rows detect patterns like \"the capital of France is\" and the corresponding $W_2$ columns push the representation toward \"Paris.\"</span>\n\n### <span style=\"font-size: 14px;\">Parameter Distribution</span>\n\n<span style=\"font-size: 14px;\">In the base model, the FFN sublayers account for roughly two-thirds of total parameters. Attention has $4 \\cdot d_{\\text{model}}^2$ parameters per layer (for $Q, K, V$, and output projections), while the FFN has $2 \\cdot d_{\\text{model}} \\cdot d_{ff} = 8 \\cdot d_{\\text{model}}^2$. The FFN is the larger component, aligning with its role as the primary site for storing learned knowledge.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n* <span style=\"font-size: 14px;\">**Placing ReLU after the second linear layer instead of between the two layers.** The correct structure is Linear-ReLU-Linear. If ReLU is applied after $W_2$ instead of after $W_1$, everything up to the activation is a single linear function ($x W_1 W_2$), and the subsequent ReLU merely clips the output. This eliminates the benefit of the expanded hidden dimension.</span>\n\n* <span style=\"font-size: 14px;\">**Using the wrong expansion ratio.** Implementing $d_{ff} = d_{\\text{model}}$ (ratio 1) instead of $d_{ff} = 4 \\cdot d_{\\text{model}}$ dramatically reduces capacity. The standard ratio is 4 for ReLU-based FFNs and $\\frac{8}{3}$ for gated variants like SwiGLU. Always check which convention the target architecture uses.</span>\n\n* <span style=\"font-size: 14px;\">**Confusing the FFN with an attention mechanism.** The FFN has no query-key-value structure, no softmax, and no interaction between positions. It is a simple two-layer MLP applied per token. Conflating the two sublayers leads to implementations that accidentally violate position-wise independence.</span>\n\n* <span style=\"font-size: 14px;\">**Forgetting the bias terms.** The original Transformer FFN includes bias vectors $b_1$ and $b_2$. Some modern architectures (PaLM, LLaMA) remove biases, but Vaswani et al. explicitly includes them. Omitting biases changes the function class, especially for inputs near the origin where $b_1$ shifts the ReLU activation boundary.</span>\n\n* <span style=\"font-size: 14px;\">**Applying the FFN across positions instead of independently per position.** The FFN must treat each position as a separate sample. A common error is reshaping so the sequence dimension gets mixed into the feature dimension. The correct implementation applies linear layers to the last dimension only, broadcasting over batch and sequence.</span>\n\n* <span style=\"font-size: 14px;\">**Forgetting the residual connection and layer normalization.** The FFN is always wrapped in a residual: $\\text{output} = \\text{LayerNorm}(x + \\text{FFN}(x))$. Without the skip connection, gradient flow degrades in deep models and training becomes unstable.</span>\n\n---",
+  "hints": [
+    "Compute hidden = np.maximum(0, x @ W1 + b1).",
+    "NumPy broadcasts each bias over leading dimensions.",
+    "Project hidden with W2 and add b2."
+  ],
+  "constraints": "- x has shape (..., d_model).\n- W1 has shape (d_model, d_ff).\n- W2 has shape (d_ff, d_model).\n- Bias lengths match their corresponding outputs.",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef feed_forward(x: np.ndarray, W1: np.ndarray, b1: np.ndarray,\n                 W2: np.ndarray, b2: np.ndarray) -> np.ndarray:\n    \"\"\"\n    Returns the position-wise feed-forward output.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-02T22:12:26.331Z",
+  "updatedAt": "2026-04-16T22:30:35.881Z",
+  "topicId": "transformer-ffn",
+  "paperSnippet": "\"In addition to attention sub-layers, each of the layers in our encoder and decoder contains a fully connected feed-forward network, which is applied to each position separately and identically. This consists of two linear transformations with a ReLU activation in between: FFN(x) = max(0, xWâ + bâ)Wâ + bâ\"",
+  "visualizationComponent": "FFNViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Feed-Forward Network** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef feed_forward(x, W1, b1, W2, b2):\n    x_arr = np.asarray(x, dtype=float)\n    w1 = np.asarray(W1, dtype=float)\n    b1_arr = np.asarray(b1, dtype=float)\n    w2 = np.asarray(W2, dtype=float)\n    b2_arr = np.asarray(b2, dtype=float)\n    hidden = np.maximum(0.0, np.matmul(x_arr, w1) + b1_arr)\n    out = np.matmul(hidden, w2) + b2_arr\n    return np.round(out, 4)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "public-1",
+      "name": "Basic FFN: d=4, dff=8",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              0.5,
+              -0.5,
+              2
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            0.149,
+            -0.0415,
+            0.1943,
+            0.4569,
+            -0.0702,
+            -0.0702,
+            0.4738,
+            0.2302
+          ],
+          [
+            -0.1408,
+            0.1628,
+            -0.139,
+            -0.1397,
+            0.0726,
+            -0.574,
+            -0.5175,
+            -0.1687
+          ],
+          [
+            -0.3038,
+            0.0943,
+            -0.2724,
+            -0.4237,
+            0.4397,
+            -0.0677,
+            0.0203,
+            -0.4274
+          ],
+          [
+            -0.1633,
+            0.0333,
+            -0.3453,
+            0.1127,
+            -0.1802,
+            -0.0875,
+            -0.1805,
+            0.5557
+          ]
+        ],
+        "W2": [
+          [
+            0.2215,
+            0.0514,
+            -0.0347,
+            -0.0903
+          ],
+          [
+            -0.4436,
+            -0.216,
+            -0.1382,
+            0.3171
+          ],
+          [
+            0.1031,
+            -0.5289,
+            0.0972,
+            -0.1155
+          ],
+          [
+            -0.2031,
+            0.1835,
+            0.3093,
+            0.2794
+          ],
+          [
+            -0.2518,
+            -0.0928,
+            0.0994,
+            0.2927
+          ],
+          [
+            -0.1438,
+            -0.0557,
+            -0.3319,
+            -0.3589
+          ],
+          [
+            0.2438,
+            0.4069,
+            -0.0216,
+            0.3011
+          ],
+          [
+            0.1085,
+            -0.1935,
+            0.1084,
+            0.4614
+          ]
+        ],
+        "b1": [
+          -0.0001,
+          -0.0106,
+          0.0082,
+          -0.0122,
+          0.0021,
+          -0.0196,
+          -0.0133,
+          0.002
+        ],
+        "b2": [
+          -0.0004,
+          0.0156,
+          -0.0262,
+          0.0082
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            -0.0271,
+            -0.1309,
+            0.3779,
+            0.9302
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "public-2",
+      "name": "Multi-token: d=3, dff=6",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              -1,
+              0.5
+            ],
+            [
+              0,
+              2,
+              -1
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            0.5072,
+            -0.1398,
+            0.0098,
+            0.1223,
+            -0.2367,
+            0.0006
+          ],
+          [
+            -0.0003,
+            -0.5264,
+            0.3053,
+            0.1801,
+            -0.1876,
+            -0.0515
+          ],
+          [
+            0.1516,
+            -0.0784,
+            -0.0728,
+            -0.436,
+            0.1664,
+            0.0372
+          ]
+        ],
+        "W2": [
+          [
+            -0.0136,
+            -0.4352,
+            -0.1216
+          ],
+          [
+            -0.6865,
+            0.3148,
+            -0.1249
+          ],
+          [
+            -0.2228,
+            0.3217,
+            -0.4953
+          ],
+          [
+            0.1606,
+            -0.6193,
+            -0.1986
+          ],
+          [
+            -0.3613,
+            0.4386,
+            0.5298
+          ],
+          [
+            -0.0988,
+            0.2522,
+            -0.054
+          ]
+        ],
+        "b1": [
+          0.0027,
+          -0.0153,
+          0.0165,
+          0.0015,
+          -0.0039,
+          0.0203
+        ],
+        "b2": [
+          0.0057,
+          -0.0075,
+          -0.0171
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            -0.2502,
+            -0.1218,
+            -0.1188
+          ],
+          [
+            -0.0221,
+            -0.2764,
+            -0.5222
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "public-3",
+      "name": "Large input: d=2, dff=4",
+      "inputs": {
+        "x": [
+          [
+            [
+              3,
+              1
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            -0.0427,
+            0.6172,
+            0.085,
+            0.3989
+          ],
+          [
+            -0.0464,
+            -0.0207,
+            0.2266,
+            0.2477
+          ]
+        ],
+        "W2": [
+          [
+            0.0071,
+            0.1369
+          ],
+          [
+            0.0811,
+            -0.4305
+          ],
+          [
+            0.2648,
+            -0.174
+          ],
+          [
+            -0.1505,
+            0.1773
+          ]
+        ],
+        "b1": [
+          -0.0011,
+          -0.0237,
+          -0.0017,
+          0.0069
+        ],
+        "b2": [
+          -0.0073,
+          0.0026
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            0.0479,
+            -0.6016
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              0.5,
+              -0.5,
+              2
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            0.149,
+            -0.0415,
+            0.1943,
+            0.4569,
+            -0.0702,
+            -0.0702,
+            0.4738,
+            0.2302
+          ],
+          [
+            -0.1408,
+            0.1628,
+            -0.139,
+            -0.1397,
+            0.0726,
+            -0.574,
+            -0.5175,
+            -0.1687
+          ],
+          [
+            -0.3038,
+            0.0943,
+            -0.2724,
+            -0.4237,
+            0.4397,
+            -0.0677,
+            0.0203,
+            -0.4274
+          ],
+          [
+            -0.1633,
+            0.0333,
+            -0.3453,
+            0.1127,
+            -0.1802,
+            -0.0875,
+            -0.1805,
+            0.5557
+          ]
+        ],
+        "W2": [
+          [
+            0.2215,
+            0.0514,
+            -0.0347,
+            -0.0903
+          ],
+          [
+            -0.4436,
+            -0.216,
+            -0.1382,
+            0.3171
+          ],
+          [
+            0.1031,
+            -0.5289,
+            0.0972,
+            -0.1155
+          ],
+          [
+            -0.2031,
+            0.1835,
+            0.3093,
+            0.2794
+          ],
+          [
+            -0.2518,
+            -0.0928,
+            0.0994,
+            0.2927
+          ],
+          [
+            -0.1438,
+            -0.0557,
+            -0.3319,
+            -0.3589
+          ],
+          [
+            0.2438,
+            0.4069,
+            -0.0216,
+            0.3011
+          ],
+          [
+            0.1085,
+            -0.1935,
+            0.1084,
+            0.4614
+          ]
+        ],
+        "b1": [
+          -0.0001,
+          -0.0106,
+          0.0082,
+          -0.0122,
+          0.0021,
+          -0.0196,
+          -0.0133,
+          0.002
+        ],
+        "b2": [
+          -0.0004,
+          0.0156,
+          -0.0262,
+          0.0082
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -0.0271,
+            -0.1309,
+            0.3779,
+            0.9302
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              -1,
+              0.5
+            ],
+            [
+              0,
+              2,
+              -1
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            0.5072,
+            -0.1398,
+            0.0098,
+            0.1223,
+            -0.2367,
+            0.0006
+          ],
+          [
+            -0.0003,
+            -0.5264,
+            0.3053,
+            0.1801,
+            -0.1876,
+            -0.0515
+          ],
+          [
+            0.1516,
+            -0.0784,
+            -0.0728,
+            -0.436,
+            0.1664,
+            0.0372
+          ]
+        ],
+        "W2": [
+          [
+            -0.0136,
+            -0.4352,
+            -0.1216
+          ],
+          [
+            -0.6865,
+            0.3148,
+            -0.1249
+          ],
+          [
+            -0.2228,
+            0.3217,
+            -0.4953
+          ],
+          [
+            0.1606,
+            -0.6193,
+            -0.1986
+          ],
+          [
+            -0.3613,
+            0.4386,
+            0.5298
+          ],
+          [
+            -0.0988,
+            0.2522,
+            -0.054
+          ]
+        ],
+        "b1": [
+          0.0027,
+          -0.0153,
+          0.0165,
+          0.0015,
+          -0.0039,
+          0.0203
+        ],
+        "b2": [
+          0.0057,
+          -0.0075,
+          -0.0171
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -0.2502,
+            -0.1218,
+            -0.1188
+          ],
+          [
+            -0.0221,
+            -0.2764,
+            -0.5222
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            [
+              3,
+              1
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            -0.0427,
+            0.6172,
+            0.085,
+            0.3989
+          ],
+          [
+            -0.0464,
+            -0.0207,
+            0.2266,
+            0.2477
+          ]
+        ],
+        "W2": [
+          [
+            0.0071,
+            0.1369
+          ],
+          [
+            0.0811,
+            -0.4305
+          ],
+          [
+            0.2648,
+            -0.174
+          ],
+          [
+            -0.1505,
+            0.1773
+          ]
+        ],
+        "b1": [
+          -0.0011,
+          -0.0237,
+          -0.0017,
+          0.0069
+        ],
+        "b2": [
+          -0.0073,
+          0.0026
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            0.0479,
+            -0.6016
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              0.5,
+              -0.5,
+              2
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            0.149,
+            -0.0415,
+            0.1943,
+            0.4569,
+            -0.0702,
+            -0.0702,
+            0.4738,
+            0.2302
+          ],
+          [
+            -0.1408,
+            0.1628,
+            -0.139,
+            -0.1397,
+            0.0726,
+            -0.574,
+            -0.5175,
+            -0.1687
+          ],
+          [
+            -0.3038,
+            0.0943,
+            -0.2724,
+            -0.4237,
+            0.4397,
+            -0.0677,
+            0.0203,
+            -0.4274
+          ],
+          [
+            -0.1633,
+            0.0333,
+            -0.3453,
+            0.1127,
+            -0.1802,
+            -0.0875,
+            -0.1805,
+            0.5557
+          ]
+        ],
+        "W2": [
+          [
+            0.2215,
+            0.0514,
+            -0.0347,
+            -0.0903
+          ],
+          [
+            -0.4436,
+            -0.216,
+            -0.1382,
+            0.3171
+          ],
+          [
+            0.1031,
+            -0.5289,
+            0.0972,
+            -0.1155
+          ],
+          [
+            -0.2031,
+            0.1835,
+            0.3093,
+            0.2794
+          ],
+          [
+            -0.2518,
+            -0.0928,
+            0.0994,
+            0.2927
+          ],
+          [
+            -0.1438,
+            -0.0557,
+            -0.3319,
+            -0.3589
+          ],
+          [
+            0.2438,
+            0.4069,
+            -0.0216,
+            0.3011
+          ],
+          [
+            0.1085,
+            -0.1935,
+            0.1084,
+            0.4614
+          ]
+        ],
+        "b1": [
+          -0.0001,
+          -0.0106,
+          0.0082,
+          -0.0122,
+          0.0021,
+          -0.0196,
+          -0.0133,
+          0.002
+        ],
+        "b2": [
+          -0.0004,
+          0.0156,
+          -0.0262,
+          0.0082
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -0.0271,
+            -0.1309,
+            0.3779,
+            0.9302
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              -1,
+              0.5
+            ],
+            [
+              0,
+              2,
+              -1
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            0.5072,
+            -0.1398,
+            0.0098,
+            0.1223,
+            -0.2367,
+            0.0006
+          ],
+          [
+            -0.0003,
+            -0.5264,
+            0.3053,
+            0.1801,
+            -0.1876,
+            -0.0515
+          ],
+          [
+            0.1516,
+            -0.0784,
+            -0.0728,
+            -0.436,
+            0.1664,
+            0.0372
+          ]
+        ],
+        "W2": [
+          [
+            -0.0136,
+            -0.4352,
+            -0.1216
+          ],
+          [
+            -0.6865,
+            0.3148,
+            -0.1249
+          ],
+          [
+            -0.2228,
+            0.3217,
+            -0.4953
+          ],
+          [
+            0.1606,
+            -0.6193,
+            -0.1986
+          ],
+          [
+            -0.3613,
+            0.4386,
+            0.5298
+          ],
+          [
+            -0.0988,
+            0.2522,
+            -0.054
+          ]
+        ],
+        "b1": [
+          0.0027,
+          -0.0153,
+          0.0165,
+          0.0015,
+          -0.0039,
+          0.0203
+        ],
+        "b2": [
+          0.0057,
+          -0.0075,
+          -0.0171
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -0.2502,
+            -0.1218,
+            -0.1188
+          ],
+          [
+            -0.0221,
+            -0.2764,
+            -0.5222
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            [
+              3,
+              1
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            -0.0427,
+            0.6172,
+            0.085,
+            0.3989
+          ],
+          [
+            -0.0464,
+            -0.0207,
+            0.2266,
+            0.2477
+          ]
+        ],
+        "W2": [
+          [
+            0.0071,
+            0.1369
+          ],
+          [
+            0.0811,
+            -0.4305
+          ],
+          [
+            0.2648,
+            -0.174
+          ],
+          [
+            -0.1505,
+            0.1773
+          ]
+        ],
+        "b1": [
+          -0.0011,
+          -0.0237,
+          -0.0017,
+          0.0069
+        ],
+        "b2": [
+          -0.0073,
+          0.0026
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            0.0479,
+            -0.6016
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              0.5,
+              -0.5,
+              2
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            0.149,
+            -0.0415,
+            0.1943,
+            0.4569,
+            -0.0702,
+            -0.0702,
+            0.4738,
+            0.2302
+          ],
+          [
+            -0.1408,
+            0.1628,
+            -0.139,
+            -0.1397,
+            0.0726,
+            -0.574,
+            -0.5175,
+            -0.1687
+          ],
+          [
+            -0.3038,
+            0.0943,
+            -0.2724,
+            -0.4237,
+            0.4397,
+            -0.0677,
+            0.0203,
+            -0.4274
+          ],
+          [
+            -0.1633,
+            0.0333,
+            -0.3453,
+            0.1127,
+            -0.1802,
+            -0.0875,
+            -0.1805,
+            0.5557
+          ]
+        ],
+        "W2": [
+          [
+            0.2215,
+            0.0514,
+            -0.0347,
+            -0.0903
+          ],
+          [
+            -0.4436,
+            -0.216,
+            -0.1382,
+            0.3171
+          ],
+          [
+            0.1031,
+            -0.5289,
+            0.0972,
+            -0.1155
+          ],
+          [
+            -0.2031,
+            0.1835,
+            0.3093,
+            0.2794
+          ],
+          [
+            -0.2518,
+            -0.0928,
+            0.0994,
+            0.2927
+          ],
+          [
+            -0.1438,
+            -0.0557,
+            -0.3319,
+            -0.3589
+          ],
+          [
+            0.2438,
+            0.4069,
+            -0.0216,
+            0.3011
+          ],
+          [
+            0.1085,
+            -0.1935,
+            0.1084,
+            0.4614
+          ]
+        ],
+        "b1": [
+          -0.0001,
+          -0.0106,
+          0.0082,
+          -0.0122,
+          0.0021,
+          -0.0196,
+          -0.0133,
+          0.002
+        ],
+        "b2": [
+          -0.0004,
+          0.0156,
+          -0.0262,
+          0.0082
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -0.0271,
+            -0.1309,
+            0.3779,
+            0.9302
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              -1,
+              0.5
+            ],
+            [
+              0,
+              2,
+              -1
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            0.5072,
+            -0.1398,
+            0.0098,
+            0.1223,
+            -0.2367,
+            0.0006
+          ],
+          [
+            -0.0003,
+            -0.5264,
+            0.3053,
+            0.1801,
+            -0.1876,
+            -0.0515
+          ],
+          [
+            0.1516,
+            -0.0784,
+            -0.0728,
+            -0.436,
+            0.1664,
+            0.0372
+          ]
+        ],
+        "W2": [
+          [
+            -0.0136,
+            -0.4352,
+            -0.1216
+          ],
+          [
+            -0.6865,
+            0.3148,
+            -0.1249
+          ],
+          [
+            -0.2228,
+            0.3217,
+            -0.4953
+          ],
+          [
+            0.1606,
+            -0.6193,
+            -0.1986
+          ],
+          [
+            -0.3613,
+            0.4386,
+            0.5298
+          ],
+          [
+            -0.0988,
+            0.2522,
+            -0.054
+          ]
+        ],
+        "b1": [
+          0.0027,
+          -0.0153,
+          0.0165,
+          0.0015,
+          -0.0039,
+          0.0203
+        ],
+        "b2": [
+          0.0057,
+          -0.0075,
+          -0.0171
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -0.2502,
+            -0.1218,
+            -0.1188
+          ],
+          [
+            -0.0221,
+            -0.2764,
+            -0.5222
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            [
+              3,
+              1
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            -0.0427,
+            0.6172,
+            0.085,
+            0.3989
+          ],
+          [
+            -0.0464,
+            -0.0207,
+            0.2266,
+            0.2477
+          ]
+        ],
+        "W2": [
+          [
+            0.0071,
+            0.1369
+          ],
+          [
+            0.0811,
+            -0.4305
+          ],
+          [
+            0.2648,
+            -0.174
+          ],
+          [
+            -0.1505,
+            0.1773
+          ]
+        ],
+        "b1": [
+          -0.0011,
+          -0.0237,
+          -0.0017,
+          0.0069
+        ],
+        "b2": [
+          -0.0073,
+          0.0026
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            0.0479,
+            -0.6016
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              0.5,
+              -0.5,
+              2
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            0.149,
+            -0.0415,
+            0.1943,
+            0.4569,
+            -0.0702,
+            -0.0702,
+            0.4738,
+            0.2302
+          ],
+          [
+            -0.1408,
+            0.1628,
+            -0.139,
+            -0.1397,
+            0.0726,
+            -0.574,
+            -0.5175,
+            -0.1687
+          ],
+          [
+            -0.3038,
+            0.0943,
+            -0.2724,
+            -0.4237,
+            0.4397,
+            -0.0677,
+            0.0203,
+            -0.4274
+          ],
+          [
+            -0.1633,
+            0.0333,
+            -0.3453,
+            0.1127,
+            -0.1802,
+            -0.0875,
+            -0.1805,
+            0.5557
+          ]
+        ],
+        "W2": [
+          [
+            0.2215,
+            0.0514,
+            -0.0347,
+            -0.0903
+          ],
+          [
+            -0.4436,
+            -0.216,
+            -0.1382,
+            0.3171
+          ],
+          [
+            0.1031,
+            -0.5289,
+            0.0972,
+            -0.1155
+          ],
+          [
+            -0.2031,
+            0.1835,
+            0.3093,
+            0.2794
+          ],
+          [
+            -0.2518,
+            -0.0928,
+            0.0994,
+            0.2927
+          ],
+          [
+            -0.1438,
+            -0.0557,
+            -0.3319,
+            -0.3589
+          ],
+          [
+            0.2438,
+            0.4069,
+            -0.0216,
+            0.3011
+          ],
+          [
+            0.1085,
+            -0.1935,
+            0.1084,
+            0.4614
+          ]
+        ],
+        "b1": [
+          -0.0001,
+          -0.0106,
+          0.0082,
+          -0.0122,
+          0.0021,
+          -0.0196,
+          -0.0133,
+          0.002
+        ],
+        "b2": [
+          -0.0004,
+          0.0156,
+          -0.0262,
+          0.0082
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -0.0271,
+            -0.1309,
+            0.3779,
+            0.9302
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              -1,
+              0.5
+            ],
+            [
+              0,
+              2,
+              -1
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            0.5072,
+            -0.1398,
+            0.0098,
+            0.1223,
+            -0.2367,
+            0.0006
+          ],
+          [
+            -0.0003,
+            -0.5264,
+            0.3053,
+            0.1801,
+            -0.1876,
+            -0.0515
+          ],
+          [
+            0.1516,
+            -0.0784,
+            -0.0728,
+            -0.436,
+            0.1664,
+            0.0372
+          ]
+        ],
+        "W2": [
+          [
+            -0.0136,
+            -0.4352,
+            -0.1216
+          ],
+          [
+            -0.6865,
+            0.3148,
+            -0.1249
+          ],
+          [
+            -0.2228,
+            0.3217,
+            -0.4953
+          ],
+          [
+            0.1606,
+            -0.6193,
+            -0.1986
+          ],
+          [
+            -0.3613,
+            0.4386,
+            0.5298
+          ],
+          [
+            -0.0988,
+            0.2522,
+            -0.054
+          ]
+        ],
+        "b1": [
+          0.0027,
+          -0.0153,
+          0.0165,
+          0.0015,
+          -0.0039,
+          0.0203
+        ],
+        "b2": [
+          0.0057,
+          -0.0075,
+          -0.0171
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -0.2502,
+            -0.1218,
+            -0.1188
+          ],
+          [
+            -0.0221,
+            -0.2764,
+            -0.5222
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            [
+              3,
+              1
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            -0.0427,
+            0.6172,
+            0.085,
+            0.3989
+          ],
+          [
+            -0.0464,
+            -0.0207,
+            0.2266,
+            0.2477
+          ]
+        ],
+        "W2": [
+          [
+            0.0071,
+            0.1369
+          ],
+          [
+            0.0811,
+            -0.4305
+          ],
+          [
+            0.2648,
+            -0.174
+          ],
+          [
+            -0.1505,
+            0.1773
+          ]
+        ],
+        "b1": [
+          -0.0011,
+          -0.0237,
+          -0.0017,
+          0.0069
+        ],
+        "b2": [
+          -0.0073,
+          0.0026
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            0.0479,
+            -0.6016
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              0.5,
+              -0.5,
+              2
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            0.149,
+            -0.0415,
+            0.1943,
+            0.4569,
+            -0.0702,
+            -0.0702,
+            0.4738,
+            0.2302
+          ],
+          [
+            -0.1408,
+            0.1628,
+            -0.139,
+            -0.1397,
+            0.0726,
+            -0.574,
+            -0.5175,
+            -0.1687
+          ],
+          [
+            -0.3038,
+            0.0943,
+            -0.2724,
+            -0.4237,
+            0.4397,
+            -0.0677,
+            0.0203,
+            -0.4274
+          ],
+          [
+            -0.1633,
+            0.0333,
+            -0.3453,
+            0.1127,
+            -0.1802,
+            -0.0875,
+            -0.1805,
+            0.5557
+          ]
+        ],
+        "W2": [
+          [
+            0.2215,
+            0.0514,
+            -0.0347,
+            -0.0903
+          ],
+          [
+            -0.4436,
+            -0.216,
+            -0.1382,
+            0.3171
+          ],
+          [
+            0.1031,
+            -0.5289,
+            0.0972,
+            -0.1155
+          ],
+          [
+            -0.2031,
+            0.1835,
+            0.3093,
+            0.2794
+          ],
+          [
+            -0.2518,
+            -0.0928,
+            0.0994,
+            0.2927
+          ],
+          [
+            -0.1438,
+            -0.0557,
+            -0.3319,
+            -0.3589
+          ],
+          [
+            0.2438,
+            0.4069,
+            -0.0216,
+            0.3011
+          ],
+          [
+            0.1085,
+            -0.1935,
+            0.1084,
+            0.4614
+          ]
+        ],
+        "b1": [
+          -0.0001,
+          -0.0106,
+          0.0082,
+          -0.0122,
+          0.0021,
+          -0.0196,
+          -0.0133,
+          0.002
+        ],
+        "b2": [
+          -0.0004,
+          0.0156,
+          -0.0262,
+          0.0082
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -0.0271,
+            -0.1309,
+            0.3779,
+            0.9302
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              -1,
+              0.5
+            ],
+            [
+              0,
+              2,
+              -1
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            0.5072,
+            -0.1398,
+            0.0098,
+            0.1223,
+            -0.2367,
+            0.0006
+          ],
+          [
+            -0.0003,
+            -0.5264,
+            0.3053,
+            0.1801,
+            -0.1876,
+            -0.0515
+          ],
+          [
+            0.1516,
+            -0.0784,
+            -0.0728,
+            -0.436,
+            0.1664,
+            0.0372
+          ]
+        ],
+        "W2": [
+          [
+            -0.0136,
+            -0.4352,
+            -0.1216
+          ],
+          [
+            -0.6865,
+            0.3148,
+            -0.1249
+          ],
+          [
+            -0.2228,
+            0.3217,
+            -0.4953
+          ],
+          [
+            0.1606,
+            -0.6193,
+            -0.1986
+          ],
+          [
+            -0.3613,
+            0.4386,
+            0.5298
+          ],
+          [
+            -0.0988,
+            0.2522,
+            -0.054
+          ]
+        ],
+        "b1": [
+          0.0027,
+          -0.0153,
+          0.0165,
+          0.0015,
+          -0.0039,
+          0.0203
+        ],
+        "b2": [
+          0.0057,
+          -0.0075,
+          -0.0171
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -0.2502,
+            -0.1218,
+            -0.1188
+          ],
+          [
+            -0.0221,
+            -0.2764,
+            -0.5222
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            [
+              3,
+              1
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            -0.0427,
+            0.6172,
+            0.085,
+            0.3989
+          ],
+          [
+            -0.0464,
+            -0.0207,
+            0.2266,
+            0.2477
+          ]
+        ],
+        "W2": [
+          [
+            0.0071,
+            0.1369
+          ],
+          [
+            0.0811,
+            -0.4305
+          ],
+          [
+            0.2648,
+            -0.174
+          ],
+          [
+            -0.1505,
+            0.1773
+          ]
+        ],
+        "b1": [
+          -0.0011,
+          -0.0237,
+          -0.0017,
+          0.0069
+        ],
+        "b2": [
+          -0.0073,
+          0.0026
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            0.0479,
+            -0.6016
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              0.5,
+              -0.5,
+              2
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            0.149,
+            -0.0415,
+            0.1943,
+            0.4569,
+            -0.0702,
+            -0.0702,
+            0.4738,
+            0.2302
+          ],
+          [
+            -0.1408,
+            0.1628,
+            -0.139,
+            -0.1397,
+            0.0726,
+            -0.574,
+            -0.5175,
+            -0.1687
+          ],
+          [
+            -0.3038,
+            0.0943,
+            -0.2724,
+            -0.4237,
+            0.4397,
+            -0.0677,
+            0.0203,
+            -0.4274
+          ],
+          [
+            -0.1633,
+            0.0333,
+            -0.3453,
+            0.1127,
+            -0.1802,
+            -0.0875,
+            -0.1805,
+            0.5557
+          ]
+        ],
+        "W2": [
+          [
+            0.2215,
+            0.0514,
+            -0.0347,
+            -0.0903
+          ],
+          [
+            -0.4436,
+            -0.216,
+            -0.1382,
+            0.3171
+          ],
+          [
+            0.1031,
+            -0.5289,
+            0.0972,
+            -0.1155
+          ],
+          [
+            -0.2031,
+            0.1835,
+            0.3093,
+            0.2794
+          ],
+          [
+            -0.2518,
+            -0.0928,
+            0.0994,
+            0.2927
+          ],
+          [
+            -0.1438,
+            -0.0557,
+            -0.3319,
+            -0.3589
+          ],
+          [
+            0.2438,
+            0.4069,
+            -0.0216,
+            0.3011
+          ],
+          [
+            0.1085,
+            -0.1935,
+            0.1084,
+            0.4614
+          ]
+        ],
+        "b1": [
+          -0.0001,
+          -0.0106,
+          0.0082,
+          -0.0122,
+          0.0021,
+          -0.0196,
+          -0.0133,
+          0.002
+        ],
+        "b2": [
+          -0.0004,
+          0.0156,
+          -0.0262,
+          0.0082
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -0.0271,
+            -0.1309,
+            0.3779,
+            0.9302
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "transformers-feed-forward-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              -1,
+              0.5
+            ],
+            [
+              0,
+              2,
+              -1
+            ]
+          ]
+        ],
+        "W1": [
+          [
+            0.5072,
+            -0.1398,
+            0.0098,
+            0.1223,
+            -0.2367,
+            0.0006
+          ],
+          [
+            -0.0003,
+            -0.5264,
+            0.3053,
+            0.1801,
+            -0.1876,
+            -0.0515
+          ],
+          [
+            0.1516,
+            -0.0784,
+            -0.0728,
+            -0.436,
+            0.1664,
+            0.0372
+          ]
+        ],
+        "W2": [
+          [
+            -0.0136,
+            -0.4352,
+            -0.1216
+          ],
+          [
+            -0.6865,
+            0.3148,
+            -0.1249
+          ],
+          [
+            -0.2228,
+            0.3217,
+            -0.4953
+          ],
+          [
+            0.1606,
+            -0.6193,
+            -0.1986
+          ],
+          [
+            -0.3613,
+            0.4386,
+            0.5298
+          ],
+          [
+            -0.0988,
+            0.2522,
+            -0.054
+          ]
+        ],
+        "b1": [
+          0.0027,
+          -0.0153,
+          0.0165,
+          0.0015,
+          -0.0039,
+          0.0203
+        ],
+        "b2": [
+          0.0057,
+          -0.0075,
+          -0.0171
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -0.2502,
+            -0.1218,
+            -0.1188
+          ],
+          [
+            -0.0221,
+            -0.2764,
+            -0.5222
+          ]
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "feed_forward",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": "[[[1.0, 0.5, -0.5, 2.0]]]",
+        "description": "Input array (batch, seq_len, d_model)"
+      },
+      {
+        "name": "W1",
+        "type": "array",
+        "example": "[[0.1,-0.2],[0.3,0.1]]",
+        "description": "First layer weights (d_model, d_ff)"
+      },
+      {
+        "name": "b1",
+        "type": "array",
+        "example": "[0.01, -0.01]",
+        "description": "First layer bias (d_ff)"
+      },
+      {
+        "name": "W2",
+        "type": "array",
+        "example": "[[0.1,-0.2],[0.3,0.1]]",
+        "description": "Second layer weights (d_ff, d_model)"
+      },
+      {
+        "name": "b2",
+        "type": "array",
+        "example": "[0.01, -0.01]",
+        "description": "Second layer bias (d_model)"
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "transformer-ffn",
+    "name": "Feed-Forward Network",
+    "description": "Position-wise MLP",
+    "color": "#ec4899"
+  },
+  "paper": {
+    "id": "transformer",
+    "title": "Attention Is All You Need",
+    "authors": "Vaswani et al., 2017",
+    "year": 2017,
+    "paperUrl": "https://arxiv.org/abs/1706.03762",
+    "visualizationComponent": "TransformerArchViz"
+  },
+  "navigation": {
+    "index": 6,
+    "total": 8,
+    "prev": "transformers-multi-head-attention",
+    "next": "transformers-layer-normalization"
+  },
+  "cleanTitle": ""
+}

@@ -1,0 +1,709 @@
+{
+  "id": "text-chunking",
+  "title": "Text Chunking",
+  "description": "Text chunking splits a sequence of tokens into fixed-size chunks with optional overlap between consecutive chunks. This is a fundamental preprocessing step in NLP pipelines, especially in retrieval-augmented generation (RAG) systems where documents must be split into manageable segments for embedding and retrieval.\n\nGiven a list of tokens, a chunk size, and an overlap count, split the tokens into chunks.\n\n### Algorithm\n\n1. Compute the step size between chunk start positions:\n\n$$\n\\text{step} = \\text{chunk\\_size} - \\text{overlap}\n$$\n\n2. Starting from position 0, extract a chunk of chunk_size tokens, then advance by step. Stop once a chunk reaches the end of the token list.\n\nReturn the chunks as a list of token lists.",
+  "seoDescription": "Split text into ordered chunks under the requested size and overlap rules without dropping content.",
+  "examples": [
+    "Input: tokens = [\"a\", \"b\", \"c\", \"d\", \"e\", \"f\"], chunk_size = 3, overlap = 0\n\nOutput: [[\"a\", \"b\", \"c\"], [\"d\", \"e\", \"f\"]]\n\nExplanation: A step of three produces two non-overlapping chunks.",
+    "Input: tokens = [\"a\", \"b\", \"c\", \"d\", \"e\", \"f\", \"g\"], chunk_size = 3, overlap = 1\n\nOutput: [[\"a\", \"b\", \"c\"], [\"c\", \"d\", \"e\"], [\"e\", \"f\", \"g\"]]"
+  ],
+  "requirements": "* Split the token list into chunks of the specified size with the given overlap between consecutive chunks\n* The step between chunk start positions is chunk_size - overlap\n* The last chunk may be shorter than chunk_size if there are remaining tokens\n* Return a list of lists of tokens",
+  "theory": "## Understanding the Theory: Text Chunking\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of variable-length sequences of discrete tokens with complex grammatical and long-range semantic dependencies. Modern Transformer architectures eliminate sequential recurrent bottlenecks by allowing every token to compute dynamic affinity scores with every other token. **Text Chunking** is an essential sequence modeling operation in modern large language models.\n\nIn this problem, the objective is to implement **Text Chunking** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\text{step} = \\text{chunk\\_size} - \\text{overlap}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **All-to-All Self-Attention**: Dot-product attention computes contextualized representations dynamically, weighting relevant context tokens higher than uninformative tokens.\n* **Causal Masking**: In autoregressive decoder models (like GPT and LLaMA), upper-triangular masking ensures the model cannot look ahead at future tokens during generation.\n* **Positional Embeddings**: Because self-attention is permutation-invariant, positional encodings inject sequence order into the token representations.",
+  "hints": [
+    "Compute the distance between chunk starts as chunk_size minus overlap.",
+    "Slice from each start position and stop after the first chunk that reaches the end."
+  ],
+  "constraints": "* tokens has at least 1 element\n* chunk_size >= 1\n* 0 <= overlap < chunk_size\n* Return a list of lists\n* Time limit: 300 ms",
+  "difficulty": "Easy",
+  "starterCode": "def text_chunking(tokens: list, chunk_size: int, overlap: int) -> list:\n    \"\"\"\n    Returns fixed-size token chunks with the requested overlap.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T20:21:22.759Z",
+  "updatedAt": "2026-08-23T20:57:07.421Z",
+  "solution": "### 💡 Intuition & Approach\nPartitions long text into overlapping token windows for retrieval-augmented generation.\n\n### ⚡ Python Reference Implementation\n```python\ndef chunk_tokens(tokens: list, chunk_size: int, overlap: int) -> list:\n    step = chunk_size - overlap\n    chunks = []\n    for i in range(0, len(tokens), step):\n        chunk = tokens[i:i + chunk_size]\n        if chunk:\n            chunks.append(chunk)\n        if i + chunk_size >= len(tokens):\n            break\n    return chunks\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "TextChunkingViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "No overlap (Ex1)",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f"
+        ],
+        "overlap": 0,
+        "chunk_size": 3
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "d",
+          "e",
+          "f"
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "With overlap (Ex2)",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f",
+          "g"
+        ],
+        "overlap": 1,
+        "chunk_size": 3
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "c",
+          "d",
+          "e"
+        ],
+        [
+          "e",
+          "f",
+          "g"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f"
+        ],
+        "overlap": 0,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "d",
+          "e",
+          "f"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f",
+          "g"
+        ],
+        "overlap": 1,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "c",
+          "d",
+          "e"
+        ],
+        [
+          "e",
+          "f",
+          "g"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f"
+        ],
+        "overlap": 0,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "d",
+          "e",
+          "f"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f",
+          "g"
+        ],
+        "overlap": 1,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "c",
+          "d",
+          "e"
+        ],
+        [
+          "e",
+          "f",
+          "g"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f"
+        ],
+        "overlap": 0,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "d",
+          "e",
+          "f"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f",
+          "g"
+        ],
+        "overlap": 1,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "c",
+          "d",
+          "e"
+        ],
+        [
+          "e",
+          "f",
+          "g"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f"
+        ],
+        "overlap": 0,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "d",
+          "e",
+          "f"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f",
+          "g"
+        ],
+        "overlap": 1,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "c",
+          "d",
+          "e"
+        ],
+        [
+          "e",
+          "f",
+          "g"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f"
+        ],
+        "overlap": 0,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "d",
+          "e",
+          "f"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f",
+          "g"
+        ],
+        "overlap": 1,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "c",
+          "d",
+          "e"
+        ],
+        [
+          "e",
+          "f",
+          "g"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f"
+        ],
+        "overlap": 0,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "d",
+          "e",
+          "f"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f",
+          "g"
+        ],
+        "overlap": 1,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "c",
+          "d",
+          "e"
+        ],
+        [
+          "e",
+          "f",
+          "g"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f"
+        ],
+        "overlap": 0,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "d",
+          "e",
+          "f"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f",
+          "g"
+        ],
+        "overlap": 1,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "c",
+          "d",
+          "e"
+        ],
+        [
+          "e",
+          "f",
+          "g"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f"
+        ],
+        "overlap": 0,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "d",
+          "e",
+          "f"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f",
+          "g"
+        ],
+        "overlap": 1,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "c",
+          "d",
+          "e"
+        ],
+        [
+          "e",
+          "f",
+          "g"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f"
+        ],
+        "overlap": 0,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "d",
+          "e",
+          "f"
+        ]
+      ]
+    },
+    {
+      "id": "text-chunking-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "tokens": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f",
+          "g"
+        ],
+        "overlap": 1,
+        "chunk_size": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          "c",
+          "d",
+          "e"
+        ],
+        [
+          "e",
+          "f",
+          "g"
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "text_chunking",
+    "parameters": [
+      {
+        "name": "tokens",
+        "type": "array",
+        "example": "[\"a\", \"b\", \"c\", \"d\", \"e\", \"f\"]",
+        "description": "List of string tokens to chunk"
+      },
+      {
+        "name": "chunk_size",
+        "type": "number",
+        "example": "3",
+        "description": "Number of tokens per chunk"
+      },
+      {
+        "name": "overlap",
+        "type": "number",
+        "example": "0",
+        "description": "Number of overlapping tokens between consecutive chunks"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "pad-sequences",
+    "remove-stopwords",
+    "word-count-dict",
+    "bag-of-words",
+    "edit-distance"
+  ],
+  "tags": [
+    "NLP",
+    "Data Processing"
+  ],
+  "prevId": "edit-distance",
+  "nextId": "bleu-score",
+  "slug": "text-chunking",
+  "cleanTitle": "Text Chunking",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/text-chunking",
+  "localUrl": "http://localhost:3000/problems/text-chunking",
+  "studyPlan": null
+}

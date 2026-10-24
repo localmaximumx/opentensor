@@ -1,0 +1,843 @@
+{
+  "id": "k3-block-attnres",
+  "title": "Block Attention Residuals",
+  "description": "Block Attention Residuals reduces depth memory by summarizing fixed groups of completed layers. The embedding is always source zero. Each completed block contributes the sum of its layer outputs, and a nonempty current block contributes the sum of outputs already produced inside that block.\n\nFor block size $m$, completed block $j$ contains the chronological layer outputs from $jm$ through $(j+1)m-1$:\n\n$$\nB_j=\\sum_{i=jm}^{(j+1)m-1}h_i.\n$$\n\nWhen the number of preceding layers is not divisible by $m$, sum the remaining outputs into one partial-block source. Do not add an empty partial source at an exact block boundary. A supplied helper performs the shared Full Attention Residuals read over the constructed sources. Return a dictionary with retrieved_representation, attention_weights, and block_sources. The tensors preserve the input floating-point dtype and device.",
+  "seoDescription": "Implement Kimi K3 block attention residuals with block-local history, learned mixing weights, and normalized outputs.",
+  "examples": [
+    "Input: embedding = [[[1,0]]], previous_outputs = [], pseudo_query = [1,0.5], block_size = 2, eps = 1e-06\n\nOutput: {\"retrieved_representation\": tensor([[[1.0, 0.0]]]), \"attention_weights\": tensor([[[1.0]]]), \"block_sources\": tensor([[[[1.0, 0.0]]]])}\n\nExplanation: With no previous layer outputs, the embedding is the only block source, so it is returned unchanged with weight 1.",
+    "Input: embedding shape (1, 1, 2), previous outputs shape (3, 1, 1, 2), pseudo-query shape (2,), block size = 2\n\nOutput: {\"retrieved_representation\": tensor of shape (1, 1, 2), \"attention_weights\": tensor of shape (3, 1, 1), \"block_sources\": tensor of shape (3, 1, 1, 2)}",
+    "Input: embedding shape (1, 2, 2), previous outputs shape (4, 1, 2, 2), pseudo-query shape (2,), block size = 2\n\nOutput: {\"retrieved_representation\": tensor of shape (1, 2, 2), \"attention_weights\": tensor of shape (3, 1, 2), \"block_sources\": tensor of shape (3, 1, 2, 2)}"
+  ],
+  "requirements": "- Return a dictionary with exactly retrieved_representation, attention_weights, and block_sources.\n- Keep the embedding as the first source.\n- Sum each consecutive group of block-size layer outputs into one completed source.\n- Add one partial source only when ungrouped layer outputs remain.\n- Preserve tensor dtype and device without mutating inputs.",
+  "theory": "# Block Attention Residuals\n\nBlock Attention Residuals keeps the main benefit of depth attention while storing fewer sources. Instead of retaining every earlier layer output separately, it adds consecutive layer outputs into block summaries. The current layer then retrieves from the embedding, completed block sums, and possibly one partial sum from the block currently being built.\n\n## Why blocks are used\n\nFull Attention Residuals can retrieve from every earlier layer, but the number of stored representations grows with network depth. Block attention reduces this memory by representing a group of nearby layers with one sum.\n\nThe embedding remains its own source because it is the original input to the stack. After that, each complete group of the requested block size contributes one source. If some recent layers do not yet fill a complete block, their sum contributes one partial source.\n\nThis exercise focuses on constructing those sources correctly. Once they are built, the supplied helper performs the same normalized depth-attention read used by the full version.\n\n## Construct completed blocks in order\n\nFor block size $m$, take the preceding layer outputs in chronological order and divide them into consecutive groups of $m$. A complete block sum is\n\n$$\nB_j = \\sum_{i=jm}^{(j+1)m-1} h_i\n$$\n\nDo not average the layers. Summation is the representation defined by the method. Also do not form groups by taking every $m$-th output; each block must contain adjacent layers.\n\nThe source list begins with the embedding, followed by completed block sums from oldest to newest.\n\n## Handle the current partial block\n\nIf the number of preceding outputs is not divisible by the block size, add one more source containing the sum of the remaining recent outputs. This source represents the portion of the current block that has already been produced.\n\nIf the count is exactly divisible by the block size, there is no remainder and therefore no partial source. Adding a zero tensor or an empty sum in this case would create an extra attention option that does not correspond to any representation.\n\n## A concrete grouping example\n\nLet the block size be three and suppose seven preceding layer outputs are available:\n\n- The embedding is source zero.\n- Layers 1, 2, and 3 are summed into the first completed block.\n- Layers 4, 5, and 6 are summed into the second completed block.\n- Layer 7 becomes the partial-block source.\n\nThe helper receives four sources in total. If only six preceding outputs were available, it would receive the embedding and two completed blocks, with no partial source.\n\nSuppose scalar layer outputs are $1,2,3,4$ and block size is three. The first block source is $1+2+3=6$, and the partial source is $4$. Together with an embedding value of $5$, the depth sources are $[5,6,4]$. The attention helper scores and mixes these three values.\n\n## Retrieval uses the shared full-attention rule\n\nAfter source construction, the helper RMS-normalizes each source for scoring, compares it with the pseudo-query, applies softmax over the source axis, and mixes the original sources. You do not need to duplicate this logic.\n\nThe returned block-source tensor matters as much as the retrieved value. It allows the tests to verify grouping, ordering, and exact-boundary behavior directly.\n\n## Implementation order\n\n- Begin the source list with the embedding.\n- Determine how many complete groups of the requested block size exist.\n- Sum every complete consecutive group and append it in chronological order.\n- If outputs remain, sum them into exactly one partial source.\n- Stack the sources and pass them to the supplied retrieval helper.\n- Return the retrieved value, attention weights, and source stack in that order.\n\n## Common mistakes to avoid\n\n- **Averaging within blocks.** Block representations are sums.\n- **Dropping the embedding.** It is always the first source.\n- **Adding an empty partial block.** Exact block boundaries must not create an extra source.\n- **Reordering layers.** Blocks are chronological groups of consecutive outputs.\n- **Returning only the attention result.** The problem also requires weights and the constructed block sources.\n",
+  "hints": [
+    "Use the layer-count remainder to separate complete blocks from a possible partial block.",
+    "Sum each complete slice along the layer dimension before stacking the sources.",
+    "Append the partial sum only when the remainder is nonzero, then call the supplied helper."
+  ],
+  "constraints": "- Preceding outputs are ordered chronologically and may contain zero layers.\n- Block size is a positive integer.\n- Embedding and layer outputs share shape (batch, sequence, width).\n- The pseudo-query has length equal to the feature width.",
+  "difficulty": "Hard",
+  "starterCode": "import torch\n\ndef _read_depth_sources(sources, pseudo_query, eps):\n    normalized = sources / torch.sqrt(sources.square().mean(dim=-1, keepdim=True) + eps)\n    logits = (normalized * pseudo_query).sum(dim=-1)\n    weights = torch.softmax(logits, dim=0)\n    retrieved = (weights.unsqueeze(-1) * sources).sum(dim=0)\n    return retrieved, weights\n\ndef block_attention_residual(embedding: torch.Tensor, previous_outputs: torch.Tensor, pseudo_query: torch.Tensor, block_size: int, eps: float = 1e-6) -> dict[str, torch.Tensor]:\n    \"\"\"\n    Returns a dictionary containing the retrieved values, depth weights, and block sources.\n    \"\"\"\n    pass",
+  "createdAt": "2026-07-29T07:43:16.647Z",
+  "updatedAt": "2026-09-03T19:22:49.691Z",
+  "topicId": "k3-block-attnres",
+  "paperSnippet": "\"block-level representations\"",
+  "visualizationComponent": "K3BlockAttnResViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Block Attention Residuals** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch\n\ndef _read_depth_sources(sources, pseudo_query, eps):\n    norm = sources / torch.sqrt(sources.square().mean(dim=-1, keepdim=True) + eps)\n    logits = (norm * pseudo_query).sum(dim=-1)\n    weights = torch.softmax(logits, dim=0)\n    retrieved = (weights.unsqueeze(-1) * sources).sum(dim=0)\n    return retrieved, weights\n\ndef block_attention_residual(embedding: torch.Tensor, previous_outputs: torch.Tensor, pseudo_query: torch.Tensor, block_size: int, eps: float = 1e-6) -> dict[str, torch.Tensor]:\n    emb = embedding if isinstance(embedding, torch.Tensor) else torch.tensor(embedding, dtype=torch.float64)\n    pq = pseudo_query if isinstance(pseudo_query, torch.Tensor) else torch.tensor(pseudo_query, dtype=torch.float64)\n    m = int(block_size)\n    eps_val = float(eps)\n    \n    if isinstance(previous_outputs, torch.Tensor) and previous_outputs.numel() > 0:\n        prev_list = [previous_outputs[i] for i in range(previous_outputs.shape[0])]\n    elif isinstance(previous_outputs, list):\n        prev_list = [torch.tensor(x, dtype=emb.dtype) for x in previous_outputs]\n    else:\n        prev_list = []\n        \n    sources = [emb]\n    P = len(prev_list)\n    num_full = P // m\n    for j in range(num_full):\n        block_sum = torch.stack(prev_list[j*m : (j+1)*m], dim=0).sum(dim=0)\n        sources.append(block_sum)\n    if P % m != 0:\n        partial_sum = torch.stack(prev_list[num_full*m : P], dim=0).sum(dim=0)\n        sources.append(partial_sum)\n        \n    stacked_sources = torch.stack(sources, dim=0)\n    retrieved, weights = _read_depth_sources(stacked_sources, pq, eps_val)\n    return {\n        \"retrieved_representation\": torch.round(retrieved * 1e6) / 1e6,\n        \"attention_weights\": torch.round(weights * 1e6) / 1e6,\n        \"block_sources\": torch.round(stacked_sources * 1e6) / 1e6\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "First layer in a block",
+      "inputs": {
+        "eps": 1e-06,
+        "embedding": [
+          [
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "block_size": 2,
+        "pseudo_query": [
+          1,
+          0.5
+        ],
+        "previous_outputs": []
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "retrieved_representation": [
+          [
+            [
+              1.0,
+              0.0
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0
+            ]
+          ]
+        ],
+        "block_sources": [
+          [
+            [
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Current partial block",
+      "inputs": {
+        "eps": 1e-06,
+        "embedding": [
+          [
+            [
+              1,
+              -0.5
+            ]
+          ]
+        ],
+        "block_size": 2,
+        "pseudo_query": [
+          0.4,
+          1.2
+        ],
+        "previous_outputs": [
+          [
+            [
+              [
+                0.5,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                1.5,
+                0.25
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                -0.25,
+                0.75
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "retrieved_representation": [
+          [
+            [
+              0.859196,
+              0.863662
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              0.086941
+            ]
+          ],
+          [
+            [
+              0.444676
+            ]
+          ],
+          [
+            [
+              0.468384
+            ]
+          ]
+        ],
+        "block_sources": [
+          [
+            [
+              [
+                1.0,
+                -0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                2.0,
+                1.25
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                -0.25,
+                0.75
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-3",
+      "name": "Exact block boundary",
+      "inputs": {
+        "eps": 1e-05,
+        "embedding": [
+          [
+            [
+              0.5,
+              1
+            ],
+            [
+              1,
+              -0.5
+            ]
+          ]
+        ],
+        "block_size": 2,
+        "pseudo_query": [
+          1,
+          -0.25
+        ],
+        "previous_outputs": [
+          [
+            [
+              [
+                1,
+                0
+              ],
+              [
+                0.5,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                2
+              ],
+              [
+                -0.5,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                1.5,
+                -0.5
+              ],
+              [
+                1,
+                0.25
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.25,
+                0.75
+              ],
+              [
+                0,
+                1.5
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "retrieved_representation": [
+          [
+            [
+              1.334342,
+              0.769573
+            ],
+            [
+              0.889169,
+              0.24864
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              0.207829,
+              0.654956
+            ]
+          ],
+          [
+            [
+              0.207829,
+              0.110831
+            ]
+          ],
+          [
+            [
+              0.584342,
+              0.234213
+            ]
+          ]
+        ],
+        "block_sources": [
+          [
+            [
+              [
+                0.5,
+                1.0
+              ],
+              [
+                1.0,
+                -0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                1.0,
+                2.0
+              ],
+              [
+                0.0,
+                1.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                1.75,
+                0.25
+              ],
+              [
+                1.0,
+                1.75
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "k3-block-attnres-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "eps": 0.0,
+        "embedding": [
+          [
+            [
+              2,
+              1
+            ]
+          ]
+        ],
+        "block_size": 4,
+        "pseudo_query": [
+          2,
+          1.0
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[2., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[2., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "eps": 0.0,
+        "embedding": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "block_size": 1,
+        "pseudo_query": [
+          0,
+          0.25
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[1., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[1., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "eps": 1.0,
+        "embedding": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "block_size": 2,
+        "pseudo_query": [
+          2,
+          1.5
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[1., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[1., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "eps": 0.0,
+        "embedding": [
+          [
+            [
+              2,
+              1
+            ]
+          ]
+        ],
+        "block_size": 3,
+        "pseudo_query": [
+          2,
+          0.75
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[2., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[2., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "eps": 0.0,
+        "embedding": [
+          [
+            [
+              3,
+              1
+            ]
+          ]
+        ],
+        "block_size": 6,
+        "pseudo_query": [
+          3,
+          1.5
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[3., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[3., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "eps": 0.0,
+        "embedding": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "block_size": 1,
+        "pseudo_query": [
+          0,
+          0.125
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[1., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[1., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "eps": 2.0,
+        "embedding": [
+          [
+            [
+              2,
+              1
+            ]
+          ]
+        ],
+        "block_size": 4,
+        "pseudo_query": [
+          3,
+          2.5
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[2., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[2., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "eps": 0.0,
+        "embedding": [
+          [
+            [
+              4,
+              1
+            ]
+          ]
+        ],
+        "block_size": 8,
+        "pseudo_query": [
+          4,
+          2.0
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[4., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[4., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "eps": 0.0,
+        "embedding": [
+          [
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "block_size": 2,
+        "pseudo_query": [
+          0.5,
+          1
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[0., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[0., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "eps": 0.0,
+        "embedding": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "block_size": 2,
+        "pseudo_query": [
+          1,
+          0.375
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[1., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[1., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "eps": 0.0,
+        "embedding": [
+          [
+            [
+              5,
+              1
+            ]
+          ]
+        ],
+        "block_size": 10,
+        "pseudo_query": [
+          5,
+          2.5
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[5., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[5., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "eps": 3.0,
+        "embedding": [
+          [
+            [
+              3,
+              1
+            ]
+          ]
+        ],
+        "block_size": 6,
+        "pseudo_query": [
+          4,
+          3.5
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[3., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[3., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "eps": 0.0,
+        "embedding": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "block_size": 2,
+        "pseudo_query": [
+          1,
+          0.4
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[1., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[1., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "eps": 0.0,
+        "embedding": [
+          [
+            [
+              6,
+              1
+            ]
+          ]
+        ],
+        "block_size": 12,
+        "pseudo_query": [
+          6,
+          3.0
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[6., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[6., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "eps": 4.0,
+        "embedding": [
+          [
+            [
+              4,
+              1
+            ]
+          ]
+        ],
+        "block_size": 8,
+        "pseudo_query": [
+          5,
+          4.5
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[4., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[4., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "eps": 0.0,
+        "embedding": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "block_size": 2,
+        "pseudo_query": [
+          1,
+          0.6
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[1., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[1., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-block-attnres-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "eps": 0.0,
+        "embedding": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "block_size": 1,
+        "pseudo_query": [
+          0,
+          0.2
+        ],
+        "previous_outputs": []
+      },
+      "expectedOutput": {
+        "retrieved_representation": "tensor([[[1., 1.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)",
+        "block_sources": "tensor([[[[1., 1.]]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "block_attention_residual",
+    "runtime": "pytorch",
+    "parameters": [
+      {
+        "name": "embedding",
+        "type": "array",
+        "example": "[[[1,0]]]",
+        "description": "Token embeddings."
+      },
+      {
+        "name": "previous_outputs",
+        "type": "array",
+        "example": "[]",
+        "description": "Chronological layer outputs."
+      },
+      {
+        "name": "pseudo_query",
+        "type": "array",
+        "example": "[1,0.5]",
+        "description": "Learned depth query."
+      },
+      {
+        "name": "block_size",
+        "type": "number",
+        "example": "2",
+        "description": "Layers in each block."
+      },
+      {
+        "name": "eps",
+        "type": "number",
+        "example": "0.000001",
+        "description": "Normalization constant."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "k3-block-attnres",
+    "name": "Block AttnRes",
+    "description": "Retrieve from completed block summaries and the current block's partial sum.",
+    "color": "#ec4899"
+  },
+  "paper": {
+    "id": "kimik3",
+    "title": "Kimi K3",
+    "authors": "Kimi Team",
+    "year": 2026,
+    "paperUrl": "https://github.com/MoonshotAI/Kimi-K3/blob/main/k3_tech_report.pdf",
+    "visualizationComponent": "KimiK3ArchViz"
+  },
+  "navigation": {
+    "index": 4,
+    "total": 11,
+    "prev": "k3-full-attnres",
+    "next": "k3-situ-glu"
+  },
+  "cleanTitle": ""
+}

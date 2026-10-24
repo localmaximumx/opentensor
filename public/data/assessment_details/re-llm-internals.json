@@ -1,0 +1,1441 @@
+{
+  "id": "re-llm-internals",
+  "name": "LLM Internals",
+  "description": "Attention, normalization, positional encodings, and decoding building blocks implemented in PyTorch.",
+  "durationMin": 45,
+  "categoryId": "research-engineer",
+  "isFree": false,
+  "sets": [
+    {
+      "id": "re-llm-internals-set-1",
+      "name": "Set 1",
+      "sortOrder": 0,
+      "problems": [
+        {
+          "slug": "re-rope",
+          "type": "code",
+          "title": "Rotary Position Embedding",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `Rotary Position Embedding` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "import math\ndef solve(x, position, theta=10000.0):\n    pass",
+            "solution": "import math\ndef solve(x, position, theta=10000.0):\n    # x has even length; pairwise 2D rotation, frequency theta^(-2i/d)\n    d=len(x); out=[0.0]*d\n    for i in range(0,d,2):\n      freq=theta**(-i/d); a=position*freq; c=math.cos(a); s=math.sin(a)\n      out[i]=x[i]*c-x[i+1]*s; out[i+1]=x[i]*s+x[i+1]*c\n    return out",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    1.0,
+                    0.0,
+                    1.0,
+                    0.0
+                  ],
+                  1
+                ],
+                "expected": [
+                  0.5403023058681398,
+                  0.8414709848078965,
+                  0.9999500004166653,
+                  0.009999833334166664
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    1.0,
+                    0.0,
+                    1.0,
+                    0.0
+                  ],
+                  1
+                ],
+                "output": [
+                  0.5403023058681398,
+                  0.8414709848078965,
+                  0.9999500004166653,
+                  0.009999833334166664
+                ],
+                "explanation": "Illustrative small example for rotary position embedding."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-attn-scaled-dot-product",
+          "type": "code",
+          "title": "Scaled Dot-Product Attention",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `Scaled Dot-Product Attention` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "import math\ndef solve(Q,K,V):\n    pass",
+            "solution": "import math\ndef solve(Q,K,V):\n    scores=[[sum(a*b for a,b in zip(q,k))/math.sqrt(len(q)) for k in K] for q in Q]\n    out=[]\n    for row in scores:\n      m=max(row); e=[math.exp(v-m) for v in row]; z=sum(e); p=[v/z for v in e]\n      out.append([sum(p[t]*V[t][j] for t in range(len(V))) for j in range(len(V[0]))])\n    return out",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    [
+                      1.0,
+                      0.0
+                    ]
+                  ],
+                  [
+                    [
+                      1.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      1.0
+                    ]
+                  ],
+                  [
+                    [
+                      1.0,
+                      2.0
+                    ],
+                    [
+                      3.0,
+                      4.0
+                    ]
+                  ]
+                ],
+                "expected": [
+                  [
+                    1.6604769013466862,
+                    2.6604769013466862
+                  ]
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    [
+                      1.0,
+                      0.0
+                    ]
+                  ],
+                  [
+                    [
+                      1.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      1.0
+                    ]
+                  ],
+                  [
+                    [
+                      1.0,
+                      2.0
+                    ],
+                    [
+                      3.0,
+                      4.0
+                    ]
+                  ]
+                ],
+                "output": [
+                  [
+                    1.6604769013466862,
+                    2.6604769013466862
+                  ]
+                ],
+                "explanation": "Illustrative small example for scaled dot-product attention."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-kv-cache-append",
+          "type": "code",
+          "title": "KV Cache Append",
+          "difficulty": "easy",
+          "challenge": {
+            "problemStatement": "Implement `KV Cache Append` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "def solve(cache, new_values):\n    pass",
+            "solution": "def solve(cache, new_values):\n    return list(cache)+list(new_values)",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    [
+                      1,
+                      2
+                    ]
+                  ],
+                  [
+                    [
+                      3,
+                      4
+                    ]
+                  ]
+                ],
+                "expected": [
+                  [
+                    1,
+                    2
+                  ],
+                  [
+                    3,
+                    4
+                  ]
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    [
+                      1,
+                      2
+                    ]
+                  ],
+                  [
+                    [
+                      3,
+                      4
+                    ]
+                  ]
+                ],
+                "output": [
+                  [
+                    1,
+                    2
+                  ],
+                  [
+                    3,
+                    4
+                  ]
+                ],
+                "explanation": "Illustrative small example for kv cache append."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        }
+      ],
+      "totalCount": 3,
+      "completed": false
+    },
+    {
+      "id": "re-llm-internals-set-2",
+      "name": "Set 2",
+      "sortOrder": 1,
+      "problems": [
+        {
+          "slug": "re-rmsnorm",
+          "type": "code",
+          "title": "RMS Normalization",
+          "difficulty": "easy",
+          "challenge": {
+            "problemStatement": "Implement `RMS Normalization` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "import math\ndef solve(x, weight=None, eps=1e-6):\n    pass",
+            "solution": "import math\ndef solve(x, weight=None, eps=1e-6):\n    weight=weight or [1.0]*len(x)\n    rms=math.sqrt(sum(v*v for v in x)/len(x)+eps)\n    return [v/rms*w for v,w in zip(x,weight)]",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    1.0,
+                    2.0,
+                    3.0
+                  ]
+                ],
+                "expected": [
+                  0.4629100002887783,
+                  0.9258200005775566,
+                  1.388730000866335
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    1.0,
+                    2.0,
+                    3.0
+                  ]
+                ],
+                "output": [
+                  0.4629100002887783,
+                  0.9258200005775566,
+                  1.388730000866335
+                ],
+                "explanation": "Illustrative small example for rms normalization."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-temperature-softmax",
+          "type": "code",
+          "title": "Temperature Softmax",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `Temperature Softmax` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "import math\ndef solve(logits, temperature):\n    pass",
+            "solution": "import math\ndef solve(logits, temperature):\n    if temperature<=0: raise ValueError(\"temperature must be positive\")\n    z=[v/temperature for v in logits]; m=max(z); e=[math.exp(v-m) for v in z]; s=sum(e)\n    return [v/s for v in e]",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    1.0,
+                    2.0,
+                    3.0
+                  ],
+                  1.0
+                ],
+                "expected": [
+                  0.09003057317038046,
+                  0.24472847105479764,
+                  0.6652409557748218
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    1.0,
+                    2.0,
+                    3.0
+                  ],
+                  1.0
+                ],
+                "output": [
+                  0.09003057317038046,
+                  0.24472847105479764,
+                  0.6652409557748218
+                ],
+                "explanation": "Illustrative small example for temperature softmax."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-attn-causal-mask",
+          "type": "code",
+          "title": "Causal Masked Attention",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `Causal Masked Attention` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "import math\ndef solve(Q,K,V):\n    pass",
+            "solution": "import math\ndef solve(Q,K,V):\n    n=len(Q); d=len(Q[0]); out=[]\n    for i,q in enumerate(Q):\n      scores=[sum(a*b for a,b in zip(q,K[j]))/math.sqrt(d) if j<=i else float(\"-inf\") for j in range(n)]\n      m=max(scores); e=[0 if v==float(\"-inf\") else math.exp(v-m) for v in scores]; z=sum(e); p=[v/z for v in e]\n      out.append([sum(p[j]*V[j][c] for j in range(n)) for c in range(len(V[0]))])\n    return out",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    [
+                      1.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      1.0
+                    ]
+                  ],
+                  [
+                    [
+                      1.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      1.0
+                    ]
+                  ],
+                  [
+                    [
+                      1.0,
+                      2.0
+                    ],
+                    [
+                      3.0,
+                      4.0
+                    ]
+                  ]
+                ],
+                "expected": [
+                  [
+                    1.0,
+                    2.0
+                  ],
+                  [
+                    2.3395230986533138,
+                    3.3395230986533138
+                  ]
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    [
+                      1.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      1.0
+                    ]
+                  ],
+                  [
+                    [
+                      1.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      1.0
+                    ]
+                  ],
+                  [
+                    [
+                      1.0,
+                      2.0
+                    ],
+                    [
+                      3.0,
+                      4.0
+                    ]
+                  ]
+                ],
+                "output": [
+                  [
+                    1.0,
+                    2.0
+                  ],
+                  [
+                    2.3395230986533138,
+                    3.3395230986533138
+                  ]
+                ],
+                "explanation": "Illustrative small example for causal masked attention."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        }
+      ],
+      "totalCount": 3,
+      "completed": false
+    },
+    {
+      "id": "re-llm-internals-set-3",
+      "name": "Set 3",
+      "sortOrder": 2,
+      "problems": [
+        {
+          "slug": "re-pos-sinusoidal",
+          "type": "code",
+          "title": "Sinusoidal Positional Encoding",
+          "difficulty": "easy",
+          "challenge": {
+            "problemStatement": "Implement `Sinusoidal Positional Encoding` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "import math\ndef solve(position,d_model):\n    pass",
+            "solution": "import math\ndef solve(position,d_model):\n    out=[]\n    for i in range(d_model):\n      angle=position/(10000**(2*(i//2)/d_model))\n      out.append(math.sin(angle) if i%2==0 else math.cos(angle))\n    return out",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  0,
+                  4
+                ],
+                "expected": [
+                  0.0,
+                  1.0,
+                  0.0,
+                  1.0
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  0,
+                  4
+                ],
+                "output": [
+                  0.0,
+                  1.0,
+                  0.0,
+                  1.0
+                ],
+                "explanation": "Illustrative small example for sinusoidal positional encoding."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-attn-multi-head",
+          "type": "code",
+          "title": "Multi-Head Attention",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `Multi-Head Attention` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "import math\ndef solve(Q,K,V,num_heads):\n    pass",
+            "solution": "import math\ndef solve(Q,K,V,num_heads):\n    # Q/K/V: sequence x d_model; split dimensions evenly across heads and concatenate outputs.\n    d=len(Q[0])\n    if d%num_heads: raise ValueError(\"d_model must divide by num_heads\")\n    dh=d//num_heads; result=[[0.0]*d for _ in Q]\n    for h in range(num_heads):\n      q=[[v[h*dh:(h+1)*dh] for v in Q][i] for i in range(len(Q))]\n      k=[v[h*dh:(h+1)*dh] for v in K]; val=[v[h*dh:(h+1)*dh] for v in V]\n      for i,row in enumerate(q):\n       scores=[sum(a*b for a,b in zip(row,kk))/math.sqrt(dh) for kk in k]\n       m=max(scores); e=[math.exp(s-m) for s in scores]; z=sum(e); p=[a/z for a in e]\n       for c in range(dh): result[i][h*dh+c]=sum(p[j]*val[j][c] for j in range(len(val)))\n    return result",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    [
+                      1.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      1.0
+                    ]
+                  ],
+                  [
+                    [
+                      1.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      1.0
+                    ]
+                  ],
+                  [
+                    [
+                      1.0,
+                      2.0
+                    ],
+                    [
+                      3.0,
+                      4.0
+                    ]
+                  ],
+                  1
+                ],
+                "expected": [
+                  [
+                    1.6604769013466862,
+                    2.6604769013466862
+                  ],
+                  [
+                    2.3395230986533138,
+                    3.3395230986533138
+                  ]
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    [
+                      1.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      1.0
+                    ]
+                  ],
+                  [
+                    [
+                      1.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      1.0
+                    ]
+                  ],
+                  [
+                    [
+                      1.0,
+                      2.0
+                    ],
+                    [
+                      3.0,
+                      4.0
+                    ]
+                  ],
+                  1
+                ],
+                "output": [
+                  [
+                    1.6604769013466862,
+                    2.6604769013466862
+                  ],
+                  [
+                    2.3395230986533138,
+                    3.3395230986533138
+                  ]
+                ],
+                "explanation": "Illustrative small example for multi-head attention."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-swiglu",
+          "type": "code",
+          "title": "SwiGLU Activation",
+          "difficulty": "easy",
+          "challenge": {
+            "problemStatement": "Implement `SwiGLU Activation` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "import math\ndef solve(x, gate_weights, value_weights):\n    pass",
+            "solution": "import math\ndef solve(x, gate_weights, value_weights):\n    def silu(z): return z/(1+math.exp(-max(-60,min(60,z))))\n    gate=[sum(a*b for a,b in zip(x,row)) for row in gate_weights]\n    val=[sum(a*b for a,b in zip(x,row)) for row in value_weights]\n    return [silu(g)*v for g,v in zip(gate,val)]",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    1.0,
+                    2.0
+                  ],
+                  [
+                    [
+                      1.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      1.0
+                    ]
+                  ],
+                  [
+                    [
+                      2.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      3.0
+                    ]
+                  ]
+                ],
+                "expected": [
+                  1.4621171572600098,
+                  10.569564935734588
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    1.0,
+                    2.0
+                  ],
+                  [
+                    [
+                      1.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      1.0
+                    ]
+                  ],
+                  [
+                    [
+                      2.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      3.0
+                    ]
+                  ]
+                ],
+                "output": [
+                  1.4621171572600098,
+                  10.569564935734588
+                ],
+                "explanation": "Illustrative small example for swiglu activation."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        }
+      ],
+      "totalCount": 3,
+      "completed": false
+    },
+    {
+      "id": "re-llm-internals-set-4",
+      "name": "Set 4",
+      "sortOrder": 3,
+      "problems": [
+        {
+          "slug": "re-muon-update",
+          "type": "code",
+          "title": "Muon Scaled Update",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `Muon Scaled Update` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "def solve(gradient, learning_rate, scale=1.0):\n    pass",
+            "solution": "def solve(gradient, learning_rate, scale=1.0):\n    # Simple scaled gradient update; returns parameter delta (not a full Muon optimizer).\n    return [[-learning_rate*scale*v for v in row] for row in gradient]",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    [
+                      1.0,
+                      2.0
+                    ],
+                    [
+                      3.0,
+                      4.0
+                    ]
+                  ],
+                  0.1,
+                  1.0
+                ],
+                "expected": [
+                  [
+                    -0.1,
+                    -0.2
+                  ],
+                  [
+                    -0.30000000000000004,
+                    -0.4
+                  ]
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    [
+                      1.0,
+                      2.0
+                    ],
+                    [
+                      3.0,
+                      4.0
+                    ]
+                  ],
+                  0.1,
+                  1.0
+                ],
+                "output": [
+                  [
+                    -0.1,
+                    -0.2
+                  ],
+                  [
+                    -0.30000000000000004,
+                    -0.4
+                  ]
+                ],
+                "explanation": "Illustrative small example for muon scaled update."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-attn-gqa",
+          "type": "code",
+          "title": "Grouped Query Attention",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `Grouped Query Attention` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "import math\ndef solve(Q,K,V,num_query_heads):\n    pass",
+            "solution": "import math\ndef solve(Q,K,V,num_query_heads):\n    # Each K/V head serves a contiguous group of query heads; tensors are head x seq x dim.\n    Hq=len(Q); Hkv=len(K)\n    if Hq%Hkv: raise ValueError(\"query heads must be divisible by KV heads\")\n    group=Hq//Hkv; out=[]\n    for h in range(Hq):\n      kh=h//group; headout=[]\n      for q in Q[h]:\n       scores=[sum(a*b for a,b in zip(q,k))/math.sqrt(len(q)) for k in K[kh]]\n       m=max(scores); e=[math.exp(s-m) for s in scores]; z=sum(e); p=[v/z for v in e]\n       headout.append([sum(p[t]*V[kh][t][j] for t in range(len(p))) for j in range(len(V[kh][0]))])\n      out.append(headout)\n    return out",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    [
+                      [
+                        1.0,
+                        0.0
+                      ],
+                      [
+                        0.0,
+                        1.0
+                      ]
+                    ],
+                    [
+                      [
+                        1.0,
+                        1.0
+                      ],
+                      [
+                        1.0,
+                        0.0
+                      ]
+                    ]
+                  ],
+                  [
+                    [
+                      [
+                        1.0,
+                        0.0
+                      ],
+                      [
+                        0.0,
+                        1.0
+                      ]
+                    ]
+                  ],
+                  [
+                    [
+                      [
+                        1.0,
+                        2.0
+                      ],
+                      [
+                        3.0,
+                        4.0
+                      ]
+                    ]
+                  ],
+                  2
+                ],
+                "expected": [
+                  [
+                    [
+                      1.6604769013466862,
+                      2.6604769013466862
+                    ],
+                    [
+                      2.3395230986533138,
+                      3.3395230986533138
+                    ]
+                  ],
+                  [
+                    [
+                      2.0,
+                      3.0
+                    ],
+                    [
+                      1.6604769013466862,
+                      2.6604769013466862
+                    ]
+                  ]
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    [
+                      [
+                        1.0,
+                        0.0
+                      ],
+                      [
+                        0.0,
+                        1.0
+                      ]
+                    ],
+                    [
+                      [
+                        1.0,
+                        1.0
+                      ],
+                      [
+                        1.0,
+                        0.0
+                      ]
+                    ]
+                  ],
+                  [
+                    [
+                      [
+                        1.0,
+                        0.0
+                      ],
+                      [
+                        0.0,
+                        1.0
+                      ]
+                    ]
+                  ],
+                  [
+                    [
+                      [
+                        1.0,
+                        2.0
+                      ],
+                      [
+                        3.0,
+                        4.0
+                      ]
+                    ]
+                  ],
+                  2
+                ],
+                "output": [
+                  [
+                    [
+                      1.6604769013466862,
+                      2.6604769013466862
+                    ],
+                    [
+                      2.3395230986533138,
+                      3.3395230986533138
+                    ]
+                  ],
+                  [
+                    [
+                      2.0,
+                      3.0
+                    ],
+                    [
+                      1.6604769013466862,
+                      2.6604769013466862
+                    ]
+                  ]
+                ],
+                "explanation": "Illustrative small example for grouped query attention."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-layernorm-backward",
+          "type": "code",
+          "title": "LayerNorm Backward",
+          "difficulty": "hard",
+          "challenge": {
+            "problemStatement": "Implement `LayerNorm Backward` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "import math\ndef solve(x, grad, gamma=None, eps=1e-5):\n    pass",
+            "solution": "import math\ndef solve(x, grad, gamma=None, eps=1e-5):\n    n=len(x); gamma=gamma or [1.0]*n; mu=sum(x)/n\n    var=sum((v-mu)**2 for v in x)/n; inv=1/math.sqrt(var+eps)\n    z=[(v-mu)*inv for v in x]; g=[grad[i]*gamma[i] for i in range(n)]\n    return [inv*(g[i]-sum(g)/n-z[i]*sum(g[j]*z[j] for j in range(n))/n) for i in range(n)]",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    1.0,
+                    2.0,
+                    3.0
+                  ],
+                  [
+                    1.0,
+                    1.0,
+                    1.0
+                  ]
+                ],
+                "expected": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    1.0,
+                    2.0,
+                    3.0
+                  ],
+                  [
+                    1.0,
+                    1.0,
+                    1.0
+                  ]
+                ],
+                "output": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "explanation": "Illustrative small example for layernorm backward."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        }
+      ],
+      "totalCount": 3,
+      "completed": false
+    }
+  ],
+  "currentSet": {
+    "id": "re-llm-internals-set-1",
+    "name": "Set 1",
+    "sortOrder": 0,
+    "problems": [
+      {
+        "slug": "re-rope",
+        "type": "code",
+        "title": "Rotary Position Embedding",
+        "difficulty": "medium",
+        "challenge": {
+          "problemStatement": "Implement `Rotary Position Embedding` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+          "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+          "requirements": [
+            "Implement a function named `solve` with the signature shown in the reference solution.",
+            "Return the value described by the function contract; do not print it.",
+            "Keep output deterministic for the same input."
+          ],
+          "constraints": [
+            "Inputs are small enough for a straightforward reference implementation.",
+            "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+            "Unless otherwise stated, dimensions must be consistent."
+          ],
+          "hints": [
+            "Implement the small mathematical contract first; do not add production-only model machinery.",
+            "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+          ],
+          "starterCode": "import math\ndef solve(x, position, theta=10000.0):\n    pass",
+          "solution": "import math\ndef solve(x, position, theta=10000.0):\n    # x has even length; pairwise 2D rotation, frequency theta^(-2i/d)\n    d=len(x); out=[0.0]*d\n    for i in range(0,d,2):\n      freq=theta**(-i/d); a=position*freq; c=math.cos(a); s=math.sin(a)\n      out[i]=x[i]*c-x[i+1]*s; out[i+1]=x[i]*s+x[i+1]*c\n    return out",
+          "testCases": [
+            {
+              "name": "smoke test",
+              "args": [
+                [
+                  1.0,
+                  0.0,
+                  1.0,
+                  0.0
+                ],
+                1
+              ],
+              "expected": [
+                0.5403023058681398,
+                0.8414709848078965,
+                0.9999500004166653,
+                0.009999833334166664
+              ],
+              "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+            }
+          ],
+          "examples": [
+            {
+              "inputArgs": [
+                [
+                  1.0,
+                  0.0,
+                  1.0,
+                  0.0
+                ],
+                1
+              ],
+              "output": [
+                0.5403023058681398,
+                0.8414709848078965,
+                0.9999500004166653,
+                0.009999833334166664
+              ],
+              "explanation": "Illustrative small example for rotary position embedding."
+            }
+          ],
+          "reconstructionStatus": "authored_reconstruction"
+        }
+      },
+      {
+        "slug": "re-attn-scaled-dot-product",
+        "type": "code",
+        "title": "Scaled Dot-Product Attention",
+        "difficulty": "medium",
+        "challenge": {
+          "problemStatement": "Implement `Scaled Dot-Product Attention` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+          "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+          "requirements": [
+            "Implement a function named `solve` with the signature shown in the reference solution.",
+            "Return the value described by the function contract; do not print it.",
+            "Keep output deterministic for the same input."
+          ],
+          "constraints": [
+            "Inputs are small enough for a straightforward reference implementation.",
+            "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+            "Unless otherwise stated, dimensions must be consistent."
+          ],
+          "hints": [
+            "Implement the small mathematical contract first; do not add production-only model machinery.",
+            "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+          ],
+          "starterCode": "import math\ndef solve(Q,K,V):\n    pass",
+          "solution": "import math\ndef solve(Q,K,V):\n    scores=[[sum(a*b for a,b in zip(q,k))/math.sqrt(len(q)) for k in K] for q in Q]\n    out=[]\n    for row in scores:\n      m=max(row); e=[math.exp(v-m) for v in row]; z=sum(e); p=[v/z for v in e]\n      out.append([sum(p[t]*V[t][j] for t in range(len(V))) for j in range(len(V[0]))])\n    return out",
+          "testCases": [
+            {
+              "name": "smoke test",
+              "args": [
+                [
+                  [
+                    1.0,
+                    0.0
+                  ]
+                ],
+                [
+                  [
+                    1.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    1.0
+                  ]
+                ],
+                [
+                  [
+                    1.0,
+                    2.0
+                  ],
+                  [
+                    3.0,
+                    4.0
+                  ]
+                ]
+              ],
+              "expected": [
+                [
+                  1.6604769013466862,
+                  2.6604769013466862
+                ]
+              ],
+              "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+            }
+          ],
+          "examples": [
+            {
+              "inputArgs": [
+                [
+                  [
+                    1.0,
+                    0.0
+                  ]
+                ],
+                [
+                  [
+                    1.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    1.0
+                  ]
+                ],
+                [
+                  [
+                    1.0,
+                    2.0
+                  ],
+                  [
+                    3.0,
+                    4.0
+                  ]
+                ]
+              ],
+              "output": [
+                [
+                  1.6604769013466862,
+                  2.6604769013466862
+                ]
+              ],
+              "explanation": "Illustrative small example for scaled dot-product attention."
+            }
+          ],
+          "reconstructionStatus": "authored_reconstruction"
+        }
+      },
+      {
+        "slug": "re-kv-cache-append",
+        "type": "code",
+        "title": "KV Cache Append",
+        "difficulty": "easy",
+        "challenge": {
+          "problemStatement": "Implement `KV Cache Append` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+          "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+          "requirements": [
+            "Implement a function named `solve` with the signature shown in the reference solution.",
+            "Return the value described by the function contract; do not print it.",
+            "Keep output deterministic for the same input."
+          ],
+          "constraints": [
+            "Inputs are small enough for a straightforward reference implementation.",
+            "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+            "Unless otherwise stated, dimensions must be consistent."
+          ],
+          "hints": [
+            "Implement the small mathematical contract first; do not add production-only model machinery.",
+            "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+          ],
+          "starterCode": "def solve(cache, new_values):\n    pass",
+          "solution": "def solve(cache, new_values):\n    return list(cache)+list(new_values)",
+          "testCases": [
+            {
+              "name": "smoke test",
+              "args": [
+                [
+                  [
+                    1,
+                    2
+                  ]
+                ],
+                [
+                  [
+                    3,
+                    4
+                  ]
+                ]
+              ],
+              "expected": [
+                [
+                  1,
+                  2
+                ],
+                [
+                  3,
+                  4
+                ]
+              ],
+              "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+            }
+          ],
+          "examples": [
+            {
+              "inputArgs": [
+                [
+                  [
+                    1,
+                    2
+                  ]
+                ],
+                [
+                  [
+                    3,
+                    4
+                  ]
+                ]
+              ],
+              "output": [
+                [
+                  1,
+                  2
+                ],
+                [
+                  3,
+                  4
+                ]
+              ],
+              "explanation": "Illustrative small example for kv cache append."
+            }
+          ],
+          "reconstructionStatus": "authored_reconstruction"
+        }
+      }
+    ],
+    "totalCount": 3,
+    "completed": false
+  }
+}

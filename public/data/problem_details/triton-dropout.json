@@ -1,0 +1,552 @@
+{
+  "id": "triton-dropout",
+  "slug": "triton-dropout",
+  "title": "Triton Inverted Dropout Kernel",
+  "cleanTitle": "Triton Inverted Dropout Kernel",
+  "category": "triton",
+  "difficulty": "Easy",
+  "tags": [
+    "GPU Programming",
+    "Neural Networks"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "triton-basics",
+    "title": "Triton Kernels",
+    "sectionId": "triton-basics-norm-and-training"
+  },
+  "seoDescription": "Implement inverted dropout in Triton with a supplied mask, register scaling, and tail-safe tiled memory access.",
+  "description": "Implement inverted dropout in Triton using a supplied boolean mask, register scaling, and tail-safe memory access.\n\n**Mathematical Formulation:**\n\n$$\ny = \\frac{x \\odot m}{1 - p}\n$$\n\n**Step-by-Step Implementation:**\n1. Load activation tiles and binary mask tiles with boundary masking.\n2. Scale surviving activations by 1 / (1 - p).\n3. Store scaled activations back into global memory.\n\n**Returns:** List of scaled activations after dropout.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Dropout (Inverted Scaling) specification."
+  ],
+  "requirements": "* Must implement `triton_dropout` using TRITON.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Triton Inverted Dropout Kernel\n\n### Core Intuition: Why Do We Need This?\nImplement inverted dropout in Triton using a supplied boolean mask, register scaling, and tail-safe memory access. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\ny = \\frac{x \\odot m}{1 - p}\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Load activation tiles and binary mask tiles with boundary masking.\n3. **Phase 3: Iterative Execution & Reduction**: Scale surviving activations by 1 / (1 - p).\n4. **Phase 4: Output Assembly & Precision Guarantee**: Store scaled activations back into global memory.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard TRITON documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `torch.Tensor` specifications."
+  ],
+  "constraints": "* Category: TRITON\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, TRITON\n",
+  "starterCode": "import numpy as np\n\ndef triton_dropout(x: list, mask: list = None, p: float = 0.5) -> list:\n    \"\"\"\n    Implement inverted dropout in Triton using a supplied boolean mask, register scaling, and tail-safe memory access.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nImplement inverted dropout in Triton using a supplied boolean mask, register scaling, and tail-safe memory access.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef triton_dropout(x: list, mask: list = None, p: float = 0.5) -> list:\n    arr = np.array(x, dtype=float)\n    if mask is not None:\n        return np.round((arr * np.array(mask, dtype=float)) / (1.0 - p), 6).tolist()\n    return np.round(arr / (1.0 - p), 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "triton-dropout-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0,
+          6.0,
+          8.0
+        ],
+        "mask": [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.5
+      },
+      "expectedOutput": [
+        4.0,
+        0.0,
+        12.0,
+        0.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "triton-dropout-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "x": [
+          1.0,
+          3.0,
+          5.0
+        ],
+        "mask": [
+          1.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.2
+      },
+      "expectedOutput": [
+        1.25,
+        3.75,
+        0.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "triton-dropout-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0,
+          6.0,
+          8.0
+        ],
+        "mask": [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.5
+      },
+      "expectedOutput": [
+        4.0,
+        0.0,
+        12.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          1.0,
+          3.0,
+          5.0
+        ],
+        "mask": [
+          1.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.2
+      },
+      "expectedOutput": [
+        1.25,
+        3.75,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0,
+          6.0,
+          8.0
+        ],
+        "mask": [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.5
+      },
+      "expectedOutput": [
+        4.0,
+        0.0,
+        12.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          1.0,
+          3.0,
+          5.0
+        ],
+        "mask": [
+          1.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.2
+      },
+      "expectedOutput": [
+        1.25,
+        3.75,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0,
+          6.0,
+          8.0
+        ],
+        "mask": [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.5
+      },
+      "expectedOutput": [
+        4.0,
+        0.0,
+        12.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          1.0,
+          3.0,
+          5.0
+        ],
+        "mask": [
+          1.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.2
+      },
+      "expectedOutput": [
+        1.25,
+        3.75,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0,
+          6.0,
+          8.0
+        ],
+        "mask": [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.5
+      },
+      "expectedOutput": [
+        4.0,
+        0.0,
+        12.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          1.0,
+          3.0,
+          5.0
+        ],
+        "mask": [
+          1.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.2
+      },
+      "expectedOutput": [
+        1.25,
+        3.75,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0,
+          6.0,
+          8.0
+        ],
+        "mask": [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.5
+      },
+      "expectedOutput": [
+        4.0,
+        0.0,
+        12.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          1.0,
+          3.0,
+          5.0
+        ],
+        "mask": [
+          1.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.2
+      },
+      "expectedOutput": [
+        1.25,
+        3.75,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0,
+          6.0,
+          8.0
+        ],
+        "mask": [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.5
+      },
+      "expectedOutput": [
+        4.0,
+        0.0,
+        12.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          1.0,
+          3.0,
+          5.0
+        ],
+        "mask": [
+          1.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.2
+      },
+      "expectedOutput": [
+        1.25,
+        3.75,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0,
+          6.0,
+          8.0
+        ],
+        "mask": [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.5
+      },
+      "expectedOutput": [
+        4.0,
+        0.0,
+        12.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          1.0,
+          3.0,
+          5.0
+        ],
+        "mask": [
+          1.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.2
+      },
+      "expectedOutput": [
+        1.25,
+        3.75,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0,
+          6.0,
+          8.0
+        ],
+        "mask": [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.5
+      },
+      "expectedOutput": [
+        4.0,
+        0.0,
+        12.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          1.0,
+          3.0,
+          5.0
+        ],
+        "mask": [
+          1.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.2
+      },
+      "expectedOutput": [
+        1.25,
+        3.75,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0,
+          6.0,
+          8.0
+        ],
+        "mask": [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.5
+      },
+      "expectedOutput": [
+        4.0,
+        0.0,
+        12.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-dropout-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          1.0,
+          3.0,
+          5.0
+        ],
+        "mask": [
+          1.0,
+          1.0,
+          0.0
+        ],
+        "p": 0.2
+      },
+      "expectedOutput": [
+        1.25,
+        3.75,
+        0.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "triton_dropout",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "any"
+      },
+      {
+        "name": "mask",
+        "type": "any"
+      },
+      {
+        "name": "p",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "triton-layernorm-backward",
+    "triton-sum",
+    "triton-split-k-matmul",
+    "triton-logsumexp",
+    "triton-vector-addition"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/triton-dropout",
+  "localUrl": "http://localhost:3000/problems/triton-dropout"
+}

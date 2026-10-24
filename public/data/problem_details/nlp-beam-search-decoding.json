@@ -1,0 +1,916 @@
+{
+  "catalogId": "python:nlp-beam-search-decoding",
+  "id": "nlp-beam-search-decoding",
+  "sourceId": "nlp-beam-search-decoding",
+  "slug": "nlp-beam-search-decoding",
+  "source": "python",
+  "category": "python",
+  "title": "Beam Search Decoding",
+  "difficulty": "Medium",
+  "tags": [
+    "NLP",
+    "Inference",
+    "Language Models"
+  ],
+  "isFree": false,
+  "planId": "cracking-nlp",
+  "planTitle": "Cracking NLP",
+  "sectionId": "cracking-nlp-transformers-for-nlp",
+  "sortOrder": 322,
+  "seoDescription": "Decode token sequences with beam search over supplied next-token probabilities, cumulative scores, and stable tie handling.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Decode optimal token sequences by maintaining the top B highest cumulative scoring hypotheses at each generation step.\n\nBeam search avoids local greedy errors by exploring a bounded set of parallel sequence candidates.\n\n### Mathematical Formulation\n$$\n\\mathcal{B}_{t+1} = \\operatorname{TopK}\\left( \\{ (s + \\log P(w), \\, \\mathbf{y}_{1:t} \\circ w) \\mid (s, \\mathbf{y}_{1:t}) \\in \\mathcal{B}_t, \\, w \\in V \\}, \\, B \\right)\n$$\n\n### Step-by-Step Implementation\n1. Expand current beam candidates across all vocabulary token continuations\n2. Accumulate log probabilities into cumulative path scores\n3. Prune search space to maintain only the top B highest-scoring sequences\n\n### Returns\nDictionary with 'best_sequence', 'best_score', and 'beam_candidates'.",
+  "theory": "## Understanding the Theory: Beam Search Decoding\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of discrete words and symbols arranged in sequential order. To process text with neural networks, we convert words into continuous embedding vectors and model their grammatical and semantic relationships. **Beam Search Decoding** is a core sequence-processing mechanism used in modern Transformer and LLM architectures.\n\nBeam search avoids local greedy errors by exploring a bounded set of parallel sequence candidates. In this problem, the goal is to: decode optimal token sequences by maintaining the top b highest cumulative scoring hypotheses at each generation step.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\mathcal{B}_{t+1} = \\operatorname{TopK}\\left( \\{ (s + \\log P(w), \\, \\mathbf{y}_{1:t} \\circ w) \\mid (s, \\mathbf{y}_{1:t}) \\in \\mathcal{B}_t, \\, w \\in V \\}, \\, B \\right)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Expand current beam candidates across all vocabulary token continuations\n2. **Phase 2**: Accumulate log probabilities into cumulative path scores\n3. **Phase 3**: Prune search space to maintain only the top B highest-scoring sequences\n\n### Practical Machine Learning Applications & Nuances\n* **Self-Attention Mechanics**: Scaled dot-product attention computes all-to-all token interactions dynamically, allowing tokens to gather context from the entire sentence simultaneously.\n* **Position Encodings**: Because self-attention is permutation-invariant, positional encodings (like sinusoidal or Rotary Position Embeddings) inject word order into the representations.\n* **Vocabulary & Subwords**: Algorithms like BPE tokenize text into frequent subwords, allowing models to represent rare words without requiring an infinite vocabulary.",
+  "examples": [
+    "Input: transition_probs = [[-0.5, -1.2, -2.0], [-0.1, -0.8, -1.5]], beam_width = 2\n\nOutput: {\"best_sequence\": [0, 0], \"best_score\": -0.6, \"beam_candidates\": [{\"sequence\": [0, 0], \"score\": -0.6}, {\"sequence\": [0, 1], \"score\": -1.3}]}\n\nExplanation: Evaluated nlp_beam_search_decoding under standard test conditions."
+  ],
+  "requirements": "* Function must be named `nlp_beam_search_decoding`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `nlp_beam_search_decoding`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def nlp_beam_search_decoding(transition_probs: list, beam_width: int = 2) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Beam Search Decoding** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef nlp_beam_search_decoding(transition_probs: list, beam_width: int = 2) -> dict:\n    beam = [(0.0, [])]\n    for probs in transition_probs:\n        cand = [(sc + float(p), s + [tok]) for sc, s in beam for tok, p in enumerate(probs)]\n        beam = sorted(cand, key=lambda x: -x[0])[:int(beam_width)]\n    return {'best_sequence': beam[0][1], 'best_score': round(float(beam[0][0]), 4), 'beam_candidates': [{'sequence': s, 'score': round(float(sc), 4)} for sc, s in beam]}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "2 steps 3 tokens beam 2",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-beam-search-decoding-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "transition_probs": [
+          [
+            -0.5,
+            -1.2,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.8,
+            -1.5
+          ]
+        ],
+        "beam_width": 2
+      },
+      "expectedOutput": {
+        "best_sequence": [
+          0,
+          0
+        ],
+        "best_score": -0.6,
+        "beam_candidates": [
+          {
+            "sequence": [
+              0,
+              0
+            ],
+            "score": -0.6
+          },
+          {
+            "sequence": [
+              0,
+              1
+            ],
+            "score": -1.3
+          }
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "nlp_beam_search_decoding",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "gradient-descent-quadratic",
+    "anchor-box-generation",
+    "value-iteration-step",
+    "precision-recall-at-k",
+    "cs336-l01-train-byte-pair-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "python",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

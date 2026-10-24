@@ -1,0 +1,496 @@
+{
+  "catalogId": "python:inference-token-sampling",
+  "id": "inference-token-sampling",
+  "sourceId": "inference-token-sampling",
+  "slug": "inference-token-sampling",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Implement Temperature, Top-k, and Top-p Sampling",
+  "difficulty": "Medium",
+  "tags": [
+    "Inference",
+    "Language Models",
+    "Probability and Statistics"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-transformer-components",
+  "sortOrder": 725,
+  "seoDescription": "Sample tokens from batched logits using temperature scaling, top-k filtering, top-p filtering, and deterministic randomness.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Filter candidate token logits using Temperature scaling, Top-K thresholding, and Top-P (nucleus) cumulative mass cuts.\n\nTemperature controls entropy, Top-K bounds search breadth, and Nucleus sampling adaptively modulates candidate pool sizes based on context certainty.\n\n### Mathematical Formulation\n$$\nz'_i = \\frac{z_i}{T}, \\quad \\mathcal{V}_{K} = \\text{top-K}(z'), \\quad \\sum_{i \\in \\mathcal{V}_P} P(i) \\le p\n$$\n\n### Step-by-Step Implementation\n1. Scale logits by temperature parameter T\n2. Filter out tokens outside top_k largest logit values with -inf\n3. Truncate low-probability tail tokens once cumulative probability exceeds top_p\n\n### Returns\nList of filtered logit values.",
+  "theory": "## Understanding the Theory: Implement Temperature, Top-k, and Top-p Sampling\n\n### Core Intuition: Why Do We Need This?\nRunning large AI models in production requires massive computing power. During text generation, memory bandwidth (fetching weights and past key-value caches from VRAM) is often the primary bottleneck rather than raw arithmetic compute. **Implement Temperature, Top-k, and Top-p Sampling** optimizes hardware efficiency, memory consumption, or request serving throughput.\n\nTemperature controls entropy, Top-K bounds search breadth, and Nucleus sampling adaptively modulates candidate pool sizes based on context certainty. In this problem, the goal is to: filter candidate token logits using temperature scaling, top-k thresholding, and top-p (nucleus) cumulative mass cuts.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nz'_i = \\frac{z_i}{T}, \\quad \\mathcal{V}_{K} = \\text{top-K}(z'), \\quad \\sum_{i \\in \\mathcal{V}_P} P(i) \\le p\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Scale logits by temperature parameter T\n2. **Phase 2**: Filter out tokens outside top_k largest logit values with -inf\n3. **Phase 3**: Truncate low-probability tail tokens once cumulative probability exceeds top_p\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth Bottleneck**: Quantizing weights to INT8 or INT4 cuts memory traffic in half or quarters, dramatically increasing token generation speeds.\n* **Serving Systems**: Dynamic batching and PagedAttention maximize GPU utilization by grouping requests arriving at different times.\n* **Latency vs. Throughput**: In production serving, systems engineers balance Time-To-First-Token (TTFT) against overall tokens-per-second throughput.",
+  "examples": [
+    "Input: logits = [4.0, 3.0, 2.0, 1.0], temperature = 1.0, top_k = 2, top_p = 1.0\n\nOutput: [4.0, 3.0, -1000000000.0, -1000000000.0]\n\nExplanation: Evaluated inference_token_sampling under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_token_sampling`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_token_sampling`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef inference_token_sampling(logits: list, temperature: float = 1.0, top_k: int = 0, top_p: float = 1.0) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Implement Temperature, Top-k, and Top-p Sampling** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef inference_token_sampling(logits: list, temperature: float = 1.0, top_k: int = 0, top_p: float = 1.0) -> list:\n    arr = np.array(logits, dtype=float) / max(1e-5, temperature)\n    if 0 < top_k < len(arr):\n        arr = np.where(arr < np.sort(arr)[-top_k], float('-inf'), arr)\n    if top_p < 1.0:\n        ex = np.exp(arr - np.max(arr))\n        probs = ex / np.sum(ex)\n        idx = np.argsort(probs)[::-1]\n        rem = idx[np.cumsum(probs[idx]) > top_p]\n        if len(rem) == len(arr): rem = rem[1:]\n        arr[rem] = float('-inf')\n    return [round(float(v), 4) if v != float('-inf') else -1e9 for v in arr]\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Top-k 2 filtering",
+      "inputs": {
+        "logits": [
+          4.0,
+          3.0,
+          2.0,
+          1.0
+        ],
+        "temperature": 1.0,
+        "top_k": 2,
+        "top_p": 1.0
+      },
+      "expectedOutput": [
+        4.0,
+        3.0,
+        -1000000000.0,
+        -1000000000.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "inference-token-sampling-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "logits": [
+          8.0,
+          6.0,
+          4.0,
+          2.0
+        ],
+        "temperature": 2.0,
+        "top_k": 4,
+        "top_p": 2.0
+      },
+      "expectedOutput": [
+        4.0,
+        3.0,
+        2.0,
+        1.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "inference-token-sampling-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "logits": [
+          2.0,
+          1.5,
+          1.0,
+          0.5
+        ],
+        "temperature": 0.5,
+        "top_k": 1,
+        "top_p": 0.5
+      },
+      "expectedOutput": [
+        4.0,
+        -1000000000.0,
+        -1000000000.0,
+        -1000000000.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "logits": [
+          5.0,
+          4.0,
+          3.0,
+          2.0
+        ],
+        "temperature": 2.0,
+        "top_k": 2,
+        "top_p": 2.0
+      },
+      "expectedOutput": [
+        2.5,
+        2.0,
+        -1000000000.0,
+        -1000000000.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "logits": [
+          6.0,
+          4.5,
+          3.0,
+          1.5
+        ],
+        "temperature": 1.5,
+        "top_k": 3,
+        "top_p": 1.5
+      },
+      "expectedOutput": [
+        4.0,
+        3.0,
+        2.0,
+        -1000000000.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "logits": [
+          12.0,
+          9.0,
+          6.0,
+          3.0
+        ],
+        "temperature": 3.0,
+        "top_k": 6,
+        "top_p": 3.0
+      },
+      "expectedOutput": [
+        4.0,
+        3.0,
+        2.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "logits": [
+          1.0,
+          0.75,
+          0.5,
+          0.25
+        ],
+        "temperature": 0.25,
+        "top_k": 1,
+        "top_p": 0.25
+      },
+      "expectedOutput": [
+        4.0,
+        -1000000000.0,
+        -1000000000.0,
+        -1000000000.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "logits": [
+          6.0,
+          5.0,
+          4.0,
+          3.0
+        ],
+        "temperature": 3.0,
+        "top_k": 4,
+        "top_p": 3.0
+      },
+      "expectedOutput": [
+        2.0,
+        1.6667,
+        1.3333,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "logits": [
+          16.0,
+          12.0,
+          8.0,
+          4.0
+        ],
+        "temperature": 4.0,
+        "top_k": 8,
+        "top_p": 4.0
+      },
+      "expectedOutput": [
+        4.0,
+        3.0,
+        2.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "logits": [
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "temperature": 1.0,
+        "top_k": 2,
+        "top_p": 1.0
+      },
+      "expectedOutput": [
+        -1000000000.0,
+        -1000000000.0,
+        3.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "logits": [
+          3.0,
+          2.25,
+          1.5,
+          0.75
+        ],
+        "temperature": 0.75,
+        "top_k": 2,
+        "top_p": 0.75
+      },
+      "expectedOutput": [
+        4.0,
+        -1000000000.0,
+        -1000000000.0,
+        -1000000000.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "logits": [
+          20.0,
+          15.0,
+          10.0,
+          5.0
+        ],
+        "temperature": 5.0,
+        "top_k": 10,
+        "top_p": 5.0
+      },
+      "expectedOutput": [
+        4.0,
+        3.0,
+        2.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "logits": [
+          7.0,
+          6.0,
+          5.0,
+          4.0
+        ],
+        "temperature": 4.0,
+        "top_k": 6,
+        "top_p": 4.0
+      },
+      "expectedOutput": [
+        1.75,
+        1.5,
+        1.25,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "logits": [
+          3.2,
+          2.4,
+          1.6,
+          0.8
+        ],
+        "temperature": 0.8,
+        "top_k": 2,
+        "top_p": 0.8
+      },
+      "expectedOutput": [
+        4.0,
+        -1000000000.0,
+        -1000000000.0,
+        -1000000000.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "logits": [
+          24.0,
+          18.0,
+          12.0,
+          6.0
+        ],
+        "temperature": 6.0,
+        "top_k": 12,
+        "top_p": 6.0
+      },
+      "expectedOutput": [
+        4.0,
+        3.0,
+        2.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "logits": [
+          8.0,
+          7.0,
+          6.0,
+          5.0
+        ],
+        "temperature": 5.0,
+        "top_k": 8,
+        "top_p": 5.0
+      },
+      "expectedOutput": [
+        1.6,
+        1.4,
+        1.2,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "logits": [
+          4.8,
+          3.6,
+          2.4,
+          1.2
+        ],
+        "temperature": 1.2,
+        "top_k": 2,
+        "top_p": 1.2
+      },
+      "expectedOutput": [
+        4.0,
+        3.0,
+        -1000000000.0,
+        -1000000000.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "logits": [
+          1.6,
+          1.2,
+          0.8,
+          0.4
+        ],
+        "temperature": 0.4,
+        "top_k": 1,
+        "top_p": 0.4
+      },
+      "expectedOutput": [
+        4.0,
+        -1000000000.0,
+        -1000000000.0,
+        -1000000000.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "logits": [
+          32.0,
+          24.0,
+          16.0,
+          8.0
+        ],
+        "temperature": 8.0,
+        "top_k": 16,
+        "top_p": 8.0
+      },
+      "expectedOutput": [
+        4.0,
+        3.0,
+        2.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-token-sampling-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "logits": [
+          9.0,
+          8.0,
+          7.0,
+          6.0
+        ],
+        "temperature": 6.0,
+        "top_k": 10,
+        "top_p": 6.0
+      },
+      "expectedOutput": [
+        1.5,
+        1.3333,
+        1.1667,
+        1.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_token_sampling",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

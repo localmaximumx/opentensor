@@ -1,0 +1,902 @@
+{
+  "id": "silhouette-score",
+  "title": "Compute Silhouette Score",
+  "description": "Compute the mean Silhouette Score for clustered points using Euclidean distance. For point $i$, let $a(i)$ be its average distance to the other points in its own cluster, and let $b(i)$ be the smallest average distance from the point to any other cluster.\n\nThe point score is\n\n$$\ns(i) = \\frac{b(i)-a(i)}{\\max(a(i),b(i))}\n$$\n\nReturn the mean of $s(i)$ over all points as a Python float. Every cluster contains at least two points.",
+  "seoDescription": "Compute the mean silhouette score from intra-cluster and nearest-cluster distances for labeled samples.",
+  "examples": [
+    "Input: X = [[0, 0], [0, 1], [1, 0], [5, 5], [5, 6], [6, 5]], labels = [0, 0, 0, 1, 1, 1]\n\nOutput: 0.8398\n\nExplanation: Each point is much closer on average to its own cluster than to the other cluster."
+  ],
+  "requirements": "* Compute pairwise Euclidean distances with NumPy broadcasting\n* Support two or more clusters\n* Avoid nested Python loops over pairs of samples\n* Return the mean score as a Python float",
+  "theory": "## Understanding the Theory: Compute Silhouette Score\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **Compute Silhouette Score** implements a core computational routine.\n\nIn this problem, the objective is to implement **Compute Silhouette Score** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\ns(i) = \\frac{b(i)-a(i)}{\\max(a(i),b(i))}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "X[:, None, :] - X[None, :, :] forms every pairwise displacement.",
+    "A boolean matrix from labels[:, None] == labels[None, :] identifies same-cluster pairs.",
+    "Set each point's own-cluster column to infinity before taking the nearest other-cluster mean."
+  ],
+  "constraints": "* X has shape $(N,D)$ and labels has length $N$\n* $2 \\leq N \\leq 500$\n* Every cluster contains at least two points\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef silhouette_score(X: list, labels: list[int]) -> float:\n    \"\"\"\n    Returns the mean Silhouette Score as a Python float.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-10-21T18:37:15.293Z",
+  "updatedAt": "2026-03-05T20:39:41.143Z",
+  "solution": "### 💡 Intuition & Approach\nCluster cohesion and separation validation score $(b - a) / \\max(a, b)$.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef silhouette_score(X: list, labels: list) -> float:\n    X_arr = np.array(X, dtype=float)\n    y = np.array(labels)\n    clusters = np.unique(y)\n    n = len(X_arr)\n    if len(clusters) < 2: return 0.0\n\n    scores = []\n    for i in range(n):\n        c_i = y[i]\n        same_c = X_arr[y == c_i]\n        a_i = np.mean([np.linalg.norm(X_arr[i] - p) for p in same_c if not np.array_equal(X_arr[i], p)]) if len(same_c) > 1 else 0.0\n\n        b_i = float('inf')\n        for c in clusters:\n            if c == c_i: continue\n            other_c = X_arr[y == c]\n            b_i = min(b_i, np.mean([np.linalg.norm(X_arr[i] - p) for p in other_c]))\n\n        s_i = (b_i - a_i) / max(a_i, b_i) if max(a_i, b_i) > 0 else 0.0\n        scores.append(s_i)\n    return float(round(np.mean(scores), 4))\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "SilhouetteScoreViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Two well-separated clusters",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    },
+    {
+      "id": "silhouette-score-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "labels": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.8398
+    }
+  ],
+  "functionMetadata": {
+    "name": "silhouette_score",
+    "parameters": [
+      {
+        "name": "X",
+        "type": "array",
+        "example": "[[0, 0], [0, 1], [5, 5], [5, 6]]",
+        "description": "2D array of shape (n_samples, n_features) with data points"
+      },
+      {
+        "name": "labels",
+        "type": "array",
+        "example": "[0, 0, 1, 1]",
+        "description": "1D array of cluster labels for each point"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "k-means-centroid-update",
+    "k-means-assignment",
+    "knn-distance",
+    "euclidean-distance",
+    "classification-metrics"
+  ],
+  "tags": [
+    "Metrics & Evaluation"
+  ],
+  "prevId": "leaky-relu",
+  "nextId": "softmax-function",
+  "slug": "silhouette-score",
+  "cleanTitle": "Compute Silhouette Score",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/silhouette-score",
+  "localUrl": "http://localhost:3000/problems/silhouette-score",
+  "studyPlan": null
+}

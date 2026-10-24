@@ -1,0 +1,1056 @@
+{
+  "id": "lstm-output-gate",
+  "title": "Output Gate",
+  "description": "Compute the LSTM output gate and exposed hidden state.\n\n$$\no_t=\\sigma\\left(W_o[h_{t-1},x_t]+b_o\\right).\n$$\n\n$$\nh_t=o_t\\odot\\tanh(C_t).\n$$\n\nHere, C_t is the already updated cell state. Return a dictionary containing output_gate and hidden_state as matching float64 NumPy arrays.",
+  "seoDescription": "Implement the LSTM output gate and expose the current hidden state from the updated cell memory.",
+  "examples": [
+    "Input: h_prev = [0,0], x_t = [1,0.5], C_t = [0.5,-0.3], W_o = [[0.1,0.2,0.3,0.4],[0.5,0.1,0.2,0.3]], b_o = [0,0]\n\nOutput: {\"output_gate\":[0.622459,0.586618],\"hidden_state\":[0.287649,-0.170889]}\n\nExplanation: The gate controls how much of the bounded cell state becomes visible as the hidden state.",
+    "Input: h_prev = [0.2,-0.1], x_t = [0.5,1], C_t = [1,-0.5], W_o = [[0.2,0.1,0.3,0.2],[0.1,0.4,0.2,0.3]], b_o = [0.1,-0.1]\n\nOutput: {\"output_gate\":[0.617748,0.569546],\"hidden_state\":[0.470473,-0.263197]}",
+    "Input: h_prev = [[0,0],[0.3,-0.2]], x_t = [[1,0.5],[0.5,1]], C_t = [[0.5,-0.3],[1,0.2]], W_o = [[0.1,0.2,0.3,0.4],[0.5,0.1,0.2,0.3]], b_o = [0,0]\n\nOutput: {\"output_gate\":[[0.622459,0.586618],[0.631812,0.629483]],\"hidden_state\":[[0.287649,-0.170889],[0.481185,0.124244]]}"
+  ],
+  "requirements": "- Compute the output gate from [h_prev, x_t].\n- Multiply the gate by tanh of the current cell state.\n- Return exactly the keys output_gate and hidden_state.",
+  "theory": "# <span style=\"font-size: 20px;\">Output Gate and Hidden State</span>\n\n<span style=\"font-size: 14px;\">The output gate is the final gating mechanism in the LSTM cell, introduced in \"Long Short-Term Memory\" (Hochreiter & Schmidhuber, 1997). It controls which parts of the already-updated cell state $C_t$ are exposed as the hidden state $h_t$, the vector that the rest of the network actually sees. Without the output gate, every piece of information stored in the cell state would be broadcast to downstream layers and the next time step's gate computations, regardless of whether it is relevant right now.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">The output gate and hidden state computation is the last stage of the LSTM cell's forward pass. By this point, the forget gate has decided what to erase from the previous cell state $C_{t-1}$, the input gate has decided what new information to write, and the cell state has been updated to $C_t$. The output gate now determines what fraction of $C_t$ to reveal as the hidden state $h_t$.</span>\n\n<span style=\"font-size: 14px;\">The hidden state $h_t$ serves two roles simultaneously. First, it is passed to whatever layer sits on top of the LSTM -- a classification head, a dense layer, or another recurrent layer in a stacked architecture. Second, it is fed back into the LSTM at the next time step as $h_{t-1}$, where it participates in computing all four gates. The output gate acts as a selective filter between the cell's internal memory and everything external to the cell.</span>\n\n<span style=\"font-size: 14px;\">Hochreiter and Schmidhuber describe this as \"protecting other units from currently irrelevant memory contents stored in the cell.\" The cell state might store information that will be critical ten time steps later but is not useful for the current prediction. The output gate learns to keep that information hidden inside $C_t$ until it becomes relevant.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">Let $x_t \\in \\mathbb{R}^D$ be the input at time step $t$, $h_{t-1} \\in \\mathbb{R}^H$ be the previous hidden state, and $C_t \\in \\mathbb{R}^H$ be the already-updated cell state. The concatenation $[h_{t-1}, x_t] \\in \\mathbb{R}^{H+D}$ is formed by stacking these two vectors.</span>\n\n<span style=\"font-size: 14px;\">**Equation 1 -- Output gate.** Determines which dimensions of the cell state to expose:</span>\n\n$$\no_t = \\sigma(W_o \\cdot [h_{t-1}, x_t] + b_o)\n$$\n\n<span style=\"font-size: 14px;\">Here $W_o \\in \\mathbb{R}^{H \\times (H+D)}$ is the output gate weight matrix and $b_o \\in \\mathbb{R}^H$ is the bias. The sigmoid $\\sigma$ squashes each element to $(0, 1)$. A value near $1$ means \"expose this dimension,\" while a value near $0$ means \"keep this dimension private inside the cell.\"</span>\n\n<span style=\"font-size: 14px;\">**Equation 2 -- Hidden state.** Combines the gate with the squashed cell state:</span>\n\n$$\nh_t = o_t \\odot \\tanh(C_t)\n$$\n\n<span style=\"font-size: 14px;\">The symbol $\\odot$ denotes element-wise (Hadamard) multiplication. The tanh squashes $C_t$ from its potentially unbounded range into $[-1, 1]$, and $o_t$ scales each dimension independently. The resulting $h_t \\in \\mathbb{R}^H$ is bounded to $[-1, 1]$ because both factors are bounded: $o_t \\in (0, 1)$ and $\\tanh(C_t) \\in (-1, 1)$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why Gate the Output</span>\n\n<span style=\"font-size: 14px;\">The cell state $C_t$ is the LSTM's long-term memory. It can accumulate information over many time steps because the forget gate allows values to persist with minimal modification. But not everything stored in long-term memory is relevant at every single time step. The output gate provides the mechanism to selectively expose only the portions of $C_t$ that matter right now.</span>\n\n<span style=\"font-size: 14px;\">Consider a language model processing \"The cat, which had been sleeping on the mat for several hours, finally woke up and stretched.\" The cell state might store the subject \"cat\" across the entire subordinate clause. During \"which had been sleeping on the mat for several hours,\" the subject information is stored but not immediately needed for next-word prediction. The output gate keeps those dimensions suppressed. When \"finally\" arrives and the model needs to predict \"woke,\" the output gate opens those dimensions to expose the stored subject.</span>\n\n<span style=\"font-size: 14px;\">Without the output gate, the hidden state would always be a direct function of the entire cell state. Gate computations at the next time step would be influenced by all stored information, not just the relevant subset. This creates noise in the recurrent signal and makes it harder for the network to learn which patterns to attend to. The output gate adds a learnable bottleneck that filters this signal.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why Tanh on the Cell State</span>\n\n<span style=\"font-size: 14px;\">The cell state $C_t$ has no activation function bounding its values. It is updated through an additive process: $C_t = f_t \\odot C_{t-1} + i_t \\odot \\tilde{C}_t$, where the forget gate $f_t$ scales the old state and the input gate $i_t$ adds new content. Because this is a weighted sum rather than a squashed activation, $C_t$ can grow to arbitrary magnitudes over many time steps. This is intentional -- it is what allows the LSTM to maintain stable gradients through long sequences.</span>\n\n<span style=\"font-size: 14px;\">However, exposing unbounded values as the hidden state would cause problems. Downstream layers receiving $h_t$ would face inputs of unpredictable scale. Gradient magnitudes would vary wildly depending on how large $C_t$ has grown. The tanh maps $C_t$ into $[-1, 1]$ before gating, ensuring $h_t$ remains stable regardless of how many time steps have elapsed or how much information has accumulated.</span>\n\n<span style=\"font-size: 14px;\">The tanh also introduces a useful nonlinearity. Two cell state values that are both very large and positive -- say $C_t = 5$ and $C_t = 50$ -- both map to $\\tanh$ values near $1$. The network treats them as \"strongly positive\" without distinguishing exact magnitudes. This saturation acts as soft clipping that prevents extreme values in one dimension from dominating the hidden state.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Hidden State vs Cell State</span>\n\n<span style=\"font-size: 14px;\">The LSTM maintains two state vectors at every time step, and understanding their distinct roles is essential.</span>\n\n<span style=\"font-size: 14px;\">**Cell state** $C_t \\in \\mathbb{R}^H$ is the internal memory. It flows through time with additive updates, shielded by the forget and input gates. Values in $C_t$ can persist for many time steps with minimal degradation because the forget gate can pass them through nearly unchanged ($f_t \\approx 1$). The cell state is never directly seen by any layer outside the LSTM cell.</span>\n\n<span style=\"font-size: 14px;\">**Hidden state** $h_t \\in \\mathbb{R}^H$ is the external interface. It is the only vector that leaves the LSTM cell. It serves two purposes: (1) it is passed to the next layer for predictions or further computation, and (2) it is fed back into the same cell at the next time step as $h_{t-1}$, participating in all four gate computations. The hidden state is a filtered, bounded version of the cell state: $h_t = o_t \\odot \\tanh(C_t)$.</span>\n\n<span style=\"font-size: 14px;\">This separation is one of the key architectural innovations of the LSTM. In a vanilla RNN, there is only one state vector $h_t$ that must simultaneously serve as long-term memory and short-term output. The LSTM splits these responsibilities: $C_t$ handles long-term storage with additive updates for gradient stability, while $h_t$ handles short-term communication with bounded values for numerical stability. The output gate is the bridge between them.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">Hochreiter and Schmidhuber introduced the LSTM in their 1997 paper \"Long Short-Term Memory,\" published in Neural Computation. The central problem the paper addresses is the **vanishing gradient problem**: in standard RNNs, error signals flowing backward through time either decay exponentially (vanishing) or explode exponentially (exploding), making it impossible to learn long-range dependencies.</span>\n\n<span style=\"font-size: 14px;\">The paper's solution is the **Constant Error Carousel (CEC)** -- the cell state's additive update mechanism that allows gradients to flow unchanged through time. The gates (forget, input, output) are the learned controllers that regulate what enters, persists in, and exits this carousel. The output gate was designed to solve what the authors call the \"output weight conflict\": without it, the cell's output connections would need to simultaneously serve the current prediction and future gate computations.</span>\n\n<span style=\"font-size: 14px;\">The original 1997 architecture did not include the forget gate -- that was added by Gers, Schmidhuber, and Cummins in 2000. The original cell state update was purely additive: $C_t = C_{t-1} + i_t \\odot \\tilde{C}_t$. The output gate, however, was part of the original design from the start, reflecting its fundamental importance. The paper states that the output gate \"protects other units from currently irrelevant memory contents stored in the cell,\" establishing the principle that internal memory and external communication should be decoupled.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Consider an LSTM with $H = 3$ (hidden size) and $D = 2$ (input size). Assume the forget gate, input gate, and candidate have already executed, producing the updated cell state $C_t$. The output gate now computes $o_t$ and $h_t$.</span>\n\n<span style=\"font-size: 14px;\">**Given values:**</span>\n\n$$\nh_{t-1} = \\begin{pmatrix} 0.2 \\\\ -0.5 \\\\ 0.1 \\end{pmatrix}, \\quad x_t = \\begin{pmatrix} 0.8 \\\\ -0.3 \\end{pmatrix}, \\quad C_t = \\begin{pmatrix} 1.5 \\\\ -0.7 \\\\ 3.2 \\end{pmatrix}\n$$\n\n<span style=\"font-size: 14px;\">**Weights and bias:**</span>\n\n$$\nW_o = \\begin{pmatrix} 0.3 & -0.1 & 0.4 & 0.2 & -0.5 \\\\ 0.1 & 0.6 & -0.2 & 0.3 & 0.1 \\\\ -0.4 & 0.2 & 0.5 & -0.1 & 0.3 \\end{pmatrix}, \\quad b_o = \\begin{pmatrix} 0.1 \\\\ -0.2 \\\\ 0.0 \\end{pmatrix}\n$$\n\n<span style=\"font-size: 14px;\">**Step 1: Concatenate.** $[h_{t-1}, x_t] = [0.2, -0.5, 0.1, 0.8, -0.3]$</span>\n\n<span style=\"font-size: 14px;\">**Step 2: Compute the pre-activation.** $W_o \\cdot [h_{t-1}, x_t] + b_o$:</span>\n\n<span style=\"font-size: 14px;\">Row 1: $0.3(0.2) + (-0.1)(-0.5) + 0.4(0.1) + 0.2(0.8) + (-0.5)(-0.3) + 0.1$</span>\n\n<span style=\"font-size: 14px;\">$= 0.06 + 0.05 + 0.04 + 0.16 + 0.15 + 0.1 = 0.56$</span>\n\n<span style=\"font-size: 14px;\">Row 2: $0.1(0.2) + 0.6(-0.5) + (-0.2)(0.1) + 0.3(0.8) + 0.1(-0.3) + (-0.2)$</span>\n\n<span style=\"font-size: 14px;\">$= 0.02 - 0.30 - 0.02 + 0.24 - 0.03 - 0.2 = -0.29$</span>\n\n<span style=\"font-size: 14px;\">Row 3: $(-0.4)(0.2) + 0.2(-0.5) + 0.5(0.1) + (-0.1)(0.8) + 0.3(-0.3) + 0.0$</span>\n\n<span style=\"font-size: 14px;\">$= -0.08 - 0.10 + 0.05 - 0.08 - 0.09 + 0.0 = -0.30$</span>\n\n<span style=\"font-size: 14px;\">**Step 3: Apply sigmoid to get $o_t$.**</span>\n\n<span style=\"font-size: 14px;\">$o_t = [\\sigma(0.56), \\sigma(-0.29), \\sigma(-0.30)] = [0.6365, 0.4280, 0.4256]$</span>\n\n<span style=\"font-size: 14px;\">**Step 4: Apply tanh to $C_t$.**</span>\n\n<span style=\"font-size: 14px;\">$\\tanh(C_t) = [\\tanh(1.5), \\tanh(-0.7), \\tanh(3.2)] = [0.9051, -0.6044, 0.9967]$</span>\n\n<span style=\"font-size: 14px;\">Note that $C_t[2] = 3.2$ maps to $0.9967$ -- nearly saturated at $1$. This illustrates the squashing effect: a large cell state value is compressed into the bounded range.</span>\n\n<span style=\"font-size: 14px;\">**Step 5: Element-wise multiply to get $h_t$.**</span>\n\n<span style=\"font-size: 14px;\">$h_t[0] = 0.6365 \\times 0.9051 = 0.5762$</span>\n\n<span style=\"font-size: 14px;\">$h_t[1] = 0.4280 \\times (-0.6044) = -0.2587$</span>\n\n<span style=\"font-size: 14px;\">$h_t[2] = 0.4256 \\times 0.9967 = 0.4242$</span>\n\n<span style=\"font-size: 14px;\">**Final result:** $h_t = [0.5762, -0.2587, 0.4242]$</span>\n\n<span style=\"font-size: 14px;\">Dimension 0 has a high output gate ($0.64$) and a large positive cell state ($1.5$), so the hidden state strongly reflects that memory. Dimension 2 has a lower output gate ($0.43$) despite an even larger cell state ($3.2$) -- the gate suppresses most of that stored information. The cell \"knows\" something in dimension 2 but chooses not to reveal it at this time step.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Connection to GRU</span>\n\n<span style=\"font-size: 14px;\">The Gated Recurrent Unit (Cho et al., 2014) is a simplified recurrent architecture that eliminates the output gate entirely. In the GRU, there is no separate cell state -- the hidden state $h_t$ is the memory. The final hidden state is computed by linear interpolation between $h_{t-1}$ and a candidate $\\tilde{h}_t$, with no gating applied after the interpolation.</span>\n\n<span style=\"font-size: 14px;\">This means the GRU has no mechanism to store information privately. Whatever the GRU remembers is always fully exposed as its output. In the LSTM, the cell state can hold information that the output gate suppresses for many time steps, only revealing it when relevant. The GRU cannot do this -- its memory is always transparent.</span>\n\n<span style=\"font-size: 14px;\">This simplification reduces the GRU from four gate computations (forget, input, candidate, output) to three (reset, update, candidate). The parameter savings are exactly $\\frac{1}{4}$: one fewer weight matrix of shape $(H, H+D)$ and one fewer bias of shape $(H,)$. Empirically, this trade-off matters most on tasks requiring complex internal state tracking, where the LSTM's ability to hide information behind the output gate gives it an advantage. On simpler sequence tasks, the GRU performs comparably with fewer parameters.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n* <span style=\"font-size: 14px;\">**Using $C_{t-1}$ instead of $C_t$ in the hidden state equation.** The hidden state is $h_t = o_t \\odot \\tanh(C_t)$, where $C_t$ is the already-updated cell state including contributions from both the forget gate and the input gate at the current step. Using $C_{t-1}$ means the hidden state does not reflect new information written at this step. This is subtle because $o_t$ itself is computed from $h_{t-1}$ and $x_t$ -- it does not depend on $C_t$ -- so the gate values are correct even when the wrong cell state is used.</span>\n\n* <span style=\"font-size: 14px;\">**Forgetting to apply tanh to the cell state.** Writing $h_t = o_t \\odot C_t$ instead of $h_t = o_t \\odot \\tanh(C_t)$ removes the squashing nonlinearity. Since $o_t \\in (0, 1)$ but $C_t$ can be arbitrarily large, the hidden state becomes unbounded. Downstream layers will receive inputs of unpredictable scale, gradients will destabilize, and training will diverge.</span>\n\n* <span style=\"font-size: 14px;\">**Confusing the output gate with the network's output.** The output gate $o_t$ is not the LSTM's prediction or the network's final output. It is an internal gating mechanism that produces $h_t$. The actual output (a class probability, a next-token logit) is computed by passing $h_t$ through additional layers. Naming variables carelessly leads to confusion about what the LSTM returns.</span>\n\n* <span style=\"font-size: 14px;\">**Computing the output gate from the new hidden state.** The output gate must be computed from $h_{t-1}$ (the previous hidden state), not from $h_t$ (which does not exist yet). Writing $o_t = \\sigma(W_o \\cdot [h_t, x_t] + b_o)$ creates a circular dependency: $h_t$ depends on $o_t$, which depends on $h_t$. All four LSTM gates take $[h_{t-1}, x_t]$ as input, never the current hidden state.</span>\n\n* <span style=\"font-size: 14px;\">**Using matrix multiplication instead of element-wise product.** The operation $o_t \\odot \\tanh(C_t)$ is an element-wise (Hadamard) product, not a matrix multiplication. Both operands have shape $(H,)$ for a single sample or $(N, H)$ for a batch. Element-wise multiplication produces the same shape. Matrix multiplication collapses the result to a scalar, destroying all dimensional information.</span>\n\n* <span style=\"font-size: 14px;\">**Assuming the output gate is always near 1.** A common misconception is that the output gate \"mostly passes things through\" and is less important than the forget or input gates. In practice, trained LSTMs use the output gate aggressively. On language modeling tasks, dimensions frequently have $o_t < 0.1$ at time steps where stored information is not yet needed. The output gate is as critical as the other gates for managing information flow.</span>\n\n---",
+  "hints": [
+    "Compute the gate from np.concatenate([h_prev, x_t], axis=-1).",
+    "The hidden state is output_gate * np.tanh(C_t)."
+  ],
+  "constraints": "- Unbatched h_prev, C_t, and the output arrays have shape (H,); batched versions have shape (N, H).\n- x_t has shape (D,) or (N, D).\n- W_o has shape (H, H + D), and b_o has shape (H,).",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef sigmoid(x: np.ndarray) -> np.ndarray:\n    return 1.0/(1.0+np.exp(-np.clip(x,-500,500)))\n\ndef output_gate(h_prev: np.ndarray, x_t: np.ndarray, C_t: np.ndarray,\n                W_o: np.ndarray, b_o: np.ndarray) -> dict:\n    \"\"\"\n    Returns output_gate and hidden_state as float64 arrays.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-10T22:45:26.204Z",
+  "updatedAt": "2026-04-04T12:04:53.963Z",
+  "topicId": "lstm-output-gate",
+  "paperSnippet": "\"The output gate protects other units from currently irrelevant memory contents stored in the cell.\"",
+  "visualizationComponent": "LSTMOutputGateViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Output Gate** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef sigmoid(x: np.ndarray) -> np.ndarray:\n    return 1.0 / (1.0 + np.exp(-np.clip(x, -500, 500)))\n\ndef output_gate(h_prev: np.ndarray, x_t: np.ndarray, C_t: np.ndarray,\n                W_o: np.ndarray, b_o: np.ndarray) -> dict:\n    hp = np.asarray(h_prev, dtype=float)\n    xt = np.asarray(x_t, dtype=float)\n    ct = np.asarray(C_t, dtype=float)\n    wo = np.asarray(W_o, dtype=float)\n    bo = np.asarray(b_o, dtype=float)\n    if hp.ndim == 1:\n        cat = np.concatenate([hp, xt])\n        o_t = sigmoid(wo @ cat + bo)\n    else:\n        cat = np.concatenate([hp, xt], axis=-1)\n        o_t = sigmoid(cat @ wo.T + bo)\n    ht = o_t * np.tanh(ct)\n    return {\n        \"output_gate\": np.round(o_t, 6).tolist(),\n        \"hidden_state\": np.round(ht, 6).tolist()\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Basic output gate",
+      "inputs": {
+        "C_t": [
+          0.5,
+          -0.3
+        ],
+        "W_o": [
+          [
+            0.1,
+            0.2,
+            0.3,
+            0.4
+          ],
+          [
+            0.5,
+            0.1,
+            0.2,
+            0.3
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          1,
+          0.5
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "output_gate": [
+          0.622459,
+          0.586618
+        ],
+        "hidden_state": [
+          0.287649,
+          -0.170889
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Biased output gate",
+      "inputs": {
+        "C_t": [
+          1,
+          -0.5
+        ],
+        "W_o": [
+          [
+            0.2,
+            0.1,
+            0.3,
+            0.2
+          ],
+          [
+            0.1,
+            0.4,
+            0.2,
+            0.3
+          ]
+        ],
+        "b_o": [
+          0.1,
+          -0.1
+        ],
+        "x_t": [
+          0.5,
+          1
+        ],
+        "h_prev": [
+          0.2,
+          -0.1
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "output_gate": [
+          0.617748,
+          0.569546
+        ],
+        "hidden_state": [
+          0.470473,
+          -0.263197
+        ]
+      }
+    },
+    {
+      "id": "test-3",
+      "name": "Batched output gate",
+      "inputs": {
+        "C_t": [
+          [
+            0.5,
+            -0.3
+          ],
+          [
+            1,
+            0.2
+          ]
+        ],
+        "W_o": [
+          [
+            0.1,
+            0.2,
+            0.3,
+            0.4
+          ],
+          [
+            0.5,
+            0.1,
+            0.2,
+            0.3
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          [
+            1,
+            0.5
+          ],
+          [
+            0.5,
+            1
+          ]
+        ],
+        "h_prev": [
+          [
+            0,
+            0
+          ],
+          [
+            0.3,
+            -0.2
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output_gate": [
+          [
+            0.622459,
+            0.586618
+          ],
+          [
+            0.631812,
+            0.629483
+          ]
+        ],
+        "hidden_state": [
+          [
+            0.287649,
+            -0.170889
+          ],
+          [
+            0.481185,
+            0.124244
+          ]
+        ]
+      }
+    },
+    {
+      "id": "lstm-output-gate-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "C_t": [
+          1.0,
+          -0.6
+        ],
+        "W_o": [
+          [
+            0.2,
+            0.4,
+            0.6,
+            0.8
+          ],
+          [
+            1.0,
+            0.2,
+            0.4,
+            0.6
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          2,
+          1.0
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          0.880797,
+          0.802184
+        ],
+        "hidden_state": [
+          0.67081,
+          -0.430813
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "C_t": [
+          0.25,
+          -0.15
+        ],
+        "W_o": [
+          [
+            0.05,
+            0.1,
+            0.15,
+            0.2
+          ],
+          [
+            0.25,
+            0.05,
+            0.1,
+            0.15
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          0,
+          0.25
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          0.512497,
+          0.509374
+        ],
+        "hidden_state": [
+          0.12552,
+          -0.075838
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "C_t": [
+          1.5,
+          0.7
+        ],
+        "W_o": [
+          [
+            1.1,
+            1.2,
+            1.3,
+            1.4
+          ],
+          [
+            1.5,
+            1.1,
+            1.2,
+            1.3
+          ]
+        ],
+        "b_o": [
+          1,
+          1
+        ],
+        "x_t": [
+          2,
+          1.5
+        ],
+        "h_prev": [
+          1,
+          1
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          0.999665,
+          0.999647
+        ],
+        "hidden_state": [
+          0.904845,
+          0.604155
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "C_t": [
+          0.75,
+          -0.45
+        ],
+        "W_o": [
+          [
+            0.15,
+            0.3,
+            0.45,
+            0.6
+          ],
+          [
+            0.75,
+            0.15,
+            0.3,
+            0.45
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          2,
+          0.75
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          0.79413,
+          0.718594
+        ],
+        "hidden_state": [
+          0.504391,
+          -0.303174
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "C_t": [
+          1.5,
+          -0.9
+        ],
+        "W_o": [
+          [
+            0.3,
+            0.6,
+            0.9,
+            1.2
+          ],
+          [
+            1.5,
+            0.3,
+            0.6,
+            0.9
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          3,
+          1.5
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          0.989013,
+          0.958909
+        ],
+        "hidden_state": [
+          0.895203,
+          -0.686864
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "C_t": [
+          0.125,
+          -0.075
+        ],
+        "W_o": [
+          [
+            0.025,
+            0.05,
+            0.075,
+            0.1
+          ],
+          [
+            0.125,
+            0.025,
+            0.05,
+            0.075
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          0,
+          0.125
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          0.503125,
+          0.502344
+        ],
+        "hidden_state": [
+          0.062565,
+          -0.037605
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "C_t": [
+          2.5,
+          1.7
+        ],
+        "W_o": [
+          [
+            2.1,
+            2.2,
+            2.3,
+            2.4
+          ],
+          [
+            2.5,
+            2.1,
+            2.2,
+            2.3
+          ]
+        ],
+        "b_o": [
+          2,
+          2
+        ],
+        "x_t": [
+          3,
+          2.5
+        ],
+        "h_prev": [
+          2,
+          2
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          1.0,
+          1.0
+        ],
+        "hidden_state": [
+          0.986614,
+          0.935409
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "C_t": [
+          2.0,
+          -1.2
+        ],
+        "W_o": [
+          [
+            0.4,
+            0.8,
+            1.2,
+            1.6
+          ],
+          [
+            2.0,
+            0.4,
+            0.8,
+            1.2
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          4,
+          2.0
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          0.999665,
+          0.996316
+        ],
+        "hidden_state": [
+          0.963704,
+          -0.830583
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "C_t": [
+          -0.3,
+          0.5
+        ],
+        "W_o": [
+          [
+            0.4,
+            0.3,
+            0.2,
+            0.1
+          ],
+          [
+            0.3,
+            0.2,
+            0.1,
+            0.5
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          0.5,
+          1
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          0.549834,
+          0.634136
+        ],
+        "hidden_state": [
+          -0.160174,
+          0.293045
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "C_t": [
+          0.375,
+          -0.225
+        ],
+        "W_o": [
+          [
+            0.075,
+            0.15,
+            0.225,
+            0.3
+          ],
+          [
+            0.375,
+            0.075,
+            0.15,
+            0.225
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          1,
+          0.375
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          0.583583,
+          0.558327
+        ],
+        "hidden_state": [
+          0.209131,
+          -0.123546
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "C_t": [
+          2.5,
+          -1.5
+        ],
+        "W_o": [
+          [
+            0.5,
+            1.0,
+            1.5,
+            2.0
+          ],
+          [
+            2.5,
+            0.5,
+            1.0,
+            1.5
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          5,
+          2.5
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          0.999996,
+          0.999842
+        ],
+        "hidden_state": [
+          0.986611,
+          -0.905005
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "C_t": [
+          3.5,
+          2.7
+        ],
+        "W_o": [
+          [
+            3.1,
+            3.2,
+            3.3,
+            3.4
+          ],
+          [
+            3.5,
+            3.1,
+            3.2,
+            3.3
+          ]
+        ],
+        "b_o": [
+          3,
+          3
+        ],
+        "x_t": [
+          4,
+          3.5
+        ],
+        "h_prev": [
+          3,
+          3
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          1.0,
+          1.0
+        ],
+        "hidden_state": [
+          0.998178,
+          0.991007
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "C_t": [
+          0.4,
+          -0.24
+        ],
+        "W_o": [
+          [
+            0.08,
+            0.16,
+            0.24,
+            0.32
+          ],
+          [
+            0.4,
+            0.08,
+            0.16,
+            0.24
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          1,
+          0.4
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          0.590976,
+          0.563653
+        ],
+        "hidden_state": [
+          0.224541,
+          -0.132738
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "C_t": [
+          3.0,
+          -1.8
+        ],
+        "W_o": [
+          [
+            0.6,
+            1.2,
+            1.8,
+            2.4
+          ],
+          [
+            3.0,
+            0.6,
+            1.2,
+            1.8
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          6,
+          3.0
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          1.0,
+          0.999997
+        ],
+        "hidden_state": [
+          0.995055,
+          -0.946803
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "C_t": [
+          4.5,
+          3.7
+        ],
+        "W_o": [
+          [
+            4.1,
+            4.2,
+            4.3,
+            4.4
+          ],
+          [
+            4.5,
+            4.1,
+            4.2,
+            4.3
+          ]
+        ],
+        "b_o": [
+          4,
+          4
+        ],
+        "x_t": [
+          5,
+          4.5
+        ],
+        "h_prev": [
+          4,
+          4
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          1.0,
+          1.0
+        ],
+        "hidden_state": [
+          0.999753,
+          0.998778
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "C_t": [
+          0.6,
+          -0.36
+        ],
+        "W_o": [
+          [
+            0.12,
+            0.24,
+            0.36,
+            0.48
+          ],
+          [
+            0.6,
+            0.12,
+            0.24,
+            0.36
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          1,
+          0.6
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          0.65656,
+          0.612065
+        ],
+        "hidden_state": [
+          0.352605,
+          -0.211293
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-output-gate-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "C_t": [
+          0.2,
+          -0.12
+        ],
+        "W_o": [
+          [
+            0.04,
+            0.08,
+            0.12,
+            0.16
+          ],
+          [
+            0.2,
+            0.04,
+            0.08,
+            0.12
+          ]
+        ],
+        "b_o": [
+          0,
+          0
+        ],
+        "x_t": [
+          0,
+          0.2
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "output_gate": [
+          0.507999,
+          0.506
+        ],
+        "hidden_state": [
+          0.100267,
+          -0.06043
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "output_gate",
+    "parameters": [
+      {
+        "name": "h_prev",
+        "type": "array",
+        "example": "[0,0]",
+        "description": "h prev"
+      },
+      {
+        "name": "x_t",
+        "type": "array",
+        "example": "[1,0.5]",
+        "description": "x t"
+      },
+      {
+        "name": "C_t",
+        "type": "array",
+        "example": "[0.5,-0.3]",
+        "description": "C t"
+      },
+      {
+        "name": "W_o",
+        "type": "array",
+        "example": "[[0.1,0.2,0.3,0.4],[0.5,0.1,0.2,0.3]]",
+        "description": "W o"
+      },
+      {
+        "name": "b_o",
+        "type": "array",
+        "example": "[0,0]",
+        "description": "b o"
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "lstm-output-gate",
+    "name": "Output Gate",
+    "description": "Decides what to output",
+    "color": "#a855f7"
+  },
+  "paper": {
+    "id": "lstm",
+    "title": "Long Short-Term Memory",
+    "authors": "Hochreiter & Schmidhuber, 1997",
+    "year": 1997,
+    "paperUrl": "https://www.bioinf.jku.at/publications/older/2604.pdf",
+    "visualizationComponent": "LSTMArchViz"
+  },
+  "navigation": {
+    "index": 4,
+    "total": 6,
+    "prev": "lstm-cell-state",
+    "next": "lstm-cell"
+  },
+  "cleanTitle": ""
+}

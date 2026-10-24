@@ -1,0 +1,816 @@
+{
+  "catalogId": "python:inference-per-channel-quantization",
+  "id": "inference-per-channel-quantization",
+  "sourceId": "inference-per-channel-quantization",
+  "slug": "inference-per-channel-quantization",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Implement Per-Channel Weight Quantization",
+  "difficulty": "Medium",
+  "tags": [
+    "Quantization",
+    "Inference",
+    "GPU Programming"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-quantization",
+  "sortOrder": 504,
+  "seoDescription": "Quantize weights independently along a selected channel axis, then dequantize with channel-specific scales.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Quantize 2D weight matrices along output channels into signed integers using symmetric scale factors.\n\nWeight distributions vary substantially across neural network output channels. Per-channel scaling prevents outlier channels from degrading quantization resolution of low-magnitude channels.\n\n### Mathematical Formulation\n$$\ns_i = \\frac{\\max_j |W_{i, j}|}{2^{b-1} - 1}, \\quad q_{i, j} = \\text{clamp}\\left(\\left\\lfloor \\frac{W_{i, j}}{s_i} \\right\\rceil, -2^{b-1}, 2^{b-1}-1\\right)\n$$\n\n### Step-by-Step Implementation\n1. Compute maximum absolute weight per output channel row\n2. Derive per-channel scale factors normalized by dynamic integer range 2^(b-1) - 1\n3. Divide weights by scale, round to nearest integer, and clamp into [-(2^(b-1)), 2^(b-1) - 1]\n\n### Returns\nDictionary with 'quantized' (2D integer list) and 'scales' (list of floats rounded to 6 decimal places).",
+  "theory": "## Understanding the Theory: Implement Per-Channel Weight Quantization\n\n### Core Intuition: Why Do We Need This?\nRunning large AI models in production requires massive computing power. During text generation, memory bandwidth (fetching weights and past key-value caches from VRAM) is often the primary bottleneck rather than raw arithmetic compute. **Implement Per-Channel Weight Quantization** optimizes hardware efficiency, memory consumption, or request serving throughput.\n\nWeight distributions vary substantially across neural network output channels. Per-channel scaling prevents outlier channels from degrading quantization resolution of low-magnitude channels. In this problem, the goal is to: quantize 2d weight matrices along output channels into signed integers using symmetric scale factors.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\ns_i = \\frac{\\max_j |W_{i, j}|}{2^{b-1} - 1}, \\quad q_{i, j} = \\text{clamp}\\left(\\left\\lfloor \\frac{W_{i, j}}{s_i} \\right\\rceil, -2^{b-1}, 2^{b-1}-1\\right)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute maximum absolute weight per output channel row\n2. **Phase 2**: Derive per-channel scale factors normalized by dynamic integer range 2^(b-1) - 1\n3. **Phase 3**: Divide weights by scale, round to nearest integer, and clamp into [-(2^(b-1)), 2^(b-1) - 1]\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth Bottleneck**: Quantizing weights to INT8 or INT4 cuts memory traffic in half or quarters, dramatically increasing token generation speeds.\n* **Serving Systems**: Dynamic batching and PagedAttention maximize GPU utilization by grouping requests arriving at different times.\n* **Latency vs. Throughput**: In production serving, systems engineers balance Time-To-First-Token (TTFT) against overall tokens-per-second throughput.",
+  "examples": [
+    "Input: weight = [[1.2, -2.4, 0.6], [-0.5, 0.0, 0.5]], num_bits = 8\n\nOutput: {\"quantized\": [[64, -127, 32], [-127, 0, 127]], \"scales\": [0.018898, 0.003937]}\n\nExplanation: Evaluated inference_per_channel_quantization under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_per_channel_quantization`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_per_channel_quantization`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import torch\n\ndef inference_per_channel_quantization(weight: list, num_bits: int = 8) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Implement Per-Channel Weight Quantization** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch\n\ndef inference_per_channel_quantization(weight: list, num_bits: int = 8) -> dict:\n    w = torch.tensor(weight, dtype=torch.float32)\n    q_max = 2 ** (num_bits - 1) - 1\n    q_min = -(2 ** (num_bits - 1))\n    max_vals = torch.amax(torch.abs(w), dim=1)\n    scales = torch.where(max_vals > 0, max_vals / q_max, torch.ones_like(max_vals))\n    q = torch.clamp(torch.round(w / scales.unsqueeze(1)), q_min, q_max).to(torch.int32)\n    return {'quantized': q.tolist(), 'scales': [round(float(s), 6) for s in scales]}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "2x3 matrix 8-bit",
+      "inputs": {
+        "weight": [
+          [
+            1.2,
+            -2.4,
+            0.6
+          ],
+          [
+            -0.5,
+            0.0,
+            0.5
+          ]
+        ],
+        "num_bits": 8
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            64,
+            -127,
+            32
+          ],
+          [
+            -127,
+            0,
+            127
+          ]
+        ],
+        "scales": [
+          0.018898,
+          0.003937
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "weight": [
+          [
+            2.4,
+            -4.8,
+            1.2
+          ],
+          [
+            -1.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "num_bits": 16
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            64,
+            -127,
+            32
+          ],
+          [
+            -127,
+            0,
+            127
+          ]
+        ],
+        "scales": [
+          0.018898,
+          0.003937
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "weight": [
+          [
+            0.6,
+            -1.2,
+            0.3
+          ],
+          [
+            -0.25,
+            0.0,
+            0.25
+          ]
+        ],
+        "num_bits": 4
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            4,
+            -7,
+            2
+          ],
+          [
+            -7,
+            0,
+            7
+          ]
+        ],
+        "scales": [
+          0.171429,
+          0.035714
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "weight": [
+          [
+            2.2,
+            -1.4,
+            1.6
+          ],
+          [
+            0.5,
+            1.0,
+            1.5
+          ]
+        ],
+        "num_bits": 8
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            127,
+            -81,
+            92
+          ],
+          [
+            42,
+            85,
+            127
+          ]
+        ],
+        "scales": [
+          0.017323,
+          0.011811
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "weight": [
+          [
+            1.8,
+            -3.6,
+            0.9
+          ],
+          [
+            -0.75,
+            0.0,
+            0.75
+          ]
+        ],
+        "num_bits": 12
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            1024,
+            -2047,
+            512
+          ],
+          [
+            -2047,
+            0,
+            2047
+          ]
+        ],
+        "scales": [
+          0.001759,
+          0.000366
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "weight": [
+          [
+            3.6,
+            -7.2,
+            1.8
+          ],
+          [
+            -1.5,
+            0.0,
+            1.5
+          ]
+        ],
+        "num_bits": 24
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            4194304,
+            -8388607,
+            2097152
+          ],
+          [
+            -8388606,
+            0,
+            8388606
+          ]
+        ],
+        "scales": [
+          1e-06,
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "weight": [
+          [
+            0.3,
+            -0.6,
+            0.15
+          ],
+          [
+            -0.125,
+            0.0,
+            0.125
+          ]
+        ],
+        "num_bits": 2
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            0,
+            -1,
+            0
+          ],
+          [
+            -1,
+            0,
+            1
+          ]
+        ],
+        "scales": [
+          0.6,
+          0.125
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "weight": [
+          [
+            3.2,
+            -0.4,
+            2.6
+          ],
+          [
+            1.5,
+            2.0,
+            2.5
+          ]
+        ],
+        "num_bits": 16
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            32767,
+            -4096,
+            26623
+          ],
+          [
+            19660,
+            26214,
+            32767
+          ]
+        ],
+        "scales": [
+          9.8e-05,
+          7.6e-05
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "weight": [
+          [
+            4.8,
+            -9.6,
+            2.4
+          ],
+          [
+            -2.0,
+            0.0,
+            2.0
+          ]
+        ],
+        "num_bits": 32
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            1073741824,
+            -2147483648,
+            536870912
+          ],
+          [
+            -2147483648,
+            0,
+            -2147483648
+          ]
+        ],
+        "scales": [
+          0.0,
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "weight": [
+          [
+            0.6,
+            -2.4,
+            1.2
+          ],
+          [
+            0.5,
+            0.0,
+            -0.5
+          ]
+        ],
+        "num_bits": 8
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            32,
+            -127,
+            64
+          ],
+          [
+            127,
+            0,
+            -127
+          ]
+        ],
+        "scales": [
+          0.018898,
+          0.003937
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "weight": [
+          [
+            0.9,
+            -1.8,
+            0.45
+          ],
+          [
+            -0.375,
+            0.0,
+            0.375
+          ]
+        ],
+        "num_bits": 6
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            16,
+            -31,
+            8
+          ],
+          [
+            -31,
+            0,
+            31
+          ]
+        ],
+        "scales": [
+          0.058065,
+          0.012097
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "weight": [
+          [
+            6.0,
+            -12.0,
+            3.0
+          ],
+          [
+            -2.5,
+            0.0,
+            2.5
+          ]
+        ],
+        "num_bits": 40
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -2147483648,
+            -2147483648,
+            -2147483648
+          ],
+          [
+            -2147483648,
+            0,
+            -2147483648
+          ]
+        ],
+        "scales": [
+          0.0,
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "weight": [
+          [
+            4.2,
+            0.6,
+            3.6
+          ],
+          [
+            2.5,
+            3.0,
+            3.5
+          ]
+        ],
+        "num_bits": 24
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            8388607,
+            1198372,
+            7190234
+          ],
+          [
+            5991862,
+            7190234,
+            8388607
+          ]
+        ],
+        "scales": [
+          1e-06,
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "weight": [
+          [
+            0.96,
+            -1.92,
+            0.48
+          ],
+          [
+            -0.4,
+            0.0,
+            0.4
+          ]
+        ],
+        "num_bits": 6
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            16,
+            -31,
+            8
+          ],
+          [
+            -31,
+            0,
+            31
+          ]
+        ],
+        "scales": [
+          0.061935,
+          0.012903
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "weight": [
+          [
+            7.2,
+            -14.4,
+            3.6
+          ],
+          [
+            -3.0,
+            0.0,
+            3.0
+          ]
+        ],
+        "num_bits": 48
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -2147483648,
+            -2147483648,
+            -2147483648
+          ],
+          [
+            -2147483648,
+            0,
+            -2147483648
+          ]
+        ],
+        "scales": [
+          0.0,
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "weight": [
+          [
+            5.2,
+            1.6,
+            4.6
+          ],
+          [
+            3.5,
+            4.0,
+            4.5
+          ]
+        ],
+        "num_bits": 32
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -2147483648,
+            660764224,
+            1899697152
+          ],
+          [
+            1670265088,
+            1908874368,
+            -2147483648
+          ]
+        ],
+        "scales": [
+          0.0,
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "weight": [
+          [
+            1.44,
+            -2.88,
+            0.72
+          ],
+          [
+            -0.6,
+            0.0,
+            0.6
+          ]
+        ],
+        "num_bits": 10
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            256,
+            -511,
+            128
+          ],
+          [
+            -511,
+            0,
+            511
+          ]
+        ],
+        "scales": [
+          0.005636,
+          0.001174
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "weight": [
+          [
+            0.48,
+            -0.96,
+            0.24
+          ],
+          [
+            -0.2,
+            0.0,
+            0.2
+          ]
+        ],
+        "num_bits": 3
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            2,
+            -3,
+            1
+          ],
+          [
+            -3,
+            0,
+            3
+          ]
+        ],
+        "scales": [
+          0.32,
+          0.066667
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "weight": [
+          [
+            9.6,
+            -19.2,
+            4.8
+          ],
+          [
+            -4.0,
+            0.0,
+            4.0
+          ]
+        ],
+        "num_bits": 64
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -2147483648,
+            -2147483648,
+            -2147483648
+          ],
+          [
+            -2147483648,
+            0,
+            -2147483648
+          ]
+        ],
+        "scales": [
+          0.0,
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-per-channel-quantization-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "weight": [
+          [
+            6.2,
+            2.6,
+            5.6
+          ],
+          [
+            4.5,
+            5.0,
+            5.5
+          ]
+        ],
+        "num_bits": 40
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -2147483648,
+            -2147483648,
+            -2147483648
+          ],
+          [
+            -2147483648,
+            -2147483648,
+            -2147483648
+          ]
+        ],
+        "scales": [
+          0.0,
+          0.0
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_per_channel_quantization",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

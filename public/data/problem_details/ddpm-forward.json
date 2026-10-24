@@ -1,0 +1,994 @@
+{
+  "id": "ddpm-forward",
+  "title": "Forward Diffusion Process",
+  "description": "Implement the closed-form forward diffusion step used by a Denoising Diffusion Probabilistic Model (DDPM). The cumulative signal retention through timestep t is\n\n$$\n\\bar{\\alpha}_t = \\prod_{s=1}^{t}(1-\\beta_s)\n$$\n\nThe noisy sample at timestep t is\n\n$$\nx_t = \\sqrt{\\bar{\\alpha}_t}\\,x_0 + \\sqrt{1-\\bar{\\alpha}_t}\\,\\epsilon\n$$\n\nHere, x_0 is the clean sample, beta_s is the noise variance at step s, t is a one-based timestep, and epsilon is the supplied Gaussian-noise sample. Use NumPy float64 calculations. Return the complete alpha-bar schedule as a list of floats from get_alpha_bar, and return x_t as a nested list from forward_diffusion.",
+  "seoDescription": "Implement the DDPM forward diffusion process by mixing clean samples with Gaussian noise at a selected timestep.",
+  "examples": [
+    "Input: x_0=[[1,2],[3,4]], t=1, betas=[0.0001,0.005075,0.01005,0.015025,0.02], epsilon=[[0.5,-0.3],[0.1,-0.8]]\n\nOutput: [[1.0049,1.9969],[3.0008,3.9918]]\n\nExplanation: At t=1, the first cumulative alpha value scales the clean sample while the supplied epsilon contributes a small amount of noise.",
+    "Input: x_0=[[1,2],[3,4]], t=3, betas=[0.0001,0.005075,0.01005,0.015025,0.02], epsilon=[[-0.2,0.7],[0.4,-0.5]]\n\nOutput: [[0.9677,2.071],[3.0264,3.908]]",
+    "Input: betas=[0.0001,0.005075,0.01005,0.015025,0.02]\n\nOutput: [0.9999,0.994826,0.984828,0.97003,0.95063]"
+  ],
+  "requirements": "- Compute the cumulative product of one minus each beta value.\n- Use the supplied epsilon when computing x_t; do not sample new noise.\n- Treat t as one-based when selecting the cumulative alpha value.\n- Round alpha-bar values to six decimals and x_t values to four decimals.\n- Return Python lists whose shapes match the corresponding schedules or samples.",
+  "theory": "# <span style=\"font-size: 20px;\">Forward Diffusion Process</span>\n\n<span style=\"font-size: 14px;\">The forward diffusion process is the data-corrupting half of denoising diffusion probabilistic models (DDPMs). Introduced by Ho et al. (2020) in \"Denoising Diffusion Probabilistic Models,\" it defines a fixed Markov chain that gradually adds Gaussian noise to a clean data sample over $T$ timesteps until the sample becomes indistinguishable from pure noise. The forward process has no learnable parameters. Its sole purpose is to produce noisy training pairs that teach a neural network to reverse the corruption.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">The forward process takes a clean data sample $x_0$ drawn from the real data distribution $q(x_0)$ and produces a sequence of increasingly noisy versions $x_1, x_2, \\ldots, x_T$. At each timestep $t$, a small amount of Gaussian noise is added to the previous sample according to a fixed variance schedule. By the final timestep $T$, the sample has been corrupted so thoroughly that it is essentially a draw from a standard normal distribution $\\mathcal{N}(0, I)$.</span>\n\n<span style=\"font-size: 14px;\">This is a **fixed** process. Unlike the reverse process (which uses a learned neural network to denoise), the forward process requires no training. The noise schedule $\\beta_1, \\beta_2, \\ldots, \\beta_T$ is set before training begins and never changes. Ho et al. describe this explicitly: \"We define the forward process as a fixed Markov chain that gradually adds Gaussian noise to the data according to a variance schedule $\\beta_1, \\ldots, \\beta_T$.\"</span>\n\n<span style=\"font-size: 14px;\">The Markov property means that each step depends only on the immediately preceding sample, not on any earlier timesteps. This is what makes the forward process mathematically tractable and allows the closed-form sampling trick that avoids iterating through all $t$ steps.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">The forward process is defined by a single conditional Gaussian at each step:</span>\n\n$$\nq(x_t \\mid x_{t-1}) = \\mathcal{N}\\!\\left(x_t;\\; \\sqrt{1 - \\beta_t}\\, x_{t-1},\\; \\beta_t I\\right)\n$$\n\n<span style=\"font-size: 14px;\">This says: to get $x_t$ from $x_{t-1}$, scale down the previous sample by $\\sqrt{1 - \\beta_t}$ (shrinking the signal slightly) and add Gaussian noise with variance $\\beta_t$. The parameter $\\beta_t$ controls how much noise is injected at step $t$.</span>\n\n<span style=\"font-size: 14px;\">Using the **reparameterization trick**, we can write this as a deterministic function of $x_{t-1}$ and a noise sample:</span>\n\n$$\nx_t = \\sqrt{1 - \\beta_t}\\, x_{t-1} + \\sqrt{\\beta_t}\\, \\epsilon_t, \\quad \\epsilon_t \\sim \\mathcal{N}(0, I)\n$$\n\n<span style=\"font-size: 14px;\">To build notation for the closed-form result, define two auxiliary quantities:</span>\n\n$$\n\\alpha_t = 1 - \\beta_t, \\qquad \\bar{\\alpha}_t = \\prod_{s=1}^{t} \\alpha_s\n$$\n\n<span style=\"font-size: 14px;\">Here $\\alpha_t$ is the fraction of signal preserved at step $t$ (always slightly less than 1), and $\\bar{\\alpha}_t$ (alpha-bar) is the cumulative product from step 1 through $t$. Because each $\\alpha_s < 1$, $\\bar{\\alpha}_t$ decreases monotonically toward zero as $t$ grows.</span>\n\n<span style=\"font-size: 14px;\">The joint distribution over the full forward chain factors as:</span>\n\n$$\nq(x_{1:T} \\mid x_0) = \\prod_{t=1}^{T} q(x_t \\mid x_{t-1})\n$$\n\n<span style=\"font-size: 14px;\">This factorization follows directly from the Markov property.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Closed-Form Trick</span>\n\n<span style=\"font-size: 14px;\">The most important mathematical insight in the forward process is that you do **not** need to iterate through all $t$ steps to sample $x_t$. You can jump directly from $x_0$ to $x_t$ in a single computation.</span>\n\n<span style=\"font-size: 14px;\">Here is the derivation. Start with one step:</span>\n\n$$\nx_1 = \\sqrt{\\alpha_1}\\, x_0 + \\sqrt{1 - \\alpha_1}\\, \\epsilon_1\n$$\n\n<span style=\"font-size: 14px;\">Apply the transition again to get $x_2$:</span>\n\n$$\nx_2 = \\sqrt{\\alpha_2}\\, x_1 + \\sqrt{1 - \\alpha_2}\\, \\epsilon_2\n$$\n\n<span style=\"font-size: 14px;\">Substitute the expression for $x_1$:</span>\n\n$$\nx_2 = \\sqrt{\\alpha_2}\\left(\\sqrt{\\alpha_1}\\, x_0 + \\sqrt{1 - \\alpha_1}\\, \\epsilon_1\\right) + \\sqrt{1 - \\alpha_2}\\, \\epsilon_2\n$$\n\n$$\n= \\sqrt{\\alpha_1 \\alpha_2}\\, x_0 + \\sqrt{\\alpha_2(1 - \\alpha_1)}\\, \\epsilon_1 + \\sqrt{1 - \\alpha_2}\\, \\epsilon_2\n$$\n\n<span style=\"font-size: 14px;\">The last two terms are independent Gaussians. The sum of independent Gaussians $\\mathcal{N}(0, \\sigma_1^2 I)$ and $\\mathcal{N}(0, \\sigma_2^2 I)$ is Gaussian with variance $\\sigma_1^2 + \\sigma_2^2$. The combined variance is:</span>\n\n$$\n\\alpha_2(1 - \\alpha_1) + (1 - \\alpha_2) = \\alpha_2 - \\alpha_1\\alpha_2 + 1 - \\alpha_2 = 1 - \\alpha_1\\alpha_2 = 1 - \\bar{\\alpha}_2\n$$\n\n<span style=\"font-size: 14px;\">So we can replace the two noise terms with a single draw:</span>\n\n$$\nx_2 = \\sqrt{\\bar{\\alpha}_2}\\, x_0 + \\sqrt{1 - \\bar{\\alpha}_2}\\, \\epsilon, \\quad \\epsilon \\sim \\mathcal{N}(0, I)\n$$\n\n<span style=\"font-size: 14px;\">This pattern holds for any timestep $t$ by induction. The general closed-form result is:</span>\n\n$$\nq(x_t \\mid x_0) = \\mathcal{N}\\!\\left(x_t;\\; \\sqrt{\\bar{\\alpha}_t}\\, x_0,\\; (1 - \\bar{\\alpha}_t) I\\right)\n$$\n\n<span style=\"font-size: 14px;\">Or equivalently, using the reparameterization trick:</span>\n\n$$\nx_t = \\sqrt{\\bar{\\alpha}_t}\\, x_0 + \\sqrt{1 - \\bar{\\alpha}_t}\\, \\epsilon, \\quad \\epsilon \\sim \\mathcal{N}(0, I)\n$$\n\n<span style=\"font-size: 14px;\">This is the equation you will implement. It takes three inputs ($x_0$, $t$, and $\\epsilon$) and produces $x_t$ in a single vectorized operation. No loops, no iterating through intermediate timesteps.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What the Coefficients Mean</span>\n\n<span style=\"font-size: 14px;\">The closed-form equation $x_t = \\sqrt{\\bar{\\alpha}_t}\\, x_0 + \\sqrt{1 - \\bar{\\alpha}_t}\\, \\epsilon$ is a weighted combination of two components: the original clean data and pure noise. The coefficients control the **signal-to-noise ratio** at each timestep.</span>\n\n* <span style=\"font-size: 14px;\">$\\sqrt{\\bar{\\alpha}_t}$ scales the **signal** (the original data $x_0$). When $t$ is small, $\\bar{\\alpha}_t$ is close to 1, so this coefficient is close to 1, preserving most of the original data.</span>\n* <span style=\"font-size: 14px;\">$\\sqrt{1 - \\bar{\\alpha}_t}$ scales the **noise** ($\\epsilon$). When $t$ is small, $1 - \\bar{\\alpha}_t$ is close to 0, so very little noise is added.</span>\n\n<span style=\"font-size: 14px;\">As $t$ increases toward $T$, the cumulative product $\\bar{\\alpha}_t$ shrinks toward zero. The signal coefficient drops and the noise coefficient rises. At the extremes:</span>\n\n* <span style=\"font-size: 14px;\">**At $t = 0$**: $\\bar{\\alpha}_0 = 1$ by convention, so $x_0 = 1 \\cdot x_0 + 0 \\cdot \\epsilon = x_0$. The sample is perfectly clean.</span>\n* <span style=\"font-size: 14px;\">**At $t = T$**: $\\bar{\\alpha}_T \\approx 0$ (for properly chosen schedules), so $x_T \\approx 0 \\cdot x_0 + 1 \\cdot \\epsilon = \\epsilon$. The sample is pure noise.</span>\n\n<span style=\"font-size: 14px;\">Notice that the two coefficients satisfy $(\\sqrt{\\bar{\\alpha}_t})^2 + (\\sqrt{1 - \\bar{\\alpha}_t})^2 = \\bar{\\alpha}_t + 1 - \\bar{\\alpha}_t = 1$. This is a **variance-preserving** property. If $x_0$ has unit variance and $\\epsilon$ has unit variance, then $x_t$ also has unit variance at every timestep. The total energy in the sample stays constant; only the proportion that comes from signal versus noise changes.</span>\n\n<span style=\"font-size: 14px;\">This variance-preserving design is deliberate. Without it, the magnitude of $x_t$ would grow or shrink over time, making it harder for the denoising network to operate consistently across timesteps.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">Ho et al. (2020) built on the theoretical framework of Sohl-Dickstein et al. (2015), who first proposed using a diffusion process for generative modeling. The key contribution of Ho et al. was showing that a simplified training objective and specific architectural choices could make diffusion models produce high-quality images competitive with GANs.</span>\n\n<span style=\"font-size: 14px;\">In the original paper, the forward process uses a **linear variance schedule** where $\\beta_t$ increases linearly from $\\beta_1 = 10^{-4}$ to $\\beta_T = 0.02$ over $T = 1000$ timesteps. This means the noise injection starts very gently (tiny $\\beta$ values in early steps) and accelerates toward the end. The linear schedule was chosen empirically; later work by Nichol and Dhariwal (2021) introduced a cosine schedule that distributes the noise more evenly across timesteps and improves sample quality.</span>\n\n<span style=\"font-size: 14px;\">The forward process being fixed (not learned) is a deliberate design choice. Sohl-Dickstein et al. experimented with learning the noise schedule, but Ho et al. found that fixing it simplifies training enormously. With a fixed forward process, the only learnable component is the reverse denoising network. The number of timesteps $T = 1000$ is large by design: more steps means each individual step adds only a tiny amount of noise, making the reverse transition closer to Gaussian, which is a key assumption in the derivation of the reverse process.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Suppose we have a 2D data point $x_0 = [0.5, -0.3]$ and we sample noise $\\epsilon = [0.8, -1.2]$. We will compute $x_t$ at three different timesteps to see how the signal degrades progressively.</span>\n\n<span style=\"font-size: 14px;\">For a typical linear schedule with $T = 1000$, the approximate values of $\\bar{\\alpha}_t$ at selected timesteps are:</span>\n\n* <span style=\"font-size: 14px;\">$\\bar{\\alpha}_{100} \\approx 0.9048$</span>\n* <span style=\"font-size: 14px;\">$\\bar{\\alpha}_{500} \\approx 0.0821$</span>\n* <span style=\"font-size: 14px;\">$\\bar{\\alpha}_{1000} \\approx 0.0001$</span>\n\n### <span style=\"font-size: 14px;\">At $t = 100$</span>\n\n$$\nx_{100} = \\sqrt{0.9048} \\cdot [0.5, -0.3] + \\sqrt{1 - 0.9048} \\cdot [0.8, -1.2]\n$$\n\n$$\n= 0.9513 \\cdot [0.5, -0.3] + 0.3087 \\cdot [0.8, -1.2]\n$$\n\n$$\n= [0.4756, -0.2854] + [0.2469, -0.3704]\n$$\n\n$$\n= [0.7226, -0.6558]\n$$\n\n<span style=\"font-size: 14px;\">The result is still close to the original. The signal coefficient (0.9513) dominates the noise coefficient (0.3087), so the original structure is largely intact.</span>\n\n### <span style=\"font-size: 14px;\">At $t = 500$</span>\n\n$$\nx_{500} = \\sqrt{0.0821} \\cdot [0.5, -0.3] + \\sqrt{1 - 0.0821} \\cdot [0.8, -1.2]\n$$\n\n$$\n= 0.2865 \\cdot [0.5, -0.3] + 0.9580 \\cdot [0.8, -1.2]\n$$\n\n$$\n= [0.1433, -0.0860] + [0.7664, -1.1496]\n$$\n\n$$\n= [0.9097, -1.2356]\n$$\n\n<span style=\"font-size: 14px;\">Now the noise dominates. The signal coefficient (0.2865) is dwarfed by the noise coefficient (0.9580). The values bear little resemblance to the original $[0.5, -0.3]$.</span>\n\n### <span style=\"font-size: 14px;\">At $t = 1000$</span>\n\n$$\nx_{1000} = \\sqrt{0.0001} \\cdot [0.5, -0.3] + \\sqrt{1 - 0.0001} \\cdot [0.8, -1.2]\n$$\n\n$$\n= 0.01 \\cdot [0.5, -0.3] + 0.99995 \\cdot [0.8, -1.2]\n$$\n\n$$\n= [0.005, -0.003] + [0.7999, -1.1999]\n$$\n\n$$\n= [0.8049, -1.2029]\n$$\n\n<span style=\"font-size: 14px;\">The original signal contributes only $[0.005, -0.003]$, which is negligible. The output is essentially the noise vector itself, confirming that at $t = T$ the forward process has destroyed all information about $x_0$. This progressive corruption is the core idea: the forward process creates a smooth bridge from structured data to unstructured noise, and the reverse process learns to walk that bridge backward.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why Return Both $x_t$ and $\\epsilon$</span>\n\n<span style=\"font-size: 14px;\">When implementing the forward process for training, the function must return **both** the noisy sample $x_t$ and the noise vector $\\epsilon$ that was used to create it. This is not optional; both are required by the training objective.</span>\n\n<span style=\"font-size: 14px;\">The simplified training loss from Ho et al. is:</span>\n\n$$\nL_{\\text{simple}} = \\mathbb{E}_{t, x_0, \\epsilon}\\left[\\left\\| \\epsilon - \\epsilon_\\theta(x_t, t) \\right\\|^2\\right]\n$$\n\n<span style=\"font-size: 14px;\">Here $\\epsilon_\\theta(x_t, t)$ is the neural network's prediction of the noise, given the noisy input $x_t$ and the timestep $t$. The loss compares this prediction against the **actual noise** $\\epsilon$ that was sampled during the forward process.</span>\n\n<span style=\"font-size: 14px;\">In a single training step, the flow is:</span>\n\n<span style=\"font-size: 14px;\">1. **Sample** a clean image $x_0$ from the dataset</span>\n\n<span style=\"font-size: 14px;\">2. **Sample** a random timestep $t \\sim \\text{Uniform}(\\{1, 2, \\ldots, T\\})$</span>\n\n<span style=\"font-size: 14px;\">3. **Sample** noise $\\epsilon \\sim \\mathcal{N}(0, I)$</span>\n\n<span style=\"font-size: 14px;\">4. **Compute** $x_t = \\sqrt{\\bar{\\alpha}_t}\\, x_0 + \\sqrt{1 - \\bar{\\alpha}_t}\\, \\epsilon$ (forward process)</span>\n\n<span style=\"font-size: 14px;\">5. **Predict** $\\hat{\\epsilon} = \\epsilon_\\theta(x_t, t)$ (neural network forward pass)</span>\n\n<span style=\"font-size: 14px;\">6. **Compute loss** $\\|\\epsilon - \\hat{\\epsilon}\\|^2$ (MSE between true and predicted noise)</span>\n\n<span style=\"font-size: 14px;\">Step 4 uses $\\epsilon$ to create $x_t$. Step 6 uses the same $\\epsilon$ as the regression target. If the forward function only returned $x_t$, you would have no way to compute the loss. This is conceptually different from classification, where labels come from the dataset. In DDPM training, the \"label\" ($\\epsilon$) is generated on the fly as part of the forward process itself, so the forward function simultaneously creates the input ($x_t$) and the target ($\\epsilon$).</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n* <span style=\"font-size: 14px;\">**Confusing $\\alpha_t$ with $\\bar{\\alpha}_t$.** $\\alpha_t = 1 - \\beta_t$ is the per-step signal retention factor. $\\bar{\\alpha}_t = \\prod_{s=1}^t \\alpha_s$ is the cumulative product. The closed-form equation uses $\\bar{\\alpha}_t$, not $\\alpha_t$. Using $\\alpha_t$ instead means you compute only a single step of noise addition rather than the cumulative effect of $t$ steps, making the result far less noisy than it should be.</span>\n\n* <span style=\"font-size: 14px;\">**Swapping the signal and noise coefficients.** The correct formula is $x_t = \\sqrt{\\bar{\\alpha}_t}\\, x_0 + \\sqrt{1 - \\bar{\\alpha}_t}\\, \\epsilon$. Writing $\\sqrt{1 - \\bar{\\alpha}_t}\\, x_0 + \\sqrt{\\bar{\\alpha}_t}\\, \\epsilon$ reverses the roles: early timesteps would be mostly noise and late timesteps mostly signal. This produces a process that starts noisy and gets cleaner, the opposite of what the forward process should do.</span>\n\n* <span style=\"font-size: 14px;\">**Forgetting to return $\\epsilon$.** If the forward function returns only $x_t$, the training loop cannot compute the loss $\\|\\epsilon - \\epsilon_\\theta(x_t, t)\\|^2$ because it has no access to the ground-truth noise. The implementer might then sample new noise for the loss target, which destroys the correspondence between input and label.</span>\n\n* <span style=\"font-size: 14px;\">**Iterating through all $t$ steps instead of using the closed form.** A naive implementation might loop from $x_0$ to $x_1$ to $x_2$ and so on up to $x_t$. This is mathematically correct but absurdly slow: for $T = 1000$, you run 1000 sequential Gaussian samples per image instead of a single vectorized operation. The closed form exists precisely to avoid this.</span>\n\n* <span style=\"font-size: 14px;\">**Dimension mismatch between $x_0$ and $\\epsilon$.** The noise $\\epsilon$ must have exactly the same shape as $x_0$. For image data, this means $\\epsilon \\in \\mathbb{R}^{B \\times C \\times H \\times W}$. Sampling noise with the wrong shape will either crash with a broadcasting error or silently produce incorrect results through unintended broadcasting.</span>\n\n* <span style=\"font-size: 14px;\">**Using the wrong distribution for $\\epsilon$.** The noise must be drawn from a standard normal $\\mathcal{N}(0, I)$, not a uniform distribution, not a Bernoulli, and not a normal with non-unit variance. The entire derivation assumes Gaussian noise; using any other distribution breaks the closed-form result and invalidates the training objective.</span>\n\n* <span style=\"font-size: 14px;\">**Applying $\\beta_t$ directly as the noise coefficient.** Writing $x_t = \\sqrt{1 - \\beta_t}\\, x_0 + \\sqrt{\\beta_t}\\, \\epsilon$ uses the single-step transition formula (from $x_{t-1}$ to $x_t$), not the closed-form jump from $x_0$ to $x_t$. This drastically underestimates the total noise at any timestep beyond $t = 1$.</span>\n\n---",
+  "hints": [
+    "Use np.cumprod on one minus the float64 beta array.",
+    "Select alpha_bar[t - 1] because t is one-based.",
+    "Convert x_0 and epsilon with np.asarray before combining them."
+  ],
+  "constraints": "- betas is a nonempty list of float values strictly between 0 and 1.\n- t is an integer from 1 through the length of betas.\n- x_0 and epsilon are equally shaped, nonempty nested lists of real numbers.\n- Numerical calculations use NumPy float64.",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef get_alpha_bar(betas: list[float]) -> list[float]:\n    \"\"\"\n    Returns the cumulative alpha-bar values rounded to six decimals.\n    \"\"\"\n    pass\n\ndef forward_diffusion(x_0: list, t: int, betas: list[float], epsilon: list) -> list:\n    \"\"\"\n    Returns x_t with the same nested shape as x_0.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-23T18:46:10.904Z",
+  "updatedAt": "2026-09-02T19:18:37.735Z",
+  "topicId": "ddpm-forward",
+  "paperSnippet": "\"We define the forward process as a fixed Markov chain that gradually adds Gaussian noise to the data according to a variance schedule Î²_1, ..., Î²_T.\"",
+  "visualizationComponent": "ForwardDiffusionViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Forward Diffusion Process** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef get_alpha_bar(betas: list[float]) -> list[float]:\n    alphas = [1.0 - float(b) for b in betas]\n    alpha_bar = []\n    prod = 1.0\n    for a in alphas:\n        prod *= a\n        alpha_bar.append(round(prod, 6))\n    return alpha_bar\n\ndef forward_diffusion(x_0: list, t: int, betas: list[float], epsilon: list) -> list:\n    x0_arr = np.asarray(x_0, dtype=float)\n    eps_arr = np.asarray(epsilon, dtype=float)\n    b_list = [float(b) for b in betas]\n    t_val = int(t)\n    \n    alphas = [1.0 - b for b in b_list[:t_val]]\n    alpha_bar = float(np.prod(alphas))\n    out = np.sqrt(alpha_bar) * x0_arr + np.sqrt(1.0 - alpha_bar) * eps_arr\n    return np.round(out, 4).tolist()\n\ndef ddpm_forward(method: str = \"forward\", betas: list = None, x_0: list = None, t: int = 1, epsilon: list = None, **kwargs):\n    if method == \"alpha_bar\":\n        return get_alpha_bar(betas)\n    return forward_diffusion(x_0, t, betas, epsilon)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Forward: t=1, early step",
+      "inputs": {
+        "t": 1,
+        "x_0": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "betas": [
+          0.0001,
+          0.005075,
+          0.01005,
+          0.015025,
+          0.02
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            0.5,
+            -0.3
+          ],
+          [
+            0.1,
+            -0.8
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1.0049,
+          1.9969
+        ],
+        [
+          3.0008,
+          3.9918
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Forward: t=3, mid step",
+      "inputs": {
+        "t": 3,
+        "x_0": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "betas": [
+          0.0001,
+          0.005075,
+          0.01005,
+          0.015025,
+          0.02
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            -0.2,
+            0.7
+          ],
+          [
+            0.4,
+            -0.5
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.9677,
+          2.071
+        ],
+        [
+          3.0264,
+          3.908
+        ]
+      ]
+    },
+    {
+      "id": "test-3",
+      "name": "Alpha-bar schedule",
+      "inputs": {
+        "betas": [
+          0.0001,
+          0.005075,
+          0.01005,
+          0.015025,
+          0.02
+        ],
+        "method": "alpha_bar"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        0.9999,
+        0.994826,
+        0.984828,
+        0.97003,
+        0.95063
+      ]
+    },
+    {
+      "id": "ddpm-forward-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "t": 2,
+        "x_0": [
+          [
+            2,
+            4
+          ],
+          [
+            6,
+            8
+          ]
+        ],
+        "betas": [
+          0.0002,
+          0.0101,
+          0.0201,
+          0.0301,
+          0.04
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            1.0,
+            -0.6
+          ],
+          [
+            0.2,
+            -1.6
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0912,
+          3.9185
+        ],
+        [
+          5.9893,
+          7.7963
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "t": 0,
+        "x_0": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "betas": [
+          0.0001,
+          0.0025,
+          0.005,
+          0.0075,
+          0.01
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            0.25,
+            -0.15
+          ],
+          [
+            0.05,
+            -0.4
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          2.0,
+          2.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "t": -1,
+        "x_0": [
+          [
+            -1,
+            -2
+          ],
+          [
+            -3,
+            -4
+          ]
+        ],
+        "betas": [
+          -0.0001,
+          -0.0051,
+          -0.01,
+          -0.015,
+          -0.02
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            -0.5,
+            0.3
+          ],
+          [
+            -0.1,
+            0.8
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "t": 3,
+        "x_0": [
+          [
+            3,
+            6
+          ],
+          [
+            9,
+            12
+          ]
+        ],
+        "betas": [
+          0.0003,
+          0.0152,
+          0.0301,
+          0.0451,
+          0.06
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            1.5,
+            -0.9
+          ],
+          [
+            0.3,
+            -2.4
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          3.2502,
+          5.6719
+        ],
+        [
+          8.8583,
+          11.2163
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "t": 2.0,
+        "x_0": [
+          [
+            2.0,
+            3.0
+          ],
+          [
+            4.0,
+            5.0
+          ]
+        ],
+        "betas": [
+          1.0001,
+          1.005075,
+          1.01005,
+          1.015025,
+          1.02
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            1.5,
+            0.7
+          ],
+          [
+            1.1,
+            0.19999999999999996
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          1.5014,
+          0.7021
+        ],
+        [
+          1.1028,
+          0.2036
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "t": -1.0,
+        "x_0": [
+          [
+            -1.0,
+            0.0
+          ],
+          [
+            1.0,
+            2.0
+          ]
+        ],
+        "betas": [
+          -1.9999,
+          -1.994925,
+          -1.98995,
+          -1.984975,
+          -1.98
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            -1.5,
+            -2.3
+          ],
+          [
+            -1.9,
+            -2.8
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "t": 1,
+        "x_0": [
+          [
+            2,
+            1
+          ],
+          [
+            4,
+            3
+          ]
+        ],
+        "betas": [
+          0.02,
+          0.015025,
+          0.01005,
+          0.005075,
+          0.0001
+        ],
+        "method": "drawrof",
+        "epsilon": [
+          [
+            -0.3,
+            0.5
+          ],
+          [
+            -0.8,
+            0.1
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          1.9375,
+          1.0607
+        ],
+        [
+          3.8467,
+          2.984
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "t": -1,
+        "x_0": [
+          [
+            -1,
+            -2
+          ],
+          [
+            -3,
+            -4
+          ]
+        ],
+        "betas": [
+          -0.0001,
+          -0.005075,
+          -0.01005,
+          -0.015025,
+          -0.02
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            -0.5,
+            0.3
+          ],
+          [
+            -0.1,
+            0.8
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "t": 10,
+        "x_0": [
+          [
+            10,
+            20
+          ],
+          [
+            30,
+            40
+          ]
+        ],
+        "betas": [
+          0.001,
+          0.0507,
+          0.1005,
+          0.1502,
+          0.2
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            5.0,
+            -3.0
+          ],
+          [
+            1.0,
+            -8.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          10.856,
+          13.2863
+        ],
+        [
+          23.4941,
+          25.2763
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "t": 0,
+        "x_0": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "betas": [
+          0.0,
+          0.0005,
+          0.001,
+          0.0015,
+          0.002
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            0.05,
+            -0.03
+          ],
+          [
+            0.01,
+            -0.08
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "t": 6.0,
+        "x_0": [
+          [
+            6.0,
+            7.0
+          ],
+          [
+            8.0,
+            9.0
+          ]
+        ],
+        "betas": [
+          5.0001,
+          5.005075,
+          5.01005,
+          5.015025,
+          5.02
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            5.5,
+            4.7
+          ],
+          [
+            5.1,
+            4.2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "t": 2,
+        "x_0": [
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            6
+          ]
+        ],
+        "betas": [
+          0.0002,
+          0.0076,
+          0.0151,
+          0.0225,
+          0.03
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            0.75,
+            -0.45
+          ],
+          [
+            0.15,
+            -1.2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0584,
+          2.9485
+        ],
+        [
+          3.9976,
+          5.8706
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "t": -2,
+        "x_0": [
+          [
+            -2,
+            -4
+          ],
+          [
+            -6,
+            -8
+          ]
+        ],
+        "betas": [
+          -0.0002,
+          -0.0101,
+          -0.0201,
+          -0.0301,
+          -0.04
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            -1.0,
+            0.6
+          ],
+          [
+            -0.2,
+            1.6
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "t": 0,
+        "x_0": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "betas": [
+          0.0,
+          0.0013,
+          0.0025,
+          0.0038,
+          0.005
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            0.125,
+            -0.075
+          ],
+          [
+            0.025,
+            -0.2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          1.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "t": 0.0,
+        "x_0": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            2.0,
+            3.0
+          ]
+        ],
+        "betas": [
+          -0.9999,
+          -0.994925,
+          -0.98995,
+          -0.984975,
+          -0.98
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            -0.5,
+            -1.3
+          ],
+          [
+            -0.9,
+            -1.8
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          2.0,
+          3.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "t": 4,
+        "x_0": [
+          [
+            4,
+            8
+          ],
+          [
+            12,
+            16
+          ]
+        ],
+        "betas": [
+          0.0004,
+          0.0203,
+          0.0402,
+          0.0601,
+          0.08
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            2.0,
+            -1.2
+          ],
+          [
+            0.4,
+            -3.2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          4.4425,
+          7.1097
+        ],
+        [
+          11.4156,
+          13.9463
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-forward-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "t": 1,
+        "x_0": [
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            3
+          ]
+        ],
+        "betas": [
+          0.0001,
+          0.0038,
+          0.0075,
+          0.0113,
+          0.015
+        ],
+        "method": "forward",
+        "epsilon": [
+          [
+            0.375,
+            -0.225
+          ],
+          [
+            0.075,
+            -0.6
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          1.0037,
+          1.9976
+        ],
+        [
+          2.0006,
+          2.9938
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "ddpm_forward",
+    "methods": [
+      {
+        "name": "forward",
+        "parameters": [
+          {
+            "name": "x_0",
+            "type": "array",
+            "example": "[[1,2],[3,4]]",
+            "description": "Clean sample."
+          },
+          {
+            "name": "t",
+            "type": "number",
+            "example": "1",
+            "description": "One-based timestep."
+          },
+          {
+            "name": "betas",
+            "type": "array",
+            "example": "[0.0001,0.005075,0.01005,0.015025,0.02]",
+            "description": "Noise schedule."
+          },
+          {
+            "name": "epsilon",
+            "type": "array",
+            "example": "[[0.5,-0.3],[0.1,-0.8]]",
+            "description": "Supplied noise with the same shape as x_0."
+          }
+        ]
+      },
+      {
+        "name": "alpha_bar",
+        "parameters": [
+          {
+            "name": "betas",
+            "type": "array",
+            "example": "[0.0001,0.005075,0.01005,0.015025,0.02]",
+            "description": "Noise schedule."
+          }
+        ]
+      }
+    ],
+    "runtime": "numpy"
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "ddpm-forward",
+    "name": "Forward Diffusion",
+    "description": "Gradually add Gaussian noise over T steps",
+    "color": "#ef4444"
+  },
+  "paper": {
+    "id": "ddpm",
+    "title": "Denoising Diffusion Probabilistic Models",
+    "authors": "Ho, Jain & Abbeel, 2020",
+    "year": 2020,
+    "paperUrl": "https://arxiv.org/abs/2006.11239",
+    "visualizationComponent": "DDPMArchViz"
+  },
+  "navigation": {
+    "index": 1,
+    "total": 5,
+    "prev": null,
+    "next": "ddpm-reverse"
+  },
+  "cleanTitle": ""
+}

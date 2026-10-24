@@ -1,0 +1,1156 @@
+{
+  "catalogId": "python:la-whitening",
+  "id": "la-whitening",
+  "sourceId": "la-whitening",
+  "slug": "la-whitening",
+  "source": "python",
+  "category": "numpy",
+  "title": "Whitening Transform",
+  "difficulty": "Hard",
+  "tags": [
+    "Feature Engineering",
+    "Linear Algebra",
+    "Classic ML"
+  ],
+  "isFree": false,
+  "planId": "math-linear-algebra",
+  "planTitle": "Linear Algebra",
+  "sectionId": "math-linear-algebra-ml-applications",
+  "sortOrder": 408,
+  "seoDescription": "Center and whiten a data matrix so the transformed features have zero mean and identity covariance.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Center and whiten feature distributions so transformed variables possess zero mean and an identity covariance matrix.\n\nWhitening eliminates linear feature correlations and equalizes variances across all principal directions, widely used in image feature representations.\n\n### Mathematical Formulation\n$$\n\\tilde{X} = (X - \\mu) W_{\\text{ZCA}}, \\quad W_{\\text{ZCA}} = V \\Lambda^{-1/2} V^T\n$$\n\n### Step-by-Step Implementation\n1. Center data matrix by subtracting feature-wise sample means\n2. Compute sample covariance matrix and its spectral eigendecomposition\n3. Apply symmetric ZCA transformation matrix to sphericize covariance to identity\n\n### Returns\nDictionary with 'whitened_data' and 'whitening_matrix'.",
+  "theory": "## Understanding the Theory: Whitening Transform\n\n### Core Intuition: Why Do We Need This?\nLinear algebra is the foundational mathematical language of machine learning. Data samples, image pixels, and word embeddings are all represented as multidimensional vectors and matrices. **Whitening Transform** transforms coordinate systems, extracts principal axes of variation, or decomposes complex transformations into simpler geometric building blocks.\n\nWhitening eliminates linear feature correlations and equalizes variances across all principal directions, widely used in image feature representations. In this problem, the goal is to: center and whiten feature distributions so transformed variables possess zero mean and an identity covariance matrix.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\tilde{X} = (X - \\mu) W_{\\text{ZCA}}, \\quad W_{\\text{ZCA}} = V \\Lambda^{-1/2} V^T\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Center data matrix by subtracting feature-wise sample means\n2. **Phase 2**: Compute sample covariance matrix and its spectral eigendecomposition\n3. **Phase 3**: Apply symmetric ZCA transformation matrix to sphericize covariance to identity\n\n### Practical Machine Learning Applications & Nuances\n* **Feature Compression & Projections**: Operations like low-rank approximations and orthogonal projections compress high-dimensional feature spaces while preserving maximum variance.\n* **Numerical Stability**: When inverting matrices or solving linear systems, ill-conditioned matrices (matrices with very small determinants or high condition numbers) require regularization to prevent numerical instability.\n* **Vectorized Execution**: Expressing computations as matrix multiplications allows GPUs and CPUs to leverage hardware tensor cores for maximum throughput.",
+  "examples": [
+    "Input: X = [[1.0, 2.0], [2.0, 4.0], [3.0, 5.0], [4.0, 8.0]]\n\nOutput: {\"whitened_data\": [[-0.8487, -0.8201], [-0.5625, -0.0712], [1.4012, -0.5354], [0.0099, 1.4268]], \"whitening_matrix\": [[3.6411, -1.6775], [-1.6775, 1.2132]]}\n\nExplanation: Evaluated la_whitening under standard test conditions."
+  ],
+  "requirements": "* Function must be named `la_whitening`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `la_whitening`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef la_whitening(X: list) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Whitening Transform** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef la_whitening(X: list) -> dict:\n    arr = np.array(X, dtype=np.float64); N = arr.shape[0]\n    cen = arr - np.mean(arr, axis=0)\n    evals, evecs = np.linalg.eigh(np.dot(cen.T, cen) / max(N - 1, 1))\n    W = np.dot(np.dot(evecs, np.diag(1.0 / np.sqrt(np.maximum(evals, 1e-8)))), evecs.T)\n    return {'whitened_data': np.round(np.dot(cen, W), 4).tolist(), 'whitening_matrix': np.round(W, 4).tolist()}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Correlated 2D data",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            2.0,
+            4.0
+          ],
+          [
+            3.0,
+            5.0
+          ],
+          [
+            4.0,
+            8.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            3.6411,
+            -1.6775
+          ],
+          [
+            -1.6775,
+            1.2132
+          ]
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "la-whitening-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "X": [
+          [
+            2.0,
+            4.0
+          ],
+          [
+            4.0,
+            8.0
+          ],
+          [
+            6.0,
+            10.0
+          ],
+          [
+            8.0,
+            16.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            1.8205,
+            -0.8387
+          ],
+          [
+            -0.8387,
+            0.6066
+          ]
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "la-whitening-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X": [
+          [
+            0.5,
+            1.0
+          ],
+          [
+            1.0,
+            2.0
+          ],
+          [
+            1.5,
+            2.5
+          ],
+          [
+            2.0,
+            4.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            7.2822,
+            -3.3549
+          ],
+          [
+            -3.3549,
+            2.4264
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            2.0,
+            3.0
+          ],
+          [
+            3.0,
+            5.0
+          ],
+          [
+            4.0,
+            6.0
+          ],
+          [
+            5.0,
+            9.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            3.6411,
+            -1.6775
+          ],
+          [
+            -1.6775,
+            1.2132
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          [
+            1.5,
+            3.0
+          ],
+          [
+            3.0,
+            6.0
+          ],
+          [
+            4.5,
+            7.5
+          ],
+          [
+            6.0,
+            12.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            2.4274,
+            -1.1183
+          ],
+          [
+            -1.1183,
+            0.8088
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            3.0,
+            6.0
+          ],
+          [
+            6.0,
+            12.0
+          ],
+          [
+            9.0,
+            15.0
+          ],
+          [
+            12.0,
+            24.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            1.2137,
+            -0.5592
+          ],
+          [
+            -0.5592,
+            0.4044
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          [
+            0.25,
+            0.5
+          ],
+          [
+            0.5,
+            1.0
+          ],
+          [
+            0.75,
+            1.25
+          ],
+          [
+            1.0,
+            2.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            14.5644,
+            -6.7098
+          ],
+          [
+            -6.7098,
+            4.8528
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            3.0,
+            4.0
+          ],
+          [
+            4.0,
+            6.0
+          ],
+          [
+            5.0,
+            7.0
+          ],
+          [
+            6.0,
+            10.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            3.6411,
+            -1.6775
+          ],
+          [
+            -1.6775,
+            1.2132
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          [
+            4.0,
+            8.0
+          ],
+          [
+            8.0,
+            16.0
+          ],
+          [
+            12.0,
+            20.0
+          ],
+          [
+            16.0,
+            32.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            0.9103,
+            -0.4194
+          ],
+          [
+            -0.4194,
+            0.3033
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            2.0,
+            1.0
+          ],
+          [
+            4.0,
+            2.0
+          ],
+          [
+            5.0,
+            3.0
+          ],
+          [
+            8.0,
+            4.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8201,
+            -0.8487
+          ],
+          [
+            -0.0712,
+            -0.5625
+          ],
+          [
+            -0.5354,
+            1.4012
+          ],
+          [
+            1.4268,
+            0.0099
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            1.2132,
+            -1.6775
+          ],
+          [
+            -1.6775,
+            3.6411
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          [
+            0.75,
+            1.5
+          ],
+          [
+            1.5,
+            3.0
+          ],
+          [
+            2.25,
+            3.75
+          ],
+          [
+            3.0,
+            6.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            4.8548,
+            -2.2366
+          ],
+          [
+            -2.2366,
+            1.6176
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            10.0,
+            20.0
+          ],
+          [
+            15.0,
+            25.0
+          ],
+          [
+            20.0,
+            40.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            0.7282,
+            -0.3355
+          ],
+          [
+            -0.3355,
+            0.2426
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          [
+            4.0,
+            5.0
+          ],
+          [
+            5.0,
+            7.0
+          ],
+          [
+            6.0,
+            8.0
+          ],
+          [
+            7.0,
+            11.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            3.6411,
+            -1.6775
+          ],
+          [
+            -1.6775,
+            1.2132
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            0.8,
+            1.6
+          ],
+          [
+            1.6,
+            3.2
+          ],
+          [
+            2.4,
+            4.0
+          ],
+          [
+            3.2,
+            6.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            4.5514,
+            -2.0968
+          ],
+          [
+            -2.0968,
+            1.5165
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          [
+            6.0,
+            12.0
+          ],
+          [
+            12.0,
+            24.0
+          ],
+          [
+            18.0,
+            30.0
+          ],
+          [
+            24.0,
+            48.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            0.6068,
+            -0.2796
+          ],
+          [
+            -0.2796,
+            0.2022
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            5.0,
+            6.0
+          ],
+          [
+            6.0,
+            8.0
+          ],
+          [
+            7.0,
+            9.0
+          ],
+          [
+            8.0,
+            12.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            3.6411,
+            -1.6775
+          ],
+          [
+            -1.6775,
+            1.2132
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          [
+            1.2,
+            2.4
+          ],
+          [
+            2.4,
+            4.8
+          ],
+          [
+            3.6,
+            6.0
+          ],
+          [
+            4.8,
+            9.6
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            3.0342,
+            -1.3979
+          ],
+          [
+            -1.3979,
+            1.011
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            0.4,
+            0.8
+          ],
+          [
+            0.8,
+            1.6
+          ],
+          [
+            1.2,
+            2.0
+          ],
+          [
+            1.6,
+            3.2
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            9.1027,
+            -4.1936
+          ],
+          [
+            -4.1936,
+            3.033
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          [
+            8.0,
+            16.0
+          ],
+          [
+            16.0,
+            32.0
+          ],
+          [
+            24.0,
+            40.0
+          ],
+          [
+            32.0,
+            64.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            0.4551,
+            -0.2097
+          ],
+          [
+            -0.2097,
+            0.1517
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "la-whitening-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            6.0,
+            7.0
+          ],
+          [
+            7.0,
+            9.0
+          ],
+          [
+            8.0,
+            10.0
+          ],
+          [
+            9.0,
+            13.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "whitened_data": [
+          [
+            -0.8487,
+            -0.8201
+          ],
+          [
+            -0.5625,
+            -0.0712
+          ],
+          [
+            1.4012,
+            -0.5354
+          ],
+          [
+            0.0099,
+            1.4268
+          ]
+        ],
+        "whitening_matrix": [
+          [
+            3.6411,
+            -1.6775
+          ],
+          [
+            -1.6775,
+            1.2132
+          ]
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "la_whitening",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

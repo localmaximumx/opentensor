@@ -1,0 +1,754 @@
+{
+  "catalogId": "sql:sql-distinct-values",
+  "id": "sql-distinct-values",
+  "sourceId": "sql-distinct-values",
+  "slug": "sql-distinct-values",
+  "source": "sql",
+  "category": "sql",
+  "title": "DISTINCT Values",
+  "difficulty": "Easy",
+  "tags": [
+    "Data Processing"
+  ],
+  "isFree": false,
+  "planId": "sql-basics",
+  "planTitle": "SQL Sheet",
+  "sectionId": "sql-basics-select-fundamentals",
+  "sortOrder": 76,
+  "seoDescription": "Return each customer and their distinct product count with SQL aggregation and deterministic sorting.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Group sales records by customer and count their distinct purchased product IDs, ordering by count descending.\n\nDISTINCT aggregates eliminate duplicate entities prior to applying aggregate functions like COUNT.\n\n### Query Logic & Formulation\n$$\n\\operatorname{COUNT}(\\operatorname{DISTINCT} \\text{product\\_id}) \\quad \\text{GROUP BY customer\\_id}\n$$\n\n### Relational Execution Steps\n1. Group sales transactions by customer_id\n2. Count unique product_id entries per customer\n3. Order by distinct_products descending, customer_id ascending\n\n### Expected Query Output\nList of dictionaries containing customer_id and distinct_products count.",
+  "theory": "## Understanding the Theory: DISTINCT Values\n\n### Core Intuition: Why Do We Need This?\nRelational databases structure data into normalized tables with strict schemas and foreign-key relationships. SQL allows data engineers and analysts to write declarative queries describing what data is needed, while the database query engine optimizes the underlying execution plan. **DISTINCT Values** combines, aggregates, or transforms records across tables.\n\nDISTINCT aggregates eliminate duplicate entities prior to applying aggregate functions like COUNT. In this problem, the goal is to: group sales records by customer and count their distinct purchased product ids, ordering by count descending.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\operatorname{COUNT}(\\operatorname{DISTINCT} \\text{product\\_id}) \\quad \\text{GROUP BY customer\\_id}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Group sales transactions by customer_id\n2. **Phase 2**: Count unique product_id entries per customer\n3. **Phase 3**: Order by distinct_products descending, customer_id ascending\n\n### Practical Machine Learning Applications & Nuances\n* **Join Mechanics**: Inner joins filter for matching records across tables, while outer joins preserve all rows from one table even when no matches exist.\n* **Window Functions**: Functions like `ROW_NUMBER()` and `RANK()` allow computing partitioned running totals and top-K ranks without requiring self-joins.\n* **Index Optimization**: Proper indexing on join keys and filter conditions ensures queries run in milliseconds rather than doing full table scans.",
+  "examples": [
+    "Input: sales = [{\"customer_id\": 1, \"product_id\": 10}, {\"customer_id\": 1, \"product_id\": 10}, {\"customer_id\": 1, \"product_id\": 20}, {\"customer_id\": 2, \"product_id\": 10}]\n\nOutput: [{\"customer_id\": 1, \"distinct_products\": 2}, {\"customer_id\": 2, \"distinct_products\": 1}]\n\nExplanation: Evaluated sql_distinct_values under standard test conditions."
+  ],
+  "requirements": "* Function must be named `sql_distinct_values`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `sql_distinct_values`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "-- SQL DISTINCT Values\nSELECT customer_id, COUNT(DISTINCT product_id) AS distinct_products\nFROM sales\nGROUP BY customer_id\nORDER BY distinct_products DESC, customer_id ASC;",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **DISTINCT Values** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef sql_distinct_values(sales: list) -> list:\n    cmap = {}\n    for s in sales:\n        cmap.setdefault(s['customer_id'], set()).add(s['product_id'])\n    out = [{'customer_id': c, 'distinct_products': len(p)} for c, p in cmap.items()]\n    out.sort(key=lambda x: (-x['distinct_products'], x['customer_id']))\n    return out\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Transactions with duplicates",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "sql-distinct-values-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-distinct-values-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "sales": [
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 10
+          },
+          {
+            "customer_id": 1,
+            "product_id": 20
+          },
+          {
+            "customer_id": 2,
+            "product_id": 10
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "customer_id": 1,
+          "distinct_products": 2
+        },
+        {
+          "customer_id": 2,
+          "distinct_products": 1
+        }
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "sql_distinct_values",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sql-multiple-joins",
+    "sql-subqueries",
+    "sql-row-number",
+    "sql-inner-join",
+    "sql-conditional-aggregation"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "sql",
+    "placeholderType": "sql_dummy_select (SELECT * FROM main_table)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

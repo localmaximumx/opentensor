@@ -1,0 +1,762 @@
+{
+  "id": "decision-tree-split",
+  "title": "Decision Tree Best Split",
+  "description": "A decision tree grows by repeatedly splitting the data on the feature and threshold that best separates the classes. The quality of a split is measured by the information gain: how much the Gini impurity decreases after splitting.\n\nGiven a feature matrix X and class labels y, find the single best split (feature index and threshold) that maximizes information gain using Gini impurity.\n\n### Algorithm\n\n1. Compute the Gini impurity of the parent node:\n\n$$\n\\text{Gini}(S) = 1 - \\sum_{k} p_k^2\n$$\n\nWhere p_k is the fraction of samples belonging to class k.\n\n2. For each feature and each midpoint between consecutive sorted unique values, split the data into left (feature  threshold)\n\n3. Compute the weighted Gini impurity after the split:\n\n$$\n\\text{Gini}_{\\text{split}} = \\frac{|S_L|}{|S|} \\cdot \\text{Gini}(S_L) + \\frac{|S_R|}{|S|} \\cdot \\text{Gini}(S_R)\n$$\n\n4. The information gain is the parent Gini minus the weighted split Gini. Return the feature and threshold with the highest gain. Break ties by smallest feature index, then smallest threshold.\n\nReturn the selected feature index and threshold as a two-item list.",
+  "seoDescription": "Find the best decision-tree split by evaluating candidate feature thresholds and selecting the largest impurity reduction.",
+  "examples": [
+    "Input: X = [[1, 5], [2, 5], [3, 5], [4, 5]], y = [0, 0, 1, 1]\n\nOutput: [0, 2.5]\n\nExplanation: Feature 0 at 2.5 separates the two classes perfectly.",
+    "Input: X = [[1, 1], [2, 1], [1, 10], [2, 10]], y = [0, 0, 1, 1]\n\nOutput: [1, 5.5]"
+  ],
+  "requirements": "* Use Gini impurity as the splitting criterion\n* Try thresholds at the midpoint between consecutive sorted unique values for each feature\n* Weight the child Gini impurities by the fraction of samples in each child\n* Return [feature_index, threshold] as a list",
+  "theory": "## Understanding the Theory: Decision Tree Best Split\n\n### Core Intuition: Why Do We Need This?\nClassical machine learning algorithms provide robust, mathematically interpretable baselines for classification, regression, and unsupervised clustering. Understanding their geometric decision boundaries and optimization guarantees forms the foundation of modern data science. **Decision Tree Best Split** constructs predictive decision boundaries or uncovers latent cluster structures in tabular datasets.\n\nIn this problem, the objective is to implement **Decision Tree Best Split** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\text{Gini}(S) = 1 - \\sum_{k} p_k^2\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Bias-Variance Tradeoff**: Controlling model complexity (e.g. tree depth, K in KNN, regularization strength) balances training accuracy against generalization on unseen test data.\n* **Feature Scaling**: Distance-based algorithms (like KNN and K-Means) require standardizing features to zero mean and unit variance to prevent high-magnitude features from dominating.\n* **Computational Complexity**: While linear models scale linearly $\\\\mathcal{O}(N)$, pair-wise distance algorithms can scale quadratically $\\\\mathcal{O}(N^2)$ without approximate nearest neighbor indexing.",
+  "hints": [
+    "Generate candidate thresholds from midpoints between sorted unique feature values.",
+    "Compare parent impurity with the size-weighted impurities of both children."
+  ],
+  "constraints": "* X has at least 2 rows and 1 column\n* y has at least 2 distinct classes\n* A valid split exists\n* Return [feature_index, threshold]\n* Time limit: 300 ms",
+  "difficulty": "Hard",
+  "starterCode": "def decision_tree_split(X: list, y: list) -> list:\n    \"\"\"\n    Returns the best feature index and threshold.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T17:58:07.171Z",
+  "updatedAt": "2026-08-23T20:39:28.810Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef decision_tree_split(X: list, y: list) -> list:\n    arrX = np.array(X, dtype=float)\n    arry = np.array(y, dtype=int)\n    N, D = arrX.shape\n    best_gain = -1\n    best_split = [0, 0.0]\n    def gini(labels):\n        if len(labels) == 0: return 0.0\n        counts = np.bincount(labels)\n        probs = counts / len(labels)\n        return 1.0 - np.sum(probs ** 2)\n    parent_gini = gini(arry)\n    for d in range(D):\n        vals = np.unique(arrX[:, d])\n        for i in range(len(vals) - 1):\n            thresh = (vals[i] + vals[i+1]) / 2.0\n            left_mask = arrX[:, d] <= thresh\n            right_mask = ~left_mask\n            if np.sum(left_mask) == 0 or np.sum(right_mask) == 0:\n                continue\n            g_left = gini(arry[left_mask])\n            g_right = gini(arry[right_mask])\n            w_gini = (np.sum(left_mask) * g_left + np.sum(right_mask) * g_right) / N\n            gain = parent_gini - w_gini\n            if gain > best_gain:\n                best_gain = gain\n                best_split = [int(d), float(thresh)]\n    return best_split\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "DecisionTreeSplitViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Clean split on feature 0",
+      "inputs": {
+        "X": [
+          [
+            1,
+            5
+          ],
+          [
+            2,
+            5
+          ],
+          [
+            3,
+            5
+          ],
+          [
+            4,
+            5
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          1,
+          1
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        0,
+        2.5
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Split on feature 1",
+      "inputs": {
+        "X": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            1,
+            10
+          ],
+          [
+            2,
+            10
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          1,
+          1
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        1,
+        5.5
+      ]
+    },
+    {
+      "id": "decision-tree-split-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X": [
+          [
+            2,
+            10
+          ],
+          [
+            4,
+            10
+          ],
+          [
+            6,
+            10
+          ],
+          [
+            8,
+            10
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": [
+        0,
+        5.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0,
+        0.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          [
+            -1,
+            -5
+          ],
+          [
+            -2,
+            -5
+          ],
+          [
+            -3,
+            -5
+          ],
+          [
+            -4,
+            -5
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          -1,
+          -1
+        ]
+      },
+      "expectedOutput": [
+        0,
+        2.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            3,
+            15
+          ],
+          [
+            6,
+            15
+          ],
+          [
+            9,
+            15
+          ],
+          [
+            12,
+            15
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          3,
+          3
+        ]
+      },
+      "expectedOutput": [
+        0,
+        7.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          [
+            2.0,
+            6.0
+          ],
+          [
+            3.0,
+            6.0
+          ],
+          [
+            4.0,
+            6.0
+          ],
+          [
+            5.0,
+            6.0
+          ]
+        ],
+        "y": [
+          1.0,
+          1.0,
+          2.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0,
+        3.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            -1.0,
+            3.0
+          ],
+          [
+            0.0,
+            3.0
+          ],
+          [
+            1.0,
+            3.0
+          ],
+          [
+            2.0,
+            3.0
+          ]
+        ],
+        "y": [
+          -2.0,
+          -2.0,
+          -1.0,
+          -1.0
+        ]
+      },
+      "expectedOutput": [
+        0,
+        2.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          [
+            5,
+            1
+          ],
+          [
+            5,
+            2
+          ],
+          [
+            5,
+            3
+          ],
+          [
+            5,
+            4
+          ]
+        ],
+        "y": [
+          1,
+          1,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        1,
+        2.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            -1,
+            -5
+          ],
+          [
+            -2,
+            -5
+          ],
+          [
+            -3,
+            -5
+          ],
+          [
+            -4,
+            -5
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          -1,
+          -1
+        ]
+      },
+      "expectedOutput": [
+        0,
+        2.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          [
+            10,
+            50
+          ],
+          [
+            20,
+            50
+          ],
+          [
+            30,
+            50
+          ],
+          [
+            40,
+            50
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          10,
+          10
+        ]
+      },
+      "expectedOutput": [
+        0,
+        25.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          [
+            6.0,
+            10.0
+          ],
+          [
+            7.0,
+            10.0
+          ],
+          [
+            8.0,
+            10.0
+          ],
+          [
+            9.0,
+            10.0
+          ]
+        ],
+        "y": [
+          5.0,
+          5.0,
+          6.0,
+          6.0
+        ]
+      },
+      "expectedOutput": [
+        0,
+        7.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            2,
+            8
+          ],
+          [
+            3,
+            8
+          ],
+          [
+            4,
+            8
+          ],
+          [
+            6,
+            8
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": [
+        0,
+        3.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          [
+            -2,
+            -10
+          ],
+          [
+            -4,
+            -10
+          ],
+          [
+            -6,
+            -10
+          ],
+          [
+            -8,
+            -10
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          -2,
+          -2
+        ]
+      },
+      "expectedOutput": [
+        0,
+        2.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0,
+        0.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            4.0
+          ],
+          [
+            1.0,
+            4.0
+          ],
+          [
+            2.0,
+            4.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "y": [
+          -1.0,
+          -1.0,
+          0.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        0,
+        2.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            4,
+            20
+          ],
+          [
+            8,
+            20
+          ],
+          [
+            12,
+            20
+          ],
+          [
+            16,
+            20
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          4,
+          4
+        ]
+      },
+      "expectedOutput": [
+        0,
+        10.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": [
+        0,
+        1.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "decision-tree-split-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            5,
+            25
+          ],
+          [
+            10,
+            25
+          ],
+          [
+            15,
+            25
+          ],
+          [
+            20,
+            25
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          5,
+          5
+        ]
+      },
+      "expectedOutput": [
+        0,
+        12.5
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "decision_tree_split",
+    "parameters": [
+      {
+        "name": "X",
+        "type": "array",
+        "example": "[[1, 5], [2, 5], [3, 5], [4, 5]]",
+        "description": "2D feature matrix where X[i][j] is feature j of sample i"
+      },
+      {
+        "name": "y",
+        "type": "array",
+        "example": "[0, 0, 1, 1]",
+        "description": "Class labels for each sample"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "gini-impurity",
+    "information-gain",
+    "entropy-node",
+    "random-forest-vote",
+    "gaussian-naive-bayes"
+  ],
+  "tags": [
+    "Classic ML"
+  ],
+  "prevId": "pca-projection",
+  "nextId": "gaussian-naive-bayes",
+  "slug": "decision-tree-split",
+  "cleanTitle": "Decision Tree Best Split",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/decision-tree-split",
+  "localUrl": "http://localhost:3000/problems/decision-tree-split",
+  "studyPlan": null
+}

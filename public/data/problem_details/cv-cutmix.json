@@ -1,0 +1,1935 @@
+{
+  "catalogId": "python:cv-cutmix",
+  "id": "cv-cutmix",
+  "sourceId": "cv-cutmix",
+  "slug": "cv-cutmix",
+  "source": "python",
+  "category": "numpy",
+  "title": "CutMix Augmentation",
+  "difficulty": "Medium",
+  "tags": [
+    "Computer Vision",
+    "Data Processing"
+  ],
+  "isFree": false,
+  "planId": "cracking-cv",
+  "planTitle": "Cracking CV",
+  "sectionId": "cracking-cv-losses-and-augmentation",
+  "sortOrder": 349,
+  "seoDescription": "Apply deterministic CutMix by pasting a supplied image region and mixing labels according to the retained pixel area.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Paste a bounding box patch from image B onto image A and compute proportionally mixed target labels based on pixel area.\n\nCutMix combines regional replacement with label smoothing, preventing CNNs from over-relying on small distinctive features.\n\n### Mathematical Formulation\n$$\n\\mathbf{X}_{\\text{mixed}} = \\mathbf{M} \\odot \\mathbf{A} + (1 - \\mathbf{M}) \\odot \\mathbf{B}, \\quad \\lambda = 1 - \\frac{\\text{Area}(\\text{Box})}{H \\times W}\n$$\n\n### Step-by-Step Implementation\n1. Identify spatial coordinates of designated bounding box crop\n2. Overwrite target bounding box region in image A with corresponding pixels from image B\n3. Compute target blending coefficient lambda proportional to preserved area\n\n### Returns\nDictionary with 'mixed_image' and scalar 'lambda_label'.",
+  "theory": "## Understanding the Theory: CutMix Augmentation\n\n### Core Intuition: Why Do We Need This?\nImages have unique spatial properties: neighboring pixels are strongly correlated, and visual patterns (like edges, corners, or textures) appear anywhere in an image. Computer vision algorithms use spatial inductive biases like translation equivariance and local receptive fields to process image grids efficiently. **CutMix Augmentation** operates directly on spatial coordinates or bounding box geometries.\n\nCutMix combines regional replacement with label smoothing, preventing CNNs from over-relying on small distinctive features. In this problem, the goal is to: paste a bounding box patch from image b onto image a and compute proportionally mixed target labels based on pixel area.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\mathbf{X}_{\\text{mixed}} = \\mathbf{M} \\odot \\mathbf{A} + (1 - \\mathbf{M}) \\odot \\mathbf{B}, \\quad \\lambda = 1 - \\frac{\\text{Area}(\\text{Box})}{H \\times W}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Identify spatial coordinates of designated bounding box crop\n2. **Phase 2**: Overwrite target bounding box region in image A with corresponding pixels from image B\n3. **Phase 3**: Compute target blending coefficient lambda proportional to preserved area\n\n### Practical Machine Learning Applications & Nuances\n* **Spatial Locality**: Sliding spatial filters across multi-channel feature maps aggregates contextual clues across local neighborhoods.\n* **Object Detection Pipelines**: Bounding box metrics (such as IoU and Non-Maximum Suppression) reconcile duplicate candidate detections into clean, final predictions.\n* **Data Augmentation**: Geometric transformations expose models to diverse spatial viewpoints, significantly improving generalization to unseen test images.",
+  "examples": [
+    "Input: image_a = [[1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]], image_b = [[2.0, 2.0, 2.0, 2.0], [2.0, 2.0, 2.0, 2.0], [2.0, 2.0, 2.0, 2.0], [2.0, 2.0, 2.0, 2.0]], bbox = [1, 1, 3, 3]\n\nOutput: {\"mixed_image\": [[1.0, 1.0, 1.0, 1.0], [1.0, 2.0, 2.0, 1.0], [1.0, 2.0, 2.0, 1.0], [1.0, 1.0, 1.0, 1.0]], \"lambda_label\": 0.75}\n\nExplanation: Evaluated cv_cutmix under standard test conditions."
+  ],
+  "requirements": "* Function must be named `cv_cutmix`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `cv_cutmix`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef cv_cutmix(image_a: list, image_b: list, bbox: list) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **CutMix Augmentation** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cv_cutmix(image_a: list, image_b: list, bbox: list) -> dict:\n    A, B = np.array(image_a, dtype=np.float64), np.array(image_b, dtype=np.float64)\n    H, W = A.shape\n    x1, y1, x2, y2 = [int(v) for v in bbox]\n    mixed = A.copy(); mixed[y1:y2, x1:x2] = B[y1:y2, x1:x2]\n    lam = 1.0 - (float((x2 - x1) * (y2 - y1)) / float(H * W))\n    return {'mixed_image': np.round(mixed, 4).tolist(), 'lambda_label': round(lam, 4)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "4x4 image cutmix 2x2 patch",
+      "inputs": {
+        "image_a": [
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        ],
+        "image_b": [
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ]
+        ],
+        "bbox": [
+          1,
+          1,
+          3,
+          3
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0,
+            2.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0,
+            2.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        ],
+        "lambda_label": 0.75
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cv-cutmix-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "image_a": [
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ]
+        ],
+        "image_b": [
+          [
+            4.0,
+            4.0,
+            4.0,
+            4.0
+          ],
+          [
+            4.0,
+            4.0,
+            4.0,
+            4.0
+          ],
+          [
+            4.0,
+            4.0,
+            4.0,
+            4.0
+          ],
+          [
+            4.0,
+            4.0,
+            4.0,
+            4.0
+          ]
+        ],
+        "bbox": [
+          2,
+          2,
+          6,
+          6
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            4.0,
+            4.0
+          ],
+          [
+            2.0,
+            2.0,
+            4.0,
+            4.0
+          ]
+        ],
+        "lambda_label": 0.0
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cv-cutmix-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "image_a": [
+          [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        ],
+        "image_b": [
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        ],
+        "bbox": [
+          0,
+          0,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            1.0,
+            1.0,
+            0.5,
+            0.5
+          ],
+          [
+            1.0,
+            1.0,
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        ],
+        "lambda_label": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "image_a": [
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ],
+        "image_b": [
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ]
+        ],
+        "bbox": [
+          -1,
+          -1,
+          -3,
+          -3
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ],
+        "lambda_label": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "image_a": [
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ],
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ],
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ],
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ]
+        ],
+        "image_b": [
+          [
+            6.0,
+            6.0,
+            6.0,
+            6.0
+          ],
+          [
+            6.0,
+            6.0,
+            6.0,
+            6.0
+          ],
+          [
+            6.0,
+            6.0,
+            6.0,
+            6.0
+          ],
+          [
+            6.0,
+            6.0,
+            6.0,
+            6.0
+          ]
+        ],
+        "bbox": [
+          3,
+          3,
+          9,
+          9
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ],
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ],
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ],
+          [
+            3.0,
+            3.0,
+            3.0,
+            6.0
+          ]
+        ],
+        "lambda_label": -1.25
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "image_a": [
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ]
+        ],
+        "image_b": [
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ],
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ],
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ],
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ]
+        ],
+        "bbox": [
+          2.0,
+          2.0,
+          4.0,
+          4.0
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            3.0,
+            3.0
+          ],
+          [
+            2.0,
+            2.0,
+            3.0,
+            3.0
+          ]
+        ],
+        "lambda_label": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "image_a": [
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ],
+        "image_b": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "bbox": [
+          -1.0,
+          -1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ],
+        "lambda_label": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "image_a": [
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        ],
+        "image_b": [
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0,
+            2.0
+          ]
+        ],
+        "bbox": [
+          3,
+          3,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        ],
+        "lambda_label": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "image_a": [
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ],
+        "image_b": [
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ]
+        ],
+        "bbox": [
+          -1,
+          -1,
+          -3,
+          -3
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ],
+        "lambda_label": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "image_a": [
+          [
+            10.0,
+            10.0,
+            10.0,
+            10.0
+          ],
+          [
+            10.0,
+            10.0,
+            10.0,
+            10.0
+          ],
+          [
+            10.0,
+            10.0,
+            10.0,
+            10.0
+          ],
+          [
+            10.0,
+            10.0,
+            10.0,
+            10.0
+          ]
+        ],
+        "image_b": [
+          [
+            20.0,
+            20.0,
+            20.0,
+            20.0
+          ],
+          [
+            20.0,
+            20.0,
+            20.0,
+            20.0
+          ],
+          [
+            20.0,
+            20.0,
+            20.0,
+            20.0
+          ],
+          [
+            20.0,
+            20.0,
+            20.0,
+            20.0
+          ]
+        ],
+        "bbox": [
+          10,
+          10,
+          30,
+          30
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            10.0,
+            10.0,
+            10.0,
+            10.0
+          ],
+          [
+            10.0,
+            10.0,
+            10.0,
+            10.0
+          ],
+          [
+            10.0,
+            10.0,
+            10.0,
+            10.0
+          ],
+          [
+            10.0,
+            10.0,
+            10.0,
+            10.0
+          ]
+        ],
+        "lambda_label": -24.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "image_a": [
+          [
+            0.1,
+            0.1,
+            0.1,
+            0.1
+          ],
+          [
+            0.1,
+            0.1,
+            0.1,
+            0.1
+          ],
+          [
+            0.1,
+            0.1,
+            0.1,
+            0.1
+          ],
+          [
+            0.1,
+            0.1,
+            0.1,
+            0.1
+          ]
+        ],
+        "image_b": [
+          [
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ],
+          [
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ],
+          [
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ],
+          [
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        ],
+        "bbox": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            0.1,
+            0.1,
+            0.1,
+            0.1
+          ],
+          [
+            0.1,
+            0.1,
+            0.1,
+            0.1
+          ],
+          [
+            0.1,
+            0.1,
+            0.1,
+            0.1
+          ],
+          [
+            0.1,
+            0.1,
+            0.1,
+            0.1
+          ]
+        ],
+        "lambda_label": 1.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "image_a": [
+          [
+            6.0,
+            6.0,
+            6.0,
+            6.0
+          ],
+          [
+            6.0,
+            6.0,
+            6.0,
+            6.0
+          ],
+          [
+            6.0,
+            6.0,
+            6.0,
+            6.0
+          ],
+          [
+            6.0,
+            6.0,
+            6.0,
+            6.0
+          ]
+        ],
+        "image_b": [
+          [
+            7.0,
+            7.0,
+            7.0,
+            7.0
+          ],
+          [
+            7.0,
+            7.0,
+            7.0,
+            7.0
+          ],
+          [
+            7.0,
+            7.0,
+            7.0,
+            7.0
+          ],
+          [
+            7.0,
+            7.0,
+            7.0,
+            7.0
+          ]
+        ],
+        "bbox": [
+          6.0,
+          6.0,
+          8.0,
+          8.0
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            6.0,
+            6.0,
+            6.0,
+            6.0
+          ],
+          [
+            6.0,
+            6.0,
+            6.0,
+            6.0
+          ],
+          [
+            6.0,
+            6.0,
+            6.0,
+            6.0
+          ],
+          [
+            6.0,
+            6.0,
+            6.0,
+            6.0
+          ]
+        ],
+        "lambda_label": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "image_a": [
+          [
+            1.5,
+            1.5,
+            1.5,
+            1.5
+          ],
+          [
+            1.5,
+            1.5,
+            1.5,
+            1.5
+          ],
+          [
+            1.5,
+            1.5,
+            1.5,
+            1.5
+          ],
+          [
+            1.5,
+            1.5,
+            1.5,
+            1.5
+          ]
+        ],
+        "image_b": [
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ],
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ],
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ],
+          [
+            3.0,
+            3.0,
+            3.0,
+            3.0
+          ]
+        ],
+        "bbox": [
+          2,
+          2,
+          4,
+          4
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            1.5,
+            1.5,
+            1.5,
+            1.5
+          ],
+          [
+            1.5,
+            1.5,
+            1.5,
+            1.5
+          ],
+          [
+            1.5,
+            1.5,
+            3.0,
+            3.0
+          ],
+          [
+            1.5,
+            1.5,
+            3.0,
+            3.0
+          ]
+        ],
+        "lambda_label": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "image_a": [
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ]
+        ],
+        "image_b": [
+          [
+            -4.0,
+            -4.0,
+            -4.0,
+            -4.0
+          ],
+          [
+            -4.0,
+            -4.0,
+            -4.0,
+            -4.0
+          ],
+          [
+            -4.0,
+            -4.0,
+            -4.0,
+            -4.0
+          ],
+          [
+            -4.0,
+            -4.0,
+            -4.0,
+            -4.0
+          ]
+        ],
+        "bbox": [
+          -2,
+          -2,
+          -6,
+          -6
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -2.0,
+            -2.0
+          ]
+        ],
+        "lambda_label": 0.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "image_a": [
+          [
+            0.25,
+            0.25,
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.25,
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.25,
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.25,
+            0.25,
+            0.25
+          ]
+        ],
+        "image_b": [
+          [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        ],
+        "bbox": [
+          0,
+          0,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            0.5,
+            0.25,
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.25,
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.25,
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.25,
+            0.25,
+            0.25
+          ]
+        ],
+        "lambda_label": 0.9375
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "image_a": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "image_b": [
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        ],
+        "bbox": [
+          0.0,
+          0.0,
+          2.0,
+          2.0
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            1.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "lambda_label": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "image_a": [
+          [
+            4.0,
+            4.0,
+            4.0,
+            4.0
+          ],
+          [
+            4.0,
+            4.0,
+            4.0,
+            4.0
+          ],
+          [
+            4.0,
+            4.0,
+            4.0,
+            4.0
+          ],
+          [
+            4.0,
+            4.0,
+            4.0,
+            4.0
+          ]
+        ],
+        "image_b": [
+          [
+            8.0,
+            8.0,
+            8.0,
+            8.0
+          ],
+          [
+            8.0,
+            8.0,
+            8.0,
+            8.0
+          ],
+          [
+            8.0,
+            8.0,
+            8.0,
+            8.0
+          ],
+          [
+            8.0,
+            8.0,
+            8.0,
+            8.0
+          ]
+        ],
+        "bbox": [
+          4,
+          4,
+          12,
+          12
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            4.0,
+            4.0,
+            4.0,
+            4.0
+          ],
+          [
+            4.0,
+            4.0,
+            4.0,
+            4.0
+          ],
+          [
+            4.0,
+            4.0,
+            4.0,
+            4.0
+          ],
+          [
+            4.0,
+            4.0,
+            4.0,
+            4.0
+          ]
+        ],
+        "lambda_label": -3.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "image_a": [
+          [
+            0.75,
+            0.75,
+            0.75,
+            0.75
+          ],
+          [
+            0.75,
+            0.75,
+            0.75,
+            0.75
+          ],
+          [
+            0.75,
+            0.75,
+            0.75,
+            0.75
+          ],
+          [
+            0.75,
+            0.75,
+            0.75,
+            0.75
+          ]
+        ],
+        "image_b": [
+          [
+            1.5,
+            1.5,
+            1.5,
+            1.5
+          ],
+          [
+            1.5,
+            1.5,
+            1.5,
+            1.5
+          ],
+          [
+            1.5,
+            1.5,
+            1.5,
+            1.5
+          ],
+          [
+            1.5,
+            1.5,
+            1.5,
+            1.5
+          ]
+        ],
+        "bbox": [
+          1,
+          1,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            0.75,
+            0.75,
+            0.75,
+            0.75
+          ],
+          [
+            0.75,
+            1.5,
+            0.75,
+            0.75
+          ],
+          [
+            0.75,
+            0.75,
+            0.75,
+            0.75
+          ],
+          [
+            0.75,
+            0.75,
+            0.75,
+            0.75
+          ]
+        ],
+        "lambda_label": 0.9375
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "image_a": [
+          [
+            5.0,
+            5.0,
+            5.0,
+            5.0
+          ],
+          [
+            5.0,
+            5.0,
+            5.0,
+            5.0
+          ],
+          [
+            5.0,
+            5.0,
+            5.0,
+            5.0
+          ],
+          [
+            5.0,
+            5.0,
+            5.0,
+            5.0
+          ]
+        ],
+        "image_b": [
+          [
+            10.0,
+            10.0,
+            10.0,
+            10.0
+          ],
+          [
+            10.0,
+            10.0,
+            10.0,
+            10.0
+          ],
+          [
+            10.0,
+            10.0,
+            10.0,
+            10.0
+          ],
+          [
+            10.0,
+            10.0,
+            10.0,
+            10.0
+          ]
+        ],
+        "bbox": [
+          5,
+          5,
+          15,
+          15
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            5.0,
+            5.0,
+            5.0,
+            5.0
+          ],
+          [
+            5.0,
+            5.0,
+            5.0,
+            5.0
+          ],
+          [
+            5.0,
+            5.0,
+            5.0,
+            5.0
+          ],
+          [
+            5.0,
+            5.0,
+            5.0,
+            5.0
+          ]
+        ],
+        "lambda_label": -5.25
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-cutmix-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "image_a": [
+          [
+            11.0,
+            11.0,
+            11.0,
+            11.0
+          ],
+          [
+            11.0,
+            11.0,
+            11.0,
+            11.0
+          ],
+          [
+            11.0,
+            11.0,
+            11.0,
+            11.0
+          ],
+          [
+            11.0,
+            11.0,
+            11.0,
+            11.0
+          ]
+        ],
+        "image_b": [
+          [
+            12.0,
+            12.0,
+            12.0,
+            12.0
+          ],
+          [
+            12.0,
+            12.0,
+            12.0,
+            12.0
+          ],
+          [
+            12.0,
+            12.0,
+            12.0,
+            12.0
+          ],
+          [
+            12.0,
+            12.0,
+            12.0,
+            12.0
+          ]
+        ],
+        "bbox": [
+          11.0,
+          11.0,
+          13.0,
+          13.0
+        ]
+      },
+      "expectedOutput": {
+        "mixed_image": [
+          [
+            11.0,
+            11.0,
+            11.0,
+            11.0
+          ],
+          [
+            11.0,
+            11.0,
+            11.0,
+            11.0
+          ],
+          [
+            11.0,
+            11.0,
+            11.0,
+            11.0
+          ],
+          [
+            11.0,
+            11.0,
+            11.0,
+            11.0
+          ]
+        ],
+        "lambda_label": 0.75
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cv_cutmix",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

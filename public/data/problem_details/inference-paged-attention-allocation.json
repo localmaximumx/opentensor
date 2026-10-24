@@ -1,0 +1,535 @@
+{
+  "catalogId": "python:inference-paged-attention-allocation",
+  "id": "inference-paged-attention-allocation",
+  "sourceId": "inference-paged-attention-allocation",
+  "slug": "inference-paged-attention-allocation",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Implement PagedAttention Block Allocation",
+  "difficulty": "Hard",
+  "tags": [
+    "Inference",
+    "Transformers"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-kv-decoding",
+  "sortOrder": 439,
+  "seoDescription": "Assign each sequence enough fixed-size blocks to hold its tokens, drawn from the free pool in order.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Calculate physical memory block allocations for variable-length token sequences using virtual memory paging tables.\n\nPagedAttention eliminates internal and external KV-cache fragmentation by allocating non-contiguous physical pages dynamically on demand.\n\n### Mathematical Formulation\n$$\nB_i = \\lceil \\frac{L_i}{\\text{block\\_size}} \\rceil, \\quad \\text{Allocated} = \\sum B_i \\le B_{\\text{total}}\n$$\n\n### Step-by-Step Implementation\n1. Partition each continuous sequence length into discrete integer memory blocks\n2. Determine cumulative block requirements across all active requests\n3. Verify allocation feasibility against physical GPU block pool capacity\n\n### Returns\nDictionary with 'blocks_per_sequence', 'total_blocks_allocated', 'can_allocate', and 'remaining_blocks'.",
+  "theory": "## Understanding the Theory: Implement PagedAttention Block Allocation\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of discrete words and symbols arranged in sequential order. To process text with neural networks, we convert words into continuous embedding vectors and model their grammatical and semantic relationships. **Implement PagedAttention Block Allocation** is a core sequence-processing mechanism used in modern Transformer and LLM architectures.\n\nPagedAttention eliminates internal and external KV-cache fragmentation by allocating non-contiguous physical pages dynamically on demand. In this problem, the goal is to: calculate physical memory block allocations for variable-length token sequences using virtual memory paging tables.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nB_i = \\lceil \\frac{L_i}{\\text{block\\_size}} \\rceil, \\quad \\text{Allocated} = \\sum B_i \\le B_{\\text{total}}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Partition each continuous sequence length into discrete integer memory blocks\n2. **Phase 2**: Determine cumulative block requirements across all active requests\n3. **Phase 3**: Verify allocation feasibility against physical GPU block pool capacity\n\n### Practical Machine Learning Applications & Nuances\n* **Self-Attention Mechanics**: Scaled dot-product attention computes all-to-all token interactions dynamically, allowing tokens to gather context from the entire sentence simultaneously.\n* **Position Encodings**: Because self-attention is permutation-invariant, positional encodings (like sinusoidal or Rotary Position Embeddings) inject word order into the representations.\n* **Vocabulary & Subwords**: Algorithms like BPE tokenize text into frequent subwords, allowing models to represent rare words without requiring an infinite vocabulary.",
+  "examples": [
+    "Input: sequence_lengths = [32, 45, 12], block_size = 16, total_memory_blocks = 10\n\nOutput: {\"blocks_per_sequence\": [2, 3, 1], \"total_blocks_allocated\": 6, \"can_allocate\": 1, \"remaining_blocks\": 4}\n\nExplanation: Evaluated inference_paged_attention_allocation under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_paged_attention_allocation`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_paged_attention_allocation`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def inference_paged_attention_allocation(sequence_lengths: list, block_size: int = 16, total_memory_blocks: int = 100) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Implement PagedAttention Block Allocation** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport math\n\ndef inference_paged_attention_allocation(sequence_lengths: list, block_size: int = 16, total_memory_blocks: int = 100) -> dict:\n    bps = [math.ceil(int(l) / int(block_size)) for l in sequence_lengths]\n    tot = sum(bps)\n    return {'blocks_per_sequence': bps, 'total_blocks_allocated': tot, 'can_allocate': tot <= int(total_memory_blocks), 'remaining_blocks': max(0, int(total_memory_blocks) - tot)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "3 sequences with block 16",
+      "inputs": {
+        "sequence_lengths": [
+          32,
+          45,
+          12
+        ],
+        "block_size": 16,
+        "total_memory_blocks": 10
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": 1,
+        "remaining_blocks": 4
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "sequence_lengths": [
+          64,
+          90,
+          24
+        ],
+        "block_size": 32,
+        "total_memory_blocks": 20
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 14
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "sequence_lengths": [
+          16,
+          22,
+          6
+        ],
+        "block_size": 8,
+        "total_memory_blocks": 5
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": false,
+        "remaining_blocks": 0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "sequence_lengths": [
+          32,
+          45,
+          12
+        ],
+        "block_size": 16,
+        "total_memory_blocks": 10
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 4
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "sequence_lengths": [
+          48,
+          68,
+          18
+        ],
+        "block_size": 24,
+        "total_memory_blocks": 15
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 9
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "sequence_lengths": [
+          96,
+          135,
+          36
+        ],
+        "block_size": 48,
+        "total_memory_blocks": 30
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 24
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "sequence_lengths": [
+          8,
+          11,
+          3
+        ],
+        "block_size": 4,
+        "total_memory_blocks": 2
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": false,
+        "remaining_blocks": 0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "sequence_lengths": [
+          64,
+          90,
+          24
+        ],
+        "block_size": 32,
+        "total_memory_blocks": 20
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 14
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "sequence_lengths": [
+          128,
+          180,
+          48
+        ],
+        "block_size": 64,
+        "total_memory_blocks": 40
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 34
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "sequence_lengths": [
+          12,
+          45,
+          32
+        ],
+        "block_size": 16,
+        "total_memory_blocks": 10
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          1,
+          3,
+          2
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 4
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "sequence_lengths": [
+          24,
+          34,
+          9
+        ],
+        "block_size": 12,
+        "total_memory_blocks": 8
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "sequence_lengths": [
+          160,
+          225,
+          60
+        ],
+        "block_size": 80,
+        "total_memory_blocks": 50
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 44
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "sequence_lengths": [
+          96,
+          135,
+          36
+        ],
+        "block_size": 48,
+        "total_memory_blocks": 30
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 24
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "sequence_lengths": [
+          26,
+          36,
+          10
+        ],
+        "block_size": 13,
+        "total_memory_blocks": 8
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "sequence_lengths": [
+          192,
+          270,
+          72
+        ],
+        "block_size": 96,
+        "total_memory_blocks": 60
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 54
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "sequence_lengths": [
+          128,
+          180,
+          48
+        ],
+        "block_size": 64,
+        "total_memory_blocks": 40
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 34
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "sequence_lengths": [
+          38,
+          54,
+          14
+        ],
+        "block_size": 19,
+        "total_memory_blocks": 12
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 6
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "sequence_lengths": [
+          13,
+          18,
+          5
+        ],
+        "block_size": 6,
+        "total_memory_blocks": 4
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          3,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 7,
+        "can_allocate": false,
+        "remaining_blocks": 0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "sequence_lengths": [
+          256,
+          360,
+          96
+        ],
+        "block_size": 128,
+        "total_memory_blocks": 80
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 74
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-paged-attention-allocation-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "sequence_lengths": [
+          160,
+          225,
+          60
+        ],
+        "block_size": 80,
+        "total_memory_blocks": 50
+      },
+      "expectedOutput": {
+        "blocks_per_sequence": [
+          2,
+          3,
+          1
+        ],
+        "total_blocks_allocated": 6,
+        "can_allocate": true,
+        "remaining_blocks": 44
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_paged_attention_allocation",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

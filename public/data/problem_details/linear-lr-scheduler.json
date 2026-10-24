@@ -1,0 +1,341 @@
+{
+  "id": "linear-lr-scheduler",
+  "title": "Learning Rate Scheduler (Linear Decay)",
+  "description": "Implement a learning-rate schedule with linear warmup followed by linear decay. The step index is zero-based, and the rate remains at the final value after training ends.\n\n$$\n\\operatorname{LR}(t) = \\begin{cases} \\eta_0 \\dfrac{t}{W}, & W > 0 \\text{ and } t < W \\\\ \\eta_0 + \\dfrac{t-W}{T-W}(\\eta_f-\\eta_0), & W \\le t < T \\\\ \\eta_f, & t \\ge T \\end{cases}\n$$\n\nHere, $t$ is step, $W$ is warmup_steps, $T$ is total_steps, $\\eta_0$ is initial_lr, and $\\eta_f$ is final_lr. When total_steps is zero, return final_lr. Return the learning rate as a Python float.",
+  "seoDescription": "Compute a linearly decaying learning rate across training steps between configured start and end values.",
+  "examples": [
+    "Input: step = 0, total_steps = 100, initial_lr = 0.001, final_lr = 0.0, warmup_steps = 10\n\nOutput: 0.0\n\nExplanation: The first warmup step uses zero percent of the initial learning rate.",
+    "Input: step = 10, total_steps = 100, initial_lr = 0.001, final_lr = 0.0, warmup_steps = 10\n\nOutput: 0.001",
+    "Input: step = 50, total_steps = 100, initial_lr = 0.001, final_lr = 0.0, warmup_steps = 10\n\nOutput: 0.000556"
+  ],
+  "requirements": "* Increase linearly from 0 to initial_lr during warmup\n* Decay linearly from initial_lr to final_lr after warmup\n* Return final_lr at and after total_steps\n* Return a Python float",
+  "theory": "## Understanding the Theory: Learning Rate Scheduler (Linear Decay)\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization challenge across highly non-convex loss surfaces filled with saddle points, ravines, and plateaus. Naive gradient descent often oscillates wildly in steep directions while crawling along flat regions. **Learning Rate Scheduler (Linear Decay)** accelerates convergence, dampens oscillations, and stabilizes weight trajectories during training.\n\nIn this problem, the objective is to implement **Learning Rate Scheduler (Linear Decay)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\operatorname{LR}(t) = \\begin{cases} \\eta_0 \\dfrac{t}{W}, & W > 0 \\text{ and } t < W \\\\ \\eta_0 + \\dfrac{t-W}{T-W}(\\eta_f-\\eta_0), & W \\le t < T \\\\ \\eta_f, & t \\ge T \\end{cases}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Momentum Accumulation**: Smoothing velocity vectors across successive mini-batches enables optimizers to escape shallow local minima and push through ill-conditioned ravines.\n* **Adaptive Scaling**: Tracking running second moments scales learning rates inversely with gradient variance, preventing rare features from vanishing and frequent features from exploding.\n* **Gradient Regularization**: Gradient clipping enforces hard norm bounds, preventing runaway parameter updates during training instability.",
+  "hints": [
+    "Handle warmup, decay, and completed training as separate branches.",
+    "For decay, use (step - warmup_steps) / (total_steps - warmup_steps) as the interpolation fraction."
+  ],
+  "constraints": "* step, total_steps, and warmup_steps are nonnegative integers\n* If total_steps is positive, warmup_steps is smaller than total_steps\n* initial_lr and final_lr are nonnegative floats",
+  "difficulty": "Medium",
+  "starterCode": "def linear_lr(step: int, total_steps: int, initial_lr: float, final_lr: float = 0.0, warmup_steps: int = 0) -> float:\n    \"\"\"\n    Returns the learning rate as a float.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-10-21T18:37:16.293Z",
+  "updatedAt": "2026-03-05T20:06:07.010Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\ndef linear_lr(step: int, total_steps: int, initial_lr: float, final_lr: float = 0.0, warmup_steps: int = 0) -> float:\n    if step < warmup_steps and warmup_steps > 0:\n        return float(round(initial_lr * (step / warmup_steps), 6))\n    if step >= total_steps:\n        return float(final_lr)\n    decay_steps = total_steps - warmup_steps\n    rate = 1.0 - ((step - warmup_steps) / decay_steps)\n    lr = final_lr + (initial_lr - final_lr) * rate\n    return float(round(lr, 6))\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "LinearLRSchedulerViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Start",
+      "inputs": {
+        "step": 0,
+        "final_lr": 0,
+        "initial_lr": 0.001,
+        "total_steps": 100,
+        "warmup_steps": 10
+      },
+      "isPublic": true,
+      "expectedOutput": 0.0
+    },
+    {
+      "id": "test-2",
+      "name": "End warmup",
+      "inputs": {
+        "step": 10,
+        "final_lr": 0,
+        "initial_lr": 0.001,
+        "total_steps": 100,
+        "warmup_steps": 10
+      },
+      "isPublic": true,
+      "expectedOutput": 0.001
+    },
+    {
+      "id": "test-ex3",
+      "name": "Mid decay (Ex3)",
+      "inputs": {
+        "step": 50,
+        "final_lr": 0,
+        "initial_lr": 0.001,
+        "total_steps": 100,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.000556
+    },
+    {
+      "id": "linear-lr-scheduler-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "step": 0,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 200,
+        "warmup_steps": 20
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "step": 0,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 50,
+        "warmup_steps": 5
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "step": 1,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 100,
+        "warmup_steps": 10
+      },
+      "expectedOutput": 0.01,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "step": 0,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 150,
+        "warmup_steps": 15
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "step": 0,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 300,
+        "warmup_steps": 30
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "step": 0,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 25,
+        "warmup_steps": 2
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "step": 2,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 200,
+        "warmup_steps": 20
+      },
+      "expectedOutput": 0.01,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "step": 0,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 400,
+        "warmup_steps": 40
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "step": 0,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 100,
+        "warmup_steps": 10
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "step": 0,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 75,
+        "warmup_steps": 8
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "step": 0,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 500,
+        "warmup_steps": 50
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "step": 3,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 300,
+        "warmup_steps": 30
+      },
+      "expectedOutput": 0.01,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "step": 0,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 80,
+        "warmup_steps": 8
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "step": 0,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 600,
+        "warmup_steps": 60
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "step": 4,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 400,
+        "warmup_steps": 40
+      },
+      "expectedOutput": 0.01,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "step": 0,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 120,
+        "warmup_steps": 12
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "linear-lr-scheduler-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "step": 0,
+        "final_lr": 1,
+        "initial_lr": 0.1,
+        "total_steps": 40,
+        "warmup_steps": 4
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "linear_lr",
+    "parameters": [
+      {
+        "name": "step",
+        "type": "number",
+        "example": "0",
+        "description": "Current step"
+      },
+      {
+        "name": "total_steps",
+        "type": "number",
+        "example": "100",
+        "description": "Total training steps"
+      },
+      {
+        "name": "initial_lr",
+        "type": "number",
+        "example": "1e-3",
+        "description": "Initial learning rate"
+      },
+      {
+        "name": "final_lr",
+        "type": "number",
+        "example": "0.0",
+        "description": "Final learning rate"
+      },
+      {
+        "name": "warmup_steps",
+        "type": "number",
+        "example": "10",
+        "description": "Warmup steps"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "cosine-annealing-lr",
+    "warmup-decay-lr",
+    "adam-optimizer",
+    "nadam-optimizer",
+    "adamw-optimizer"
+  ],
+  "tags": [
+    "Optimization"
+  ],
+  "prevId": "r2-score",
+  "nextId": "batch-normalization",
+  "slug": "linear-lr-scheduler",
+  "cleanTitle": "Learning Rate Scheduler (Linear Decay)",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/linear-lr-scheduler",
+  "localUrl": "http://localhost:3000/problems/linear-lr-scheduler",
+  "studyPlan": null
+}

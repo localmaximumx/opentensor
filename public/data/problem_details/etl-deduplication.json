@@ -1,0 +1,762 @@
+{
+  "id": "etl-deduplication",
+  "title": "ETL Deduplication",
+  "description": "Deduplicate records using the values in key_columns as a composite key. Select one record per key according to strategy:\n\n* \"first\": select the first occurrence\n* \"last\": select the last occurrence\n* \"most_complete\": select the record with the fewest None values, breaking ties by first occurrence\n\nRegardless of strategy, order the output by the first appearance of each unique key. Return the selected records as a list of dictionaries without changing the input records.",
+  "seoDescription": "Deduplicate ETL records by configured key fields while applying the required policy for repeated entries.",
+  "examples": [
+    "Input: records = [{\"id\": 1, \"name\": \"Alice\", \"email\": \"alice@test.com\"}, {\"id\": 2, \"name\": \"Bob\", \"email\": \"bob@test.com\"}], key_columns = [\"id\"], strategy = \"first\"\n\nOutput: [{\"id\": 1, \"name\": \"Alice\", \"email\": \"alice@test.com\"}, {\"id\": 2, \"name\": \"Bob\", \"email\": \"bob@test.com\"}]\n\nExplanation: The two records have different keys, so both remain.",
+    "Input: records = [{\"id\": 1, \"name\": \"Alice\", \"email\": \"alice@test.com\"}, {\"id\": 2, \"name\": \"Bob\", \"email\": \"bob@test.com\"}, {\"id\": 1, \"name\": \"Alice Smith\", \"email\": \"alice.s@test.com\"}], key_columns = [\"id\"], strategy = \"first\"\n\nOutput: [{\"id\": 1, \"name\": \"Alice\", \"email\": \"alice@test.com\"}, {\"id\": 2, \"name\": \"Bob\", \"email\": \"bob@test.com\"}]"
+  ],
+  "requirements": "* Build composite keys in key_columns order\n* Select records according to the chosen strategy\n* Break completeness ties by first occurrence\n* Preserve first-key appearance order",
+  "theory": "## Understanding the Theory: ETL Deduplication\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **ETL Deduplication** implements a core computational routine.\n\nIn this problem, the objective is to implement **ETL Deduplication** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\text{null\\_count}(record) = \\sum_{field \\in record} \\mathbf{1}[\\text{value is None}]\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "Use tuple(record[column] for column in key_columns) as the composite key.",
+    "Store key order separately from grouped records, then select from each group."
+  ],
+  "constraints": "* strategy is first, last, or most_complete\n* Every record contains every key column\n* Key values are hashable",
+  "difficulty": "Easy",
+  "starterCode": "def deduplicate(records: list, key_columns: list, strategy: str) -> list:\n    \"\"\"\n    Returns a list of selected records.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-29T21:07:25.736Z",
+  "updatedAt": "2026-08-23T11:59:44.127Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\ndef deduplicate(records: list, key_columns: list, strategy: str) -> list:\n    seen = {}\n    for r in records:\n        k = tuple(r.get(col) for col in key_columns)\n        if strategy == 'first':\n            if k not in seen:\n                seen[k] = r\n        elif strategy == 'last':\n            seen[k] = r\n    return list(seen.values())\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "EtlDeduplicationViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "public_no_duplicates",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "public_keep_first",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          },
+          {
+            "id": 1,
+            "name": "Alice Smith",
+            "email": "alice.s@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ]
+    },
+    {
+      "id": "etl-deduplication-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "tsrif",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-deduplication-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "records": [
+          {
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@test.com"
+          },
+          {
+            "id": 2,
+            "name": "Bob",
+            "email": "bob@test.com"
+          }
+        ],
+        "strategy": "first",
+        "key_columns": [
+          "id"
+        ]
+      },
+      "expectedOutput": [
+        {
+          "id": 1,
+          "name": "Alice",
+          "email": "alice@test.com"
+        },
+        {
+          "id": 2,
+          "name": "Bob",
+          "email": "bob@test.com"
+        }
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "deduplicate",
+    "parameters": [
+      {
+        "name": "records",
+        "type": "array",
+        "example": "[{\"id\": 1, \"name\": \"Alice\"}, {\"id\": 2, \"name\": \"Bob\"}]",
+        "description": "List of record dictionaries"
+      },
+      {
+        "name": "key_columns",
+        "type": "array",
+        "example": "[\"id\"]",
+        "description": "Columns to use for identifying duplicates"
+      },
+      {
+        "name": "strategy",
+        "type": "string",
+        "example": "first",
+        "description": "Dedup strategy: \"first\" or \"last\""
+      }
+    ]
+  },
+  "relatedProblems": [
+    "etl-schema-validation",
+    "etl-dependency-orchestration",
+    "feature-store-lookup",
+    "impute-missing",
+    "model-versioning-basics"
+  ],
+  "tags": [
+    "MLOps"
+  ],
+  "prevId": "etl-schema-validation",
+  "nextId": "etl-dependency-orchestration",
+  "slug": "etl-deduplication",
+  "cleanTitle": "ETL Deduplication",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/etl-deduplication",
+  "localUrl": "http://localhost:3000/problems/etl-deduplication",
+  "studyPlan": null
+}

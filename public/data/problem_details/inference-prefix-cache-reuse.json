@@ -1,0 +1,995 @@
+{
+  "catalogId": "python:inference-prefix-cache-reuse",
+  "id": "inference-prefix-cache-reuse",
+  "sourceId": "inference-prefix-cache-reuse",
+  "slug": "inference-prefix-cache-reuse",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Implement Prefix Cache Matching and Reuse",
+  "difficulty": "Medium",
+  "tags": [
+    "Inference",
+    "Language Models"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-kv-decoding",
+  "sortOrder": 183,
+  "seoDescription": "Find the longest exactly-matching prefix, measured in whole blocks, among all candidates.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Identify longest common prefix token blocks between incoming prompt and stored KV cache memory to eliminate prefill latency.\n\nPrefix caching avoids recomputing quadratic attention matrices for long system prompts and multi-turn chat history.\n\n### Mathematical Formulation\n$$\nL_{\\text{reuse}} = \\max \\{ B \\mid \\forall k < B, \\, \\text{Prompt}_{k} = \\text{Cache}_{k} \\}\n$$\n\n### Step-by-Step Implementation\n1. Segment incoming prompt into fixed-size sequence blocks\n2. Match prompt blocks sequentially against cached token blocks\n3. Compute reused token count and remaining tokens requiring forward computation\n\n### Returns\nDictionary with 'matched_blocks', 'reused_tokens', and 'new_tokens_to_compute'.",
+  "theory": "## Understanding the Theory: Implement Prefix Cache Matching and Reuse\n\n### Core Intuition: Why Do We Need This?\nRunning large AI models in production requires massive computing power. During text generation, memory bandwidth (fetching weights and past key-value caches from VRAM) is often the primary bottleneck rather than raw arithmetic compute. **Implement Prefix Cache Matching and Reuse** optimizes hardware efficiency, memory consumption, or request serving throughput.\n\nPrefix caching avoids recomputing quadratic attention matrices for long system prompts and multi-turn chat history. In this problem, the goal is to: identify longest common prefix token blocks between incoming prompt and stored kv cache memory to eliminate prefill latency.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nL_{\\text{reuse}} = \\max \\{ B \\mid \\forall k < B, \\, \\text{Prompt}_{k} = \\text{Cache}_{k} \\}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Segment incoming prompt into fixed-size sequence blocks\n2. **Phase 2**: Match prompt blocks sequentially against cached token blocks\n3. **Phase 3**: Compute reused token count and remaining tokens requiring forward computation\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth Bottleneck**: Quantizing weights to INT8 or INT4 cuts memory traffic in half or quarters, dramatically increasing token generation speeds.\n* **Serving Systems**: Dynamic batching and PagedAttention maximize GPU utilization by grouping requests arriving at different times.\n* **Latency vs. Throughput**: In production serving, systems engineers balance Time-To-First-Token (TTFT) against overall tokens-per-second throughput.",
+  "examples": [
+    "Input: prompt_tokens = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], cached_block_tokens = [[1, 2, 3, 4], [5, 6, 7, 8], [99, 99, 99, 99]], block_size = 4\n\nOutput: {\"matched_blocks\": 2, \"reused_tokens\": 8, \"new_tokens_to_compute\": 4}\n\nExplanation: Evaluated inference_prefix_cache_reuse under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_prefix_cache_reuse`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_prefix_cache_reuse`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def inference_prefix_cache_reuse(prompt_tokens: list, cached_block_tokens: list, block_size: int = 4) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Implement Prefix Cache Matching and Reuse** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef inference_prefix_cache_reuse(prompt_tokens: list, cached_block_tokens: list, block_size: int = 4) -> dict:\n    p, bs = list(prompt_tokens), int(block_size)\n    m_blocks = 0\n    for i in range(len(p) // bs):\n        blk = p[i*bs:(i+1)*bs]\n        if i < len(cached_block_tokens) and cached_block_tokens[i] == blk: m_blocks += 1\n        else: break\n    reused = m_blocks * bs\n    return {'matched_blocks': m_blocks, 'reused_tokens': reused, 'new_tokens_to_compute': len(p) - reused}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "12 tokens matching first 2 blocks",
+      "inputs": {
+        "prompt_tokens": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "cached_block_tokens": [
+          [
+            1,
+            2,
+            3,
+            4
+          ],
+          [
+            5,
+            6,
+            7,
+            8
+          ],
+          [
+            99,
+            99,
+            99,
+            99
+          ]
+        ],
+        "block_size": 4
+      },
+      "expectedOutput": {
+        "matched_blocks": 2,
+        "reused_tokens": 8,
+        "new_tokens_to_compute": 4
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "prompt_tokens": [
+          2,
+          4,
+          6,
+          8,
+          10,
+          12,
+          14,
+          16,
+          18,
+          20,
+          22,
+          24
+        ],
+        "cached_block_tokens": [
+          [
+            2,
+            4,
+            6,
+            8
+          ],
+          [
+            10,
+            12,
+            14,
+            16
+          ],
+          [
+            198,
+            198,
+            198,
+            198
+          ]
+        ],
+        "block_size": 8
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "prompt_tokens": [
+          1,
+          1,
+          2,
+          2,
+          2,
+          3,
+          4,
+          4,
+          4,
+          5,
+          6,
+          6
+        ],
+        "cached_block_tokens": [
+          [
+            1,
+            1,
+            2,
+            2
+          ],
+          [
+            2,
+            3,
+            4,
+            4
+          ],
+          [
+            50,
+            50,
+            50,
+            50
+          ]
+        ],
+        "block_size": 2
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "prompt_tokens": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "cached_block_tokens": [
+          [
+            1,
+            2,
+            3,
+            4
+          ],
+          [
+            5,
+            6,
+            7,
+            8
+          ],
+          [
+            99,
+            99,
+            99,
+            99
+          ]
+        ],
+        "block_size": 4
+      },
+      "expectedOutput": {
+        "matched_blocks": 2,
+        "reused_tokens": 8,
+        "new_tokens_to_compute": 4
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "prompt_tokens": [
+          2,
+          3,
+          4,
+          6,
+          8,
+          9,
+          10,
+          12,
+          14,
+          15,
+          16,
+          18
+        ],
+        "cached_block_tokens": [
+          [
+            2,
+            3,
+            4,
+            6
+          ],
+          [
+            8,
+            9,
+            10,
+            12
+          ],
+          [
+            148,
+            148,
+            148,
+            148
+          ]
+        ],
+        "block_size": 6
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "prompt_tokens": [
+          3,
+          6,
+          9,
+          12,
+          15,
+          18,
+          21,
+          24,
+          27,
+          30,
+          33,
+          36
+        ],
+        "cached_block_tokens": [
+          [
+            3,
+            6,
+            9,
+            12
+          ],
+          [
+            15,
+            18,
+            21,
+            24
+          ],
+          [
+            297,
+            297,
+            297,
+            297
+          ]
+        ],
+        "block_size": 12
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "prompt_tokens": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          3,
+          3
+        ],
+        "cached_block_tokens": [
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            2,
+            2,
+            2
+          ],
+          [
+            25,
+            25,
+            25,
+            25
+          ]
+        ],
+        "block_size": 1
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "prompt_tokens": [
+          2,
+          4,
+          6,
+          8,
+          10,
+          12,
+          14,
+          16,
+          18,
+          20,
+          22,
+          24
+        ],
+        "cached_block_tokens": [
+          [
+            2,
+            4,
+            6,
+            8
+          ],
+          [
+            10,
+            12,
+            14,
+            16
+          ],
+          [
+            198,
+            198,
+            198,
+            198
+          ]
+        ],
+        "block_size": 8
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "prompt_tokens": [
+          4,
+          8,
+          12,
+          16,
+          20,
+          24,
+          28,
+          32,
+          36,
+          40,
+          44,
+          48
+        ],
+        "cached_block_tokens": [
+          [
+            4,
+            8,
+            12,
+            16
+          ],
+          [
+            20,
+            24,
+            28,
+            32
+          ],
+          [
+            396,
+            396,
+            396,
+            396
+          ]
+        ],
+        "block_size": 16
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "prompt_tokens": [
+          12,
+          11,
+          10,
+          9,
+          8,
+          7,
+          6,
+          5,
+          4,
+          3,
+          2,
+          1
+        ],
+        "cached_block_tokens": [
+          [
+            4,
+            3,
+            2,
+            1
+          ],
+          [
+            8,
+            7,
+            6,
+            5
+          ],
+          [
+            99,
+            99,
+            99,
+            99
+          ]
+        ],
+        "block_size": 4
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "prompt_tokens": [
+          1,
+          2,
+          2,
+          3,
+          4,
+          4,
+          5,
+          6,
+          7,
+          8,
+          8,
+          9
+        ],
+        "cached_block_tokens": [
+          [
+            1,
+            2,
+            2,
+            3
+          ],
+          [
+            4,
+            4,
+            5,
+            6
+          ],
+          [
+            74,
+            74,
+            74,
+            74
+          ]
+        ],
+        "block_size": 3
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "prompt_tokens": [
+          5,
+          10,
+          15,
+          20,
+          25,
+          30,
+          35,
+          40,
+          45,
+          50,
+          55,
+          60
+        ],
+        "cached_block_tokens": [
+          [
+            5,
+            10,
+            15,
+            20
+          ],
+          [
+            25,
+            30,
+            35,
+            40
+          ],
+          [
+            495,
+            495,
+            495,
+            495
+          ]
+        ],
+        "block_size": 20
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "prompt_tokens": [
+          3,
+          6,
+          9,
+          12,
+          15,
+          18,
+          21,
+          24,
+          27,
+          30,
+          33,
+          36
+        ],
+        "cached_block_tokens": [
+          [
+            3,
+            6,
+            9,
+            12
+          ],
+          [
+            15,
+            18,
+            21,
+            24
+          ],
+          [
+            297,
+            297,
+            297,
+            297
+          ]
+        ],
+        "block_size": 12
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "prompt_tokens": [
+          1,
+          2,
+          2,
+          3,
+          4,
+          5,
+          6,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "cached_block_tokens": [
+          [
+            1,
+            2,
+            2,
+            3
+          ],
+          [
+            4,
+            5,
+            6,
+            6
+          ],
+          [
+            79,
+            79,
+            79,
+            79
+          ]
+        ],
+        "block_size": 3
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "prompt_tokens": [
+          6,
+          12,
+          18,
+          24,
+          30,
+          36,
+          42,
+          48,
+          54,
+          60,
+          66,
+          72
+        ],
+        "cached_block_tokens": [
+          [
+            6,
+            12,
+            18,
+            24
+          ],
+          [
+            30,
+            36,
+            42,
+            48
+          ],
+          [
+            594,
+            594,
+            594,
+            594
+          ]
+        ],
+        "block_size": 24
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "prompt_tokens": [
+          4,
+          8,
+          12,
+          16,
+          20,
+          24,
+          28,
+          32,
+          36,
+          40,
+          44,
+          48
+        ],
+        "cached_block_tokens": [
+          [
+            4,
+            8,
+            12,
+            16
+          ],
+          [
+            20,
+            24,
+            28,
+            32
+          ],
+          [
+            396,
+            396,
+            396,
+            396
+          ]
+        ],
+        "block_size": 16
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "prompt_tokens": [
+          1,
+          2,
+          4,
+          5,
+          6,
+          7,
+          8,
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "cached_block_tokens": [
+          [
+            1,
+            2,
+            4,
+            5
+          ],
+          [
+            6,
+            7,
+            8,
+            10
+          ],
+          [
+            119,
+            119,
+            119,
+            119
+          ]
+        ],
+        "block_size": 5
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "prompt_tokens": [
+          1,
+          1,
+          1,
+          2,
+          2,
+          2,
+          3,
+          3,
+          4,
+          4,
+          4,
+          5
+        ],
+        "cached_block_tokens": [
+          [
+            1,
+            1,
+            1,
+            2
+          ],
+          [
+            2,
+            2,
+            3,
+            3
+          ],
+          [
+            40,
+            40,
+            40,
+            40
+          ]
+        ],
+        "block_size": 2
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "prompt_tokens": [
+          8,
+          16,
+          24,
+          32,
+          40,
+          48,
+          56,
+          64,
+          72,
+          80,
+          88,
+          96
+        ],
+        "cached_block_tokens": [
+          [
+            8,
+            16,
+            24,
+            32
+          ],
+          [
+            40,
+            48,
+            56,
+            64
+          ],
+          [
+            792,
+            792,
+            792,
+            792
+          ]
+        ],
+        "block_size": 32
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefix-cache-reuse-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "prompt_tokens": [
+          5,
+          10,
+          15,
+          20,
+          25,
+          30,
+          35,
+          40,
+          45,
+          50,
+          55,
+          60
+        ],
+        "cached_block_tokens": [
+          [
+            5,
+            10,
+            15,
+            20
+          ],
+          [
+            25,
+            30,
+            35,
+            40
+          ],
+          [
+            495,
+            495,
+            495,
+            495
+          ]
+        ],
+        "block_size": 20
+      },
+      "expectedOutput": {
+        "matched_blocks": 0,
+        "reused_tokens": 0,
+        "new_tokens_to_compute": 12
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_prefix_cache_reuse",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

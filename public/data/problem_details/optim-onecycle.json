@@ -1,0 +1,534 @@
+{
+  "catalogId": "python:optim-onecycle",
+  "id": "optim-onecycle",
+  "sourceId": "optim-onecycle",
+  "slug": "optim-onecycle",
+  "source": "python",
+  "category": "numpy",
+  "title": "LR Range Test and One-Cycle Policy",
+  "difficulty": "Hard",
+  "tags": [
+    "Optimization"
+  ],
+  "isFree": false,
+  "planId": "math-optimization",
+  "planTitle": "Optimization",
+  "sectionId": "math-optimization-learning-rate-scheduling",
+  "sortOrder": 539,
+  "seoDescription": "Implement the one-cycle learning rate policy for full-batch MSE gradient descent, using zero-initialized weights.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Generate dynamic cosine annealing learning rate schedule with warmup and cooldown phases.\n\nRamping learning rate to peak values while lowering momentum regularizes training, preventing premature convergence to sharp sub-optimal local minima.\n\n### Mathematical Formulation\n$$\n\\eta_t = \\begin{cases} \\eta_{\\max} + \\frac{\\eta_{\\text{init}} - \\eta_{\\max}}{2} (1 + \\cos(\\pi \\frac{t}{T_{\\text{up}}})) & t < T_{\\text{up}} \\\\ \\eta_{\\text{final}} + \\frac{\\eta_{\\max} - \\eta_{\\text{final}}}{2} (1 + \\cos(\\pi \\frac{t - T_{\\text{up}}}{T_{\\text{down}}})) & t \\ge T_{\\text{up}} \\end{cases}\n$$\n\n### Step-by-Step Implementation\n1. Determine warmup boundary step T_up = floor(total_steps * pct_start)\n2. Interpolate learning rate via cosine curve from initial_lr to max_lr during warmup\n3. Interpolate learning rate via cosine curve from max_lr down to final_lr during cooldown\n\n### Returns\nList of floats representing step-wise learning rates rounded to 6 decimal places.",
+  "theory": "## Understanding the Theory: LR Range Test and One-Cycle Policy\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization problem: we want to find parameter values that minimize the loss function across training samples. Because loss landscapes in deep learning are non-convex with ravines, saddle points, and plateaus, simple gradient descent can get stuck or oscillate. **LR Range Test and One-Cycle Policy** accelerates convergence and stabilizes parameter trajectories.\n\nRamping learning rate to peak values while lowering momentum regularizes training, preventing premature convergence to sharp sub-optimal local minima. In this problem, the goal is to: generate dynamic cosine annealing learning rate schedule with warmup and cooldown phases.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\eta_t = \\begin{cases} \\eta_{\\max} + \\frac{\\eta_{\\text{init}} - \\eta_{\\max}}{2} (1 + \\cos(\\pi \\frac{t}{T_{\\text{up}}})) & t < T_{\\text{up}} \\\\ \\eta_{\\text{final}} + \\frac{\\eta_{\\max} - \\eta_{\\text{final}}}{2} (1 + \\cos(\\pi \\frac{t - T_{\\text{up}}}{T_{\\text{down}}})) & t \\ge T_{\\text{up}} \\end{cases}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Determine warmup boundary step T_up = floor(total_steps * pct_start)\n2. **Phase 2**: Interpolate learning rate via cosine curve from initial_lr to max_lr during warmup\n3. **Phase 3**: Interpolate learning rate via cosine curve from max_lr down to final_lr during cooldown\n\n### Practical Machine Learning Applications & Nuances\n* **Escaping Ravines**: Momentum methods accumulate velocity across successive steps, helping the optimizer push through flat regions and dampening high-frequency oscillations.\n* **Adaptive Learning Rates**: Algorithms like Adam scale learning rates per parameter, giving infrequent features larger updates and preventing exploding updates on frequent features.\n* **Gradient Regularization**: Techniques like gradient clipping and weight decay prevent exploding gradients and encourage simpler, more generalizable model weights.",
+  "examples": [
+    "Input: total_steps = 10, max_lr = 0.1, pct_start = 0.3, div_factor = 10.0, final_div_factor = 100.0\n\nOutput: [0.01, 0.0325, 0.0775, 0.1, 0.095053, 0.081193, 0.061165, 0.038935, 0.018907, 0.005047]\n\nExplanation: Evaluated optim_onecycle under standard test conditions."
+  ],
+  "requirements": "* Function must be named `optim_onecycle`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `optim_onecycle`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import math\n\ndef optim_onecycle(total_steps: int, max_lr: float, pct_start: float = 0.3, div_factor: float = 25.0, final_div_factor: float = 1e4) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **LR Range Test and One-Cycle Policy** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport math\n\ndef optim_onecycle(total_steps: int, max_lr: float, pct_start: float = 0.3, div_factor: float = 25.0, final_div_factor: float = 1e4) -> list:\n    init_lr, fin_lr = max_lr / div_factor, (max_lr / div_factor) / final_div_factor\n    s_up, s_dn = int(total_steps * pct_start), total_steps - int(total_steps * pct_start)\n    lrs = []\n    for t in range(total_steps):\n        if t < s_up:\n            p = t / s_up if s_up > 0 else 1.0\n            lr = max_lr + 0.5 * (init_lr - max_lr) * (1.0 + math.cos(math.pi * p))\n        else:\n            p = (t - s_up) / s_dn if s_dn > 0 else 1.0\n            lr = fin_lr + 0.5 * (max_lr - fin_lr) * (1.0 + math.cos(math.pi * p))\n        lrs.append(round(lr, 6))\n    return lrs\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "10 steps 1-cycle",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "optim-onecycle-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "optim-onecycle-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "total_steps": 10,
+        "max_lr": 0.1,
+        "pct_start": 0.3,
+        "div_factor": 10.0,
+        "final_div_factor": 100.0
+      },
+      "expectedOutput": [
+        0.01,
+        0.0325,
+        0.0775,
+        0.1,
+        0.095053,
+        0.081193,
+        0.061165,
+        0.038935,
+        0.018907,
+        0.005047
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "optim_onecycle",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

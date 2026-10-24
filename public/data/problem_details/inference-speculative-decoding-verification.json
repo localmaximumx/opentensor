@@ -1,0 +1,656 @@
+{
+  "catalogId": "python:inference-speculative-decoding-verification",
+  "id": "inference-speculative-decoding-verification",
+  "sourceId": "inference-speculative-decoding-verification",
+  "slug": "inference-speculative-decoding-verification",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Implement Speculative Decoding and Token Verification",
+  "difficulty": "Hard",
+  "tags": [
+    "Inference",
+    "Language Models"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-kv-decoding",
+  "sortOrder": 252,
+  "seoDescription": "Verify speculative draft tokens against target probabilities and sample the corrected or bonus continuation exactly.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Verify speculative draft tokens against target model distribution probabilities using acceptance probability criteria.\n\nSpeculative decoding achieves 2x-3x speedup by drafting cheap tokens with a small model and verifying in parallel with the large model.\n\n### Mathematical Formulation\n$$\nP(\\text{accept}) = \\min\\left(1, \\frac{P_{\\text{target}}(x)}{P_{\\text{draft}}(x)}\\right)\n$$\n\n### Step-by-Step Implementation\n1. Compare draft model probability against target model probability for each proposed token\n2. Accept draft token if acceptance ratio satisfies acceptance condition\n3. Halt on first rejected token and sample correction from residual distribution\n\n### Returns\nDictionary with 'accepted_tokens', 'num_accepted', and 'acceptance_rate'.",
+  "theory": "## Understanding the Theory: Implement Speculative Decoding and Token Verification\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of discrete words and symbols arranged in sequential order. To process text with neural networks, we convert words into continuous embedding vectors and model their grammatical and semantic relationships. **Implement Speculative Decoding and Token Verification** is a core sequence-processing mechanism used in modern Transformer and LLM architectures.\n\nSpeculative decoding achieves 2x-3x speedup by drafting cheap tokens with a small model and verifying in parallel with the large model. In this problem, the goal is to: verify speculative draft tokens against target model distribution probabilities using acceptance probability criteria.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nP(\\text{accept}) = \\min\\left(1, \\frac{P_{\\text{target}}(x)}{P_{\\text{draft}}(x)}\\right)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compare draft model probability against target model probability for each proposed token\n2. **Phase 2**: Accept draft token if acceptance ratio satisfies acceptance condition\n3. **Phase 3**: Halt on first rejected token and sample correction from residual distribution\n\n### Practical Machine Learning Applications & Nuances\n* **Self-Attention Mechanics**: Scaled dot-product attention computes all-to-all token interactions dynamically, allowing tokens to gather context from the entire sentence simultaneously.\n* **Position Encodings**: Because self-attention is permutation-invariant, positional encodings (like sinusoidal or Rotary Position Embeddings) inject word order into the representations.\n* **Vocabulary & Subwords**: Algorithms like BPE tokenize text into frequent subwords, allowing models to represent rare words without requiring an infinite vocabulary.",
+  "examples": [
+    "Input: draft_tokens = [101, 102, 103], draft_probs = [0.9, 0.8, 0.7], target_probs = [0.85, 0.75, 0.2]\n\nOutput: {\"accepted_tokens\": [101, 102], \"num_accepted\": 2, \"acceptance_rate\": 0.6667}\n\nExplanation: Evaluated inference_speculative_decoding_verification under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_speculative_decoding_verification`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_speculative_decoding_verification`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def inference_speculative_decoding_verification(draft_tokens: list, draft_probs: list, target_probs: list) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Implement Speculative Decoding and Token Verification** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef inference_speculative_decoding_verification(draft_tokens: list, draft_probs: list, target_probs: list) -> dict:\n    acc = []\n    for i, tok in enumerate(draft_tokens):\n        ratio = min(1.0, float(target_probs[i]) / max(float(draft_probs[i]), 1e-12))\n        if ratio >= 0.8: acc.append(tok)\n        else: break\n    return {'accepted_tokens': acc, 'num_accepted': len(acc), 'acceptance_rate': round(len(acc)/max(len(draft_tokens), 1), 4)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "3 draft tokens with 2 accepted",
+      "inputs": {
+        "draft_tokens": [
+          101,
+          102,
+          103
+        ],
+        "draft_probs": [
+          0.9,
+          0.8,
+          0.7
+        ],
+        "target_probs": [
+          0.85,
+          0.75,
+          0.2
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          101,
+          102
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "draft_tokens": [
+          202,
+          204,
+          206
+        ],
+        "draft_probs": [
+          1.8,
+          1.6,
+          1.4
+        ],
+        "target_probs": [
+          1.7,
+          1.5,
+          0.4
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          202,
+          204
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "draft_tokens": [
+          50,
+          51,
+          52
+        ],
+        "draft_probs": [
+          0.45,
+          0.4,
+          0.35
+        ],
+        "target_probs": [
+          0.425,
+          0.375,
+          0.1
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          50,
+          51
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "draft_tokens": [
+          101,
+          102,
+          103
+        ],
+        "draft_probs": [
+          1.9,
+          1.8,
+          1.7
+        ],
+        "target_probs": [
+          1.85,
+          1.75,
+          1.2
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          101,
+          102
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "draft_tokens": [
+          152,
+          153,
+          154
+        ],
+        "draft_probs": [
+          1.35,
+          1.2,
+          1.05
+        ],
+        "target_probs": [
+          1.275,
+          1.125,
+          0.3
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          152,
+          153
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "draft_tokens": [
+          303,
+          306,
+          309
+        ],
+        "draft_probs": [
+          2.7,
+          2.4,
+          2.1
+        ],
+        "target_probs": [
+          2.55,
+          2.25,
+          0.6
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          303,
+          306
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "draft_tokens": [
+          25,
+          26,
+          26
+        ],
+        "draft_probs": [
+          0.225,
+          0.2,
+          0.175
+        ],
+        "target_probs": [
+          0.2125,
+          0.1875,
+          0.05
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          25,
+          26
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "draft_tokens": [
+          202,
+          204,
+          206
+        ],
+        "draft_probs": [
+          2.9,
+          2.8,
+          2.7
+        ],
+        "target_probs": [
+          2.85,
+          2.75,
+          2.2
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          202,
+          204,
+          206
+        ],
+        "num_accepted": 3,
+        "acceptance_rate": 1.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "draft_tokens": [
+          404,
+          408,
+          412
+        ],
+        "draft_probs": [
+          3.6,
+          3.2,
+          2.8
+        ],
+        "target_probs": [
+          3.4,
+          3.0,
+          0.8
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          404,
+          408
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "draft_tokens": [
+          103,
+          102,
+          101
+        ],
+        "draft_probs": [
+          0.7,
+          0.8,
+          0.9
+        ],
+        "target_probs": [
+          0.2,
+          0.75,
+          0.85
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [],
+        "num_accepted": 0,
+        "acceptance_rate": 0.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "draft_tokens": [
+          76,
+          76,
+          77
+        ],
+        "draft_probs": [
+          0.675,
+          0.6,
+          0.525
+        ],
+        "target_probs": [
+          0.6375,
+          0.5625,
+          0.15
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          76,
+          76
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "draft_tokens": [
+          505,
+          510,
+          515
+        ],
+        "draft_probs": [
+          4.5,
+          4.0,
+          3.5
+        ],
+        "target_probs": [
+          4.25,
+          3.75,
+          1.0
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          505,
+          510
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "draft_tokens": [
+          303,
+          306,
+          309
+        ],
+        "draft_probs": [
+          3.9,
+          3.8,
+          3.7
+        ],
+        "target_probs": [
+          3.85,
+          3.75,
+          3.2
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          303,
+          306,
+          309
+        ],
+        "num_accepted": 3,
+        "acceptance_rate": 1.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "draft_tokens": [
+          81,
+          82,
+          82
+        ],
+        "draft_probs": [
+          0.72,
+          0.64,
+          0.56
+        ],
+        "target_probs": [
+          0.68,
+          0.6,
+          0.16
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          81,
+          82
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "draft_tokens": [
+          606,
+          612,
+          618
+        ],
+        "draft_probs": [
+          5.4,
+          4.8,
+          4.2
+        ],
+        "target_probs": [
+          5.1,
+          4.5,
+          1.2
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          606,
+          612
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "draft_tokens": [
+          404,
+          408,
+          412
+        ],
+        "draft_probs": [
+          4.9,
+          4.8,
+          4.7
+        ],
+        "target_probs": [
+          4.85,
+          4.75,
+          4.2
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          404,
+          408,
+          412
+        ],
+        "num_accepted": 3,
+        "acceptance_rate": 1.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "draft_tokens": [
+          121,
+          122,
+          124
+        ],
+        "draft_probs": [
+          1.08,
+          0.96,
+          0.84
+        ],
+        "target_probs": [
+          1.02,
+          0.9,
+          0.24
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          121,
+          122
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "draft_tokens": [
+          40,
+          41,
+          41
+        ],
+        "draft_probs": [
+          0.36,
+          0.32,
+          0.28
+        ],
+        "target_probs": [
+          0.34,
+          0.3,
+          0.08
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          40,
+          41
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "draft_tokens": [
+          808,
+          816,
+          824
+        ],
+        "draft_probs": [
+          7.2,
+          6.4,
+          5.6
+        ],
+        "target_probs": [
+          6.8,
+          6.0,
+          1.6
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          808,
+          816
+        ],
+        "num_accepted": 2,
+        "acceptance_rate": 0.6667
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-speculative-decoding-verification-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "draft_tokens": [
+          505,
+          510,
+          515
+        ],
+        "draft_probs": [
+          5.9,
+          5.8,
+          5.7
+        ],
+        "target_probs": [
+          5.85,
+          5.75,
+          5.2
+        ]
+      },
+      "expectedOutput": {
+        "accepted_tokens": [
+          505,
+          510,
+          515
+        ],
+        "num_accepted": 3,
+        "acceptance_rate": 1.0
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_speculative_decoding_verification",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

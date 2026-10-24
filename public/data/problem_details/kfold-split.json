@@ -1,0 +1,2885 @@
+{
+  "id": "kfold-split",
+  "title": "K-Fold Split (Indices Only)",
+  "description": "Partition sample indices from zero through $N-1$ into $k$ folds for cross-validation. When $N$ is not divisible by $k$, the first $N\\bmod k$ validation folds receive one extra index.\n\n$$\n\\{0,1,\\ldots,N-1\\}=F_1\\cup F_2\\cup\\cdots\\cup F_k\n$$\n\n$$\nF_i\\cap F_j=\\varnothing\\quad\\text{for }i\\ne j\n$$\n\nFor fold $i$, validation indices are $F_i$ and training indices are all remaining folds. If shuffle is true, shuffle indices with np.random.default_rng(seed).permutation before partitioning. Return a list of $k$ dictionaries, each containing train_idx and val_idx as one-dimensional integer NumPy arrays.",
+  "seoDescription": "Generate deterministic K-fold train and validation index splits that use every sample exactly once for validation.",
+  "examples": [
+    "Input: N = 5, k = 2, shuffle = false, seed = 0\n\nOutput: [{\"train_idx\": [3, 4], \"val_idx\": [0, 1, 2]}, {\"train_idx\": [0, 1, 2], \"val_idx\": [3, 4]}]\n\nExplanation: Five indices produce validation folds of sizes three and two, and each fold is held out once.",
+    "Input: N = 7, k = 3, shuffle = false, seed = 0\n\nOutput: [{\"train_idx\": [3, 4, 5, 6], \"val_idx\": [0, 1, 2]}, {\"train_idx\": [0, 1, 2, 5, 6], \"val_idx\": [3, 4]}, {\"train_idx\": [0, 1, 2, 3, 4], \"val_idx\": [5, 6]}]"
+  ],
+  "requirements": "* Place every index in exactly one validation fold\n* Keep validation fold sizes within one element of each other\n* Use the supplied seed when shuffling\n* Return a list of dictionaries containing train_idx and val_idx arrays",
+  "theory": "## Understanding the Theory: K-Fold Split (Indices Only)\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **K-Fold Split (Indices Only)** implements a core computational routine.\n\nIn this problem, the objective is to implement **K-Fold Split (Indices Only)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\{0,1,\\ldots,N-1\\}=F_1\\cup F_2\\cup\\cdots\\cup F_k\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "Use np.array_split(indices, k) to create balanced validation folds.",
+    "Concatenate every fold except the current validation fold for train_idx."
+  ],
+  "constraints": "* 2 <= k <= N\n* seed is a nonnegative integer\n* Use NumPy only",
+  "difficulty": "Hard",
+  "starterCode": "import numpy as np\n\ndef kfold_split(N: int, k: int, shuffle: bool = True, seed: int = 0) -> list:\n    \"\"\"\n    Returns a list of dictionaries with train_idx and val_idx.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-15T16:17:00.576Z",
+  "updatedAt": "2026-08-23T10:37:25.159Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef kfold_split(N: int, k: int, shuffle: bool = True, seed: int = 0) -> list:\n    indices = np.arange(N)\n    if shuffle:\n        rng = np.random.default_rng(seed)\n        rng.shuffle(indices)\n    folds = np.array_split(indices, k)\n    out = []\n    for i in range(k):\n        val = folds[i].tolist()\n        train = np.concatenate([folds[j] for j in range(k) if j != i]).tolist()\n        out.append({'train_idx': train, 'val_idx': val})\n    return out\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "KFoldSplitViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Basic 2-fold",
+      "inputs": {
+        "N": 5,
+        "k": 2,
+        "seed": 0,
+        "shuffle": false
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2
+          ],
+          "val_idx": [
+            3,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "3-fold uneven",
+      "inputs": {
+        "N": 7,
+        "k": 3,
+        "seed": 0,
+        "shuffle": false
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4,
+            5,
+            6
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            5,
+            6
+          ],
+          "val_idx": [
+            3,
+            4
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "val_idx": [
+            5,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kfold-split-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "N": 10,
+        "k": 4,
+        "seed": 0,
+        "shuffle": 0
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            6,
+            7,
+            8,
+            9
+          ],
+          "val_idx": [
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            8,
+            9
+          ],
+          "val_idx": [
+            6,
+            7
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "val_idx": [
+            8,
+            9
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "N": 2,
+        "k": 1,
+        "seed": 0,
+        "shuffle": 0
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2
+          ],
+          "val_idx": [
+            3,
+            4
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "N": 5,
+        "k": 2,
+        "seed": 1,
+        "shuffle": 1
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2
+          ],
+          "val_idx": [
+            3,
+            4
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "N": 8,
+        "k": 3,
+        "seed": 0,
+        "shuffle": 0
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            6,
+            7
+          ],
+          "val_idx": [
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "val_idx": [
+            6,
+            7
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "N": 15,
+        "k": 6,
+        "seed": 0,
+        "shuffle": 0
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14
+          ],
+          "val_idx": [
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14
+          ],
+          "val_idx": [
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            11,
+            12,
+            13,
+            14
+          ],
+          "val_idx": [
+            9,
+            10
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            13,
+            14
+          ],
+          "val_idx": [
+            11,
+            12
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "val_idx": [
+            13,
+            14
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "N": 1,
+        "k": 1,
+        "seed": 0,
+        "shuffle": 0
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2
+          ],
+          "val_idx": [
+            3,
+            4
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "N": 10,
+        "k": 4,
+        "seed": 2,
+        "shuffle": 2
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            6,
+            9,
+            5,
+            3,
+            4,
+            8,
+            1
+          ],
+          "val_idx": [
+            2,
+            0,
+            7
+          ]
+        },
+        {
+          "train_idx": [
+            2,
+            0,
+            7,
+            3,
+            4,
+            8,
+            1
+          ],
+          "val_idx": [
+            6,
+            9,
+            5
+          ]
+        },
+        {
+          "train_idx": [
+            2,
+            0,
+            7,
+            6,
+            9,
+            5,
+            8,
+            1
+          ],
+          "val_idx": [
+            3,
+            4
+          ]
+        },
+        {
+          "train_idx": [
+            2,
+            0,
+            7,
+            6,
+            9,
+            5,
+            3,
+            4
+          ],
+          "val_idx": [
+            8,
+            1
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "N": 20,
+        "k": 8,
+        "seed": 0,
+        "shuffle": 0
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "val_idx": [
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "val_idx": [
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "val_idx": [
+            9,
+            10,
+            11
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "val_idx": [
+            12,
+            13
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            16,
+            17,
+            18,
+            19
+          ],
+          "val_idx": [
+            14,
+            15
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            18,
+            19
+          ],
+          "val_idx": [
+            16,
+            17
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17
+          ],
+          "val_idx": [
+            18,
+            19
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "N": 5,
+        "k": 2,
+        "seed": 0,
+        "shuffle": 0
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2
+          ],
+          "val_idx": [
+            3,
+            4
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "N": 4,
+        "k": 2,
+        "seed": 0,
+        "shuffle": 0
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            2,
+            3
+          ],
+          "val_idx": [
+            0,
+            1
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1
+          ],
+          "val_idx": [
+            2,
+            3
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "N": 25,
+        "k": 10,
+        "seed": 0,
+        "shuffle": 0
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24
+          ],
+          "val_idx": [
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24
+          ],
+          "val_idx": [
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24
+          ],
+          "val_idx": [
+            9,
+            10,
+            11
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24
+          ],
+          "val_idx": [
+            12,
+            13,
+            14
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24
+          ],
+          "val_idx": [
+            15,
+            16
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24
+          ],
+          "val_idx": [
+            17,
+            18
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            21,
+            22,
+            23,
+            24
+          ],
+          "val_idx": [
+            19,
+            20
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            23,
+            24
+          ],
+          "val_idx": [
+            21,
+            22
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22
+          ],
+          "val_idx": [
+            23,
+            24
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "N": 15,
+        "k": 6,
+        "seed": 3,
+        "shuffle": 3
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            2,
+            13,
+            0,
+            10,
+            1,
+            4,
+            7,
+            6,
+            12,
+            5,
+            3,
+            8
+          ],
+          "val_idx": [
+            11,
+            9,
+            14
+          ]
+        },
+        {
+          "train_idx": [
+            11,
+            9,
+            14,
+            10,
+            1,
+            4,
+            7,
+            6,
+            12,
+            5,
+            3,
+            8
+          ],
+          "val_idx": [
+            2,
+            13,
+            0
+          ]
+        },
+        {
+          "train_idx": [
+            11,
+            9,
+            14,
+            2,
+            13,
+            0,
+            7,
+            6,
+            12,
+            5,
+            3,
+            8
+          ],
+          "val_idx": [
+            10,
+            1,
+            4
+          ]
+        },
+        {
+          "train_idx": [
+            11,
+            9,
+            14,
+            2,
+            13,
+            0,
+            10,
+            1,
+            4,
+            12,
+            5,
+            3,
+            8
+          ],
+          "val_idx": [
+            7,
+            6
+          ]
+        },
+        {
+          "train_idx": [
+            11,
+            9,
+            14,
+            2,
+            13,
+            0,
+            10,
+            1,
+            4,
+            7,
+            6,
+            3,
+            8
+          ],
+          "val_idx": [
+            12,
+            5
+          ]
+        },
+        {
+          "train_idx": [
+            11,
+            9,
+            14,
+            2,
+            13,
+            0,
+            10,
+            1,
+            4,
+            7,
+            6,
+            12,
+            5
+          ],
+          "val_idx": [
+            3,
+            8
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "N": 4,
+        "k": 2,
+        "seed": 0,
+        "shuffle": 0
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            2,
+            3
+          ],
+          "val_idx": [
+            0,
+            1
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1
+          ],
+          "val_idx": [
+            2,
+            3
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "N": 30,
+        "k": 12,
+        "seed": 0,
+        "shuffle": 0
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29
+          ],
+          "val_idx": [
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29
+          ],
+          "val_idx": [
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29
+          ],
+          "val_idx": [
+            9,
+            10,
+            11
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29
+          ],
+          "val_idx": [
+            12,
+            13,
+            14
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29
+          ],
+          "val_idx": [
+            15,
+            16,
+            17
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29
+          ],
+          "val_idx": [
+            18,
+            19
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29
+          ],
+          "val_idx": [
+            20,
+            21
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29
+          ],
+          "val_idx": [
+            22,
+            23
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            26,
+            27,
+            28,
+            29
+          ],
+          "val_idx": [
+            24,
+            25
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            28,
+            29
+          ],
+          "val_idx": [
+            26,
+            27
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27
+          ],
+          "val_idx": [
+            28,
+            29
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "N": 20,
+        "k": 8,
+        "seed": 4,
+        "shuffle": 4
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            10,
+            18,
+            5,
+            7,
+            9,
+            1,
+            16,
+            2,
+            15,
+            11,
+            17,
+            19,
+            6,
+            4,
+            3,
+            12,
+            14
+          ],
+          "val_idx": [
+            0,
+            13,
+            8
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            13,
+            8,
+            7,
+            9,
+            1,
+            16,
+            2,
+            15,
+            11,
+            17,
+            19,
+            6,
+            4,
+            3,
+            12,
+            14
+          ],
+          "val_idx": [
+            10,
+            18,
+            5
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            13,
+            8,
+            10,
+            18,
+            5,
+            16,
+            2,
+            15,
+            11,
+            17,
+            19,
+            6,
+            4,
+            3,
+            12,
+            14
+          ],
+          "val_idx": [
+            7,
+            9,
+            1
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            13,
+            8,
+            10,
+            18,
+            5,
+            7,
+            9,
+            1,
+            11,
+            17,
+            19,
+            6,
+            4,
+            3,
+            12,
+            14
+          ],
+          "val_idx": [
+            16,
+            2,
+            15
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            13,
+            8,
+            10,
+            18,
+            5,
+            7,
+            9,
+            1,
+            16,
+            2,
+            15,
+            19,
+            6,
+            4,
+            3,
+            12,
+            14
+          ],
+          "val_idx": [
+            11,
+            17
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            13,
+            8,
+            10,
+            18,
+            5,
+            7,
+            9,
+            1,
+            16,
+            2,
+            15,
+            11,
+            17,
+            4,
+            3,
+            12,
+            14
+          ],
+          "val_idx": [
+            19,
+            6
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            13,
+            8,
+            10,
+            18,
+            5,
+            7,
+            9,
+            1,
+            16,
+            2,
+            15,
+            11,
+            17,
+            19,
+            6,
+            12,
+            14
+          ],
+          "val_idx": [
+            4,
+            3
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            13,
+            8,
+            10,
+            18,
+            5,
+            7,
+            9,
+            1,
+            16,
+            2,
+            15,
+            11,
+            17,
+            19,
+            6,
+            4,
+            3
+          ],
+          "val_idx": [
+            12,
+            14
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "N": 6,
+        "k": 2,
+        "seed": 0,
+        "shuffle": 0
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4,
+            5
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2
+          ],
+          "val_idx": [
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "N": 2,
+        "k": 1,
+        "seed": 0,
+        "shuffle": 0
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2
+          ],
+          "val_idx": [
+            3,
+            4
+          ]
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "kfold-split-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "N": 40,
+        "k": 16,
+        "seed": 0,
+        "shuffle": 0
+      },
+      "expectedOutput": [
+        {
+          "train_idx": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
+          "val_idx": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
+          "val_idx": [
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
+          "val_idx": [
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
+          "val_idx": [
+            9,
+            10,
+            11
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
+          "val_idx": [
+            12,
+            13,
+            14
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
+          "val_idx": [
+            15,
+            16,
+            17
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
+          "val_idx": [
+            18,
+            19,
+            20
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
+          "val_idx": [
+            21,
+            22,
+            23
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
+          "val_idx": [
+            24,
+            25
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
+          "val_idx": [
+            26,
+            27
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
+          "val_idx": [
+            28,
+            29
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
+          "val_idx": [
+            30,
+            31
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
+          "val_idx": [
+            32,
+            33
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            36,
+            37,
+            38,
+            39
+          ],
+          "val_idx": [
+            34,
+            35
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            38,
+            39
+          ],
+          "val_idx": [
+            36,
+            37
+          ]
+        },
+        {
+          "train_idx": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37
+          ],
+          "val_idx": [
+            38,
+            39
+          ]
+        }
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "kfold_split",
+    "parameters": [
+      {
+        "name": "N",
+        "type": "number",
+        "example": "5",
+        "description": "Number of samples"
+      },
+      {
+        "name": "k",
+        "type": "number",
+        "example": "2",
+        "description": "Number of folds"
+      },
+      {
+        "name": "shuffle",
+        "type": "boolean",
+        "example": "false",
+        "description": "Whether to shuffle before splitting"
+      },
+      {
+        "name": "seed",
+        "type": "number",
+        "example": "0",
+        "description": "Random seed"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "stratified-split",
+    "impute-missing",
+    "batch-generator",
+    "classification-metrics",
+    "cross-entropy-loss"
+  ],
+  "tags": [
+    "Data Processing"
+  ],
+  "prevId": "rnn-step-forward",
+  "nextId": "make-diagonal",
+  "slug": "kfold-split",
+  "cleanTitle": "K-Fold Split (Indices Only)",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/kfold-split",
+  "localUrl": "http://localhost:3000/problems/kfold-split",
+  "studyPlan": null
+}

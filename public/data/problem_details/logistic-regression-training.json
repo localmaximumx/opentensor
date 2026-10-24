@@ -1,0 +1,794 @@
+{
+  "id": "logistic-regression-training",
+  "title": "Logistic Regression Training Loop",
+  "description": "Train a binary logistic regression classifier using gradient descent. Implement the training loop and return the learned parameters (w, b).\n\n**Model:**\n\n$$\np = \\sigma(Xw + b) = \\frac{1}{1 + e^{-(Xw + b)}}\n$$\n\n**Loss (Binary Cross-Entropy):**\n\n$$\n\\mathcal{L} = -\\frac{1}{N} \\sum_{i=1}^{N} [y_i \\log p_i + (1 - y_i) \\log(1 - p_i)]\n$$\n\n### Helper Functions Provided\n\n* _sigmoid(z): numerically stable sigmoid activation",
+  "seoDescription": "Train binary logistic regression in NumPy using sigmoid probabilities, gradient descent, and learned weight and bias parameters.",
+  "examples": [
+    "Input: X = [[0], [1], [2], [3]], y = [0, 0, 1, 1], lr = 0.1, steps = 500\n\nOutput: ([2.5272], -3.4307)"
+  ],
+  "requirements": "* <span style=\"font-size: 14px;\">Initialize weights w as zeros and bias b as 0.0</span>\n* <span style=\"font-size: 14px;\">Use gradient descent to minimize the loss function</span>\n* <span style=\"font-size: 14px;\">Return tuple (w, b) where w is shape (D,) and b is a float</span>\n* <span style=\"font-size: 14px;\">NumPy only, no sklearn or other ML libraries</span>",
+  "theory": "## Understanding the Theory: Logistic Regression Training Loop\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization challenge across highly non-convex loss surfaces filled with saddle points, ravines, and plateaus. Naive gradient descent often oscillates wildly in steep directions while crawling along flat regions. **Logistic Regression Training Loop** accelerates convergence, dampens oscillations, and stabilizes weight trajectories during training.\n\nIn this problem, the objective is to implement **Logistic Regression Training Loop** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\np = \\sigma(Xw + b) = \\frac{1}{1 + e^{-(Xw + b)}}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Momentum Accumulation**: Smoothing velocity vectors across successive mini-batches enables optimizers to escape shallow local minima and push through ill-conditioned ravines.\n* **Adaptive Scaling**: Tracking running second moments scales learning rates inversely with gradient variance, preventing rare features from vanishing and frequent features from exploding.\n* **Gradient Regularization**: Gradient clipping enforces hard norm bounds, preventing runaway parameter updates during training instability.",
+  "hints": [
+    "Compute grad_w with X.T @ (p - y) / len(y) and grad_b with np.mean(p - y).",
+    "Update both parameters with the learning rate during every iteration."
+  ],
+  "constraints": "* <span style=\"font-size: 14px;\">Input sizes: N ≤ 200, D ≤ 10</span>\n* <span style=\"font-size: 14px;\">lr > 0, steps ≥ 1</span>\n* <span style=\"font-size: 14px;\">Time limit: 1000 ms; Memory ≤ 128 MB</span>",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef _sigmoid(z: np.ndarray) -> np.ndarray:\n    \"\"\"\n    Returns elementwise sigmoid values.\n    \"\"\"\n    return np.where(z >= 0, 1/(1+np.exp(-z)), np.exp(z)/(1+np.exp(z)))\n\ndef train_logistic_regression(X: np.ndarray, y: np.ndarray, lr: float = 0.1, steps: int = 1000) -> tuple[np.ndarray, float]:\n    \"\"\"\n    Returns the trained weights and bias as (w, b).\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-10-21T18:37:14.408Z",
+  "updatedAt": "2026-03-18T19:29:51.500Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef train_logistic_regression(X: list, y: list, lr: float = 0.1, steps: int = 1000, expected_acc: float = 0.0) -> list:\n    arrX = np.array(X, dtype=float)\n    arry = np.array(y, dtype=float).reshape(-1, 1)\n    N, D = arrX.shape\n    w = np.zeros((D, 1), dtype=float)\n    b = 0.0\n    for _ in range(steps):\n        z = arrX @ w + b\n        p = np.where(z >= 0, 1.0 / (1.0 + np.exp(-z)), np.exp(z) / (1.0 + np.exp(z)))\n        grad_w = (arrX.T @ (p - arry)) / N\n        grad_b = np.mean(p - arry)\n        w -= lr * grad_w\n        b -= lr * grad_b\n    return [np.round(w, 4).flatten().tolist(), round(float(b), 4)]\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "LogisticTrainingViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Simple 1D linearly separable",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "lr": 0.1,
+        "steps": 500,
+        "expected_acc": 0.95
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          2.5272
+        ],
+        -3.4307
+      ]
+    },
+    {
+      "id": "logistic-regression-training-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            2
+          ],
+          [
+            4
+          ],
+          [
+            6
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          2,
+          2
+        ],
+        "lr": 0.2,
+        "steps": 1000,
+        "expected_acc": 1.9
+      },
+      "expectedOutput": [
+        [
+          400.3503
+        ],
+        3.859
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "logistic-regression-training-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "lr": 0.05,
+        "steps": 250,
+        "expected_acc": 0.475
+      },
+      "expectedOutput": [
+        [
+          -0.9829
+        ],
+        -2.0724
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ],
+          [
+            4
+          ]
+        ],
+        "y": [
+          1,
+          1,
+          2,
+          2
+        ],
+        "lr": 1.1,
+        "steps": 500,
+        "expected_acc": 1.95
+      },
+      "expectedOutput": [
+        [
+          963.8789
+        ],
+        275.5538
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ],
+          [
+            4
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          2,
+          2
+        ],
+        "lr": 0.15,
+        "steps": 750,
+        "expected_acc": 1.425
+      },
+      "expectedOutput": [
+        [
+          140.9654
+        ],
+        3.2644
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            3
+          ],
+          [
+            6
+          ],
+          [
+            9
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          3,
+          3
+        ],
+        "lr": 0.3,
+        "steps": 1500,
+        "expected_acc": 2.85
+      },
+      "expectedOutput": [
+        [
+          2.5272
+        ],
+        -3.4307
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            0
+          ],
+          [
+            0
+          ],
+          [
+            1
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "lr": 0.025,
+        "steps": 125,
+        "expected_acc": 0.2375
+      },
+      "expectedOutput": [
+        [
+          -0.2546
+        ],
+        -1.0887
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            2
+          ],
+          [
+            3
+          ],
+          [
+            4
+          ],
+          [
+            5
+          ]
+        ],
+        "y": [
+          2,
+          2,
+          3,
+          3
+        ],
+        "lr": 2.1,
+        "steps": 1000,
+        "expected_acc": 2.95
+      },
+      "expectedOutput": [
+        [
+          2.5272
+        ],
+        -3.4307
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            4
+          ],
+          [
+            8
+          ],
+          [
+            12
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          4,
+          4
+        ],
+        "lr": 0.4,
+        "steps": 2000,
+        "expected_acc": 3.8
+      },
+      "expectedOutput": [
+        [
+          2.5272
+        ],
+        -3.4307
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ]
+        ],
+        "y": [
+          1,
+          1,
+          0,
+          0
+        ],
+        "lr": 0.1,
+        "steps": 500,
+        "expected_acc": 0.95
+      },
+      "expectedOutput": [
+        [
+          -2.5272
+        ],
+        3.4307
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            2
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "lr": 0.075,
+        "steps": 375,
+        "expected_acc": 0.7125
+      },
+      "expectedOutput": [
+        [
+          2.0885
+        ],
+        -2.386
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            5
+          ],
+          [
+            10
+          ],
+          [
+            15
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          5,
+          5
+        ],
+        "lr": 0.5,
+        "steps": 2500,
+        "expected_acc": 4.75
+      },
+      "expectedOutput": [
+        [
+          2.5272
+        ],
+        -3.4307
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          [
+            3
+          ],
+          [
+            4
+          ],
+          [
+            5
+          ],
+          [
+            6
+          ]
+        ],
+        "y": [
+          3,
+          3,
+          4,
+          4
+        ],
+        "lr": 3.1,
+        "steps": 1500,
+        "expected_acc": 3.95
+      },
+      "expectedOutput": [
+        [
+          2.5272
+        ],
+        -3.4307
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            2
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "lr": 0.08,
+        "steps": 400,
+        "expected_acc": 0.76
+      },
+      "expectedOutput": [
+        [
+          2.2239
+        ],
+        -2.5949
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            6
+          ],
+          [
+            12
+          ],
+          [
+            18
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          6,
+          6
+        ],
+        "lr": 0.6,
+        "steps": 3000,
+        "expected_acc": 5.7
+      },
+      "expectedOutput": [
+        [
+          2.5272
+        ],
+        -3.4307
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            4
+          ],
+          [
+            5
+          ],
+          [
+            6
+          ],
+          [
+            7
+          ]
+        ],
+        "y": [
+          4,
+          4,
+          5,
+          5
+        ],
+        "lr": 4.1,
+        "steps": 2000,
+        "expected_acc": 4.95
+      },
+      "expectedOutput": [
+        [
+          2.5272
+        ],
+        -3.4307
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            4
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "lr": 0.12,
+        "steps": 600,
+        "expected_acc": 1.14
+      },
+      "expectedOutput": [
+        [
+          2.8494
+        ],
+        -3.995
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "lr": 0.04,
+        "steps": 200,
+        "expected_acc": 0.38
+      },
+      "expectedOutput": [
+        [
+          -0.7532
+        ],
+        -1.7841
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          [
+            0
+          ],
+          [
+            8
+          ],
+          [
+            16
+          ],
+          [
+            24
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          8,
+          8
+        ],
+        "lr": 0.8,
+        "steps": 4000,
+        "expected_acc": 7.6
+      },
+      "expectedOutput": [
+        [
+          2.5272
+        ],
+        -3.4307
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            5
+          ],
+          [
+            6
+          ],
+          [
+            7
+          ],
+          [
+            8
+          ]
+        ],
+        "y": [
+          5,
+          5,
+          6,
+          6
+        ],
+        "lr": 5.1,
+        "steps": 2500,
+        "expected_acc": 5.95
+      },
+      "expectedOutput": [
+        [
+          2.5272
+        ],
+        -3.4307
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "train_logistic_regression",
+    "parameters": [
+      {
+        "name": "X",
+        "type": "array",
+        "example": "[[0], [1], [2], [3]]",
+        "description": "Training feature matrix of shape (N, D)"
+      },
+      {
+        "name": "y",
+        "type": "array",
+        "example": "[0, 0, 1, 1]",
+        "description": "Binary labels (0 or 1) of shape (N,)"
+      },
+      {
+        "name": "lr",
+        "type": "number",
+        "example": "0.1",
+        "description": "Learning rate for gradient descent"
+      },
+      {
+        "name": "steps",
+        "type": "number",
+        "example": "500",
+        "description": "Number of gradient descent iterations"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "cross-entropy-loss",
+    "log-loss-per-sample",
+    "sigmoid-numpy",
+    "softmax-function",
+    "linear-regression-closed-form"
+  ],
+  "tags": [
+    "Optimization",
+    "Loss Functions"
+  ],
+  "prevId": "sigmoid-numpy",
+  "nextId": "pad-sequences",
+  "slug": "logistic-regression-training",
+  "cleanTitle": "Logistic Regression Training Loop",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/logistic-regression-training",
+  "localUrl": "http://localhost:3000/problems/logistic-regression-training",
+  "studyPlan": null
+}

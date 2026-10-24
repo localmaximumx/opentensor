@@ -1,0 +1,557 @@
+{
+  "catalogId": "python:nlp-text-classification",
+  "id": "nlp-text-classification",
+  "sourceId": "nlp-text-classification",
+  "slug": "nlp-text-classification",
+  "source": "python",
+  "category": "numpy",
+  "title": "Text Classification",
+  "difficulty": "Medium",
+  "tags": [
+    "Classification",
+    "NLP",
+    "Classic ML",
+    "Probability and Statistics"
+  ],
+  "isFree": false,
+  "planId": "cracking-nlp",
+  "planTitle": "Cracking NLP",
+  "sectionId": "cracking-nlp-sequence-models",
+  "sortOrder": 384,
+  "seoDescription": "Train a Laplace-smoothed Multinomial Naive Bayes text classifier and predict labels for test documents.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Train a Laplace-smoothed Multinomial Naive Bayes text classifier and predict discrete category labels for unseen documents.\n\nMultinomial Naive Bayes models document generation as drawing words with replacement from class multinomial urns.\n\n### Mathematical Formulation\n$$\n\\hat{y} = \\arg\\max_c \\left[ \\log P(c) + \\sum_{w \\in d} \\log \\frac{N_{cw} + 1}{N_c + |V|} \\right]\n$$\n\n### Step-by-Step Implementation\n1. Build unique vocabulary index and compute class prior probabilities\n2. Calculate Laplace-smoothed word token likelihoods per class\n3. Predict test document categories via maximum a posteriori log-probability\n\n### Returns\nList of predicted class labels for test documents.",
+  "theory": "## Understanding the Theory: Text Classification\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of discrete words and symbols arranged in sequential order. To process text with neural networks, we convert words into continuous embedding vectors and model their grammatical and semantic relationships. **Text Classification** is a core sequence-processing mechanism used in modern Transformer and LLM architectures.\n\nMultinomial Naive Bayes models document generation as drawing words with replacement from class multinomial urns. In this problem, the goal is to: train a laplace-smoothed multinomial naive bayes text classifier and predict discrete category labels for unseen documents.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\hat{y} = \\arg\\max_c \\left[ \\log P(c) + \\sum_{w \\in d} \\log \\frac{N_{cw} + 1}{N_c + |V|} \\right]\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Build unique vocabulary index and compute class prior probabilities\n2. **Phase 2**: Calculate Laplace-smoothed word token likelihoods per class\n3. **Phase 3**: Predict test document categories via maximum a posteriori log-probability\n\n### Practical Machine Learning Applications & Nuances\n* **Self-Attention Mechanics**: Scaled dot-product attention computes all-to-all token interactions dynamically, allowing tokens to gather context from the entire sentence simultaneously.\n* **Position Encodings**: Because self-attention is permutation-invariant, positional encodings (like sinusoidal or Rotary Position Embeddings) inject word order into the representations.\n* **Vocabulary & Subwords**: Algorithms like BPE tokenize text into frequent subwords, allowing models to represent rare words without requiring an infinite vocabulary.",
+  "examples": [
+    "Input: train_docs = [\"football match goal team\", \"python code computer software\", \"soccer league tournament\"], train_labels = [\"sports\", \"tech\", \"sports\"], test_docs = [\"software program\", \"football tournament\"]\n\nOutput: [\"tech\", \"sports\"]\n\nExplanation: Evaluated nlp_text_classification under standard test conditions."
+  ],
+  "requirements": "* Function must be named `nlp_text_classification`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `nlp_text_classification`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def nlp_text_classification(train_docs: list, train_labels: list, test_docs: list) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Text Classification** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport math, numpy as np\n\ndef nlp_text_classification(train_docs: list, train_labels: list, test_docs: list) -> list:\n    classes = sorted(list(set(train_labels)))\n    vocab = sorted(list(set(w for d in train_docs for w in d.lower().split())))\n    V, w2i = len(vocab), {w: i for i, w in enumerate(vocab)}\n    priors = {c: train_labels.count(c)/len(train_docs) for c in classes}\n    wc = {c: np.zeros(V) for c in classes}; tw = {c: 0.0 for c in classes}\n    for d, l in zip(train_docs, train_labels):\n        for w in d.lower().split():\n            wc[l][w2i[w]] += 1; tw[l] += 1\n    preds = []\n    for d in test_docs:\n        scores = {c: math.log(priors[c]) + sum(math.log((wc[c][w2i[w]] + 1.0)/(tw[c] + V)) for w in d.lower().split() if w in w2i) for c in classes}\n        preds.append(max(scores, key=scores.get))\n    return preds\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Classify sports vs tech",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "nlp-text-classification-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "nlp-text-classification-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "train_docs": [
+          "football match goal team",
+          "python code computer software",
+          "soccer league tournament"
+        ],
+        "train_labels": [
+          "sports",
+          "tech",
+          "sports"
+        ],
+        "test_docs": [
+          "software program",
+          "football tournament"
+        ]
+      },
+      "expectedOutput": [
+        "tech",
+        "sports"
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "nlp_text_classification",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

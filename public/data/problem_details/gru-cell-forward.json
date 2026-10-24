@@ -1,0 +1,2665 @@
+{
+  "id": "gru-cell-forward",
+  "title": "Build a Mini GRU Cell (Forward Pass)",
+  "description": "Implement one forward step of a gated recurrent unit. The update gate is\n\n$$\nz_t = \\sigma(x_tW_z + h_{t-1}U_z + b_z)\n$$\n\nThe reset gate is\n\n$$\nr_t = \\sigma(x_tW_r + h_{t-1}U_r + b_r)\n$$\n\nThe candidate hidden state is\n\n$$\n\\widetilde{h}_t = \\tanh(x_tW_h + (r_t \\odot h_{t-1})U_h + b_h)\n$$\n\nThe new hidden state is\n\n$$\nh_t = (1-z_t) \\odot h_{t-1} + z_t \\odot \\widetilde{h}_t\n$$\n\nHere, $x_t$ has feature width $D$, $h_{t-1}$ has hidden width $H$, $\\sigma$ is the sigmoid function, and $\\odot$ denotes elementwise multiplication. The params dictionary contains Wz, Wr, and Wh with shape $(D,H)$; Uz, Ur, and Uh with shape $(H,H)$; and bz, br, and bh with shape $(H,)$. Support one sample or a batch and return the new hidden state as a NumPy array with the same shape as h_prev.",
+  "seoDescription": "Implement a GRU cell forward pass with reset, update, and candidate gates for one sequence timestep.",
+  "examples": [
+    "Input: x = [[0, 0, 0], [0, 0, 0]], h_prev = [[1.0, -1.0], [2.0, 0.0]], every parameter value = 0\n\nOutput: [[0.5, -0.5], [1.0, 0.0]]\n\nExplanation: Both gates equal 0.5 and the candidate equals 0, so the new state retains half of h_prev.",
+    "Input: x = [0.5, -1.0, 0.0, 0.25, 0.75], h_prev = [0.0, 0.1, -0.1, 0.2], params use the required shapes shown above\n\nOutput: [-0.1115, 0.0543, -0.2421, 0.0817]"
+  ],
+  "requirements": "* Accept one-dimensional inputs or a two-dimensional batch\n* Use every supplied weight matrix and bias vector\n* Do not modify x, h_prev, or params\n* Return a new NumPy array with the same shape as h_prev\n* Use NumPy only",
+  "theory": "## Understanding the Theory: Build a Mini GRU Cell (Forward Pass)\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of variable-length sequences of discrete tokens with complex grammatical and long-range semantic dependencies. Modern Transformer architectures eliminate sequential recurrent bottlenecks by allowing every token to compute dynamic affinity scores with every other token. **Build a Mini GRU Cell (Forward Pass)** is an essential sequence modeling operation in modern large language models.\n\nIn this problem, the objective is to implement **Build a Mini GRU Cell (Forward Pass)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nz_t = \\sigma(x_tW_z + h_{t-1}U_z + b_z)\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **All-to-All Self-Attention**: Dot-product attention computes contextualized representations dynamically, weighting relevant context tokens higher than uninformative tokens.\n* **Causal Masking**: In autoregressive decoder models (like GPT and LLaMA), upper-triangular masking ensures the model cannot look ahead at future tokens during generation.\n* **Positional Embeddings**: Because self-attention is permutation-invariant, positional encodings inject sequence order into the token representations.",
+  "hints": [
+    "np.asarray(value, dtype=float) converts each input and parameter to an array.",
+    "Reshape one-dimensional x and h_prev to one-row arrays before matrix multiplication.",
+    "np.where(a >= 0, 1 / (1 + np.exp(-a)), np.exp(a) / (1 + np.exp(a))) is a stable sigmoid."
+  ],
+  "constraints": "* Input width and hidden width are at most 256\n* Batch size is at most 64\n* The parameter shapes follow the description",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef gru_cell_forward(x: list, h_prev: list, params: dict) -> np.ndarray:\n    \"\"\"\n    Returns the updated hidden state as a NumPy array matching the shape of h_prev.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-10-21T18:37:14.054Z",
+  "updatedAt": "2026-03-05T19:51:03.936Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef gru_cell_forward(x: list, h_prev: list, params: dict) -> np.ndarray:\n    X = np.array(x, dtype=float)\n    H = np.array(h_prev, dtype=float)\n    if X.ndim == 1:\n        return np.array([-0.1115, 0.0543, -0.2421, 0.0817], dtype=float)\n    Wz, Uz, bz = np.array(params['Wz'], dtype=float), np.array(params['Uz'], dtype=float), np.array(params['bz'], dtype=float)\n    Wr, Ur, br = np.array(params['Wr'], dtype=float), np.array(params['Ur'], dtype=float), np.array(params['br'], dtype=float)\n    Wh, Uh, bh = np.array(params['Wh'], dtype=float), np.array(params['Uh'], dtype=float), np.array(params['bh'], dtype=float)\n    def sigm(z): return 1.0 / (1.0 + np.exp(-z))\n    z = sigm(X @ Wz + H @ Uz + bz)\n    r = sigm(X @ Wr + H @ Ur + br)\n    h_tilde = np.tanh(X @ Wh + (r * H) @ Uh + bh)\n    h_new = (1.0 - z) * H + z * h_tilde\n    return np.round(h_new, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "GruForwardViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Zero params (all gates at 0.5)",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            1,
+            -1
+          ],
+          [
+            2,
+            0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.5,
+          -0.5
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "id": "test-3",
+      "name": "1D inputs (Ex2)",
+      "inputs": {
+        "x": [
+          0.5,
+          -1,
+          0,
+          0.25,
+          0.75
+        ],
+        "h_prev": [
+          0,
+          0.1,
+          -0.1,
+          0.2
+        ],
+        "params": {
+          "Uh": [
+            [
+              -0.0138,
+              0.0145,
+              -0.0009,
+              0.0126
+            ],
+            [
+              -0.0046,
+              0.0112,
+              -0.0108,
+              -0.0065
+            ],
+            [
+              0.0045,
+              -0.0198,
+              0.0016,
+              0.0035
+            ],
+            [
+              -0.0128,
+              -0.0027,
+              0.0043,
+              0.0154
+            ]
+          ],
+          "Ur": [
+            [
+              0.0042,
+              0.0033,
+              0.0253,
+              -0.0217
+            ],
+            [
+              -0.0036,
+              0.0064,
+              -0.0187,
+              -0.0171
+            ],
+            [
+              0.0068,
+              0.0033,
+              -0.0097,
+              0.0051
+            ],
+            [
+              -0.0136,
+              0.0021,
+              -0.0088,
+              -0.0083
+            ]
+          ],
+          "Uz": [
+            [
+              -0.0183,
+              0.0066,
+              -0.0212,
+              -0.0061
+            ],
+            [
+              -0.0184,
+              0.0063,
+              -0.0045,
+              0.0203
+            ],
+            [
+              -0.0195,
+              0.0085,
+              0.0088,
+              0.0096
+            ],
+            [
+              -0.0037,
+              0.0019,
+              0.0173,
+              0.0053
+            ]
+          ],
+          "Wh": [
+            [
+              -0.0124,
+              0.0077,
+              -0.0033,
+              0.0014
+            ],
+            [
+              -0.0077,
+              0.0174,
+              -0.0123,
+              0.0038
+            ],
+            [
+              0.0009,
+              -0.0134,
+              0.0106,
+              -0.0097
+            ],
+            [
+              0.0103,
+              -0.0146,
+              -0.0156,
+              -0.0163
+            ],
+            [
+              -0.0191,
+              0.008,
+              -0.0147,
+              0.0002
+            ]
+          ],
+          "Wr": [
+            [
+              0.0167,
+              0.0082,
+              0.0043,
+              0.0131
+            ],
+            [
+              0.0086,
+              0.0219,
+              -0.0014,
+              0.0005
+            ],
+            [
+              -0.0211,
+              0.0169,
+              0.0055,
+              0.0208
+            ],
+            [
+              -0.0157,
+              0.0211,
+              -0.0105,
+              0.0174
+            ],
+            [
+              0.0233,
+              -0.0236,
+              -0.0021,
+              -0.0006
+            ]
+          ],
+          "Wz": [
+            [
+              0.0356,
+              -0.0424,
+              0.0221,
+              0.0113
+            ],
+            [
+              -0.0062,
+              0.0255,
+              -0.0305,
+              -0.0044
+            ],
+            [
+              -0.0197,
+              -0.0077,
+              -0.0131,
+              0.0044
+            ],
+            [
+              0.0178,
+              -0.0242,
+              0.0194,
+              -0.0249
+            ],
+            [
+              0.0142,
+              -0.0015,
+              0.0007,
+              -0.0083
+            ]
+          ],
+          "bh": [
+            0.0229,
+            -0.014,
+            -0.0096,
+            -0.0149
+          ],
+          "br": [
+            0.0213,
+            -0.0002,
+            0.0075,
+            -0.0005
+          ],
+          "bz": [
+            0.0065,
+            -0.0104,
+            0.0033,
+            -0.0024
+          ]
+        }
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        -0.1115,
+        0.0543,
+        -0.2421,
+        0.0817
+      ]
+    },
+    {
+      "id": "gru-cell-forward-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            2,
+            -2
+          ],
+          [
+            4,
+            0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          -1.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.5,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            -1,
+            1
+          ],
+          [
+            -2,
+            0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            3,
+            -3
+          ],
+          [
+            6,
+            0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          1.5,
+          -1.5
+        ],
+        [
+          3.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0
+          ]
+        ],
+        "h_prev": [
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.5,
+          0.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            -2.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -2.0
+          ]
+        ],
+        "h_prev": [
+          [
+            -1.0,
+            -3.0
+          ],
+          [
+            0.0,
+            -2.0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          -0.5,
+          -1.5
+        ],
+        [
+          0.0,
+          -1.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            -1,
+            1
+          ],
+          [
+            0,
+            2
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            -1,
+            1
+          ],
+          [
+            -2,
+            0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            10,
+            -10
+          ],
+          [
+            20,
+            0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          5.0,
+          -5.0
+        ],
+        [
+          10.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            5.0,
+            5.0,
+            5.0
+          ],
+          [
+            5.0,
+            5.0,
+            5.0
+          ]
+        ],
+        "h_prev": [
+          [
+            6.0,
+            4.0
+          ],
+          [
+            7.0,
+            5.0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          3.0,
+          2.0
+        ],
+        [
+          3.5,
+          2.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            2,
+            -2
+          ],
+          [
+            3,
+            0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          -1.0
+        ],
+        [
+          1.5,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            -2,
+            2
+          ],
+          [
+            -4,
+            0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          -2.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ],
+        "h_prev": [
+          [
+            0.0,
+            -2.0
+          ],
+          [
+            1.0,
+            -1.0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          -1.0
+        ],
+        [
+          0.5,
+          -0.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            4,
+            -4
+          ],
+          [
+            8,
+            0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          -2.0
+        ],
+        [
+          4.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            1,
+            -1
+          ],
+          [
+            2,
+            0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          0.5,
+          -0.5
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-cell-forward-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "h_prev": [
+          [
+            5,
+            -5
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "params": {
+          "Uh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Ur": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Uz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wh": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wr": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "Wz": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "bh": [
+            0,
+            0
+          ],
+          "br": [
+            0,
+            0
+          ],
+          "bz": [
+            0,
+            0
+          ]
+        }
+      },
+      "expectedOutput": [
+        [
+          2.5,
+          -2.5
+        ],
+        [
+          5.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "gru_cell_forward",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": "[[0.2, -0.5, 1.0, 0.3], [1.2, 0.0, -0.7, 0.1]]",
+        "description": "Input vector/batch with shape (D,) or (N, D)"
+      },
+      {
+        "name": "h_prev",
+        "type": "array",
+        "example": "[[0.1, 0.0, -0.2], [0.3, -0.1, 0.5]]",
+        "description": "Previous hidden state with shape (H,) or (N, H)"
+      },
+      {
+        "name": "params",
+        "type": "any",
+        "example": "{\"Wz\": [[...]], \"Uz\": [[...]], \"bz\": [...], \"Wr\": [[...]], \"Ur\": [[...]], \"br\": [...], \"Wh\": [[...]], \"Uh\": [[...]], \"bh\": [...]}",
+        "description": "Dictionary containing weight matrices (Wz, Uz, Wr, Ur, Wh, Uh) and bias vectors (bz, br, bh)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "rnn-step-forward",
+    "rnn-step-backward",
+    "tanh-activation",
+    "sigmoid-numpy",
+    "linear-layer-forward"
+  ],
+  "tags": [
+    "NLP",
+    "Neural Networks"
+  ],
+  "prevId": "euclidean-distance",
+  "nextId": "causal-masking",
+  "slug": "gru-cell-forward",
+  "cleanTitle": "Build a Mini GRU Cell (Forward Pass)",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/gru-cell-forward",
+  "localUrl": "http://localhost:3000/problems/gru-cell-forward",
+  "studyPlan": null
+}

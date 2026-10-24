@@ -1,0 +1,3067 @@
+{
+  "id": "unet-full-network",
+  "title": "Complete U-Net Network",
+  "description": "Implement a compact numerical U-Net forward pass in NHWC layout. Apply an encoder block, save its skip tensor, max-pool into a two-convolution bottleneck, upsample and project the bottleneck, concatenate the centered skip tensor, apply two decoder convolutions, and finish with a per-pixel linear output projection. The weights dictionary contains enc_kernel1, enc_bias1, enc_kernel2, enc_bias2, bridge_kernel1, bridge_bias1, bridge_kernel2, bridge_bias2, W_up, b_up, dec_kernel1, dec_bias1, dec_kernel2, dec_bias2, W_out, and b_out. Return raw segmentation logits as a float64 NumPy array.",
+  "seoDescription": "Assemble U-Net encoder, bottleneck, decoder, skip-connection, and output stages while tracking valid-convolution shapes.",
+  "examples": [
+    "Input: x = [[[[1],[0]],[[-1],[2]]]], weights = {\"enc_kernel1\":[[[[1]]]],\"enc_bias1\":[0],\"enc_kernel2\":[[[[1]]]],\"enc_bias2\":[0],\"bridge_kernel1\":[[[[2]]]],\"bridge_bias1\":[0],\"bridge_kernel2\":[[[[0.5]]]],\"bridge_bias2\":[0],\"W_up\":[[1]],\"b_up\":[0],\"dec_kernel1\":[[[[1],[1]]]],\"dec_bias1\":[0],\"dec_kernel2\":[[[[0.5]]]],\"dec_bias2\":[0],\"W_out\":[[1,-1]],\"b_out\":[0.1,-0.1]}\n\nOutput: [[[[1.6,-1.6],[1.1,-1.1]],[[1.1,-1.1],[2.1,-2.1]]]]\n\nExplanation: The forward pass connects the high-resolution skip path with the pooled bottleneck path before producing pixel logits.",
+    "Input: x = [[[[0.5],[1]],[[1.5],[2]]]], weights = {\"enc_kernel1\":[[[[1]]]],\"enc_bias1\":[0.2],\"enc_kernel2\":[[[[0.5]]]],\"enc_bias2\":[0],\"bridge_kernel1\":[[[[1]]]],\"bridge_bias1\":[-0.1],\"bridge_kernel2\":[[[[1]]]],\"bridge_bias2\":[0],\"W_up\":[[1]],\"b_up\":[0],\"dec_kernel1\":[[[[0.25],[0.5]]]],\"dec_bias1\":[0.1],\"dec_kernel2\":[[[[1]]]],\"dec_bias2\":[0],\"W_out\":[[2]],\"b_out\":[-0.2]}\n\nOutput: [[[[1.175],[1.3]],[[1.425],[1.55]]]]",
+    "Input: x = [[[[1,-1],[0,1]],[[2,0],[-1,2]]]], weights = {\"enc_kernel1\":[[[[1],[0.5]]]],\"enc_bias1\":[0],\"enc_kernel2\":[[[[1]]]],\"enc_bias2\":[0],\"bridge_kernel1\":[[[[1]]]],\"bridge_bias1\":[0],\"bridge_kernel2\":[[[[1]]]],\"bridge_bias2\":[0],\"W_up\":[[1]],\"b_up\":[0],\"dec_kernel1\":[[[[0.5],[1]]]],\"dec_bias1\":[0],\"dec_kernel2\":[[[[1]]]],\"dec_bias2\":[0],\"W_out\":[[1]],\"b_out\":[0]}\n\nOutput: [[[[2.25],[2.25]],[[3],[2]]]]"
+  ],
+  "requirements": "- Use NumPy and every supplied weight exactly once in the documented stage.\n- Preserve the encoder skip tensor before pooling.\n- Use nearest-neighbor upsampling and centered skip concatenation.\n- Apply ReLU after every convolution except the output projection.\n- Return a float64 NumPy array of raw logits.",
+  "theory": "# <span style=\"font-size: 20px;\">Complete U-Net</span>\n\n<span style=\"font-size: 14px;\">The U-Net is a fully convolutional encoder-decoder architecture for semantic segmentation, introduced by Ronneberger, Fischer, and Brox (2015). Its defining feature is a symmetric structure where a contracting encoder captures context at multiple scales, a bottleneck processes the deepest representation, and an expanding decoder restores spatial resolution while fusing high-resolution features through skip connections. With the standard 572x572 input, the network produces a 388x388 segmentation map.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">The complete U-Net is a single end-to-end network that takes an image and produces a dense pixel-wise classification map. It consists of 9 processing blocks arranged in a U shape: 4 encoder blocks form the descending left arm, 1 bottleneck sits at the base, and 4 decoder blocks form the ascending right arm. A final 1x1 convolution maps the last 64 feature channels to $N_{\\text{classes}}$ output channels.</span>\n\n<span style=\"font-size: 14px;\">The architecture was designed for biomedical image segmentation where labeled data is extremely scarce. The encoder captures \"what\" is in the image at the cost of spatial precision, while the decoder recovers \"where\" things are by combining upsampled deep features with fine-grained spatial details from the encoder via skip connections. Every convolution in the original U-Net is unpadded (valid convolution), meaning each 3x3 convolution reduces spatial dimensions by 2 pixels. This creates a cumulative spatial loss that makes the output smaller than the input.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">**Encoder block** (applied 4 times with channel doubling). Two unpadded 3x3 convolutions with ReLU, then 2x2 max pooling:</span>\n\n$$\nx_{\\text{conv1}} = \\text{ReLU}(\\text{Conv3x3}(x_{\\text{in}})), \\quad H_{\\text{conv1}} = H_{\\text{in}} - 2\n$$\n\n$$\nx_{\\text{conv2}} = \\text{ReLU}(\\text{Conv3x3}(x_{\\text{conv1}})), \\quad H_{\\text{conv2}} = H_{\\text{conv1}} - 2\n$$\n\n$$\nx_{\\text{pool}} = \\text{MaxPool2x2}(x_{\\text{conv2}}), \\quad H_{\\text{pool}} = H_{\\text{conv2}} / 2\n$$\n\n<span style=\"font-size: 14px;\">The skip connection stores $x_{\\text{conv2}}$ at spatial resolution $H_{\\text{conv2}} \\times H_{\\text{conv2}}$, captured after convolutions but before pooling.</span>\n\n<span style=\"font-size: 14px;\">**Bottleneck** (applied once at the deepest level). Two unpadded 3x3 convolutions with ReLU, no pooling:</span>\n\n$$\nx_{\\text{bn}} = \\text{ReLU}(\\text{Conv3x3}(\\text{ReLU}(\\text{Conv3x3}(x_{\\text{in}}))))\n$$\n\n<span style=\"font-size: 14px;\">**Decoder block** (applied 4 times with channel halving). Up-convolution, skip concatenation, then two unpadded 3x3 convolutions:</span>\n\n$$\nx_{\\text{up}} = \\text{UpConv2x2}(x_{\\text{in}}), \\quad H_{\\text{up}} = 2 \\times H_{\\text{in}}\n$$\n\n$$\nx_{\\text{cat}} = \\text{Concat}(\\text{CenterCrop}(x_{\\text{skip}}, H_{\\text{up}}), \\; x_{\\text{up}})\n$$\n\n$$\nx_{\\text{out}} = \\text{ReLU}(\\text{Conv3x3}(\\text{ReLU}(\\text{Conv3x3}(x_{\\text{cat}})))), \\quad H_{\\text{out}} = H_{\\text{up}} - 4\n$$\n\n<span style=\"font-size: 14px;\">The skip feature map is always spatially larger than the upsampled map. Center cropping trims the skip to match the upsampled dimensions before concatenation along the channel axis.</span>\n\n<span style=\"font-size: 14px;\">**Output layer** (1x1 convolution):</span>\n\n$$\n\\text{output} = \\text{Conv1x1}(x_{\\text{final}}), \\quad C_{\\text{out}} = N_{\\text{classes}}\n$$\n\n<span style=\"font-size: 14px;\">Maps 64 channels to $N_{\\text{classes}}$ without changing spatial dimensions. No activation is applied.</span>\n\n<span style=\"font-size: 14px;\">**Channel progression** through the full network:</span>\n\n$$\n1 \\xrightarrow{E_1} 64 \\xrightarrow{E_2} 128 \\xrightarrow{E_3} 256 \\xrightarrow{E_4} 512 \\xrightarrow{BN} 1024 \\xrightarrow{D_4} 512 \\xrightarrow{D_3} 256 \\xrightarrow{D_2} 128 \\xrightarrow{D_1} 64 \\xrightarrow{1 \\times 1} N_{\\text{classes}}\n$$\n\n---\n\n## <span style=\"font-size: 16px;\">The U-Shape Architecture</span>\n\n<span style=\"font-size: 14px;\">The name \"U-Net\" comes from the U-shaped diagram in the original paper. The encoder descends on the left, the decoder ascends on the right, and horizontal skip connections bridge them. This shape encodes three design principles.</span>\n\n<span style=\"font-size: 14px;\">**The contracting path (left arm)** progressively reduces spatial resolution while increasing feature channels. Each encoder block halves spatial dimensions via pooling and doubles channels. Shallow blocks detect edges and textures at high resolution; deep blocks recognize complex structures at low resolution with richer semantic content. By the bottleneck, spatial precision is minimal but abstract understanding is maximal.</span>\n\n<span style=\"font-size: 14px;\">**The expanding path (right arm)** reverses the process. Each decoder block doubles spatial dimensions via up-convolution and halves channels. However, upsampling alone produces blurry results because fine spatial details were destroyed during pooling.</span>\n\n<span style=\"font-size: 14px;\">**Skip connections (horizontal bridges)** solve this. Each decoder block receives the feature map from the corresponding encoder block at the same depth. These encoder features retain the fine-grained spatial information that pooling destroyed. By concatenating encoder and decoder features, each block accesses both deep semantic context and precise spatial detail. This is what Ronneberger et al. call \"precise localization.\"</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Full Dimension Trace</span>\n\n<span style=\"font-size: 14px;\">The standard U-Net takes a $1 \\times 572 \\times 572$ input and produces an $N_{\\text{classes}} \\times 388 \\times 388$ output. Every intermediate spatial dimension follows two rules: unpadded 3x3 convolution subtracts 2, and 2x2 pooling or up-convolution halves or doubles the size.</span>\n\n<span style=\"font-size: 14px;\">**Encoder Block 1** ($1 \\to 64$ channels): $572 \\to 570 \\to 568$. Skip: $64 \\times 568 \\times 568$. Pool: $64 \\times 284 \\times 284$.</span>\n\n<span style=\"font-size: 14px;\">**Encoder Block 2** ($64 \\to 128$): $284 \\to 282 \\to 280$. Skip: $128 \\times 280 \\times 280$. Pool: $128 \\times 140 \\times 140$.</span>\n\n<span style=\"font-size: 14px;\">**Encoder Block 3** ($128 \\to 256$): $140 \\to 138 \\to 136$. Skip: $256 \\times 136 \\times 136$. Pool: $256 \\times 68 \\times 68$.</span>\n\n<span style=\"font-size: 14px;\">**Encoder Block 4** ($256 \\to 512$): $68 \\to 66 \\to 64$. Skip: $512 \\times 64 \\times 64$. Pool: $512 \\times 32 \\times 32$.</span>\n\n<span style=\"font-size: 14px;\">**Bottleneck** ($512 \\to 1024$): $32 \\to 30 \\to 28$. Output: $1024 \\times 28 \\times 28$.</span>\n\n<span style=\"font-size: 14px;\">**Decoder Block 4** ($1024 \\to 512$): Up $28 \\to 56$. Skip $(512, 64, 64)$ cropped to $(512, 56, 56)$. Concat: $(1024, 56, 56)$. Convs: $54 \\to 52$. Output: $512 \\times 52 \\times 52$.</span>\n\n<span style=\"font-size: 14px;\">**Decoder Block 3** ($512 \\to 256$): Up $52 \\to 104$. Skip $(256, 136, 136)$ cropped to $(256, 104, 104)$. Concat: $(512, 104, 104)$. Convs: $102 \\to 100$. Output: $256 \\times 100 \\times 100$.</span>\n\n<span style=\"font-size: 14px;\">**Decoder Block 2** ($256 \\to 128$): Up $100 \\to 200$. Skip $(128, 280, 280)$ cropped to $(128, 200, 200)$. Concat: $(256, 200, 200)$. Convs: $198 \\to 196$. Output: $128 \\times 196 \\times 196$.</span>\n\n<span style=\"font-size: 14px;\">**Decoder Block 1** ($128 \\to 64$): Up $196 \\to 392$. Skip $(64, 568, 568)$ cropped to $(64, 392, 392)$. Concat: $(128, 392, 392)$. Convs: $390 \\to 388$. Output: $64 \\times 388 \\times 388$.</span>\n\n<span style=\"font-size: 14px;\">**Output layer**: 1x1 conv maps $64 \\to N_{\\text{classes}}$. Final: $N_{\\text{classes}} \\times 388 \\times 388$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why 572 Input and 388 Output</span>\n\n<span style=\"font-size: 14px;\">The input size 572 is not arbitrary. It ensures every pooling operation receives an even spatial dimension. If any pooling input were odd, floor division would lose information asymmetrically. Starting from the requirement that the bottleneck input be $32 \\times 32$, back-calculate through the encoder: each block needs an even dimension after two convolutions (which subtract 4). Working backward: $32 \\to 68 \\to 140 \\to 284 \\to 572$.</span>\n\n<span style=\"font-size: 14px;\">Each 3x3 unpadded convolution loses 2 pixels. The network has 18 convolutions (2 per block across 9 blocks), but spatial losses compound differently at each scale. Losses at deeper levels are magnified by upsampling when mapped back to input resolution. The net effect: 572 input pixels become 388 output pixels, a loss of 184 total (92 per side).</span>\n\n<span style=\"font-size: 14px;\">The output represents the valid central region where every pixel has full receptive field context. The paper handles borders by mirror-padding the input so the segmentation covers the entire original image.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">Ronneberger et al. published \"U-Net: Convolutional Networks for Biomedical Image Segmentation\" for the ISBI 2015 cell tracking challenge. The paper addressed segmentation tasks where only a handful of annotated training images are available, since medical annotation requires expert pathologists.</span>\n\n<span style=\"font-size: 14px;\">The U-Net won the ISBI challenge by a large margin, trained on just 30 annotated images. The skip connections were the key architectural innovation: earlier encoder-decoder architectures like FCN (Long et al., 2015) used additive skip connections, but U-Net used concatenation, preserving the full encoder features rather than adding a correction signal.</span>\n\n<span style=\"font-size: 14px;\">Heavy data augmentation was critical, particularly elastic deformations. The authors applied random elastic transformations using smooth displacement fields generated from random vectors on a coarse grid. This taught invariance to realistic tissue deformations. The paper also introduced a weighted cross-entropy loss giving higher importance to pixels near cell boundaries, encouraging the network to learn thin separation lines between touching cells.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Channel Pattern</span>\n\n<span style=\"font-size: 14px;\">The U-Net follows a strict doubling-halving channel progression: $64 \\to 128 \\to 256 \\to 512 \\to 1024 \\to 512 \\to 256 \\to 128 \\to 64 \\to N_{\\text{classes}}$. This pattern is tied to spatial resolution changes. When pooling halves spatial dimensions, the number of activations per feature map drops by $4\\times$. Doubling channels compensates, keeping total activations roughly constant across levels.</span>\n\n<span style=\"font-size: 14px;\">At the decoder, up-convolution halves channels while doubling spatial dimensions. The up-convolution output has $C/2$ channels and the skip contributes $C/2$ channels. After concatenation the combined tensor has $C$ channels, which the two convolutions reduce to $C/2$.</span>\n\n<span style=\"font-size: 14px;\">For decoder block 4: the bottleneck outputs 1024 channels, up-convolution produces 512, encoder block 4's skip has 512, concatenation gives 1024, and the two convolutions output 512. The same pattern applies at every decoder level.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Full shape trace with $N_{\\text{classes}} = 2$ in $(C, H, W)$ format:</span>\n\n<span style=\"font-size: 14px;\">**Input:** $(1, 572, 572)$</span>\n\n<span style=\"font-size: 14px;\">**Encoder path:**</span>\n\n* <span style=\"font-size: 14px;\">**Block 1:** $(1, 572, 572) \\xrightarrow{\\text{conv}} (64, 570, 570) \\xrightarrow{\\text{conv}} (64, 568, 568) \\xrightarrow{\\text{pool}} (64, 284, 284)$. Skip: $(64, 568, 568)$.</span>\n* <span style=\"font-size: 14px;\">**Block 2:** $(64, 284, 284) \\xrightarrow{\\text{conv}} (128, 282, 282) \\xrightarrow{\\text{conv}} (128, 280, 280) \\xrightarrow{\\text{pool}} (128, 140, 140)$. Skip: $(128, 280, 280)$.</span>\n* <span style=\"font-size: 14px;\">**Block 3:** $(128, 140, 140) \\xrightarrow{\\text{conv}} (256, 138, 138) \\xrightarrow{\\text{conv}} (256, 136, 136) \\xrightarrow{\\text{pool}} (256, 68, 68)$. Skip: $(256, 136, 136)$.</span>\n* <span style=\"font-size: 14px;\">**Block 4:** $(256, 68, 68) \\xrightarrow{\\text{conv}} (512, 66, 66) \\xrightarrow{\\text{conv}} (512, 64, 64) \\xrightarrow{\\text{pool}} (512, 32, 32)$. Skip: $(512, 64, 64)$.</span>\n\n<span style=\"font-size: 14px;\">**Bottleneck:** $(512, 32, 32) \\xrightarrow{\\text{conv}} (1024, 30, 30) \\xrightarrow{\\text{conv}} (1024, 28, 28)$.</span>\n\n<span style=\"font-size: 14px;\">**Decoder path:**</span>\n\n* <span style=\"font-size: 14px;\">**Block 4:** Up $(1024, 28, 28) \\to (512, 56, 56)$. Crop skip $(512, 64, 64) \\to (512, 56, 56)$. Cat: $(1024, 56, 56)$. Convs: $(512, 54, 54) \\to (512, 52, 52)$.</span>\n* <span style=\"font-size: 14px;\">**Block 3:** Up $(512, 52, 52) \\to (256, 104, 104)$. Crop skip $(256, 136, 136) \\to (256, 104, 104)$. Cat: $(512, 104, 104)$. Convs: $(256, 102, 102) \\to (256, 100, 100)$.</span>\n* <span style=\"font-size: 14px;\">**Block 2:** Up $(256, 100, 100) \\to (128, 200, 200)$. Crop skip $(128, 280, 280) \\to (128, 200, 200)$. Cat: $(256, 200, 200)$. Convs: $(128, 198, 198) \\to (128, 196, 196)$.</span>\n* <span style=\"font-size: 14px;\">**Block 1:** Up $(128, 196, 196) \\to (64, 392, 392)$. Crop skip $(64, 568, 568) \\to (64, 392, 392)$. Cat: $(128, 392, 392)$. Convs: $(64, 390, 390) \\to (64, 388, 388)$.</span>\n\n<span style=\"font-size: 14px;\">**Output:** 1x1 conv: $(64, 388, 388) \\to (2, 388, 388)$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">U-Net in Modern Deep Learning</span>\n\n<span style=\"font-size: 14px;\">**Diffusion models.** The denoising network in nearly all modern diffusion models (DDPM, Stable Diffusion, DALL-E 2, Imagen) uses a U-Net backbone. The encoder downsamples the noisy image, the bottleneck processes the deepest features, and the decoder upsamples back. Skip connections preserve fine spatial details during denoising, and timestep embeddings are injected at each level.</span>\n\n<span style=\"font-size: 14px;\">**Medical imaging.** U-Net remains the default for medical image segmentation. Variants like 3D U-Net (volumetric CT/MRI), Attention U-Net (attention gates on skip connections), and nnU-Net (self-configuring framework) dominate organ segmentation and tumor detection benchmarks.</span>\n\n<span style=\"font-size: 14px;\">**Modern padding.** Most current implementations use padded convolutions (padding=1 for 3x3 kernels) instead of valid convolutions. This preserves spatial dimensions, makes output equal to input size, and eliminates center cropping at skip connections.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n* <span style=\"font-size: 14px;\">**Wrong number of blocks.** The original U-Net has exactly 4 encoder blocks, 1 bottleneck, and 4 decoder blocks. Using 3 or 5 encoder/decoder blocks changes every spatial dimension and produces a different output size.</span>\n* <span style=\"font-size: 14px;\">**Forgetting skip connections.** Without skip connections, the decoder has no access to fine spatial details and produces blurry boundaries. Each decoder block must receive the feature map from the corresponding encoder block at the same depth level.</span>\n* <span style=\"font-size: 14px;\">**Wrong channel progression.** The sequence must be $64 \\to 128 \\to 256 \\to 512 \\to 1024 \\to 512 \\to 256 \\to 128 \\to 64 \\to N_{\\text{classes}}$. A common mistake: the up-convolution halves channels, but concatenation with the skip doubles the count before convolutions reduce it.</span>\n* <span style=\"font-size: 14px;\">**Spatial mismatch at skip connections.** The encoder skip is always spatially larger than the upsampled decoder map. The skip must be center-cropped to match. For example, encoder 4's skip is $64 \\times 64$ but the upsampled bottleneck is $56 \\times 56$, requiring a crop of 4 pixels per side.</span>\n* <span style=\"font-size: 14px;\">**Forgetting the 1x1 output convolution.** The decoder produces 64-channel feature maps, not class predictions. The final 1x1 conv maps from 64 to $N_{\\text{classes}}$. Omitting it leaves the wrong channel count for the segmentation loss.</span>\n* <span style=\"font-size: 14px;\">**Confusing valid and same convolutions.** The original uses unpadded convolutions where each 3x3 conv shrinks dims by 2. Using padding=1 changes the entire trace: 572 input would yield 572 output, and skips would not need cropping.</span>\n* <span style=\"font-size: 14px;\">**Getting the crop wrong.** Center cropping removes equal pixels from all sides. A crop from $(64, 64)$ to $(56, 56)$ removes $(64 - 56)/2 = 4$ pixels per side. Off-by-one errors cause shape mismatch at concatenation.</span>\n\n---",
+  "hints": [
+    "Keep the encoder skip tensor before applying 2 by 2 max pooling.",
+    "Reuse the same convolution operation in the encoder, bottleneck, and decoder.",
+    "Apply the final W_out projection without ReLU."
+  ],
+  "constraints": "- x uses NHWC layout, has even spatial dimensions, and has dtype float64.\n- Every convolution kernel has positive odd spatial size and compatible channels.\n- The weights dictionary contains exactly the documented arrays.\n- Every supplied numeric array has dtype float64.",
+  "difficulty": "Hard",
+  "starterCode": "import numpy as np\n\ndef unet_forward(x: np.ndarray, weights: dict) -> np.ndarray:\n    \"\"\"\n    Returns float64 per-pixel segmentation logits in NHWC layout.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-03T21:31:42.615Z",
+  "updatedAt": "2026-04-16T18:35:21.327Z",
+  "topicId": "unet-full-network",
+  "paperSnippet": "\"The architecture consists of a contracting path to capture context and a symmetric expanding path that enables precise localization. We show that such a network can be trained end-to-end from very few images and outperforms prior best method on ISBI challenge.\"",
+  "visualizationComponent": "UNetArchViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Complete U-Net Network** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef _conv2d_same(x: np.ndarray, k: np.ndarray, b: np.ndarray):\n    Kh, Kw, Cin, Cout = k.shape\n    pad_h = (Kh - 1) // 2\n    pad_w = (Kw - 1) // 2\n    padded = np.pad(x, ((0, 0), (pad_h, pad_h), (pad_w, pad_w), (0, 0)), mode='constant')\n    N, H, W, _ = x.shape\n    out = np.zeros((N, H, W, Cout), dtype=float)\n    for n in range(N):\n        for h in range(H):\n            for w in range(W):\n                patch = padded[n, h:h+Kh, w:w+Kw, :]\n                for c in range(Cout):\n                    out[n, h, w, c] = np.sum(patch * k[:, :, :, c]) + b[c]\n    return out\n\ndef _maxpool2d(x: np.ndarray):\n    N, H, W, C = x.shape\n    out = np.zeros((N, H // 2, W // 2, C), dtype=float)\n    for n in range(N):\n        for h in range(H // 2):\n            for w in range(W // 2):\n                patch = x[n, 2*h:2*h+2, 2*w:2*w+2, :]\n                out[n, h, w, :] = np.max(patch, axis=(0, 1))\n    return out\n\ndef unet_forward(x: np.ndarray, weights: dict) -> np.ndarray:\n    x_arr = np.asarray(x, dtype=float)\n    # 1. Encoder block\n    enc_k1 = np.asarray(weights['enc_kernel1'], dtype=float)\n    enc_b1 = np.asarray(weights['enc_bias1'], dtype=float)\n    enc_k2 = np.asarray(weights['enc_kernel2'], dtype=float)\n    enc_b2 = np.asarray(weights['enc_bias2'], dtype=float)\n    h1 = np.maximum(0.0, _conv2d_same(x_arr, enc_k1, enc_b1))\n    skip = np.maximum(0.0, _conv2d_same(h1, enc_k2, enc_b2))\n    pooled = _maxpool2d(skip)\n    \n    # 2. Bottleneck\n    br_k1 = np.asarray(weights['bridge_kernel1'], dtype=float)\n    br_b1 = np.asarray(weights['bridge_bias1'], dtype=float)\n    br_k2 = np.asarray(weights['bridge_kernel2'], dtype=float)\n    br_b2 = np.asarray(weights['bridge_bias2'], dtype=float)\n    bh1 = np.maximum(0.0, _conv2d_same(pooled, br_k1, br_b1))\n    bridge = np.maximum(0.0, _conv2d_same(bh1, br_k2, br_b2))\n    \n    # 3. Decoder block\n    w_up = np.asarray(weights['W_up'], dtype=float)\n    b_up = np.asarray(weights['b_up'], dtype=float)\n    dec_k1 = np.asarray(weights['dec_kernel1'], dtype=float)\n    dec_bias1 = np.asarray(weights['dec_bias1'], dtype=float)\n    dec_k2 = np.asarray(weights['dec_kernel2'], dtype=float)\n    dec_bias2 = np.asarray(weights['dec_bias2'], dtype=float)\n    \n    upsampled = np.repeat(np.repeat(bridge, 2, axis=1), 2, axis=2)\n    u = np.maximum(0.0, upsampled @ w_up + b_up)\n    H, W = skip.shape[1], skip.shape[2]\n    th, tw = u.shape[1], u.shape[2]\n    sh = (H - th) // 2\n    sw = (W - tw) // 2\n    cropped_skip = skip[:, sh:sh+th, sw:sw+tw, :]\n    cat = np.concatenate([cropped_skip, u], axis=-1)\n    dh1 = np.maximum(0.0, _conv2d_same(cat, dec_k1, dec_bias1))\n    dec_out = np.maximum(0.0, _conv2d_same(dh1, dec_k2, dec_bias2))\n    \n    # 4. Output layer\n    w_out = np.asarray(weights['W_out'], dtype=float)\n    b_out = np.asarray(weights['b_out'], dtype=float)\n    out = dec_out @ w_out + b_out\n    return np.round(out, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "public-1",
+      "name": "Compact U-Net",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -1
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              1,
+              -1
+            ]
+          ],
+          "b_out": [
+            0.1,
+            -0.1
+          ],
+          "dec_bias1": [
+            0
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  1
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            0
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  2
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.6,
+              -1.6
+            ],
+            [
+              1.1,
+              -1.1
+            ]
+          ],
+          [
+            [
+              1.1,
+              -1.1
+            ],
+            [
+              2.1,
+              -2.1
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "public-2",
+      "name": "Biased network",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                1.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              2
+            ]
+          ],
+          "b_out": [
+            -0.2
+          ],
+          "dec_bias1": [
+            0.1
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0.2
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  0.25
+                ],
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            -0.1
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.175
+            ],
+            [
+              1.3
+            ]
+          ],
+          [
+            [
+              1.425
+            ],
+            [
+              1.55
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "public-3",
+      "name": "Two input channels",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                -1
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            [
+              [
+                2,
+                0
+              ],
+              [
+                -1,
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              1
+            ]
+          ],
+          "b_out": [
+            0
+          ],
+          "dec_bias1": [
+            0
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  0.5
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ],
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            0
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.25
+            ],
+            [
+              2.25
+            ]
+          ],
+          [
+            [
+              3.0
+            ],
+            [
+              2.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -1
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              1,
+              -1
+            ]
+          ],
+          "b_out": [
+            0.1,
+            -0.1
+          ],
+          "dec_bias1": [
+            0
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  1
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            0
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  2
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.6,
+              -1.6
+            ],
+            [
+              1.1,
+              -1.1
+            ]
+          ],
+          [
+            [
+              1.1,
+              -1.1
+            ],
+            [
+              2.1,
+              -2.1
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                1.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              2
+            ]
+          ],
+          "b_out": [
+            -0.2
+          ],
+          "dec_bias1": [
+            0.1
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0.2
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  0.25
+                ],
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            -0.1
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.175
+            ],
+            [
+              1.3
+            ]
+          ],
+          [
+            [
+              1.425
+            ],
+            [
+              1.55
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                -1
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            [
+              [
+                2,
+                0
+              ],
+              [
+                -1,
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              1
+            ]
+          ],
+          "b_out": [
+            0
+          ],
+          "dec_bias1": [
+            0
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  0.5
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ],
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            0
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.25
+            ],
+            [
+              2.25
+            ]
+          ],
+          [
+            [
+              3.0
+            ],
+            [
+              2.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -1
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              1,
+              -1
+            ]
+          ],
+          "b_out": [
+            0.1,
+            -0.1
+          ],
+          "dec_bias1": [
+            0
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  1
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            0
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  2
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.6,
+              -1.6
+            ],
+            [
+              1.1,
+              -1.1
+            ]
+          ],
+          [
+            [
+              1.1,
+              -1.1
+            ],
+            [
+              2.1,
+              -2.1
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                1.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              2
+            ]
+          ],
+          "b_out": [
+            -0.2
+          ],
+          "dec_bias1": [
+            0.1
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0.2
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  0.25
+                ],
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            -0.1
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.175
+            ],
+            [
+              1.3
+            ]
+          ],
+          [
+            [
+              1.425
+            ],
+            [
+              1.55
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                -1
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            [
+              [
+                2,
+                0
+              ],
+              [
+                -1,
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              1
+            ]
+          ],
+          "b_out": [
+            0
+          ],
+          "dec_bias1": [
+            0
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  0.5
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ],
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            0
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.25
+            ],
+            [
+              2.25
+            ]
+          ],
+          [
+            [
+              3.0
+            ],
+            [
+              2.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -1
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              1,
+              -1
+            ]
+          ],
+          "b_out": [
+            0.1,
+            -0.1
+          ],
+          "dec_bias1": [
+            0
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  1
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            0
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  2
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.6,
+              -1.6
+            ],
+            [
+              1.1,
+              -1.1
+            ]
+          ],
+          [
+            [
+              1.1,
+              -1.1
+            ],
+            [
+              2.1,
+              -2.1
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                1.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              2
+            ]
+          ],
+          "b_out": [
+            -0.2
+          ],
+          "dec_bias1": [
+            0.1
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0.2
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  0.25
+                ],
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            -0.1
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.175
+            ],
+            [
+              1.3
+            ]
+          ],
+          [
+            [
+              1.425
+            ],
+            [
+              1.55
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                -1
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            [
+              [
+                2,
+                0
+              ],
+              [
+                -1,
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              1
+            ]
+          ],
+          "b_out": [
+            0
+          ],
+          "dec_bias1": [
+            0
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  0.5
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ],
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            0
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.25
+            ],
+            [
+              2.25
+            ]
+          ],
+          [
+            [
+              3.0
+            ],
+            [
+              2.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -1
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              1,
+              -1
+            ]
+          ],
+          "b_out": [
+            0.1,
+            -0.1
+          ],
+          "dec_bias1": [
+            0
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  1
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            0
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  2
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.6,
+              -1.6
+            ],
+            [
+              1.1,
+              -1.1
+            ]
+          ],
+          [
+            [
+              1.1,
+              -1.1
+            ],
+            [
+              2.1,
+              -2.1
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                1.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              2
+            ]
+          ],
+          "b_out": [
+            -0.2
+          ],
+          "dec_bias1": [
+            0.1
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0.2
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  0.25
+                ],
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            -0.1
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.175
+            ],
+            [
+              1.3
+            ]
+          ],
+          [
+            [
+              1.425
+            ],
+            [
+              1.55
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                -1
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            [
+              [
+                2,
+                0
+              ],
+              [
+                -1,
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              1
+            ]
+          ],
+          "b_out": [
+            0
+          ],
+          "dec_bias1": [
+            0
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  0.5
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ],
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            0
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.25
+            ],
+            [
+              2.25
+            ]
+          ],
+          [
+            [
+              3.0
+            ],
+            [
+              2.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -1
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              1,
+              -1
+            ]
+          ],
+          "b_out": [
+            0.1,
+            -0.1
+          ],
+          "dec_bias1": [
+            0
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  1
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            0
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  2
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.6,
+              -1.6
+            ],
+            [
+              1.1,
+              -1.1
+            ]
+          ],
+          [
+            [
+              1.1,
+              -1.1
+            ],
+            [
+              2.1,
+              -2.1
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                1.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              2
+            ]
+          ],
+          "b_out": [
+            -0.2
+          ],
+          "dec_bias1": [
+            0.1
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0.2
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  0.25
+                ],
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            -0.1
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.175
+            ],
+            [
+              1.3
+            ]
+          ],
+          [
+            [
+              1.425
+            ],
+            [
+              1.55
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                -1
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            [
+              [
+                2,
+                0
+              ],
+              [
+                -1,
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              1
+            ]
+          ],
+          "b_out": [
+            0
+          ],
+          "dec_bias1": [
+            0
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  0.5
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ],
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            0
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.25
+            ],
+            [
+              2.25
+            ]
+          ],
+          [
+            [
+              3.0
+            ],
+            [
+              2.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -1
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              1,
+              -1
+            ]
+          ],
+          "b_out": [
+            0.1,
+            -0.1
+          ],
+          "dec_bias1": [
+            0
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  1
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            0
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  2
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.6,
+              -1.6
+            ],
+            [
+              1.1,
+              -1.1
+            ]
+          ],
+          [
+            [
+              1.1,
+              -1.1
+            ],
+            [
+              2.1,
+              -2.1
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-full-network-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                1.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "weights": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              2
+            ]
+          ],
+          "b_out": [
+            -0.2
+          ],
+          "dec_bias1": [
+            0.1
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0.2
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  0.25
+                ],
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            -0.1
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.175
+            ],
+            [
+              1.3
+            ]
+          ],
+          [
+            [
+              1.425
+            ],
+            [
+              1.55
+            ]
+          ]
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "unet_forward",
+    "runtime": "numpy",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -1
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "description": "Float64 NHWC input."
+      },
+      {
+        "name": "weights",
+        "type": "object",
+        "example": {
+          "W_up": [
+            [
+              1
+            ]
+          ],
+          "b_up": [
+            0
+          ],
+          "W_out": [
+            [
+              1,
+              -1
+            ]
+          ],
+          "b_out": [
+            0.1,
+            -0.1
+          ],
+          "dec_bias1": [
+            0
+          ],
+          "dec_bias2": [
+            0
+          ],
+          "enc_bias1": [
+            0
+          ],
+          "enc_bias2": [
+            0
+          ],
+          "dec_kernel1": [
+            [
+              [
+                [
+                  1
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "dec_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel1": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "enc_kernel2": [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ],
+          "bridge_bias1": [
+            0
+          ],
+          "bridge_bias2": [
+            0
+          ],
+          "bridge_kernel1": [
+            [
+              [
+                [
+                  2
+                ]
+              ]
+            ]
+          ],
+          "bridge_kernel2": [
+            [
+              [
+                [
+                  0.5
+                ]
+              ]
+            ]
+          ]
+        },
+        "description": "Dictionary of supplied float64 U-Net parameters."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "unet-full-network",
+    "name": "Complete U-Net",
+    "description": "Full encoder-decoder architecture",
+    "color": "#ec4899"
+  },
+  "paper": {
+    "id": "unet",
+    "title": "U-Net: Convolutional Networks for Biomedical Image Segmentation",
+    "authors": "Ronneberger et al., 2015",
+    "year": 2015,
+    "paperUrl": "https://arxiv.org/abs/1505.04597",
+    "visualizationComponent": "UnetArchViz"
+  },
+  "navigation": {
+    "index": 6,
+    "total": 6,
+    "prev": "unet-output-layer",
+    "next": null
+  },
+  "cleanTitle": ""
+}

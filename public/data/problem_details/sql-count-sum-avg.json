@@ -1,0 +1,814 @@
+{
+  "catalogId": "sql:sql-count-sum-avg",
+  "id": "sql-count-sum-avg",
+  "sourceId": "sql-count-sum-avg",
+  "slug": "sql-count-sum-avg",
+  "source": "sql",
+  "category": "sql",
+  "title": "COUNT, SUM, AVG",
+  "difficulty": "Easy",
+  "tags": [
+    "Data Processing"
+  ],
+  "isFree": false,
+  "planId": "sql-basics",
+  "planTitle": "SQL Sheet",
+  "sectionId": "sql-basics-aggregation",
+  "sortOrder": 261,
+  "seoDescription": "Aggregate sales by category with SQL COUNT, SUM, and AVG while handling NULL discounts and deterministic ordering.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Aggregate sales transactions by category, calculating COUNT, SUM(revenue), and AVG(discount) with NULL coalescing and revenue sorting.\n\nAggregating metrics across business dimensions provides executive summary metrics for revenue reporting.\n\n### Query Logic & Formulation\n$$\n\\operatorname{COUNT}(*), \\quad \\sum \\text{revenue}, \\quad \\operatorname{AVG}(\\operatorname{COALESCE}(\\text{discount}, 0)) \\quad \\text{GROUP BY category}\n$$\n\n### Relational Execution Steps\n1. Group sales transactions by category\n2. Calculate total transaction count and aggregate gross revenue\n3. Compute average discount treating NULLs as zero and sort by revenue descending\n\n### Expected Query Output\nList of records containing summary metrics per category.",
+  "theory": "## Understanding the Theory: COUNT, SUM, AVG\n\n### Core Intuition: Why Do We Need This?\nRelational databases structure data into normalized tables with strict schemas and foreign-key relationships. SQL allows data engineers and analysts to write declarative queries describing what data is needed, while the database query engine optimizes the underlying execution plan. **COUNT, SUM, AVG** combines, aggregates, or transforms records across tables.\n\nAggregating metrics across business dimensions provides executive summary metrics for revenue reporting. In this problem, the goal is to: aggregate sales transactions by category, calculating count, sum(revenue), and avg(discount) with null coalescing and revenue sorting.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\operatorname{COUNT}(*), \\quad \\sum \\text{revenue}, \\quad \\operatorname{AVG}(\\operatorname{COALESCE}(\\text{discount}, 0)) \\quad \\text{GROUP BY category}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Group sales transactions by category\n2. **Phase 2**: Calculate total transaction count and aggregate gross revenue\n3. **Phase 3**: Compute average discount treating NULLs as zero and sort by revenue descending\n\n### Practical Machine Learning Applications & Nuances\n* **Join Mechanics**: Inner joins filter for matching records across tables, while outer joins preserve all rows from one table even when no matches exist.\n* **Window Functions**: Functions like `ROW_NUMBER()` and `RANK()` allow computing partitioned running totals and top-K ranks without requiring self-joins.\n* **Index Optimization**: Proper indexing on join keys and filter conditions ensures queries run in milliseconds rather than doing full table scans.",
+  "examples": [
+    "Input: sales = [{\"category\": \"Electronics\", \"revenue\": 500.0, \"discount\": 50.0}, {\"category\": \"Electronics\", \"revenue\": 300.0, \"discount\": null}, {\"category\": \"Clothing\", \"revenue\": 150.0, \"discount\": 10.0}]\n\nOutput: [{\"category\": \"Electronics\", \"total_sales\": 2, \"total_revenue\": 800.0, \"avg_discount\": 25.0}, {\"category\": \"Clothing\", \"total_sales\": 1, \"total_revenue\": 150.0, \"avg_discount\": 10.0}]\n\nExplanation: Evaluated sql_count_sum_avg under standard test conditions."
+  ],
+  "requirements": "* Function must be named `sql_count_sum_avg`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `sql_count_sum_avg`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "-- SQL COUNT, SUM, AVG\nSELECT category,\n       COUNT(*) AS total_sales,\n       ROUND(SUM(revenue), 2) AS total_revenue,\n       ROUND(AVG(COALESCE(discount, 0.0)), 2) AS avg_discount\nFROM sales\nGROUP BY category\nORDER BY total_revenue DESC;",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **COUNT, SUM, AVG** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef sql_count_sum_avg(sales: list) -> list:\n    g = {}\n    for s in sales:\n        c = s['category']\n        if c not in g: g[c] = {'cnt': 0, 'rev': 0.0, 'discs': []}\n        g[c]['cnt'] += 1; g[c]['rev'] += float(s['revenue']); g[c]['discs'].append(float(s.get('discount') or 0.0))\n    res = [{'category': c, 'total_sales': d['cnt'], 'total_revenue': round(d['rev'], 2), 'avg_discount': round(sum(d['discs'])/len(d['discs']), 2)} for c, d in g.items()]\n    res.sort(key=lambda x: -x['total_revenue'])\n    return res\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Sales across Electronics and Clothing",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "sql-count-sum-avg-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-count-sum-avg-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "sales": [
+          {
+            "category": "Electronics",
+            "revenue": 500.0,
+            "discount": 50.0
+          },
+          {
+            "category": "Electronics",
+            "revenue": 300.0,
+            "discount": null
+          },
+          {
+            "category": "Clothing",
+            "revenue": 150.0,
+            "discount": 10.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "category": "Electronics",
+          "total_sales": 2,
+          "total_revenue": 800.0,
+          "avg_discount": 25.0
+        },
+        {
+          "category": "Clothing",
+          "total_sales": 1,
+          "total_revenue": 150.0,
+          "avg_discount": 10.0
+        }
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "sql_count_sum_avg",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sql-multiple-joins",
+    "sql-subqueries",
+    "sql-distinct-values",
+    "sql-row-number",
+    "sql-inner-join"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "sql",
+    "placeholderType": "sql_dummy_select (SELECT * FROM main_table)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

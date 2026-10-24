@@ -1,0 +1,952 @@
+{
+  "id": "k3-quantile-balancing",
+  "title": "Quantile Balancing",
+  "description": "Quantile Balancing derives the next expert bias directly from a batch of raw sigmoid router scores. For token $i$, raw score vector $s_i$, current bias $b$, and selected count $k$, current routes are the Top-$k$ entries of $s_i+b$. Mixture weights use only the selected raw scores:\n\n$$\np_{i,j}=\\frac{s_{i,j}}{\\sum_{r\\in\\mathcal{T}_i}s_{i,r}}.\n$$\n\nUse the $(k+1)$-th biased score as token cutoff $\\alpha_i$. For $m$ tokens and $n$ experts, target load $q=mk/n$ is integral. For each expert $j$, take the $(q+1)$-th largest value of $s_{i,j}-\\alpha_i$, negate it, then subtract the mean across experts. The resulting centered bias applies to the next batch only. Return a dictionary with selected_experts, mixture_weights, expert_loads, and next_bias. Selected indices and loads use integer tensors; the other tensors preserve the router-score dtype and device.",
+  "seoDescription": "Implement Kimi K3 quantile balancing by ranking expert loads and computing bounded routing-bias updates.",
+  "examples": [
+    "Input: router_scores = [[0.9,0.1],[0.2,0.8]], current_bias = [0,0], selected_count = 1\n\nOutput: {\"selected_experts\": tensor([[0], [1]]), \"mixture_weights\": tensor([[1.0], [1.0]]), \"expert_loads\": tensor([1, 1]), \"next_bias\": tensor([0.0, 0.0])}\n\nExplanation: Each token selects a different expert. Both loads already equal the target, so the centered next bias remains zero.",
+    "Input: router scores shape (4, 4), current bias shape (4,), selected count = 1\n\nOutput: {\"selected_experts\": tensor of shape (4, 1), \"mixture_weights\": tensor of shape (4, 1), \"expert_loads\": tensor of shape (4,), \"next_bias\": tensor of shape (4,)}",
+    "Input: router scores shape (4, 4), current bias shape (4,), selected count = 2\n\nOutput: {\"selected_experts\": tensor of shape (4, 2), \"mixture_weights\": tensor of shape (4, 2), \"expert_loads\": tensor of shape (4,), \"next_bias\": tensor of shape (4,)}"
+  ],
+  "requirements": "- Return a dictionary with exactly selected_experts, mixture_weights, expert_loads, and next_bias.\n- Selected indices use integer dtype, and loads count every selected assignment.\n- Mixture weights sum to one within every token.\n- The next bias has zero mean within numerical tolerance.",
+  "theory": "# Quantile Balancing\n\nQuantile Balancing is a way to choose mixture-of-experts routes now and calculate a better selection bias for the next batch. It uses the router's actual score distribution rather than moving every expert bias by a fixed step. The current routes use the current bias, while the next bias is derived from score margins and returned separately.\n\n## Routing and weighting use different scores\n\nFor each token, begin with raw sigmoid router scores. Add the current expert bias only when deciding which experts enter the top set:\n\n$$\n\\mathcal{T}_i = \\operatorname{TopK}(s_i+b,k)\n$$\n\nThe bias can help an underused expert get selected, but it must not distort the mixture weights after selection. Gather the selected raw scores and normalize them:\n\n$$\np_{i,j} = \\frac{s_{i,j}}{\\sum_{r\\in\\mathcal{T}_i}s_{i,r}}\n$$\n\nThis distinction is easy to miss. Biased scores choose the experts; raw scores decide how strongly the chosen experts contribute.\n\nThe expert load is simply the number of selected assignments received by each expert. If every token selects $k$ experts, the loads must sum to the number of tokens multiplied by $k$.\n\n## The cutoff describes the selection boundary\n\nFor each token, sort its biased scores and take the value immediately below the selected top $k$. This is the $(k+1)$-th largest biased score, denoted by $\\alpha_i$.\n\nAn expert score above this cutoff would enter the selected set, while one below it would not. The margin\n\n$$\ns_{i,j}-\\alpha_i\n$$\n\ntherefore describes how far expert $j$ is from the token's current selection boundary, using the expert's raw score against that token-specific cutoff.\n\n## Use a quantile for the desired expert load\n\nWith $m$ tokens, $n$ experts, and $k$ selected experts per token, a perfectly balanced expert would receive\n\n$$\nq = \\frac{mk}{n}\n$$\n\nassignments. This problem guarantees that $q$ is an integer.\n\nFor each expert, collect its margin across all tokens. Sort those margins from largest to smallest and take the $(q+1)$-th value. Negating this boundary gives a bias that would place roughly $q$ token margins above zero for that expert.\n\nFinally, subtract the mean bias across experts. Adding the same constant to every expert score does not change top-k selection, so centering removes an irrelevant common offset and guarantees a zero-mean next bias.\n\n## A small balancing picture\n\nSuppose four tokens choose one of two experts. Then the target load is $q=4\\times1/2=2$ selections per expert.\n\nFor expert A, imagine the four margins sorted from largest to smallest are $0.8$, $0.3$, $-0.1$, and $-0.5$. The $(q+1)$-th value is the third value, $-0.1$, so the uncentered next bias is $0.1$.\n\nFor expert B, suppose the corresponding boundary is $0.4$, giving an uncentered bias of $-0.4$. Their mean is $-0.15$. Subtracting it produces centered biases $0.25$ and $-0.25$.\n\nThe positive bias makes A easier to select in the next batch, while the negative bias makes B harder to select. The two values have zero mean, so only their relative difference matters.\n\n## Keep current and next batch separate\n\nThe newly derived bias does not change the routes already selected in this call. It is returned for the caller to use with the next batch. Recomputing current routes with the new bias would mix two time steps and would make the returned loads inconsistent with the returned selected indices.\n\n## Implementation order\n\n- Add the current bias to raw router scores and select the top $k$ expert indices per token.\n- Gather the selected raw scores and normalize them into mixture weights.\n- Count how many selected assignments each expert receives.\n- Find each token's $(k+1)$-th largest biased score as its cutoff.\n- Form raw-score margins against those cutoffs.\n- For each expert, take the $(q+1)$-th largest margin, negate it, and center all expert biases by subtracting their mean.\n- Return selected indices, mixture weights, loads, and next bias in that order.\n\n## Common mistakes to avoid\n\n- **Normalizing biased scores.** Mixture weights come from selected raw scores.\n- **Using the $k$-th score as cutoff.** The boundary is the first unselected score, which is the $(k+1)$-th largest.\n- **Updating current routes with the next bias.** The new bias applies only to the next batch.\n- **Using an average margin.** The update is determined by a specific load quantile.\n- **Forgetting to center.** The returned next bias must have zero mean.\n",
+  "hints": [
+    "Use a stable descending sort so tied route scores have deterministic expert indices.",
+    "Gather mixture weights from raw router scores, not the bias-adjusted scores.",
+    "The next bias uses the expert-wise order statistic of raw-score margins against each token cutoff."
+  ],
+  "constraints": "- Router scores have shape (tokens, experts) and lie strictly between zero and one.\n- Selected count is positive and smaller than the expert count.\n- Total assignments are divisible by the expert count.\n- Relevant biased scores and quantile margins contain no ties.",
+  "difficulty": "Hard",
+  "starterCode": "import torch\n\ndef quantile_balancing(router_scores: torch.Tensor, current_bias: torch.Tensor, selected_count: int) -> dict[str, torch.Tensor]:\n    \"\"\"\n    Returns a dictionary containing routes, mixture weights, expert loads, and the next centered bias.\n    \"\"\"\n    pass",
+  "createdAt": "2026-07-29T07:43:16.647Z",
+  "updatedAt": "2026-09-03T19:22:49.691Z",
+  "topicId": "k3-quantile-balancing",
+  "paperSnippet": "\"Quantile Balancing\"",
+  "visualizationComponent": "K3QuantileBalancingViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Quantile Balancing** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch\n\ndef quantile_balancing(router_scores: torch.Tensor, current_bias: torch.Tensor, selected_count: int) -> dict[str, torch.Tensor]:\n    scores = router_scores if isinstance(router_scores, torch.Tensor) else torch.tensor(router_scores, dtype=torch.float64)\n    bias = current_bias if isinstance(current_bias, torch.Tensor) else torch.tensor(current_bias, dtype=torch.float64)\n    k = int(selected_count)\n    m, n = scores.shape\n    \n    biased = scores + bias\n    topk_vals, topk_idx = torch.topk(biased, k=k, dim=-1)\n    \n    raw_selected = torch.gather(scores, -1, topk_idx)\n    mix_weights = raw_selected / raw_selected.sum(dim=-1, keepdim=True)\n    \n    loads = torch.zeros(n, dtype=torch.int64)\n    for idx in topk_idx.flatten():\n        loads[idx.item()] += 1\n        \n    top_k1_vals, _ = torch.topk(biased, k=k + 1, dim=-1)\n    alpha = top_k1_vals[:, k]\n    diff = scores - alpha.unsqueeze(-1)\n    \n    q = int(m * k / n)\n    raw_next_bias = torch.zeros(n, dtype=scores.dtype)\n    for j in range(n):\n        sorted_diff, _ = torch.sort(diff[:, j], descending=True)\n        raw_next_bias[j] = -sorted_diff[q]\n        \n    next_bias = raw_next_bias - raw_next_bias.mean()\n    return {\n        \"selected_experts\": topk_idx,\n        \"mixture_weights\": torch.round(mix_weights * 1e6) / 1e6,\n        \"expert_loads\": loads,\n        \"next_bias\": torch.round(next_bias * 1e6) / 1e6\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Already balanced routes",
+      "inputs": {
+        "current_bias": [
+          0,
+          0
+        ],
+        "router_scores": [
+          [
+            0.9,
+            0.1
+          ],
+          [
+            0.2,
+            0.8
+          ]
+        ],
+        "selected_count": 1
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "selected_experts": [
+          [
+            0
+          ],
+          [
+            1
+          ]
+        ],
+        "mixture_weights": [
+          [
+            1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "expert_loads": [
+          1,
+          1
+        ],
+        "next_bias": [
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Bias changes dispatch only",
+      "inputs": {
+        "current_bias": [
+          -0.15,
+          0.05,
+          0.1,
+          0
+        ],
+        "router_scores": [
+          [
+            0.82,
+            0.61,
+            0.25,
+            0.12
+          ],
+          [
+            0.77,
+            0.52,
+            0.48,
+            0.21
+          ],
+          [
+            0.69,
+            0.64,
+            0.31,
+            0.18
+          ],
+          [
+            0.58,
+            0.55,
+            0.51,
+            0.49
+          ]
+        ],
+        "selected_count": 1
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "selected_experts": [
+          [
+            0
+          ],
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "mixture_weights": [
+          [
+            1.0
+          ],
+          [
+            1.0
+          ],
+          [
+            1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "expert_loads": [
+          2,
+          1,
+          1,
+          0
+        ],
+        "next_bias": [
+          -0.2475,
+          -0.0375,
+          0.0125,
+          0.2725
+        ]
+      }
+    },
+    {
+      "id": "test-3",
+      "name": "Two selected experts per token",
+      "inputs": {
+        "current_bias": [
+          0.02,
+          -0.03,
+          0.01,
+          0
+        ],
+        "router_scores": [
+          [
+            0.91,
+            0.72,
+            0.33,
+            0.14
+          ],
+          [
+            0.81,
+            0.62,
+            0.43,
+            0.24
+          ],
+          [
+            0.71,
+            0.52,
+            0.83,
+            0.34
+          ],
+          [
+            0.61,
+            0.92,
+            0.53,
+            0.44
+          ]
+        ],
+        "selected_count": 2
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "selected_experts": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "mixture_weights": [
+          [
+            0.558282,
+            0.441718
+          ],
+          [
+            0.566434,
+            0.433566
+          ],
+          [
+            0.538961,
+            0.461039
+          ],
+          [
+            0.601307,
+            0.398693
+          ]
+        ],
+        "expert_loads": [
+          4,
+          3,
+          1,
+          0
+        ],
+        "next_bias": [
+          -0.1725,
+          -0.1325,
+          0.0575,
+          0.2475
+        ]
+      }
+    },
+    {
+      "id": "k3-quantile-balancing-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            1.8,
+            0.2
+          ],
+          [
+            0.4,
+            1.6
+          ]
+        ],
+        "selected_count": 2
+      },
+      "expectedOutput": {
+        "selected_experts": [
+          [
+            0
+          ],
+          [
+            1
+          ]
+        ],
+        "mixture_weights": [
+          [
+            1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "expert_loads": [
+          1,
+          1
+        ],
+        "next_bias": [
+          -0.0,
+          -0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            0.45,
+            0.05
+          ],
+          [
+            0.1,
+            0.4
+          ]
+        ],
+        "selected_count": 1
+      },
+      "expectedOutput": {
+        "selected_experts": "tensor([[0],\n        [1]])",
+        "mixture_weights": "tensor([[1.],\n        [1.]], dtype=torch.float64)",
+        "expert_loads": "tensor([1, 1])",
+        "next_bias": "tensor([0., 0.], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            1.9,
+            1.1
+          ],
+          [
+            1.2,
+            1.8
+          ]
+        ],
+        "selected_count": 1
+      },
+      "expectedOutput": {
+        "selected_experts": "tensor([[0],\n        [1]])",
+        "mixture_weights": "tensor([[1.],\n        [1.]], dtype=torch.float64)",
+        "expert_loads": "tensor([1, 1])",
+        "next_bias": "tensor([0., 0.], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            1.35,
+            0.15
+          ],
+          [
+            0.3,
+            1.2
+          ]
+        ],
+        "selected_count": 2
+      },
+      "expectedOutput": {
+        "selected_experts": [
+          [
+            0
+          ],
+          [
+            1
+          ]
+        ],
+        "mixture_weights": [
+          [
+            1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "expert_loads": [
+          1,
+          1
+        ],
+        "next_bias": [
+          -0.0,
+          -0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            2.7,
+            0.3
+          ],
+          [
+            0.6,
+            2.4
+          ]
+        ],
+        "selected_count": 3
+      },
+      "expectedOutput": {
+        "selected_experts": [
+          [
+            0
+          ],
+          [
+            1
+          ]
+        ],
+        "mixture_weights": [
+          [
+            1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "expert_loads": [
+          1,
+          1
+        ],
+        "next_bias": [
+          -0.0,
+          -0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            0.225,
+            0.025
+          ],
+          [
+            0.05,
+            0.2
+          ]
+        ],
+        "selected_count": 1
+      },
+      "expectedOutput": {
+        "selected_experts": "tensor([[0],\n        [1]])",
+        "mixture_weights": "tensor([[1.],\n        [1.]], dtype=torch.float64)",
+        "expert_loads": "tensor([1, 1])",
+        "next_bias": "tensor([0., -0.], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            2.9,
+            2.1
+          ],
+          [
+            2.2,
+            2.8
+          ]
+        ],
+        "selected_count": 2
+      },
+      "expectedOutput": {
+        "selected_experts": [
+          [
+            0
+          ],
+          [
+            1
+          ]
+        ],
+        "mixture_weights": [
+          [
+            1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "expert_loads": [
+          1,
+          1
+        ],
+        "next_bias": [
+          -0.0,
+          -0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            3.6,
+            0.4
+          ],
+          [
+            0.8,
+            3.2
+          ]
+        ],
+        "selected_count": 4
+      },
+      "expectedOutput": {
+        "selected_experts": [
+          [
+            0
+          ],
+          [
+            1
+          ]
+        ],
+        "mixture_weights": [
+          [
+            1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "expert_loads": [
+          1,
+          1
+        ],
+        "next_bias": [
+          -0.0,
+          -0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "current_bias": [
+          0,
+          0
+        ],
+        "router_scores": [
+          [
+            0.1,
+            0.9
+          ],
+          [
+            0.8,
+            0.2
+          ]
+        ],
+        "selected_count": 1
+      },
+      "expectedOutput": {
+        "selected_experts": "tensor([[1],\n        [0]])",
+        "mixture_weights": "tensor([[1.],\n        [1.]], dtype=torch.float64)",
+        "expert_loads": "tensor([1, 1])",
+        "next_bias": "tensor([-0., -0.], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            0.675,
+            0.075
+          ],
+          [
+            0.15,
+            0.6
+          ]
+        ],
+        "selected_count": 1
+      },
+      "expectedOutput": {
+        "selected_experts": "tensor([[0],\n        [1]])",
+        "mixture_weights": "tensor([[1.],\n        [1.]], dtype=torch.float64)",
+        "expert_loads": "tensor([1, 1])",
+        "next_bias": "tensor([-0., 0.], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            4.5,
+            0.5
+          ],
+          [
+            1.0,
+            4.0
+          ]
+        ],
+        "selected_count": 5
+      },
+      "expectedOutput": {
+        "selected_experts": [
+          [
+            0
+          ],
+          [
+            1
+          ]
+        ],
+        "mixture_weights": [
+          [
+            1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "expert_loads": [
+          1,
+          1
+        ],
+        "next_bias": [
+          -0.0,
+          -0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            3.9,
+            3.1
+          ],
+          [
+            3.2,
+            3.8
+          ]
+        ],
+        "selected_count": 3
+      },
+      "expectedOutput": {
+        "selected_experts": [
+          [
+            0
+          ],
+          [
+            1
+          ]
+        ],
+        "mixture_weights": [
+          [
+            1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "expert_loads": [
+          1,
+          1
+        ],
+        "next_bias": [
+          -0.0,
+          -0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            0.72,
+            0.08
+          ],
+          [
+            0.16,
+            0.64
+          ]
+        ],
+        "selected_count": 1
+      },
+      "expectedOutput": {
+        "selected_experts": "tensor([[0],\n        [1]])",
+        "mixture_weights": "tensor([[1.],\n        [1.]], dtype=torch.float64)",
+        "expert_loads": "tensor([1, 1])",
+        "next_bias": "tensor([-0., 0.], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            5.4,
+            0.6
+          ],
+          [
+            1.2,
+            4.8
+          ]
+        ],
+        "selected_count": 6
+      },
+      "expectedOutput": {
+        "selected_experts": [
+          [
+            0
+          ],
+          [
+            1
+          ]
+        ],
+        "mixture_weights": [
+          [
+            1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "expert_loads": [
+          1,
+          1
+        ],
+        "next_bias": [
+          -0.0,
+          -0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            4.9,
+            4.1
+          ],
+          [
+            4.2,
+            4.8
+          ]
+        ],
+        "selected_count": 4
+      },
+      "expectedOutput": {
+        "selected_experts": [
+          [
+            0
+          ],
+          [
+            1
+          ]
+        ],
+        "mixture_weights": [
+          [
+            1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "expert_loads": [
+          1,
+          1
+        ],
+        "next_bias": [
+          -0.0,
+          -0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            1.08,
+            0.12
+          ],
+          [
+            0.24,
+            0.96
+          ]
+        ],
+        "selected_count": 1
+      },
+      "expectedOutput": {
+        "selected_experts": "tensor([[0],\n        [1]])",
+        "mixture_weights": "tensor([[1.],\n        [1.]], dtype=torch.float64)",
+        "expert_loads": "tensor([1, 1])",
+        "next_bias": "tensor([0., 0.], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-quantile-balancing-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "current_bias": [
+          1,
+          1
+        ],
+        "router_scores": [
+          [
+            0.36,
+            0.04
+          ],
+          [
+            0.08,
+            0.32
+          ]
+        ],
+        "selected_count": 1
+      },
+      "expectedOutput": {
+        "selected_experts": "tensor([[0],\n        [1]])",
+        "mixture_weights": "tensor([[1.],\n        [1.]], dtype=torch.float64)",
+        "expert_loads": "tensor([1, 1])",
+        "next_bias": "tensor([0., 0.], dtype=torch.float64)"
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "quantile_balancing",
+    "runtime": "pytorch",
+    "parameters": [
+      {
+        "name": "router_scores",
+        "type": "array",
+        "example": "[[0.9,0.1],[0.2,0.8]]",
+        "description": "Raw sigmoid router scores."
+      },
+      {
+        "name": "current_bias",
+        "type": "array",
+        "example": "[0,0]",
+        "description": "Current expert selection bias."
+      },
+      {
+        "name": "selected_count",
+        "type": "number",
+        "example": "1",
+        "description": "Experts selected for each token."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "k3-quantile-balancing",
+    "name": "Quantile Balancing",
+    "description": "Derive next-step expert biases from router-score margin quantiles.",
+    "color": "#f59e0b"
+  },
+  "paper": {
+    "id": "kimik3",
+    "title": "Kimi K3",
+    "authors": "Kimi Team",
+    "year": 2026,
+    "paperUrl": "https://github.com/MoonshotAI/Kimi-K3/blob/main/k3_tech_report.pdf",
+    "visualizationComponent": "KimiK3ArchViz"
+  },
+  "navigation": {
+    "index": 6,
+    "total": 11,
+    "prev": "k3-situ-glu",
+    "next": "k3-stable-latent-moe"
+  },
+  "cleanTitle": ""
+}

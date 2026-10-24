@@ -1,0 +1,678 @@
+{
+  "id": "mean-average-precision",
+  "title": "Compute Mean Average Precision (mAP)",
+  "description": "For each retrieval query, rank items by descending score, compute Average Precision, then average the query scores to obtain mean Average Precision.\n\nFor one query:\n\n$$\n\\operatorname{AP} = \\frac{1}{R}\\sum_{r=1}^{n}\\operatorname{Precision}(r)\\operatorname{rel}(r)\n$$\n\nAcross $Q$ queries:\n\n$$\n\\operatorname{mAP} = \\frac{1}{Q}\\sum_{q=1}^{Q}\\operatorname{AP}_q\n$$\n\nHere, $r$ is a rank, $R$ is the total number of relevant items in that query, and $\\operatorname{rel}(r)$ is one when the item at rank $r$ is relevant. If k is provided, only ranks through k contribute to the numerator, while $R$ remains the total relevant count. A query with no relevant items has AP zero. Return map_value and ap_per_query in a dictionary.",
+  "seoDescription": "Compute mean average precision across ranked retrieval results from per-query relevance labels.",
+  "examples": [
+    "Input: y_true_list = [[1, 0, 1, 0]], y_score_list = [[0.9, 0.8, 0.7, 0.1]], k = None\n\nOutput: {\"map_value\": 0.833333, \"ap_per_query\": [0.833333]}\n\nExplanation: Relevant items occur at ranks 1 and 3, where precision is 1 and 2/3.",
+    "Input: y_true_list = [[1, 0, 1], [1, 1, 0]], y_score_list = [[0.9, 0.8, 0.7], [0.9, 0.8, 0.7]], k = None\n\nOutput: {\"map_value\": 0.916667, \"ap_per_query\": [0.833333, 1.0]}"
+  ],
+  "requirements": "* Sort each query by descending score\n* Compute precision only at relevant ranks, respecting the optional cutoff\n* Assign AP zero when a query has no relevant items\n* Return exactly map_value and ap_per_query in a dictionary\n* Round numeric outputs to 6 decimal places.",
+  "theory": "## Understanding the Theory: Compute Mean Average Precision (mAP)\n\n### Core Intuition: Why Do We Need This?\nRecommender systems surface relevant content, products, or information from catalogs containing millions of items. Evaluating recommendations requires ranking-sensitive metrics that emphasize placing the most relevant items near the top of the recommendation list. **Compute Mean Average Precision (mAP)** calculates ranking quality, user-item affinities, or top-K relevance scores.\n\nIn this problem, the objective is to implement **Compute Mean Average Precision (mAP)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\operatorname{AP} = \\frac{1}{R}\\sum_{r=1}^{n}\\operatorname{Precision}(r)\\operatorname{rel}(r)\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Position Discounting**: Users rarely scroll past the top items; ranking metrics heavily penalize placing relevant recommendations further down the list.\n* **Sparsity & Cold Start**: User-item interaction matrices are over 99% empty; embeddings and matrix factorization discover latent features to generalize to unseen interactions.\n* **Online vs. Offline Evaluation**: Offline ranking metrics (like NDCG@K and Recall@K) correlate strongly with online user engagement and click-through rates.",
+  "hints": [
+    "Use np.argsort(-scores, kind=\"stable\") to obtain each ranking.",
+    "Use cumulative relevant counts divided by np.arange(1, n + 1) for precision at every rank.",
+    "Mask the precision array by the ranked relevance labels before summing."
+  ],
+  "constraints": "* Each relevance label is 0 or 1\n* Corresponding relevance and score lists have equal lengths\n* Use NumPy only",
+  "difficulty": "Hard",
+  "starterCode": "import numpy as np\n\ndef mean_average_precision(y_true_list: list, y_score_list: list, k: int | None = None) -> dict:\n    \"\"\"\n    Returns a dictionary with map_value and ap_per_query.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-09T14:33:45.006Z",
+  "updatedAt": "2026-10-12T07:47:35.464Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef mean_average_precision(y_true_list: list, y_score_list: list, k: int | None = None) -> dict:\n    aps = []\n    for y_true, y_score in zip(y_true_list, y_score_list):\n        order = np.argsort(y_score)[::-1]\n        if k is not None:\n            order = order[:k]\n        yt = np.array(y_true)[order]\n        hits = 0\n        precisions = []\n        for i, val in enumerate(yt):\n            if val == 1:\n                hits += 1\n                precisions.append(hits / (i + 1))\n        ap = np.mean(precisions) if precisions else 0.0\n        aps.append(round(float(ap), 6))\n    return {'map_value': round(float(np.mean(aps)), 6), 'ap_per_query': aps}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "MeanAveragePrecisionViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Single query, imperfect",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            1,
+            0,
+            1,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            0.9,
+            0.8,
+            0.7,
+            0.1
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "map_value": 0.833333,
+        "ap_per_query": [
+          0.833333
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Two queries",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            1,
+            0,
+            1
+          ],
+          [
+            1,
+            1,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            0.9,
+            0.8,
+            0.7
+          ],
+          [
+            0.9,
+            0.8,
+            0.7
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "map_value": 0.916667,
+        "ap_per_query": [
+          0.833333,
+          1.0
+        ]
+      }
+    },
+    {
+      "id": "mean-average-precision-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            2,
+            0,
+            2,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            1.8,
+            1.6,
+            1.4,
+            0.2
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.0,
+        "ap_per_query": [
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            0.45,
+            0.4,
+            0.35,
+            0.05
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.0,
+        "ap_per_query": [
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            2,
+            1,
+            2,
+            1
+          ]
+        ],
+        "y_score_list": [
+          [
+            1.9,
+            1.8,
+            1.7,
+            1.1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.5,
+        "ap_per_query": [
+          0.5
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            2,
+            0,
+            2,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            1.35,
+            1.2,
+            1.05,
+            0.15
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.0,
+        "ap_per_query": [
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            3,
+            0,
+            3,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            2.7,
+            2.4,
+            2.1,
+            0.3
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.0,
+        "ap_per_query": [
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            0.225,
+            0.2,
+            0.175,
+            0.025
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.0,
+        "ap_per_query": [
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            3,
+            2,
+            3,
+            2
+          ]
+        ],
+        "y_score_list": [
+          [
+            2.9,
+            2.8,
+            2.7,
+            2.1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.0,
+        "ap_per_query": [
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            4,
+            0,
+            4,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            3.6,
+            3.2,
+            2.8,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.0,
+        "ap_per_query": [
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            0,
+            1,
+            0,
+            1
+          ]
+        ],
+        "y_score_list": [
+          [
+            0.1,
+            0.7,
+            0.8,
+            0.9
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.833333,
+        "ap_per_query": [
+          0.833333
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            1,
+            0,
+            1,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            0.675,
+            0.6,
+            0.525,
+            0.075
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.833333,
+        "ap_per_query": [
+          0.833333
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            5,
+            0,
+            5,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            4.5,
+            4.0,
+            3.5,
+            0.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.0,
+        "ap_per_query": [
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            4,
+            3,
+            4,
+            3
+          ]
+        ],
+        "y_score_list": [
+          [
+            3.9,
+            3.8,
+            3.7,
+            3.1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.0,
+        "ap_per_query": [
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            1,
+            0,
+            1,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            0.72,
+            0.64,
+            0.56,
+            0.08
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.833333,
+        "ap_per_query": [
+          0.833333
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            6,
+            0,
+            6,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            5.4,
+            4.8,
+            4.2,
+            0.6
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.0,
+        "ap_per_query": [
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            5,
+            4,
+            5,
+            4
+          ]
+        ],
+        "y_score_list": [
+          [
+            4.9,
+            4.8,
+            4.7,
+            4.1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.0,
+        "ap_per_query": [
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            1,
+            0,
+            1,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            1.08,
+            0.96,
+            0.84,
+            0.12
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.833333,
+        "ap_per_query": [
+          0.833333
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            0.36,
+            0.32,
+            0.28,
+            0.04
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.0,
+        "ap_per_query": [
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "mean-average-precision-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "k": null,
+        "y_true_list": [
+          [
+            8,
+            0,
+            8,
+            0
+          ]
+        ],
+        "y_score_list": [
+          [
+            7.2,
+            6.4,
+            5.6,
+            0.8
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "map_value": 0.0,
+        "ap_per_query": [
+          0.0
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "mean_average_precision",
+    "parameters": [
+      {
+        "name": "y_true_list",
+        "type": "array",
+        "example": "[[1, 0, 1, 0]]",
+        "description": "Binary relevance labels for each query"
+      },
+      {
+        "name": "y_score_list",
+        "type": "array",
+        "example": "[[0.9, 0.8, 0.7, 0.1]]",
+        "description": "Ranking scores for each query"
+      },
+      {
+        "name": "k",
+        "type": "any",
+        "example": "None",
+        "description": "Optional rank cutoff"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "precision-recall-at-k",
+    "hit-rate-at-k",
+    "classification-metrics",
+    "iou-bounding-box",
+    "ndcg"
+  ],
+  "tags": [
+    "Metrics & Evaluation"
+  ],
+  "prevId": "auc",
+  "nextId": "confusion-matrix-norm",
+  "slug": "mean-average-precision",
+  "cleanTitle": "Compute Mean Average Precision (mAP)",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/mean-average-precision",
+  "localUrl": "http://localhost:3000/problems/mean-average-precision",
+  "studyPlan": null
+}

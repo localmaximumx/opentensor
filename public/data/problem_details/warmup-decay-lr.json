@@ -1,0 +1,314 @@
+{
+  "id": "warmup-decay-lr",
+  "title": "Warmup + Linear Decay LR Schedule",
+  "description": "Most modern training pipelines start with a warmup phase where the learning rate gradually increases from zero, followed by a decay phase where it gradually decreases. This prevents early instability from large updates while still allowing the optimizer to escape sharp minima later.\n\nGiven a base learning rate, warmup steps, total steps, and the current step, compute the learning rate at that step.\n\n### Schedule\n\n**Warmup phase** (current_step = warmup_steps): the learning rate decreases linearly from base_lr to 0.\n\n$$\nlr = base\\_lr \\times \\frac{total\\_steps - current\\_step}{total\\_steps - warmup\\_steps}\n$$",
+  "seoDescription": "Compute a learning-rate schedule with linear warmup followed by linear decay across training steps.",
+  "examples": [
+    "Input: base_lr = 0.1, warmup_steps = 10, total_steps = 100, current_step = 5\n\nOutput: 0.05\n\nExplanation: Step 5 is halfway through the linear warmup.",
+    "Input: base_lr = 0.1, warmup_steps = 10, total_steps = 100, current_step = 55\n\nOutput: 0.05"
+  ],
+  "requirements": "* During warmup, linearly increase lr from 0 to base_lr\n* During decay, linearly decrease lr from base_lr to 0\n* At current_step = warmup_steps, lr should equal base_lr\n* Round numeric outputs to 6 decimal places.",
+  "theory": "## Understanding the Theory: Warmup + Linear Decay LR Schedule\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization challenge across highly non-convex loss surfaces filled with saddle points, ravines, and plateaus. Naive gradient descent often oscillates wildly in steep directions while crawling along flat regions. **Warmup + Linear Decay LR Schedule** accelerates convergence, dampens oscillations, and stabilizes weight trajectories during training.\n\nIn this problem, the objective is to implement **Warmup + Linear Decay LR Schedule** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nlr = base\\_lr \\times \\frac{total\\_steps - current\\_step}{total\\_steps - warmup\\_steps}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Momentum Accumulation**: Smoothing velocity vectors across successive mini-batches enables optimizers to escape shallow local minima and push through ill-conditioned ravines.\n* **Adaptive Scaling**: Tracking running second moments scales learning rates inversely with gradient variance, preventing rare features from vanishing and frequent features from exploding.\n* **Gradient Regularization**: Gradient clipping enforces hard norm bounds, preventing runaway parameter updates during training instability.",
+  "hints": [
+    "Use the warmup fraction when the current step is below the warmup boundary.",
+    "Use the remaining-step fraction during linear decay."
+  ],
+  "constraints": "* base_lr > 0, warmup_steps >= 0, total_steps > warmup_steps\n* 0 <= current_step <= total_steps\n* Return a single float\n* Time limit: 300 ms",
+  "difficulty": "Easy",
+  "starterCode": "def warmup_decay_schedule(base_lr: float, warmup_steps: int, total_steps: int, current_step: int) -> float:\n    \"\"\"\n    Returns the learning rate for the requested training step.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T15:34:00.922Z",
+  "updatedAt": "2026-10-12T07:47:37.586Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\ndef warmup_decay_schedule(base_lr: float, warmup_steps: int, total_steps: int, current_step: int) -> float:\n    if current_step < warmup_steps:\n        return float(round(base_lr * (current_step / warmup_steps), 6))\n    decay_steps = total_steps - warmup_steps\n    rate = max(0.0, 1.0 - (current_step - warmup_steps) / decay_steps)\n    return float(round(base_lr * rate, 6))\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "WarmupDecayLrViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Warmup phase (Ex1)",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 5,
+        "warmup_steps": 10
+      },
+      "isPublic": true,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "test-2",
+      "name": "Decay phase (Ex2)",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 55,
+        "warmup_steps": 10
+      },
+      "isPublic": true,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 5,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 55,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 5,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 55,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 5,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 55,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 5,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 55,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 5,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 55,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 5,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 55,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 5,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 55,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 5,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 55,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 5,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    },
+    {
+      "id": "warmup-decay-lr-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 55,
+        "warmup_steps": 10
+      },
+      "isPublic": false,
+      "expectedOutput": 0.05
+    }
+  ],
+  "functionMetadata": {
+    "name": "warmup_decay_schedule",
+    "parameters": [
+      {
+        "name": "base_lr",
+        "type": "number",
+        "example": "0.1",
+        "description": "Base learning rate"
+      },
+      {
+        "name": "warmup_steps",
+        "type": "number",
+        "example": "10",
+        "description": "Number of warmup steps"
+      },
+      {
+        "name": "total_steps",
+        "type": "number",
+        "example": "100",
+        "description": "Total number of steps"
+      },
+      {
+        "name": "current_step",
+        "type": "number",
+        "example": "5",
+        "description": "Current step number"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "cosine-annealing-lr",
+    "linear-lr-scheduler",
+    "adam-optimizer",
+    "adamw-optimizer",
+    "gradient-descent-quadratic"
+  ],
+  "tags": [
+    "Optimization"
+  ],
+  "prevId": "gaussian-blur-kernel",
+  "nextId": "cosine-annealing-lr",
+  "slug": "warmup-decay-lr",
+  "cleanTitle": "Warmup + Linear Decay LR Schedule",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/warmup-decay-lr",
+  "localUrl": "http://localhost:3000/problems/warmup-decay-lr",
+  "studyPlan": null
+}

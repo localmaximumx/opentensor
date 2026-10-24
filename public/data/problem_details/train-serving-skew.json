@@ -1,0 +1,890 @@
+{
+  "id": "train-serving-skew",
+  "title": "Detect Train-Serving Skew",
+  "description": "Measure train-serving distribution shift with the Population Stability Index for each feature:\n\n$$\n\\operatorname{PSI}=\\sum_{i=1}^{B}(s_i-t_i)\\ln\\left(\\frac{s_i}{t_i}\\right)\n$$\n\nHere, $B$ is the number of bins, $t_i$ is a training proportion, and $s_i$ is its serving proportion. Add eps to both proportions before evaluating each term. A feature is skewed when its PSI is at least threshold. Return each PSI rounded to six decimals with its boolean skewed flag in a nested dictionary.",
+  "seoDescription": "Detect train-serving skew by comparing offline and online feature values under configured tolerances.",
+  "examples": [
+    "Input: train_dist = {\"age\": [0.1, 0.2, 0.3, 0.25, 0.15], \"income\": [0.2, 0.2, 0.2, 0.2, 0.2]}, serving_dist = {\"age\": [0.05, 0.1, 0.15, 0.35, 0.35], \"income\": [0.2, 0.2, 0.2, 0.2, 0.2]}, threshold = 0.2, eps = 1e-10\n\nOutput: {\"age\": {\"psi\": 0.411051, \"skewed\": true}, \"income\": {\"psi\": 0, \"skewed\": false}}\n\nExplanation: The age distribution exceeds the threshold, while the identical income distributions have zero PSI.",
+    "Input: train_dist = {\"clicks\": [0.3, 0.4, 0.2, 0.1]}, serving_dist = {\"clicks\": [0.25, 0.35, 0.25, 0.15]}, threshold = 0.2, eps = 1e-10\n\nOutput: {\"clicks\": {\"psi\": 0.047223, \"skewed\": false}}"
+  ],
+  "requirements": "* Compute PSI independently for every feature\n* Add eps before division and logarithms\n* Mark values greater than or equal to the threshold as skewed\n* Return {feature: {\"psi\": float, \"skewed\": bool}}\n* Round numeric outputs to 6 decimal places.",
+  "theory": "## Understanding the Theory: Detect Train-Serving Skew\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **Detect Train-Serving Skew** implements a core computational routine.\n\nIn this problem, the objective is to implement **Detect Train-Serving Skew** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\operatorname{PSI}=\\sum_{i=1}^{B}(s_i-t_i)\\ln\\left(\\frac{s_i}{t_i}\\right)\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "Convert each pair of bin lists with np.asarray(..., dtype=float) + eps.",
+    "Compute one feature with np.sum((serving - train) * np.log(serving / train))."
+  ],
+  "constraints": "* Training and serving dictionaries have the same feature keys\n* Corresponding feature distributions have equal bin counts\n* All bin proportions are nonnegative\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef detect_skew(train_dist: dict, serving_dist: dict, threshold: float = 0.2, eps: float = 1e-10) -> dict:\n    \"\"\"\n    Returns a dictionary of feature PSI scores and skew flags.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-29T18:41:42.030Z",
+  "updatedAt": "2026-10-12T08:02:09.545Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport math\nimport numpy as np\n\ndef detect_skew(train_dist: dict, serving_dist: dict, threshold: float = 0.2, eps: float = 1e-10) -> dict:\n    res = {}\n    for feat in train_dist:\n        p = np.array(train_dist[feat], dtype=float) + eps\n        q = np.array(serving_dist[feat], dtype=float) + eps\n        p /= np.sum(p)\n        q /= np.sum(q)\n        psi = np.sum((q - p) * np.log(q / p))\n        res[feat] = {'psi': round(float(psi), 6), 'skewed': bool(psi > threshold)}\n    return res\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "TrainServingSkewViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Age skewed, income not (Ex1)",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "age": [
+            0.1,
+            0.2,
+            0.3,
+            0.25,
+            0.15
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        },
+        "serving_dist": {
+          "age": [
+            0.05,
+            0.1,
+            0.15,
+            0.35,
+            0.35
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        }
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "age": {
+          "psi": 0.411051,
+          "skewed": true
+        },
+        "income": {
+          "psi": 0,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Gentle shift below threshold (Ex2)",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "clicks": [
+            0.3,
+            0.4,
+            0.2,
+            0.1
+          ]
+        },
+        "serving_dist": {
+          "clicks": [
+            0.25,
+            0.35,
+            0.25,
+            0.15
+          ]
+        }
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "clicks": {
+          "psi": 0.047223,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "age": [
+            0.1,
+            0.2,
+            0.3,
+            0.25,
+            0.15
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        },
+        "serving_dist": {
+          "age": [
+            0.05,
+            0.1,
+            0.15,
+            0.35,
+            0.35
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "age": {
+          "psi": 0.411051,
+          "skewed": true
+        },
+        "income": {
+          "psi": 0,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "clicks": [
+            0.3,
+            0.4,
+            0.2,
+            0.1
+          ]
+        },
+        "serving_dist": {
+          "clicks": [
+            0.25,
+            0.35,
+            0.25,
+            0.15
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "clicks": {
+          "psi": 0.047223,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "age": [
+            0.1,
+            0.2,
+            0.3,
+            0.25,
+            0.15
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        },
+        "serving_dist": {
+          "age": [
+            0.05,
+            0.1,
+            0.15,
+            0.35,
+            0.35
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "age": {
+          "psi": 0.411051,
+          "skewed": true
+        },
+        "income": {
+          "psi": 0,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "clicks": [
+            0.3,
+            0.4,
+            0.2,
+            0.1
+          ]
+        },
+        "serving_dist": {
+          "clicks": [
+            0.25,
+            0.35,
+            0.25,
+            0.15
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "clicks": {
+          "psi": 0.047223,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "age": [
+            0.1,
+            0.2,
+            0.3,
+            0.25,
+            0.15
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        },
+        "serving_dist": {
+          "age": [
+            0.05,
+            0.1,
+            0.15,
+            0.35,
+            0.35
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "age": {
+          "psi": 0.411051,
+          "skewed": true
+        },
+        "income": {
+          "psi": 0,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "clicks": [
+            0.3,
+            0.4,
+            0.2,
+            0.1
+          ]
+        },
+        "serving_dist": {
+          "clicks": [
+            0.25,
+            0.35,
+            0.25,
+            0.15
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "clicks": {
+          "psi": 0.047223,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "age": [
+            0.1,
+            0.2,
+            0.3,
+            0.25,
+            0.15
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        },
+        "serving_dist": {
+          "age": [
+            0.05,
+            0.1,
+            0.15,
+            0.35,
+            0.35
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "age": {
+          "psi": 0.411051,
+          "skewed": true
+        },
+        "income": {
+          "psi": 0,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "clicks": [
+            0.3,
+            0.4,
+            0.2,
+            0.1
+          ]
+        },
+        "serving_dist": {
+          "clicks": [
+            0.25,
+            0.35,
+            0.25,
+            0.15
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "clicks": {
+          "psi": 0.047223,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "age": [
+            0.1,
+            0.2,
+            0.3,
+            0.25,
+            0.15
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        },
+        "serving_dist": {
+          "age": [
+            0.05,
+            0.1,
+            0.15,
+            0.35,
+            0.35
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "age": {
+          "psi": 0.411051,
+          "skewed": true
+        },
+        "income": {
+          "psi": 0,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "clicks": [
+            0.3,
+            0.4,
+            0.2,
+            0.1
+          ]
+        },
+        "serving_dist": {
+          "clicks": [
+            0.25,
+            0.35,
+            0.25,
+            0.15
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "clicks": {
+          "psi": 0.047223,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "age": [
+            0.1,
+            0.2,
+            0.3,
+            0.25,
+            0.15
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        },
+        "serving_dist": {
+          "age": [
+            0.05,
+            0.1,
+            0.15,
+            0.35,
+            0.35
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "age": {
+          "psi": 0.411051,
+          "skewed": true
+        },
+        "income": {
+          "psi": 0,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "clicks": [
+            0.3,
+            0.4,
+            0.2,
+            0.1
+          ]
+        },
+        "serving_dist": {
+          "clicks": [
+            0.25,
+            0.35,
+            0.25,
+            0.15
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "clicks": {
+          "psi": 0.047223,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "age": [
+            0.1,
+            0.2,
+            0.3,
+            0.25,
+            0.15
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        },
+        "serving_dist": {
+          "age": [
+            0.05,
+            0.1,
+            0.15,
+            0.35,
+            0.35
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "age": {
+          "psi": 0.411051,
+          "skewed": true
+        },
+        "income": {
+          "psi": 0,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "clicks": [
+            0.3,
+            0.4,
+            0.2,
+            0.1
+          ]
+        },
+        "serving_dist": {
+          "clicks": [
+            0.25,
+            0.35,
+            0.25,
+            0.15
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "clicks": {
+          "psi": 0.047223,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "age": [
+            0.1,
+            0.2,
+            0.3,
+            0.25,
+            0.15
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        },
+        "serving_dist": {
+          "age": [
+            0.05,
+            0.1,
+            0.15,
+            0.35,
+            0.35
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "age": {
+          "psi": 0.411051,
+          "skewed": true
+        },
+        "income": {
+          "psi": 0,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "clicks": [
+            0.3,
+            0.4,
+            0.2,
+            0.1
+          ]
+        },
+        "serving_dist": {
+          "clicks": [
+            0.25,
+            0.35,
+            0.25,
+            0.15
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "clicks": {
+          "psi": 0.047223,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "age": [
+            0.1,
+            0.2,
+            0.3,
+            0.25,
+            0.15
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        },
+        "serving_dist": {
+          "age": [
+            0.05,
+            0.1,
+            0.15,
+            0.35,
+            0.35
+          ],
+          "income": [
+            0.2,
+            0.2,
+            0.2,
+            0.2,
+            0.2
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "age": {
+          "psi": 0.411051,
+          "skewed": true
+        },
+        "income": {
+          "psi": 0,
+          "skewed": false
+        }
+      }
+    },
+    {
+      "id": "train-serving-skew-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "eps": 1e-10,
+        "threshold": 0.2,
+        "train_dist": {
+          "clicks": [
+            0.3,
+            0.4,
+            0.2,
+            0.1
+          ]
+        },
+        "serving_dist": {
+          "clicks": [
+            0.25,
+            0.35,
+            0.25,
+            0.15
+          ]
+        }
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "clicks": {
+          "psi": 0.047223,
+          "skewed": false
+        }
+      }
+    }
+  ],
+  "functionMetadata": {
+    "name": "detect_skew",
+    "parameters": [
+      {
+        "name": "train_dist",
+        "type": "any",
+        "description": "Dict mapping feature names to training distribution arrays"
+      },
+      {
+        "name": "serving_dist",
+        "type": "any",
+        "description": "Dict mapping feature names to serving distribution arrays"
+      },
+      {
+        "name": "threshold",
+        "type": "number",
+        "description": "PSI threshold for skew detection"
+      },
+      {
+        "name": "eps",
+        "type": "number",
+        "description": "Small constant to avoid log(0)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "data-drift-detection",
+    "monitoring-metrics-selection",
+    "shadow-deployment-evaluation",
+    "feature-store-lookup",
+    "retraining-trigger-design"
+  ],
+  "tags": [
+    "MLOps"
+  ],
+  "prevId": "word-count-dict",
+  "nextId": "model-versioning-basics",
+  "slug": "train-serving-skew",
+  "cleanTitle": "Detect Train-Serving Skew",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/train-serving-skew",
+  "localUrl": "http://localhost:3000/problems/train-serving-skew",
+  "studyPlan": null
+}

@@ -1,0 +1,800 @@
+{
+  "catalogId": "python:dl-nms",
+  "id": "dl-nms",
+  "sourceId": "dl-nms",
+  "slug": "dl-nms",
+  "source": "python",
+  "category": "numpy",
+  "title": "Non-Maximum Suppression",
+  "difficulty": "Medium",
+  "tags": [
+    "Object Detection",
+    "Neural Networks",
+    "Computer Vision"
+  ],
+  "isFree": false,
+  "planId": "cracking-dl",
+  "planTitle": "Cracking Deep Learning",
+  "sectionId": "cracking-dl-advanced-architectures",
+  "sortOrder": 745,
+  "seoDescription": "Implement greedy non-maximum suppression for scored object-detection boxes using an IoU threshold and stable selection order.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Filter redundant overlapping candidate bounding boxes iteratively retaining highest scoring detections.\n\nObject detectors propose hundreds of redundant overlapping anchor boxes around each target entity. NMS post-processing collapses overlaps to single confident bounding boxes.\n\n### Mathematical Formulation\n$$\n\\text{Keep } i, \\quad \\text{Suppress } j \\iff \\text{IoU}(B_i, B_j) > \\tau\n$$\n\n### Step-by-Step Implementation\n1. Sort candidate detections in descending order of classification scores\n2. Greedily retain highest-scoring bounding box\n3. Suppress all remaining boxes sharing IoU > iou_threshold with retained box\n\n### Returns\nList of integer indices of retained bounding boxes.",
+  "theory": "## Understanding the Theory: Non-Maximum Suppression\n\n### Core Intuition: Why Do We Need This?\nNeural networks achieve their remarkable expressive power by stacking linear layers interspersed with non-linear activation functions and normalization layers. Without non-linear activations, any deep network would collapse into a single shallow linear regression. **Non-Maximum Suppression** ensures signals propagate cleanly through dozens or hundreds of layers without vanishing or exploding.\n\nObject detectors propose hundreds of redundant overlapping anchor boxes around each target entity. NMS post-processing collapses overlaps to single confident bounding boxes. In this problem, the goal is to: filter redundant overlapping candidate bounding boxes iteratively retaining highest scoring detections.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\text{Keep } i, \\quad \\text{Suppress } j \\iff \\text{IoU}(B_i, B_j) > \\tau\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Sort candidate detections in descending order of classification scores\n2. **Phase 2**: Greedily retain highest-scoring bounding box\n3. **Phase 3**: Suppress all remaining boxes sharing IoU > iou_threshold with retained box\n\n### Practical Machine Learning Applications & Nuances\n* **Gradient Flow**: Carefully designed activation functions (like ReLU, GELU, and Swish) maintain strong gradient signals during backpropagation.\n* **Internal Covariate Shift**: Normalization techniques (like LayerNorm and RMSNorm) standardize hidden states across channels or batch dimensions, allowing models to train stably at higher learning rates.\n* **Hardware Friendly**: Modern deep learning frameworks implement these layers using fused GPU kernels to reduce memory round-trips.",
+  "examples": [
+    "Input: boxes = [[0.0, 0.0, 2.0, 2.0], [0.1, 0.1, 2.1, 2.1], [5.0, 5.0, 7.0, 7.0]], scores = [0.9, 0.75, 0.85], iou_threshold = 0.5\n\nOutput: [0, 2]\n\nExplanation: Evaluated dl_nms under standard test conditions."
+  ],
+  "requirements": "* Function must be named `dl_nms`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `dl_nms`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef dl_nms(boxes: list, scores: list, iou_threshold: float = 0.5) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Non-Maximum Suppression** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef dl_nms(boxes: list, scores: list, iou_threshold: float = 0.5) -> list:\n    if not boxes: return []\n    b, s = np.array(boxes, dtype=float), np.array(scores, dtype=float)\n    order = np.argsort(s)[::-1]\n    keep = []\n    while len(order) > 0:\n        idx = order[0]; keep.append(int(idx))\n        if len(order) == 1: break\n        cb, ob = b[idx], b[order[1:]]\n        iw = np.maximum(0.0, np.minimum(cb[2], ob[:, 2]) - np.maximum(cb[0], ob[:, 0]))\n        ih = np.maximum(0.0, np.minimum(cb[3], ob[:, 3]) - np.maximum(cb[1], ob[:, 1]))\n        ia = iw * ih; u = (cb[2]-cb[0])*(cb[3]-cb[1]) + (ob[:, 2]-ob[:, 0])*(ob[:, 3]-ob[:, 1]) - ia\n        order = order[np.where(np.where(u > 0, ia / u, 0.0) <= iou_threshold)[0] + 1]\n    return keep\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "3 overlapping boxes NMS",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            2.0,
+            2.0
+          ],
+          [
+            0.1,
+            0.1,
+            2.1,
+            2.1
+          ],
+          [
+            5.0,
+            5.0,
+            7.0,
+            7.0
+          ]
+        ],
+        "scores": [
+          0.9,
+          0.75,
+          0.85
+        ],
+        "iou_threshold": 0.5
+      },
+      "expectedOutput": [
+        0,
+        2
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "dl-nms-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            4.0,
+            4.0
+          ],
+          [
+            0.2,
+            0.2,
+            4.2,
+            4.2
+          ],
+          [
+            10.0,
+            10.0,
+            14.0,
+            14.0
+          ]
+        ],
+        "scores": [
+          1.8,
+          1.5,
+          1.7
+        ],
+        "iou_threshold": 1.0
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "dl-nms-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          [
+            0.05,
+            0.05,
+            1.05,
+            1.05
+          ],
+          [
+            2.5,
+            2.5,
+            3.5,
+            3.5
+          ]
+        ],
+        "scores": [
+          0.45,
+          0.375,
+          0.425
+        ],
+        "iou_threshold": 0.25
+      },
+      "expectedOutput": [
+        0,
+        2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "boxes": [
+          [
+            -0.0,
+            -0.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.1,
+            -2.1,
+            -2.1
+          ],
+          [
+            -5.0,
+            -5.0,
+            -7.0,
+            -7.0
+          ]
+        ],
+        "scores": [
+          -0.9,
+          -0.75,
+          -0.85
+        ],
+        "iou_threshold": -0.5
+      },
+      "expectedOutput": [
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            6.0,
+            6.0
+          ],
+          [
+            0.3,
+            0.3,
+            6.3,
+            6.3
+          ],
+          [
+            15.0,
+            15.0,
+            21.0,
+            21.0
+          ]
+        ],
+        "scores": [
+          2.7,
+          2.25,
+          2.55
+        ],
+        "iou_threshold": 1.5
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "boxes": [
+          [
+            1.0,
+            1.0,
+            3.0,
+            3.0
+          ],
+          [
+            1.1,
+            1.1,
+            3.1,
+            3.1
+          ],
+          [
+            6.0,
+            6.0,
+            8.0,
+            8.0
+          ]
+        ],
+        "scores": [
+          1.9,
+          1.75,
+          1.85
+        ],
+        "iou_threshold": 1.5
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "boxes": [
+          [
+            -2.0,
+            -2.0,
+            0.0,
+            0.0
+          ],
+          [
+            -1.9,
+            -1.9,
+            0.10000000000000009,
+            0.10000000000000009
+          ],
+          [
+            3.0,
+            3.0,
+            5.0,
+            5.0
+          ]
+        ],
+        "scores": [
+          -1.1,
+          -1.25,
+          -1.15
+        ],
+        "iou_threshold": -1.5
+      },
+      "expectedOutput": [
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "boxes": [
+          [
+            2.0,
+            2.0,
+            0.0,
+            0.0
+          ],
+          [
+            2.1,
+            2.1,
+            0.1,
+            0.1
+          ],
+          [
+            7.0,
+            7.0,
+            5.0,
+            5.0
+          ]
+        ],
+        "scores": [
+          0.85,
+          0.75,
+          0.9
+        ],
+        "iou_threshold": 0.5
+      },
+      "expectedOutput": [
+        2,
+        0,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "boxes": [
+          [
+            -0.0,
+            -0.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.1,
+            -2.1,
+            -2.1
+          ],
+          [
+            -5.0,
+            -5.0,
+            -7.0,
+            -7.0
+          ]
+        ],
+        "scores": [
+          -0.9,
+          -0.75,
+          -0.85
+        ],
+        "iou_threshold": -0.5
+      },
+      "expectedOutput": [
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            20.0,
+            20.0
+          ],
+          [
+            1.0,
+            1.0,
+            21.0,
+            21.0
+          ],
+          [
+            50.0,
+            50.0,
+            70.0,
+            70.0
+          ]
+        ],
+        "scores": [
+          9.0,
+          7.5,
+          8.5
+        ],
+        "iou_threshold": 5.0
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            0.2,
+            0.2
+          ],
+          [
+            0.01,
+            0.01,
+            0.21,
+            0.21
+          ],
+          [
+            0.5,
+            0.5,
+            0.7,
+            0.7
+          ]
+        ],
+        "scores": [
+          0.09,
+          0.075,
+          0.085
+        ],
+        "iou_threshold": 0.05
+      },
+      "expectedOutput": [
+        0,
+        2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "boxes": [
+          [
+            5.0,
+            5.0,
+            7.0,
+            7.0
+          ],
+          [
+            5.1,
+            5.1,
+            7.1,
+            7.1
+          ],
+          [
+            10.0,
+            10.0,
+            12.0,
+            12.0
+          ]
+        ],
+        "scores": [
+          5.9,
+          5.75,
+          5.85
+        ],
+        "iou_threshold": 5.5
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            3.0,
+            3.0
+          ],
+          [
+            0.15,
+            0.15,
+            3.15,
+            3.15
+          ],
+          [
+            7.5,
+            7.5,
+            10.5,
+            10.5
+          ]
+        ],
+        "scores": [
+          1.35,
+          1.125,
+          1.275
+        ],
+        "iou_threshold": 0.75
+      },
+      "expectedOutput": [
+        0,
+        2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "boxes": [
+          [
+            -0.0,
+            -0.0,
+            -4.0,
+            -4.0
+          ],
+          [
+            -0.2,
+            -0.2,
+            -4.2,
+            -4.2
+          ],
+          [
+            -10.0,
+            -10.0,
+            -14.0,
+            -14.0
+          ]
+        ],
+        "scores": [
+          -1.8,
+          -1.5,
+          -1.7
+        ],
+        "iou_threshold": -1.0
+      },
+      "expectedOutput": [
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            0.5,
+            0.5
+          ],
+          [
+            0.025,
+            0.025,
+            0.525,
+            0.525
+          ],
+          [
+            1.25,
+            1.25,
+            1.75,
+            1.75
+          ]
+        ],
+        "scores": [
+          0.225,
+          0.1875,
+          0.2125
+        ],
+        "iou_threshold": 0.125
+      },
+      "expectedOutput": [
+        0,
+        2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "boxes": [
+          [
+            -1.0,
+            -1.0,
+            1.0,
+            1.0
+          ],
+          [
+            -0.9,
+            -0.9,
+            1.1,
+            1.1
+          ],
+          [
+            4.0,
+            4.0,
+            6.0,
+            6.0
+          ]
+        ],
+        "scores": [
+          -0.09999999999999998,
+          -0.25,
+          -0.15000000000000002
+        ],
+        "iou_threshold": -0.5
+      },
+      "expectedOutput": [
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            8.0,
+            8.0
+          ],
+          [
+            0.4,
+            0.4,
+            8.4,
+            8.4
+          ],
+          [
+            20.0,
+            20.0,
+            28.0,
+            28.0
+          ]
+        ],
+        "scores": [
+          3.6,
+          3.0,
+          3.4
+        ],
+        "iou_threshold": 2.0
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            1.5,
+            1.5
+          ],
+          [
+            0.075,
+            0.075,
+            1.575,
+            1.575
+          ],
+          [
+            3.75,
+            3.75,
+            5.25,
+            5.25
+          ]
+        ],
+        "scores": [
+          0.675,
+          0.5625,
+          0.6375
+        ],
+        "iou_threshold": 0.375
+      },
+      "expectedOutput": [
+        0,
+        2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            10.0,
+            10.0
+          ],
+          [
+            0.5,
+            0.5,
+            10.5,
+            10.5
+          ],
+          [
+            25.0,
+            25.0,
+            35.0,
+            35.0
+          ]
+        ],
+        "scores": [
+          4.5,
+          3.75,
+          4.25
+        ],
+        "iou_threshold": 2.5
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-nms-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "boxes": [
+          [
+            10.0,
+            10.0,
+            12.0,
+            12.0
+          ],
+          [
+            10.1,
+            10.1,
+            12.1,
+            12.1
+          ],
+          [
+            15.0,
+            15.0,
+            17.0,
+            17.0
+          ]
+        ],
+        "scores": [
+          10.9,
+          10.75,
+          10.85
+        ],
+        "iou_threshold": 10.5
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "dl_nms",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

@@ -1,0 +1,1175 @@
+{
+  "catalogId": "python:cv-vit-attention-block",
+  "id": "cv-vit-attention-block",
+  "sourceId": "cv-vit-attention-block",
+  "slug": "cv-vit-attention-block",
+  "source": "python",
+  "category": "pytorch",
+  "title": "ViT Multi-Head Self-Attention",
+  "difficulty": "Hard",
+  "tags": [
+    "Computer Vision",
+    "Transformers"
+  ],
+  "isFree": false,
+  "planId": "cracking-cv",
+  "planTitle": "Cracking CV",
+  "sectionId": "cracking-cv-modern-cv-and-vit",
+  "sortOrder": 524,
+  "seoDescription": "Implement Vision Transformer multi-head self-attention with combined QKV projection, scaled softmax, and output projection.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Compute multi-head self-attention on patch token representations with QKV projection and output projection.\n\nUnlike localized 2D convolutional receptive fields, multi-head self-attention models pairwise relationships across all visual patches immediately from the first transformer layer.\n\n### Mathematical Formulation\n$$\n\\mathbf{Y} = \\text{Concat}(\\text{head}_1, \\dots, \\text{head}_H) \\mathbf{W}_{\\text{out}}, \\quad \\text{head}_h = \\text{Softmax}\\left(\\frac{\\mathbf{Q}_h \\mathbf{K}_h^T}{\\sqrt{d_k}}\\right) \\mathbf{V}_h\n$$\n\n### Step-by-Step Implementation\n1. Project input sequence x through fused QKV matrix to obtain query, key, and value tensors\n2. Partition projections into multiple attention heads of dimension d_k = D / H\n3. Compute scaled dot-product attention per head, concatenate context representations, and project via W_out\n\n### Returns\nNested 2D list of shape (N, D) representing projected multi-head attention output rounded to 4 decimal places.",
+  "theory": "## Understanding the Theory: ViT Multi-Head Self-Attention\n\n### Core Intuition: Why Do We Need This?\nImages have unique spatial properties: neighboring pixels are strongly correlated, and visual patterns (like edges, corners, or textures) appear anywhere in an image. Computer vision algorithms use spatial inductive biases like translation equivariance and local receptive fields to process image grids efficiently. **ViT Multi-Head Self-Attention** operates directly on spatial coordinates or bounding box geometries.\n\nUnlike localized 2D convolutional receptive fields, multi-head self-attention models pairwise relationships across all visual patches immediately from the first transformer layer. In this problem, the goal is to: compute multi-head self-attention on patch token representations with qkv projection and output projection.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\mathbf{Y} = \\text{Concat}(\\text{head}_1, \\dots, \\text{head}_H) \\mathbf{W}_{\\text{out}}, \\quad \\text{head}_h = \\text{Softmax}\\left(\\frac{\\mathbf{Q}_h \\mathbf{K}_h^T}{\\sqrt{d_k}}\\right) \\mathbf{V}_h\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Project input sequence x through fused QKV matrix to obtain query, key, and value tensors\n2. **Phase 2**: Partition projections into multiple attention heads of dimension d_k = D / H\n3. **Phase 3**: Compute scaled dot-product attention per head, concatenate context representations, and project via W_out\n\n### Practical Machine Learning Applications & Nuances\n* **Spatial Locality**: Sliding spatial filters across multi-channel feature maps aggregates contextual clues across local neighborhoods.\n* **Object Detection Pipelines**: Bounding box metrics (such as IoU and Non-Maximum Suppression) reconcile duplicate candidate detections into clean, final predictions.\n* **Data Augmentation**: Geometric transformations expose models to diverse spatial viewpoints, significantly improving generalization to unseen test images.",
+  "examples": [
+    "Input: x = [[1.0, 0.0], [0.0, 1.0]], W_qkv = [[1.0, 0.0, 1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0, 0.0, 1.0]], W_out = [[1.0, 0.0], [0.0, 1.0]], num_heads = 2\n\nOutput: [[0.7311, 0.5], [0.5, 0.7311]]\n\nExplanation: Evaluated cv_vit_attention_block under standard test conditions."
+  ],
+  "requirements": "* Function must be named `cv_vit_attention_block`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `cv_vit_attention_block`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import torch, math\n\ndef cv_vit_attention_block(x: list, W_qkv: list, W_out: list, num_heads: int = 2) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **ViT Multi-Head Self-Attention** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch, math\n\ndef cv_vit_attention_block(x: list, W_qkv: list, W_out: list, num_heads: int = 2) -> list:\n    t_x, t_qkv, t_out = torch.tensor(x, dtype=torch.float32), torch.tensor(W_qkv, dtype=torch.float32), torch.tensor(W_out, dtype=torch.float32)\n    N, D = t_x.shape\n    d_k = D // num_heads\n    q, k, v = torch.chunk(torch.matmul(t_x, t_qkv), 3, dim=-1)\n    q = q.view(N, num_heads, d_k).transpose(0, 1)\n    k = k.view(N, num_heads, d_k).transpose(0, 1)\n    v = v.view(N, num_heads, d_k).transpose(0, 1)\n    attn = torch.softmax(torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k), dim=-1)\n    ctx = torch.matmul(attn, v).transpose(0, 1).contiguous().view(N, D)\n    return torch.round(torch.matmul(ctx, t_out), decimals=4).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "2 tokens 2 heads",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "W_out": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "num_heads": 2
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cv-vit-attention-block-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "x": [
+          [
+            2.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            2.0,
+            0.0,
+            2.0,
+            0.0,
+            2.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0,
+            0.0,
+            2.0,
+            0.0,
+            2.0
+          ]
+        ],
+        "W_out": [
+          [
+            2.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "num_heads": 4
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cv-vit-attention-block-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          [
+            0.5,
+            0.0
+          ],
+          [
+            0.0,
+            0.5
+          ]
+        ],
+        "W_qkv": [
+          [
+            0.5,
+            0.0,
+            0.5,
+            0.0,
+            0.5,
+            0.0
+          ],
+          [
+            0.0,
+            0.5,
+            0.0,
+            0.5,
+            0.0,
+            0.5
+          ]
+        ],
+        "W_out": [
+          [
+            0.5,
+            0.0
+          ],
+          [
+            0.0,
+            0.5
+          ]
+        ],
+        "num_heads": 1
+      },
+      "expectedOutput": [
+        [
+          0.06390000134706497,
+          0.06109999865293503
+        ],
+        [
+          0.06109999865293503,
+          0.06390000134706497
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            -1.0,
+            -0.0,
+            -1.0,
+            -0.0,
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0,
+            -0.0,
+            -1.0,
+            -0.0,
+            -1.0
+          ]
+        ],
+        "W_out": [
+          [
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0
+          ]
+        ],
+        "num_heads": -2
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            3.0,
+            0.0
+          ],
+          [
+            0.0,
+            3.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            3.0,
+            0.0,
+            3.0,
+            0.0,
+            3.0,
+            0.0
+          ],
+          [
+            0.0,
+            3.0,
+            0.0,
+            3.0,
+            0.0,
+            3.0
+          ]
+        ],
+        "W_out": [
+          [
+            3.0,
+            0.0
+          ],
+          [
+            0.0,
+            3.0
+          ]
+        ],
+        "num_heads": 6
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            2.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            2.0,
+            1.0,
+            2.0,
+            1.0,
+            2.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0,
+            1.0,
+            2.0,
+            1.0,
+            2.0
+          ]
+        ],
+        "W_out": [
+          [
+            2.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0
+          ]
+        ],
+        "num_heads": 3.0
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -1.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            -1.0,
+            -2.0,
+            -1.0,
+            -2.0,
+            -1.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -1.0,
+            -2.0,
+            -1.0,
+            -2.0,
+            -1.0
+          ]
+        ],
+        "W_out": [
+          [
+            -1.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -1.0
+          ]
+        ],
+        "num_heads": 0.0
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            1.0
+          ],
+          [
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "W_out": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        "num_heads": 2
+      },
+      "expectedOutput": [
+        [
+          0.5,
+          0.7311000227928162
+        ],
+        [
+          0.7311000227928162,
+          0.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            -1.0,
+            -0.0,
+            -1.0,
+            -0.0,
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0,
+            -0.0,
+            -1.0,
+            -0.0,
+            -1.0
+          ]
+        ],
+        "W_out": [
+          [
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0
+          ]
+        ],
+        "num_heads": -2
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            10.0,
+            0.0
+          ],
+          [
+            0.0,
+            10.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            10.0,
+            0.0,
+            10.0,
+            0.0,
+            10.0,
+            0.0
+          ],
+          [
+            0.0,
+            10.0,
+            0.0,
+            10.0,
+            0.0,
+            10.0
+          ]
+        ],
+        "W_out": [
+          [
+            10.0,
+            0.0
+          ],
+          [
+            0.0,
+            10.0
+          ]
+        ],
+        "num_heads": 20
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            0.1,
+            0.0
+          ],
+          [
+            0.0,
+            0.1
+          ]
+        ],
+        "W_qkv": [
+          [
+            0.1,
+            0.0,
+            0.1,
+            0.0,
+            0.1,
+            0.0
+          ],
+          [
+            0.0,
+            0.1,
+            0.0,
+            0.1,
+            0.0,
+            0.1
+          ]
+        ],
+        "W_out": [
+          [
+            0.1,
+            0.0
+          ],
+          [
+            0.0,
+            0.1
+          ]
+        ],
+        "num_heads": 0
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            6.0,
+            5.0
+          ],
+          [
+            5.0,
+            6.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            6.0,
+            5.0,
+            6.0,
+            5.0,
+            6.0,
+            5.0
+          ],
+          [
+            5.0,
+            6.0,
+            5.0,
+            6.0,
+            5.0,
+            6.0
+          ]
+        ],
+        "W_out": [
+          [
+            6.0,
+            5.0
+          ],
+          [
+            5.0,
+            6.0
+          ]
+        ],
+        "num_heads": 7.0
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            1.5,
+            0.0
+          ],
+          [
+            0.0,
+            1.5
+          ]
+        ],
+        "W_qkv": [
+          [
+            1.5,
+            0.0,
+            1.5,
+            0.0,
+            1.5,
+            0.0
+          ],
+          [
+            0.0,
+            1.5,
+            0.0,
+            1.5,
+            0.0,
+            1.5
+          ]
+        ],
+        "W_out": [
+          [
+            1.5,
+            0.0
+          ],
+          [
+            0.0,
+            1.5
+          ]
+        ],
+        "num_heads": 3
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            -2.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -2.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            -2.0,
+            -0.0,
+            -2.0,
+            -0.0,
+            -2.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -2.0,
+            -0.0,
+            -2.0,
+            -0.0,
+            -2.0
+          ]
+        ],
+        "W_out": [
+          [
+            -2.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -2.0
+          ]
+        ],
+        "num_heads": -4
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            0.25,
+            0.0
+          ],
+          [
+            0.0,
+            0.25
+          ]
+        ],
+        "W_qkv": [
+          [
+            0.25,
+            0.0,
+            0.25,
+            0.0,
+            0.25,
+            0.0
+          ],
+          [
+            0.0,
+            0.25,
+            0.0,
+            0.25,
+            0.0,
+            0.25
+          ]
+        ],
+        "W_out": [
+          [
+            0.25,
+            0.0
+          ],
+          [
+            0.0,
+            0.25
+          ]
+        ],
+        "num_heads": 0
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            0.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            0.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            0.0,
+            -1.0,
+            0.0,
+            -1.0,
+            0.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            0.0,
+            -1.0,
+            0.0,
+            -1.0,
+            0.0
+          ]
+        ],
+        "W_out": [
+          [
+            0.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            0.0
+          ]
+        ],
+        "num_heads": 1.0
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            4.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            4.0,
+            0.0,
+            4.0,
+            0.0,
+            4.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.0,
+            0.0,
+            4.0,
+            0.0,
+            4.0
+          ]
+        ],
+        "W_out": [
+          [
+            4.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.0
+          ]
+        ],
+        "num_heads": 8
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            0.75,
+            0.0
+          ],
+          [
+            0.0,
+            0.75
+          ]
+        ],
+        "W_qkv": [
+          [
+            0.75,
+            0.0,
+            0.75,
+            0.0,
+            0.75,
+            0.0
+          ],
+          [
+            0.0,
+            0.75,
+            0.0,
+            0.75,
+            0.0,
+            0.75
+          ]
+        ],
+        "W_out": [
+          [
+            0.75,
+            0.0
+          ],
+          [
+            0.0,
+            0.75
+          ]
+        ],
+        "num_heads": 2
+      },
+      "expectedOutput": [
+        [
+          0.24400000274181366,
+          0.21089999377727509
+        ],
+        [
+          0.21089999377727509,
+          0.24400000274181366
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            5.0,
+            0.0
+          ],
+          [
+            0.0,
+            5.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            5.0,
+            0.0,
+            5.0,
+            0.0,
+            5.0,
+            0.0
+          ],
+          [
+            0.0,
+            5.0,
+            0.0,
+            5.0,
+            0.0,
+            5.0
+          ]
+        ],
+        "W_out": [
+          [
+            5.0,
+            0.0
+          ],
+          [
+            0.0,
+            5.0
+          ]
+        ],
+        "num_heads": 10
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-vit-attention-block-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            11.0,
+            10.0
+          ],
+          [
+            10.0,
+            11.0
+          ]
+        ],
+        "W_qkv": [
+          [
+            11.0,
+            10.0,
+            11.0,
+            10.0,
+            11.0,
+            10.0
+          ],
+          [
+            10.0,
+            11.0,
+            10.0,
+            11.0,
+            10.0,
+            11.0
+          ]
+        ],
+        "W_out": [
+          [
+            11.0,
+            10.0
+          ],
+          [
+            10.0,
+            11.0
+          ]
+        ],
+        "num_heads": 12.0
+      },
+      "expectedOutput": [
+        [
+          0.7311,
+          0.5
+        ],
+        [
+          0.5,
+          0.7311
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cv_vit_attention_block",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

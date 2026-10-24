@@ -1,0 +1,658 @@
+{
+  "id": "alphago-l01-tromp-taylor-result",
+  "slug": "alphago-l01-tromp-taylor-result",
+  "title": "Score a Terminal Position with Tromp-Taylor Rules",
+  "cleanTitle": "Score a Terminal Position with Tromp-Taylor Rules",
+  "category": "numpy",
+  "difficulty": "Medium",
+  "tags": [
+    "Reinforcement Learning",
+    "Data Processing"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "alphago-from-scratch",
+    "title": "Build AlphaGo from Scratch",
+    "sectionId": "alphago-l01"
+  },
+  "seoDescription": "Score a terminal Go board with Tromp-Taylor area rules by counting stones and empty regions controlled by each player.",
+  "description": "Compute Tromp-Taylor area scoring for a completed Go game, adding live stones and completely surrounded empty territory to determine the winner with komi.\n\n**Mathematical Formulation:**\n\n$$\n\\text{Score}_B = |S_B| + |T_B|, \\quad \\text{Score}_W = |S_W| + |T_W| + \\text{komi}\n$$\n\n**Step-by-Step Implementation:**\n1. Count all active black (1) and white (2) stones on the board.\n2. Traverse contiguous empty intersections using flood fill.\n3. If an empty region touches only one color, allocate its points to that player as territory.\n4. Add komi compensation to White's score and declare the winner.\n\n**Returns:** Dictionary with keys 'black_score', 'white_score', and 'winner'.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Score a Terminal Position with Tromp-Taylor Rules specification."
+  ],
+  "requirements": "* Must implement `alphago_l01_tromp_taylor_result` using NUMPY.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Score a Terminal Position with Tromp-Taylor Rules\n\n### Core Intuition: Why Do We Need This?\nCompute Tromp-Taylor area scoring for a completed Go game, adding live stones and completely surrounded empty territory to determine the winner with komi. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\n\\text{Score}_B = |S_B| + |T_B|, \\quad \\text{Score}_W = |S_W| + |T_W| + \\text{komi}\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Count all active black (1) and white (2) stones on the board.\n3. **Phase 3: Iterative Execution & Reduction**: Traverse contiguous empty intersections using flood fill.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Add komi compensation to White's score and declare the winner.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard NUMPY documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `np.ndarray` specifications."
+  ],
+  "constraints": "* Category: NUMPY\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, NUMPY\n",
+  "starterCode": "import numpy as np\n\ndef alphago_l01_tromp_taylor_result(board: list, komi: float = 7.5) -> dict:\n    \"\"\"\n    Compute Tromp-Taylor area scoring for a completed Go game, adding live stones and completely surrounded empty territory to determine the winner with komi.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nCompute Tromp-Taylor area scoring for a completed Go game, adding live stones and completely surrounded empty territory to determine the winner with komi.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef alphago_l01_tromp_taylor_result(board: list, komi: float = 7.5) -> dict:\n    b = np.array(board, dtype=int)\n    H, W = b.shape\n    b_score = float(np.sum(b == 1))\n    w_score = float(np.sum(b == 2)) + komi\n    visited = set()\n    for r in range(H):\n        for c in range(W):\n            if b[r, c] == 0 and (r, c) not in visited:\n                region, borders, q = [], set(), [(r, c)]\n                visited.add((r, c))\n                while q:\n                    cr, cc = q.pop(0)\n                    region.append((cr, cc))\n                    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:\n                        nr, nc = cr + dr, cc + dc\n                        if 0 <= nr < H and 0 <= nc < W:\n                            if b[nr, nc] == 0 and (nr, nc) not in visited:\n                                visited.add((nr, nc))\n                                q.append((nr, nc))\n                            elif b[nr, nc] != 0:\n                                borders.add(b[nr, nc])\n                if borders == {1}:\n                    b_score += len(region)\n                elif borders == {2}:\n                    w_score += len(region)\n    winner = 1 if b_score > w_score else 2\n    return {'black_score': b_score, 'white_score': w_score, 'winner': winner}\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "alphago-l01-tromp-taylor-result-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "board": [
+          [
+            1,
+            0,
+            2
+          ],
+          [
+            1,
+            0,
+            2
+          ],
+          [
+            1,
+            0,
+            2
+          ]
+        ],
+        "komi": 0.5
+      },
+      "expectedOutput": {
+        "black_score": 3.0,
+        "white_score": 3.5,
+        "winner": 2
+      },
+      "isPublic": true
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "board": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "komi": 7.5
+      },
+      "expectedOutput": {
+        "black_score": 9.0,
+        "white_score": 7.5,
+        "winner": 1
+      },
+      "isPublic": true
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "board": [
+          [
+            2,
+            0,
+            4
+          ],
+          [
+            2,
+            0,
+            4
+          ],
+          [
+            2,
+            0,
+            4
+          ]
+        ],
+        "komi": 1.0
+      },
+      "expectedOutput": {
+        "black_score": 0.0,
+        "white_score": 4.0,
+        "winner": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "board": [
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            1
+          ]
+        ],
+        "komi": 0.25
+      },
+      "expectedOutput": {
+        "black_score": 9.0,
+        "white_score": 0.25,
+        "winner": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "board": [
+          [
+            -1,
+            0,
+            -2
+          ],
+          [
+            -1,
+            0,
+            -2
+          ],
+          [
+            -1,
+            0,
+            -2
+          ]
+        ],
+        "komi": -0.5
+      },
+      "expectedOutput": {
+        "black_score": 0.0,
+        "white_score": -0.5,
+        "winner": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "board": [
+          [
+            3,
+            0,
+            6
+          ],
+          [
+            3,
+            0,
+            6
+          ],
+          [
+            3,
+            0,
+            6
+          ]
+        ],
+        "komi": 1.5
+      },
+      "expectedOutput": {
+        "black_score": 0.0,
+        "white_score": 1.5,
+        "winner": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "board": [
+          [
+            2.0,
+            1.0,
+            3.0
+          ],
+          [
+            2.0,
+            1.0,
+            3.0
+          ],
+          [
+            2.0,
+            1.0,
+            3.0
+          ]
+        ],
+        "komi": 1.5
+      },
+      "expectedOutput": {
+        "black_score": 3.0,
+        "white_score": 4.5,
+        "winner": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "board": [
+          [
+            -1.0,
+            -2.0,
+            0.0
+          ],
+          [
+            -1.0,
+            -2.0,
+            0.0
+          ],
+          [
+            -1.0,
+            -2.0,
+            0.0
+          ]
+        ],
+        "komi": -1.5
+      },
+      "expectedOutput": {
+        "black_score": 0.0,
+        "white_score": -1.5,
+        "winner": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "board": [
+          [
+            2,
+            0,
+            1
+          ],
+          [
+            2,
+            0,
+            1
+          ],
+          [
+            2,
+            0,
+            1
+          ]
+        ],
+        "komi": 0.5
+      },
+      "expectedOutput": {
+        "black_score": 3.0,
+        "white_score": 3.5,
+        "winner": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "board": [
+          [
+            -1,
+            0,
+            -2
+          ],
+          [
+            -1,
+            0,
+            -2
+          ],
+          [
+            -1,
+            0,
+            -2
+          ]
+        ],
+        "komi": -0.5
+      },
+      "expectedOutput": {
+        "black_score": 0.0,
+        "white_score": -0.5,
+        "winner": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "board": [
+          [
+            10,
+            0,
+            20
+          ],
+          [
+            10,
+            0,
+            20
+          ],
+          [
+            10,
+            0,
+            20
+          ]
+        ],
+        "komi": 5.0
+      },
+      "expectedOutput": {
+        "black_score": 0.0,
+        "white_score": 5.0,
+        "winner": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "board": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "komi": 0.05
+      },
+      "expectedOutput": {
+        "black_score": 0.0,
+        "white_score": 0.05,
+        "winner": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "board": [
+          [
+            6.0,
+            5.0,
+            7.0
+          ],
+          [
+            6.0,
+            5.0,
+            7.0
+          ],
+          [
+            6.0,
+            5.0,
+            7.0
+          ]
+        ],
+        "komi": 5.5
+      },
+      "expectedOutput": {
+        "black_score": 0.0,
+        "white_score": 5.5,
+        "winner": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "board": [
+          [
+            2,
+            0,
+            3
+          ],
+          [
+            2,
+            0,
+            3
+          ],
+          [
+            2,
+            0,
+            3
+          ]
+        ],
+        "komi": 0.75
+      },
+      "expectedOutput": {
+        "black_score": 0.0,
+        "white_score": 3.75,
+        "winner": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "board": [
+          [
+            -2,
+            0,
+            -4
+          ],
+          [
+            -2,
+            0,
+            -4
+          ],
+          [
+            -2,
+            0,
+            -4
+          ]
+        ],
+        "komi": -1.0
+      },
+      "expectedOutput": {
+        "black_score": 0.0,
+        "white_score": -1.0,
+        "winner": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "board": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "komi": 0.125
+      },
+      "expectedOutput": {
+        "black_score": 0.0,
+        "white_score": 0.125,
+        "winner": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "board": [
+          [
+            0.0,
+            -1.0,
+            1.0
+          ],
+          [
+            0.0,
+            -1.0,
+            1.0
+          ],
+          [
+            0.0,
+            -1.0,
+            1.0
+          ]
+        ],
+        "komi": -0.5
+      },
+      "expectedOutput": {
+        "black_score": 3.0,
+        "white_score": -0.5,
+        "winner": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "board": [
+          [
+            4,
+            0,
+            8
+          ],
+          [
+            4,
+            0,
+            8
+          ],
+          [
+            4,
+            0,
+            8
+          ]
+        ],
+        "komi": 2.0
+      },
+      "expectedOutput": {
+        "black_score": 0.0,
+        "white_score": 2.0,
+        "winner": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "board": [
+          [
+            1,
+            0,
+            2
+          ],
+          [
+            1,
+            0,
+            2
+          ],
+          [
+            1,
+            0,
+            2
+          ]
+        ],
+        "komi": 0.375
+      },
+      "expectedOutput": {
+        "black_score": 3.0,
+        "white_score": 3.375,
+        "winner": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l01-tromp-taylor-result-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "board": [
+          [
+            5,
+            0,
+            10
+          ],
+          [
+            5,
+            0,
+            10
+          ],
+          [
+            5,
+            0,
+            10
+          ]
+        ],
+        "komi": 2.5
+      },
+      "expectedOutput": {
+        "black_score": 0.0,
+        "white_score": 2.5,
+        "winner": 2
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "alphago_l01_tromp_taylor_result",
+    "parameters": [
+      {
+        "name": "board",
+        "type": "any"
+      },
+      {
+        "name": "komi",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/alphago-l01-tromp-taylor-result",
+  "localUrl": "http://localhost:3000/problems/alphago-l01-tromp-taylor-result"
+}

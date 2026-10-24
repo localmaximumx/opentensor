@@ -1,0 +1,1070 @@
+{
+  "catalogId": "python:cv-miou",
+  "id": "cv-miou",
+  "sourceId": "cv-miou",
+  "slug": "cv-miou",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Mean IoU for Segmentation",
+  "difficulty": "Easy",
+  "tags": [
+    "Metrics & Evaluation",
+    "Computer Vision"
+  ],
+  "isFree": false,
+  "planId": "cracking-cv",
+  "planTitle": "Cracking CV",
+  "sectionId": "cracking-cv-modern-cv-and-vit",
+  "sortOrder": 203,
+  "seoDescription": "Compute the mean Intersection-over-Union (mIoU) for a semantic segmentation prediction.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Calculate per-class IoU and overall mean IoU across 2D semantic segmentation prediction masks.\n\nmIoU balances evaluation across large background regions and small foreground target objects.\n\n### Mathematical Formulation\n$$\n\\operatorname{IoU}_c = \\frac{\\operatorname{TP}_c}{\\operatorname{TP}_c + \\operatorname{FP}_c + \\operatorname{FN}_c}, \\quad \\operatorname{mIoU} = \\frac{1}{K}\\sum_{c=1}^K \\operatorname{IoU}_c\n$$\n\n### Step-by-Step Implementation\n1. Compute true positive intersection and union pixel counts for each class c\n2. Calculate per-class IoU ratio\n3. Average per-class IoU scores across all segmentation categories\n\n### Returns\nDictionary with 'class_ious' mapping and scalar 'mean_iou'.",
+  "theory": "## Understanding the Theory: Mean IoU for Segmentation\n\n### Core Intuition: Why Do We Need This?\nImages have unique spatial properties: neighboring pixels are strongly correlated, and visual patterns (like edges, corners, or textures) appear anywhere in an image. Computer vision algorithms use spatial inductive biases like translation equivariance and local receptive fields to process image grids efficiently. **Mean IoU for Segmentation** operates directly on spatial coordinates or bounding box geometries.\n\nmIoU balances evaluation across large background regions and small foreground target objects. In this problem, the goal is to: calculate per-class iou and overall mean iou across 2d semantic segmentation prediction masks.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\operatorname{IoU}_c = \\frac{\\operatorname{TP}_c}{\\operatorname{TP}_c + \\operatorname{FP}_c + \\operatorname{FN}_c}, \\quad \\operatorname{mIoU} = \\frac{1}{K}\\sum_{c=1}^K \\operatorname{IoU}_c\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute true positive intersection and union pixel counts for each class c\n2. **Phase 2**: Calculate per-class IoU ratio\n3. **Phase 3**: Average per-class IoU scores across all segmentation categories\n\n### Practical Machine Learning Applications & Nuances\n* **Spatial Locality**: Sliding spatial filters across multi-channel feature maps aggregates contextual clues across local neighborhoods.\n* **Object Detection Pipelines**: Bounding box metrics (such as IoU and Non-Maximum Suppression) reconcile duplicate candidate detections into clean, final predictions.\n* **Data Augmentation**: Geometric transformations expose models to diverse spatial viewpoints, significantly improving generalization to unseen test images.",
+  "examples": [
+    "Input: pred_mask = [[0, 0, 1], [0, 1, 1], [1, 1, 1]], target_mask = [[0, 0, 0], [0, 1, 1], [1, 1, 1]], num_classes = 2\n\nOutput: {\"class_ious\": {\"0\": 0.75, \"1\": 0.8333}, \"mean_iou\": 0.7917}\n\nExplanation: Evaluated cv_miou under standard test conditions."
+  ],
+  "requirements": "* Function must be named `cv_miou`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `cv_miou`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import torch\n\ndef cv_miou(pred_mask: list, target_mask: list, num_classes: int = 3) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Mean IoU for Segmentation** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cv_miou(pred_mask: list, target_mask: list, num_classes: int = 3) -> dict:\n    p, t = np.array(pred_mask, dtype=np.int64).flatten(), np.array(target_mask, dtype=np.int64).flatten()\n    ious = {}\n    for c in range(int(num_classes)):\n        u = np.sum((p == c) | (t == c))\n        ious[c] = round(float(np.sum((p == c) & (t == c))) / float(u) if u > 0 else 1.0, 4)\n    return {'class_ious': ious, 'mean_iou': round(float(np.mean(list(ious.values()))), 4)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "3x3 mask with 2 classes",
+      "inputs": {
+        "pred_mask": [
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "num_classes": 2
+      },
+      "expectedOutput": {
+        "class_ious": {
+          "0": 0.75,
+          "1": 0.8333
+        },
+        "mean_iou": 0.7917
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cv-miou-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "pred_mask": [
+          [
+            0,
+            0,
+            2
+          ],
+          [
+            0,
+            2,
+            2
+          ],
+          [
+            2,
+            2,
+            2
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            2,
+            2
+          ],
+          [
+            2,
+            2,
+            2
+          ]
+        ],
+        "num_classes": 4
+      },
+      "expectedOutput": {
+        "class_ious": {
+          "0": 0.75,
+          "1": 1.0,
+          "2": 0.8333,
+          "3": 1.0
+        },
+        "mean_iou": 0.8958
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cv-miou-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "pred_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "num_classes": 1
+      },
+      "expectedOutput": {
+        "class_ious": {
+          "0": 1.0
+        },
+        "mean_iou": 1.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "pred_mask": [
+          [
+            0,
+            0,
+            -1
+          ],
+          [
+            0,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        "num_classes": -2
+      },
+      "expectedOutput": {
+        "class_ious": {},
+        "mean_iou": 0.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "pred_mask": [
+          [
+            0,
+            0,
+            3
+          ],
+          [
+            0,
+            3,
+            3
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            3,
+            3
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ],
+        "num_classes": 6
+      },
+      "expectedOutput": {
+        "class_ious": {
+          "0": 0.75,
+          "1": 1.0,
+          "2": 1.0,
+          "3": 0.8333,
+          "4": 1.0,
+          "5": 1.0
+        },
+        "mean_iou": 0.9305
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "pred_mask": [
+          [
+            1.0,
+            1.0,
+            2.0
+          ],
+          [
+            1.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0
+          ]
+        ],
+        "target_mask": [
+          [
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            2.0
+          ]
+        ],
+        "num_classes": 3.0
+      },
+      "expectedOutput": {
+        "class_ious": {
+          "0": 1.0,
+          "1": 0.75,
+          "2": 0.8333
+        },
+        "mean_iou": 0.8611
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "pred_mask": [
+          [
+            -2.0,
+            -2.0,
+            -1.0
+          ],
+          [
+            -2.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ],
+        "target_mask": [
+          [
+            -2.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ],
+        "num_classes": 0.0
+      },
+      "expectedOutput": {
+        "class_ious": {},
+        "mean_iou": 0.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "pred_mask": [
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            1,
+            1,
+            0
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            1,
+            0
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "num_classes": 2
+      },
+      "expectedOutput": {
+        "class_ious": {
+          "0": 0.75,
+          "1": 0.8333
+        },
+        "mean_iou": 0.7916
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "pred_mask": [
+          [
+            0,
+            0,
+            -1
+          ],
+          [
+            0,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        "num_classes": -2
+      },
+      "expectedOutput": {
+        "class_ious": {},
+        "mean_iou": 0.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "pred_mask": [
+          [
+            0,
+            0,
+            10
+          ],
+          [
+            0,
+            10,
+            10
+          ],
+          [
+            10,
+            10,
+            10
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            10,
+            10
+          ],
+          [
+            10,
+            10,
+            10
+          ]
+        ],
+        "num_classes": 20
+      },
+      "expectedOutput": {
+        "class_ious": {
+          "0": 0.75,
+          "1": 1.0,
+          "2": 1.0,
+          "3": 1.0,
+          "4": 1.0,
+          "5": 1.0,
+          "6": 1.0,
+          "7": 1.0,
+          "8": 1.0,
+          "9": 1.0,
+          "10": 0.8333,
+          "11": 1.0,
+          "12": 1.0,
+          "13": 1.0,
+          "14": 1.0,
+          "15": 1.0,
+          "16": 1.0,
+          "17": 1.0,
+          "18": 1.0,
+          "19": 1.0
+        },
+        "mean_iou": 0.9792
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "pred_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "num_classes": 0
+      },
+      "expectedOutput": {
+        "class_ious": {},
+        "mean_iou": 0.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "pred_mask": [
+          [
+            5.0,
+            5.0,
+            6.0
+          ],
+          [
+            5.0,
+            6.0,
+            6.0
+          ],
+          [
+            6.0,
+            6.0,
+            6.0
+          ]
+        ],
+        "target_mask": [
+          [
+            5.0,
+            5.0,
+            5.0
+          ],
+          [
+            5.0,
+            6.0,
+            6.0
+          ],
+          [
+            6.0,
+            6.0,
+            6.0
+          ]
+        ],
+        "num_classes": 7.0
+      },
+      "expectedOutput": {
+        "class_ious": {
+          "0": 1.0,
+          "1": 1.0,
+          "2": 1.0,
+          "3": 1.0,
+          "4": 1.0,
+          "5": 0.75,
+          "6": 0.8333
+        },
+        "mean_iou": 0.9405
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "pred_mask": [
+          [
+            0,
+            0,
+            2
+          ],
+          [
+            0,
+            2,
+            2
+          ],
+          [
+            2,
+            2,
+            2
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            2,
+            2
+          ],
+          [
+            2,
+            2,
+            2
+          ]
+        ],
+        "num_classes": 3
+      },
+      "expectedOutput": {
+        "class_ious": {
+          "0": 0.75,
+          "1": 1.0,
+          "2": 0.8333
+        },
+        "mean_iou": 0.8611
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "pred_mask": [
+          [
+            0,
+            0,
+            -2
+          ],
+          [
+            0,
+            -2,
+            -2
+          ],
+          [
+            -2,
+            -2,
+            -2
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            -2,
+            -2
+          ],
+          [
+            -2,
+            -2,
+            -2
+          ]
+        ],
+        "num_classes": -4
+      },
+      "expectedOutput": {
+        "class_ious": {},
+        "mean_iou": 0.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "pred_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "num_classes": 0
+      },
+      "expectedOutput": {
+        "class_ious": {},
+        "mean_iou": 0.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "pred_mask": [
+          [
+            -1.0,
+            -1.0,
+            0.0
+          ],
+          [
+            -1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "target_mask": [
+          [
+            -1.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "num_classes": 1.0
+      },
+      "expectedOutput": {
+        "class_ious": {
+          "0": 0.8333
+        },
+        "mean_iou": 0.8333
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "pred_mask": [
+          [
+            0,
+            0,
+            4
+          ],
+          [
+            0,
+            4,
+            4
+          ],
+          [
+            4,
+            4,
+            4
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            4,
+            4
+          ],
+          [
+            4,
+            4,
+            4
+          ]
+        ],
+        "num_classes": 8
+      },
+      "expectedOutput": {
+        "class_ious": {
+          "0": 0.75,
+          "1": 1.0,
+          "2": 1.0,
+          "3": 1.0,
+          "4": 0.8333,
+          "5": 1.0,
+          "6": 1.0,
+          "7": 1.0
+        },
+        "mean_iou": 0.9479
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "pred_mask": [
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "num_classes": 2
+      },
+      "expectedOutput": {
+        "class_ious": {
+          "0": 0.75,
+          "1": 0.8333
+        },
+        "mean_iou": 0.7916
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "pred_mask": [
+          [
+            0,
+            0,
+            5
+          ],
+          [
+            0,
+            5,
+            5
+          ],
+          [
+            5,
+            5,
+            5
+          ]
+        ],
+        "target_mask": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            5,
+            5
+          ],
+          [
+            5,
+            5,
+            5
+          ]
+        ],
+        "num_classes": 10
+      },
+      "expectedOutput": {
+        "class_ious": {
+          "0": 0.75,
+          "1": 1.0,
+          "2": 1.0,
+          "3": 1.0,
+          "4": 1.0,
+          "5": 0.8333,
+          "6": 1.0,
+          "7": 1.0,
+          "8": 1.0,
+          "9": 1.0
+        },
+        "mean_iou": 0.9583
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-miou-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "pred_mask": [
+          [
+            10.0,
+            10.0,
+            11.0
+          ],
+          [
+            10.0,
+            11.0,
+            11.0
+          ],
+          [
+            11.0,
+            11.0,
+            11.0
+          ]
+        ],
+        "target_mask": [
+          [
+            10.0,
+            10.0,
+            10.0
+          ],
+          [
+            10.0,
+            11.0,
+            11.0
+          ],
+          [
+            11.0,
+            11.0,
+            11.0
+          ]
+        ],
+        "num_classes": 12.0
+      },
+      "expectedOutput": {
+        "class_ious": {
+          "0": 1.0,
+          "1": 1.0,
+          "2": 1.0,
+          "3": 1.0,
+          "4": 1.0,
+          "5": 1.0,
+          "6": 1.0,
+          "7": 1.0,
+          "8": 1.0,
+          "9": 1.0,
+          "10": 0.75,
+          "11": 0.8333
+        },
+        "mean_iou": 0.9653
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cv_miou",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

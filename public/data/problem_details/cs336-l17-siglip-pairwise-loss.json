@@ -1,0 +1,659 @@
+{
+  "id": "cs336-l17-siglip-pairwise-loss",
+  "slug": "cs336-l17-siglip-pairwise-loss",
+  "title": "SigLIP Pairwise Sigmoid Contrastive Loss",
+  "cleanTitle": "SigLIP Pairwise Sigmoid Contrastive Loss",
+  "category": "pytorch",
+  "difficulty": "Medium",
+  "tags": [
+    "Loss Functions",
+    "Language Models",
+    "Computer Vision"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "language-modeling-from-scratch",
+    "title": "Language Modeling from Scratch",
+    "sectionId": "cs336-l17"
+  },
+  "seoDescription": "Compute SigLIP's independent pairwise logistic loss for normalized image and text embeddings.",
+  "description": "Compute SigLIP pairwise logistic loss treating image-text matching as independent binary classifications across all batch pairs without global normalization.\n\n**Mathematical Formulation:**\n\n$$\n\\mathcal{L}_{\\text{SigLIP}} = -\\frac{1}{N} \\sum_{i, j} \\log \\sigma\\left( z_{ij} (s \\cdot I_i^\\top T_j + b) \\right)\n$$\n\n**Step-by-Step Implementation:**\n1. Compute pairwise cosine similarity matrix between normalized image and text embeddings.\n2. Scale similarities and add learnable bias term b.\n3. Apply binary logistic loss across positive matched pairs and negative mismatched pairs.\n4. Return mean pairwise logistic loss.\n\n**Returns:** Float representing SigLIP contrastive loss.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Implement the SigLIP Pairwise Loss specification."
+  ],
+  "requirements": "* Must implement `cs336_l17_siglip_pairwise_loss` using PYTORCH.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: SigLIP Pairwise Sigmoid Contrastive Loss\n\n### Core Intuition: Why Do We Need This?\nCompute SigLIP pairwise logistic loss treating image-text matching as independent binary classifications across all batch pairs without global normalization. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\n\\mathcal{L}_{\\text{SigLIP}} = -\\frac{1}{N} \\sum_{i, j} \\log \\sigma\\left( z_{ij} (s \\cdot I_i^\\top T_j + b) \\right)\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Compute pairwise cosine similarity matrix between normalized image and text embeddings.\n3. **Phase 3: Iterative Execution & Reduction**: Scale similarities and add learnable bias term b.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return mean pairwise logistic loss.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard PYTORCH documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `torch.Tensor` specifications."
+  ],
+  "constraints": "* Category: PYTORCH\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, PYTORCH\n",
+  "starterCode": "import numpy as np\n\ndef cs336_l17_siglip_pairwise_loss(image_features: list, text_features: list, scale: float = 1.0, bias: float = 0.0) -> float:\n    \"\"\"\n    Compute SigLIP pairwise logistic loss treating image-text matching as independent binary classifications across all batch pairs without global normalization.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nCompute SigLIP pairwise logistic loss treating image-text matching as independent binary classifications across all batch pairs without global normalization.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cs336_l17_siglip_pairwise_loss(image_features: list, text_features: list, scale: float = 1.0, bias: float = 0.0) -> float:\n    I = np.array(image_features, dtype=float) / (np.linalg.norm(image_features, axis=-1, keepdims=True) + 1e-12)\n    T = np.array(text_features, dtype=float) / (np.linalg.norm(text_features, axis=-1, keepdims=True) + 1e-12)\n    logits = np.dot(I, T.T) * scale + bias\n    labels = 2.0 * np.eye(len(logits)) - 1.0\n    return round(float(-np.mean(np.log(1.0 / (1.0 + np.exp(-labels * logits))))), 6)\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "image_features": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "text_features": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "scale": 1.0,
+        "bias": 0.0
+      },
+      "expectedOutput": 0.503204,
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "image_features": [
+          [
+            0.707,
+            0.707
+          ]
+        ],
+        "text_features": [
+          [
+            0.707,
+            0.707
+          ]
+        ],
+        "scale": 2.0,
+        "bias": -1.0
+      },
+      "expectedOutput": 0.313262,
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "image_features": [
+          [
+            2.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "text_features": [
+          [
+            2.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "scale": 2.0,
+        "bias": 0.0
+      },
+      "expectedOutput": 0.410038,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "image_features": [
+          [
+            0.5,
+            0.0
+          ],
+          [
+            0.0,
+            0.5
+          ]
+        ],
+        "text_features": [
+          [
+            0.5,
+            0.0
+          ],
+          [
+            0.0,
+            0.5
+          ]
+        ],
+        "scale": 0.5,
+        "bias": 0.0
+      },
+      "expectedOutput": 0.583612,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "image_features": [
+          [
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0
+          ]
+        ],
+        "text_features": [
+          [
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0
+          ]
+        ],
+        "scale": -1.0,
+        "bias": -0.0
+      },
+      "expectedOutput": 1.003204,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "image_features": [
+          [
+            3.0,
+            0.0
+          ],
+          [
+            0.0,
+            3.0
+          ]
+        ],
+        "text_features": [
+          [
+            3.0,
+            0.0
+          ],
+          [
+            0.0,
+            3.0
+          ]
+        ],
+        "scale": 3.0,
+        "bias": 0.0
+      },
+      "expectedOutput": 0.370867,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "image_features": [
+          [
+            2.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0
+          ]
+        ],
+        "text_features": [
+          [
+            2.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0
+          ]
+        ],
+        "scale": 2.0,
+        "bias": 1.0
+      },
+      "expectedOutput": 1.360116,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "image_features": [
+          [
+            -1.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -1.0
+          ]
+        ],
+        "text_features": [
+          [
+            -1.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -1.0
+          ]
+        ],
+        "scale": -1.0,
+        "bias": -2.0
+      },
+      "expectedOutput": 1.55381,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "image_features": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        "text_features": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        "scale": 1.0,
+        "bias": 0.0
+      },
+      "expectedOutput": 0.503204,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "image_features": [
+          [
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0
+          ]
+        ],
+        "text_features": [
+          [
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0
+          ]
+        ],
+        "scale": -1.0,
+        "bias": -0.0
+      },
+      "expectedOutput": 1.003204,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "image_features": [
+          [
+            10.0,
+            0.0
+          ],
+          [
+            0.0,
+            10.0
+          ]
+        ],
+        "text_features": [
+          [
+            10.0,
+            0.0
+          ],
+          [
+            0.0,
+            10.0
+          ]
+        ],
+        "scale": 10.0,
+        "bias": 0.0
+      },
+      "expectedOutput": 0.346596,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "image_features": [
+          [
+            0.1,
+            0.0
+          ],
+          [
+            0.0,
+            0.1
+          ]
+        ],
+        "text_features": [
+          [
+            0.1,
+            0.0
+          ],
+          [
+            0.0,
+            0.1
+          ]
+        ],
+        "scale": 0.1,
+        "bias": 0.0
+      },
+      "expectedOutput": 0.668772,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "image_features": [
+          [
+            6.0,
+            5.0
+          ],
+          [
+            5.0,
+            6.0
+          ]
+        ],
+        "text_features": [
+          [
+            6.0,
+            5.0
+          ],
+          [
+            5.0,
+            6.0
+          ]
+        ],
+        "scale": 6.0,
+        "bias": 5.0
+      },
+      "expectedOutput": 5.450837,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "image_features": [
+          [
+            1.5,
+            0.0
+          ],
+          [
+            0.0,
+            1.5
+          ]
+        ],
+        "text_features": [
+          [
+            1.5,
+            0.0
+          ],
+          [
+            0.0,
+            1.5
+          ]
+        ],
+        "scale": 1.5,
+        "bias": 0.0
+      },
+      "expectedOutput": 0.44728,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "image_features": [
+          [
+            -2.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -2.0
+          ]
+        ],
+        "text_features": [
+          [
+            -2.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -2.0
+          ]
+        ],
+        "scale": -2.0,
+        "bias": -0.0
+      },
+      "expectedOutput": 1.410038,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "image_features": [
+          [
+            0.25,
+            0.0
+          ],
+          [
+            0.0,
+            0.25
+          ]
+        ],
+        "text_features": [
+          [
+            0.25,
+            0.0
+          ],
+          [
+            0.0,
+            0.25
+          ]
+        ],
+        "scale": 0.25,
+        "bias": 0.0
+      },
+      "expectedOutput": 0.634543,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "image_features": [
+          [
+            0.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            0.0
+          ]
+        ],
+        "text_features": [
+          [
+            0.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            0.0
+          ]
+        ],
+        "scale": 0.0,
+        "bias": -1.0
+      },
+      "expectedOutput": 0.813262,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "image_features": [
+          [
+            4.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.0
+          ]
+        ],
+        "text_features": [
+          [
+            4.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.0
+          ]
+        ],
+        "scale": 4.0,
+        "bias": 0.0
+      },
+      "expectedOutput": 0.355649,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "image_features": [
+          [
+            0.75,
+            0.0
+          ],
+          [
+            0.0,
+            0.75
+          ]
+        ],
+        "text_features": [
+          [
+            0.75,
+            0.0
+          ],
+          [
+            0.0,
+            0.75
+          ]
+        ],
+        "scale": 0.75,
+        "bias": 0.0
+      },
+      "expectedOutput": 0.540009,
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l17-siglip-pairwise-loss-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "image_features": [
+          [
+            5.0,
+            0.0
+          ],
+          [
+            0.0,
+            5.0
+          ]
+        ],
+        "text_features": [
+          [
+            5.0,
+            0.0
+          ],
+          [
+            0.0,
+            5.0
+          ]
+        ],
+        "scale": 5.0,
+        "bias": 0.0
+      },
+      "expectedOutput": 0.349931,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cs336_l17_siglip_pairwise_loss",
+    "parameters": [
+      {
+        "name": "image_features",
+        "type": "any"
+      },
+      {
+        "name": "text_features",
+        "type": "any"
+      },
+      {
+        "name": "scale",
+        "type": "any"
+      },
+      {
+        "name": "bias",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/cs336-l17-siglip-pairwise-loss",
+  "localUrl": "http://localhost:3000/problems/cs336-l17-siglip-pairwise-loss"
+}

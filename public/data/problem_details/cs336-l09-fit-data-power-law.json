@@ -1,0 +1,545 @@
+{
+  "id": "cs336-l09-fit-data-power-law",
+  "slug": "cs336-l09-fit-data-power-law",
+  "title": "Fit a Positive-Decay Data Scaling Law",
+  "cleanTitle": "Fit a Positive-Decay Data Scaling Law",
+  "category": "pytorch",
+  "difficulty": "Hard",
+  "tags": [
+    "Scaling Laws",
+    "Language Models",
+    "Probability and Statistics"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "language-modeling-from-scratch",
+    "title": "Language Modeling from Scratch",
+    "sectionId": "cs336-l09"
+  },
+  "seoDescription": "Fit a positive-decay data scaling law over supplied irreducible-loss candidates and predict loss at target data sizes.",
+  "description": "Fit an empirical power-law relationship between training dataset size and test loss, extrapolating loss at target data regimes.\n\n**Mathematical Formulation:**\n\n$$\nL(D) = E + \\frac{B}{D^\\beta}, \\quad \\log(L(D) - E) = \\log B - \\beta \\log D\n$$\n\n**Step-by-Step Implementation:**\n1. Subtract irreducible loss constant E from measured loss values.\n2. Take logarithms of dataset sizes and excess loss values.\n3. Perform linear regression in log-log space to extract power-law exponent beta and coefficient B.\n4. Predict test loss at target dataset scale.\n\n**Returns:** Dictionary with keys 'alpha_decay', 'scaling_coefficient', and 'predicted_loss'.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Fit a Data Power Law with a Noise Floor specification."
+  ],
+  "requirements": "* Must implement `cs336_l09_fit_data_power_law` using PYTORCH.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Fit a Positive-Decay Data Scaling Law\n\n### Core Intuition: Why Do We Need This?\nFit an empirical power-law relationship between training dataset size and test loss, extrapolating loss at target data regimes. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\nL(D) = E + \\frac{B}{D^\\beta}, \\quad \\log(L(D) - E) = \\log B - \\beta \\log D\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Subtract irreducible loss constant E from measured loss values.\n3. **Phase 3: Iterative Execution & Reduction**: Take logarithms of dataset sizes and excess loss values.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Predict test loss at target dataset scale.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard PYTORCH documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `torch.Tensor` specifications."
+  ],
+  "constraints": "* Category: PYTORCH\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, PYTORCH\n",
+  "starterCode": "import numpy as np\n\ndef cs336_l09_fit_data_power_law(data_sizes: list, losses: list, target_data_size: float, irreducible_loss: float = 1.5) -> dict:\n    \"\"\"\n    Fit an empirical power-law relationship between training dataset size and test loss, extrapolating loss at target data regimes.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nFit an empirical power-law relationship between training dataset size and test loss, extrapolating loss at target data regimes.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cs336_l09_fit_data_power_law(data_sizes: list, losses: list, target_data_size: float, irreducible_loss: float = 1.5) -> dict:\n    x = np.log(np.array(data_sizes, dtype=float))\n    y = np.log(np.maximum(1e-12, np.array(losses, dtype=float) - irreducible_loss))\n    slope, intercept = np.polyfit(x, y, 1)\n    b, B = -slope, np.exp(intercept)\n    pred = irreducible_loss + B * (target_data_size ** (-b))\n    return {'alpha_decay': round(float(b), 6), 'scaling_coefficient': round(float(B), 6), 'predicted_loss': round(float(pred), 6)}\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "cs336-l09-fit-data-power-law-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "data_sizes": [
+          1000000.0,
+          10000000.0,
+          100000000.0
+        ],
+        "losses": [
+          2.5,
+          2.0,
+          1.75
+        ],
+        "target_data_size": 1000000000.0,
+        "irreducible_loss": 1.5
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 64.0,
+        "predicted_loss": 1.625
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "data_sizes": [
+          10.0,
+          100.0
+        ],
+        "losses": [
+          5.0,
+          3.0
+        ],
+        "target_data_size": 1000.0,
+        "irreducible_loss": 1.0
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 8.0,
+        "predicted_loss": 2.0
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "data_sizes": [
+          2000000.0,
+          20000000.0,
+          200000000.0
+        ],
+        "losses": [
+          5.0,
+          4.0,
+          3.5
+        ],
+        "target_data_size": 2000000000.0,
+        "irreducible_loss": 3.0
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 157.699032,
+        "predicted_loss": 3.25
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "data_sizes": [
+          500000.0,
+          5000000.0,
+          50000000.0
+        ],
+        "losses": [
+          1.25,
+          1.0,
+          0.875
+        ],
+        "target_data_size": 500000000.0,
+        "irreducible_loss": 0.75
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 25.973527,
+        "predicted_loss": 0.8125
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "data_sizes": [
+          -1000000.0,
+          -10000000.0,
+          -100000000.0
+        ],
+        "losses": [
+          -2.5,
+          -2.0,
+          -1.75
+        ],
+        "target_data_size": -1000000000.0,
+        "irreducible_loss": -1.5
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 64.0,
+        "predicted_loss": 1.625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "data_sizes": [
+          3000000.0,
+          30000000.0,
+          300000000.0
+        ],
+        "losses": [
+          7.5,
+          6.0,
+          5.25
+        ],
+        "target_data_size": 3000000000.0,
+        "irreducible_loss": 4.5
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 267.256969,
+        "predicted_loss": 4.875
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "data_sizes": [
+          1000001.0,
+          10000001.0,
+          100000001.0
+        ],
+        "losses": [
+          3.5,
+          3.0,
+          2.75
+        ],
+        "target_data_size": 1000000001.0,
+        "irreducible_loss": 2.5
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 64.000074,
+        "predicted_loss": 2.625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "data_sizes": [
+          999998.0,
+          9999998.0,
+          99999998.0
+        ],
+        "losses": [
+          0.5,
+          0.0,
+          -0.25
+        ],
+        "target_data_size": 999999998.0,
+        "irreducible_loss": -0.5
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 63.999852,
+        "predicted_loss": -0.375
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "data_sizes": [
+          100000000.0,
+          10000000.0,
+          1000000.0
+        ],
+        "losses": [
+          1.75,
+          2.0,
+          2.5
+        ],
+        "target_data_size": 1000000000.0,
+        "irreducible_loss": 1.5
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 64.0,
+        "predicted_loss": 1.625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "data_sizes": [
+          -1000000.0,
+          -10000000.0,
+          -100000000.0
+        ],
+        "losses": [
+          -2.5,
+          -2.0,
+          -1.75
+        ],
+        "target_data_size": -1000000000.0,
+        "irreducible_loss": -1.5
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 64.0,
+        "predicted_loss": 1.625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "data_sizes": [
+          10000000.0,
+          100000000.0,
+          1000000000.0
+        ],
+        "losses": [
+          25.0,
+          20.0,
+          17.5
+        ],
+        "target_data_size": 10000000000.0,
+        "irreducible_loss": 15.0
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 1280.0,
+        "predicted_loss": 16.25
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "data_sizes": [
+          100000.0,
+          1000000.0,
+          10000000.0
+        ],
+        "losses": [
+          0.25,
+          0.2,
+          0.175
+        ],
+        "target_data_size": 100000000.0,
+        "irreducible_loss": 0.15
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 3.2,
+        "predicted_loss": 0.1625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "data_sizes": [
+          1000005.0,
+          10000005.0,
+          100000005.0
+        ],
+        "losses": [
+          7.5,
+          7.0,
+          6.75
+        ],
+        "target_data_size": 1000000005.0,
+        "irreducible_loss": 6.5
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 64.000369,
+        "predicted_loss": 6.625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "data_sizes": [
+          1500000.0,
+          15000000.0,
+          150000000.0
+        ],
+        "losses": [
+          3.75,
+          3.0,
+          2.625
+        ],
+        "target_data_size": 1500000000.0,
+        "irreducible_loss": 2.25
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 108.462593,
+        "predicted_loss": 2.4375
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "data_sizes": [
+          -2000000.0,
+          -20000000.0,
+          -200000000.0
+        ],
+        "losses": [
+          -5.0,
+          -4.0,
+          -3.5
+        ],
+        "target_data_size": -2000000000.0,
+        "irreducible_loss": -3.0
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 64.0,
+        "predicted_loss": 1.625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "data_sizes": [
+          250000.0,
+          2500000.0,
+          25000000.0
+        ],
+        "losses": [
+          0.625,
+          0.5,
+          0.4375
+        ],
+        "target_data_size": 250000000.0,
+        "irreducible_loss": 0.375
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 10.541001,
+        "predicted_loss": 0.40625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "data_sizes": [
+          999999.0,
+          9999999.0,
+          99999999.0
+        ],
+        "losses": [
+          1.5,
+          1.0,
+          0.75
+        ],
+        "target_data_size": 999999999.0,
+        "irreducible_loss": 0.5
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 63.999926,
+        "predicted_loss": 0.625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "data_sizes": [
+          4000000.0,
+          40000000.0,
+          400000000.0
+        ],
+        "losses": [
+          10.0,
+          8.0,
+          7.0
+        ],
+        "target_data_size": 4000000000.0,
+        "irreducible_loss": 6.0
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 388.577887,
+        "predicted_loss": 6.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "data_sizes": [
+          750000.0,
+          7500000.0,
+          75000000.0
+        ],
+        "losses": [
+          1.875,
+          1.5,
+          1.3125
+        ],
+        "target_data_size": 750000000.0,
+        "irreducible_loss": 1.125
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 44.018063,
+        "predicted_loss": 1.21875
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l09-fit-data-power-law-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "data_sizes": [
+          5000000.0,
+          50000000.0,
+          500000000.0
+        ],
+        "losses": [
+          12.5,
+          10.0,
+          8.75
+        ],
+        "target_data_size": 5000000000.0,
+        "irreducible_loss": 7.5
+      },
+      "expectedOutput": {
+        "alpha_decay": 0.30103,
+        "scaling_coefficient": 519.470531,
+        "predicted_loss": 8.125
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cs336_l09_fit_data_power_law",
+    "parameters": [
+      {
+        "name": "data_sizes",
+        "type": "any"
+      },
+      {
+        "name": "losses",
+        "type": "any"
+      },
+      {
+        "name": "target_data_size",
+        "type": "any"
+      },
+      {
+        "name": "irreducible_loss",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/cs336-l09-fit-data-power-law",
+  "localUrl": "http://localhost:3000/problems/cs336-l09-fit-data-power-law"
+}

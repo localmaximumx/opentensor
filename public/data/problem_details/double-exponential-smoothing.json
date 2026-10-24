@@ -1,0 +1,450 @@
+{
+  "id": "double-exponential-smoothing",
+  "title": "Double Exponential Smoothing",
+  "description": "Holt's double exponential smoothing tracks both the current level and a linear trend. Initialize the level with the first observation and the trend with the difference between the first two observations.\n\nUpdate the level at each later time:\n\n$$\n\\ell_t = \\alpha y_t + (1-\\alpha)(\\ell_{t-1}+b_{t-1})\n$$\n\nThen update the trend:\n\n$$\nb_t = \\beta(\\ell_t-\\ell_{t-1}) + (1-\\beta)b_{t-1}\n$$\n\nIn these equations, the observation is the current input value, the level is its smoothed estimate, and the trend is the smoothed rate of change. Alpha controls level smoothing, while beta controls trend smoothing. Return all level values, including the initial level.",
+  "seoDescription": "Apply Holt double exponential smoothing to a time series by updating level and trend components.",
+  "examples": [
+    "Input: series = [10, 20, 30], alpha = 0.5, beta = 0.5\n\nOutput: [10, 20.0, 30.0]\n\nExplanation: The initialized trend is 10, so both updates follow this perfectly linear series.",
+    "Input: series = [5, 5, 5, 5], alpha = 0.9, beta = 0.1\n\nOutput: [5, 5.0, 5.0, 5.0]"
+  ],
+  "requirements": "* Initialize level from the first value.\n* Initialize trend as the second value minus the first.\n* Update level before using the new level to update trend.\n* Return one level value for every input observation.",
+  "theory": "## Understanding the Theory: Double Exponential Smoothing\n\n### Core Intuition: Why Do We Need This?\nTemporal data streams exhibit sequential dependency, seasonality, and long-term trends over time. Forecasting models must capture historical temporal dynamics while strictly enforcing causality to prevent future information leakage. **Double Exponential Smoothing** models historical temporal dependencies or smooths sequential fluctuations.\n\nIn this problem, the objective is to implement **Double Exponential Smoothing** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\ell_t = \\alpha y_t + (1-\\alpha)(\\ell_{t-1}+b_{t-1})\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Causality & Lookahead Bias**: Forecasting models must only condition on past observations; feature engineering must respect strict temporal splits.\n* **Stationarity & Differencing**: Many time series methods require transforming non-stationary trends into stationary series via first-order differencing.\n* **Exponential Weighting**: Assigning exponentially decaying weights prioritizes recent observations while preserving historical momentum.",
+  "hints": [
+    "Store the old level until both update equations have been evaluated.",
+    "Append the initial level before looping from index 1."
+  ],
+  "constraints": "* series contains at least two numeric values.\n* 0 < alpha <= 1.\n* 0 < beta <= 1.\n* Time limit: 300 ms.",
+  "difficulty": "Medium",
+  "starterCode": "def double_exponential_smoothing(series: list, alpha: float, beta: float) -> list:\n    \"\"\"\n    Returns the smoothed level at every time step.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T22:29:12.402Z",
+  "updatedAt": "2026-08-23T21:25:45.823Z",
+  "solution": "### 💡 Intuition & Approach\nHolt linear trend method capturing both instantaneous level $L_t$ and slope velocity $T_t$.\n\n### ⚡ Python Reference Implementation\n```python\ndef double_exponential_smoothing(series: list, alpha: float, beta: float) -> list:\n    if not series: return []\n    level = series[0]\n    trend = series[1] - series[0] if len(series) > 1 else 0.0\n    smoothed = [round(level, 4)]\n\n    for t in range(1, len(series)):\n        prev_level = level\n        level = alpha * series[t] + (1.0 - alpha) * (prev_level + trend)\n        trend = beta * (level - prev_level) + (1.0 - beta) * trend\n        smoothed.append(round(level, 4))\n    return smoothed\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "DoubleExpSmoothingViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Linear trend",
+      "inputs": {
+        "beta": 0.5,
+        "alpha": 0.5,
+        "series": [
+          10,
+          20,
+          30
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        10,
+        20.0,
+        30.0
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Constant series",
+      "inputs": {
+        "beta": 0.1,
+        "alpha": 0.9,
+        "series": [
+          5,
+          5,
+          5,
+          5
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        5,
+        5.0,
+        5.0,
+        5.0
+      ]
+    },
+    {
+      "id": "double-exponential-smoothing-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "beta": 1.0,
+        "alpha": 1.0,
+        "series": [
+          20,
+          40,
+          60
+        ]
+      },
+      "expectedOutput": [
+        20,
+        40.0,
+        60.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "beta": 0.25,
+        "alpha": 0.25,
+        "series": [
+          5,
+          10,
+          15
+        ]
+      },
+      "expectedOutput": [
+        5,
+        10.0,
+        15.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "beta": -0.5,
+        "alpha": -0.5,
+        "series": [
+          -10,
+          -20,
+          -30
+        ]
+      },
+      "expectedOutput": [
+        -10,
+        -20.0,
+        -30.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "beta": 1.5,
+        "alpha": 1.5,
+        "series": [
+          30,
+          60,
+          90
+        ]
+      },
+      "expectedOutput": [
+        30,
+        60.0,
+        90.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "beta": 1.5,
+        "alpha": 1.5,
+        "series": [
+          11.0,
+          21.0,
+          31.0
+        ]
+      },
+      "expectedOutput": [
+        11.0,
+        21.0,
+        31.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "beta": -1.5,
+        "alpha": -1.5,
+        "series": [
+          8.0,
+          18.0,
+          28.0
+        ]
+      },
+      "expectedOutput": [
+        8.0,
+        18.0,
+        28.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "beta": 0.5,
+        "alpha": 0.5,
+        "series": [
+          30,
+          20,
+          10
+        ]
+      },
+      "expectedOutput": [
+        30,
+        20.0,
+        10.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "beta": -0.5,
+        "alpha": -0.5,
+        "series": [
+          -10,
+          -20,
+          -30
+        ]
+      },
+      "expectedOutput": [
+        -10,
+        -20.0,
+        -30.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "beta": 5.0,
+        "alpha": 5.0,
+        "series": [
+          100,
+          200,
+          300
+        ]
+      },
+      "expectedOutput": [
+        100,
+        200.0,
+        300.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "beta": 0.05,
+        "alpha": 0.05,
+        "series": [
+          1,
+          2,
+          3
+        ]
+      },
+      "expectedOutput": [
+        1,
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "beta": 5.5,
+        "alpha": 5.5,
+        "series": [
+          15.0,
+          25.0,
+          35.0
+        ]
+      },
+      "expectedOutput": [
+        15.0,
+        25.0,
+        35.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "beta": 0.75,
+        "alpha": 0.75,
+        "series": [
+          15,
+          30,
+          45
+        ]
+      },
+      "expectedOutput": [
+        15,
+        30.0,
+        45.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "beta": -1.0,
+        "alpha": -1.0,
+        "series": [
+          -20,
+          -40,
+          -60
+        ]
+      },
+      "expectedOutput": [
+        -20,
+        -40.0,
+        -60.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "beta": 0.125,
+        "alpha": 0.125,
+        "series": [
+          2,
+          5,
+          8
+        ]
+      },
+      "expectedOutput": [
+        2,
+        5.0,
+        8.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "beta": -0.5,
+        "alpha": -0.5,
+        "series": [
+          9.0,
+          19.0,
+          29.0
+        ]
+      },
+      "expectedOutput": [
+        9.0,
+        19.0,
+        29.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "beta": 2.0,
+        "alpha": 2.0,
+        "series": [
+          40,
+          80,
+          120
+        ]
+      },
+      "expectedOutput": [
+        40,
+        80.0,
+        120.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "beta": 0.375,
+        "alpha": 0.375,
+        "series": [
+          8,
+          15,
+          22
+        ]
+      },
+      "expectedOutput": [
+        8,
+        15.0,
+        22.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "double-exponential-smoothing-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "beta": 2.5,
+        "alpha": 2.5,
+        "series": [
+          50,
+          100,
+          150
+        ]
+      },
+      "expectedOutput": [
+        50,
+        100.0,
+        150.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "double_exponential_smoothing",
+    "parameters": [
+      {
+        "name": "series",
+        "type": "array",
+        "example": "[10, 20, 30]",
+        "description": "Time series data"
+      },
+      {
+        "name": "alpha",
+        "type": "number",
+        "example": "0.5",
+        "description": "Level smoothing parameter (0-1)"
+      },
+      {
+        "name": "beta",
+        "type": "number",
+        "example": "0.5",
+        "description": "Trend smoothing parameter (0-1)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "exponential-moving-average",
+    "weighted-moving-average",
+    "simple-moving-average",
+    "seasonal-average",
+    "lag-features"
+  ],
+  "tags": [
+    "Time Series"
+  ],
+  "prevId": "moving-median",
+  "nextId": "cumulative-returns",
+  "slug": "double-exponential-smoothing",
+  "cleanTitle": "Double Exponential Smoothing",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/double-exponential-smoothing",
+  "localUrl": "http://localhost:3000/problems/double-exponential-smoothing",
+  "studyPlan": null
+}

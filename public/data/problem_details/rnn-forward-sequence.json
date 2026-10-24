@@ -1,0 +1,1620 @@
+{
+  "id": "rnn-forward-sequence",
+  "title": "Forward Through Sequence",
+  "description": "Process an entire sequence with a vanilla RNN while retaining every hidden state.\n\n$$\nh_t=\\tanh\\left(W_{xh}x_t+W_{hh}h_{t-1}+b_h\\right),\\qquad t=1,\\ldots,T.\n$$\n\nReturn a dictionary containing hidden_states with shape (N, T, H) and final_hidden_state with shape (N, H), both float64 NumPy arrays.",
+  "seoDescription": "Implement a vanilla RNN forward pass that updates and returns hidden states across every sequence time step.",
+  "examples": [
+    "Input: X = [[[1,0.5],[0.5,1]]], h_0 = [[0,0]], W_xh = [[0.1,0.2],[0.3,0.4]], W_hh = [[0.5,0.1],[0.2,0.3]], b_h = [0,0]\n\nOutput: {\"hidden_states\":[[[0.197375,0.462117],[0.375576,0.621908]]],\"final_hidden_state\":[[0.375576,0.621908]]}\n\nExplanation: Each hidden state becomes the recurrent input to the following time step and is also stored in the output sequence.",
+    "Input: X = [[[1],[0],[-1]]], h_0 = [[0.2,-0.1]], W_xh = [[0.3],[-0.2]], W_hh = [[0.4,0.1],[0.2,0.5]], b_h = [0.1,-0.1]\n\nOutput: {\"hidden_states\":[[[0.438199,-0.300437],[0.240435,-0.161161],[-0.11937,0.067404]]],\"final_hidden_state\":[[-0.11937,0.067404]]}",
+    "Input: X = [[[1],[2]],[[0],[-1]]], h_0 = [[0,0],[0.5,-0.5]], W_xh = [[0.2],[0.4]], W_hh = [[0.3,0.1],[0.2,0.4]], b_h = [0,0]\n\nOutput: {\"hidden_states\":[[[0.197375,0.379949],[0.459918,0.757982]],[[0.099668,-0.099668],[-0.178145,-0.396874]]],\"final_hidden_state\":[[0.459918,0.757982],[-0.178145,-0.396874]]}"
+  ],
+  "requirements": "- Begin recurrence from the supplied h_0.\n- Process time steps in their original order with shared parameters.\n- Return exactly the keys hidden_states and final_hidden_state.",
+  "theory": "# <span style=\"font-size: 20px;\">Forward Sequence Pass</span>\n\n<span style=\"font-size: 14px;\">The forward sequence pass unrolls a Vanilla RNN cell across $T$ timesteps. At each step $t$, the cell consumes the current input $x_t$ and the previous hidden state $h_{t-1}$, producing $h_t = \\tanh(x_t W_{xh}^T + h_{t-1} W_{hh}^T + b_h)$. The pass collects every hidden state into a tensor of shape $(B, T, H)$ and returns $h_T$ separately with shape $(B, H)$.</span>\n\n<span style=\"font-size: 14px;\">This is the core operation that makes a recurrent network recurrent. A single RNN cell processes one timestep. The forward sequence pass is the loop that applies that cell repeatedly, threading the hidden state from one step to the next, turning a static cell into a sequence processor.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">Unrolling an RNN means applying the same cell once per timestep, feeding the output hidden state of step $t$ as input to step $t+1$. The recurrent graph is \"unfolded\" into a feedforward chain of $T$ identical cells sharing parameters.</span>\n\n<span style=\"font-size: 14px;\">The procedure takes three inputs:</span>\n\n* <span style=\"font-size: 14px;\">**Input sequence $X$:** Shape $(B, T, D)$ where $B$ is batch size, $T$ is timesteps, $D$ is input dimension. Each slice $x_t = X[:, t, :]$ is one timestep's input.</span>\n* <span style=\"font-size: 14px;\">**Initial hidden state $h_0$:** Shape $(B, H)$. Often zeros, but can be learned or carried from a previous segment.</span>\n* <span style=\"font-size: 14px;\">**Shared parameters:** $W_{xh} \\in \\mathbb{R}^{H \\times D}$, $W_{hh} \\in \\mathbb{R}^{H \\times H}$, $b_h \\in \\mathbb{R}^{H}$. Identical at every timestep.</span>\n\n<span style=\"font-size: 14px;\">It produces two outputs:</span>\n\n* <span style=\"font-size: 14px;\">**All hidden states:** Shape $(B, T, H)$ containing $h_1, h_2, \\ldots, h_T$ stacked along the time axis. Each $h_t$ encodes information about the sequence up to step $t$.</span>\n* <span style=\"font-size: 14px;\">**Final hidden state $h_T$:** Shape $(B, H)$, summarizing the entire sequence. This is the last slice of the hidden states tensor, returned separately as a convenience.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">The forward pass applies the same recurrence $T$ times:</span>\n\n$$\nh_t = \\tanh(x_t W_{xh}^T + h_{t-1} W_{hh}^T + b_h) \\quad \\text{for } t = 1, 2, \\ldots, T\n$$\n\n<span style=\"font-size: 14px;\">The three additive terms inside $\\tanh$:</span>\n\n* <span style=\"font-size: 14px;\">**Input contribution $x_t W_{xh}^T$:** Projects the current input from $\\mathbb{R}^D$ to $\\mathbb{R}^H$, mapping input features into hidden space.</span>\n* <span style=\"font-size: 14px;\">**Recurrent contribution $h_{t-1} W_{hh}^T$:** Projects the previous hidden state from $\\mathbb{R}^H$ to $\\mathbb{R}^H$. This is the memory pathway -- it carries information from all previous timesteps.</span>\n* <span style=\"font-size: 14px;\">**Bias $b_h$:** Learnable offset in $\\mathbb{R}^H$, broadcast across the batch.</span>\n\n<span style=\"font-size: 14px;\">The $\\tanh$ squashes each element to $[-1, 1]$, bounding hidden state magnitude. Without it, repeated matrix multiplications through time would cause activations to explode or vanish even faster than they already tend to.</span>\n\n<span style=\"font-size: 14px;\">After the loop:</span>\n\n$$\n\\text{hidden\\_states} = \\text{stack}([h_1, h_2, \\ldots, h_T], \\text{dim}=1) \\in \\mathbb{R}^{B \\times T \\times H}\n$$\n\n$$\nh_{\\text{final}} = h_T \\in \\mathbb{R}^{B \\times H}\n$$\n\n---\n\n## <span style=\"font-size: 16px;\">The Unrolling Loop</span>\n\n<span style=\"font-size: 14px;\">The algorithm is a simple for-loop:</span>\n\n<span style=\"font-size: 14px;\">1. Set $h_{\\text{prev}} = h_0$.</span>\n<span style=\"font-size: 14px;\">2. Create an empty list for hidden states.</span>\n<span style=\"font-size: 14px;\">3. For $t = 1$ to $T$:</span>\n<span style=\"font-size: 14px;\">$\\quad$ a. Extract $x_t = X[:, t-1, :]$ (0-indexed).</span>\n<span style=\"font-size: 14px;\">$\\quad$ b. Compute $h_t = \\tanh(x_t W_{xh}^T + h_{\\text{prev}} W_{hh}^T + b_h)$.</span>\n<span style=\"font-size: 14px;\">$\\quad$ c. Append $h_t$ to the list.</span>\n<span style=\"font-size: 14px;\">$\\quad$ d. Set $h_{\\text{prev}} = h_t$.</span>\n<span style=\"font-size: 14px;\">4. Stack the list into shape $(B, T, H)$.</span>\n<span style=\"font-size: 14px;\">5. Return (stacked hidden states, $h_T$).</span>\n\n<span style=\"font-size: 14px;\">The critical detail is step 3d: the hidden state from the current step becomes the input to the next. This creates the sequential chain -- each $h_t$ is a function of $x_t$ and $h_{t-1}$, which itself depends on $x_{t-1}$ and $h_{t-2}$, all the way back to $h_0$. The entire sequence history is compressed into the hidden state at each step.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Weight Sharing</span>\n\n<span style=\"font-size: 14px;\">A defining feature of RNNs is that the same $W_{xh}$, $W_{hh}$, and $b_h$ are reused at every timestep. This is weight sharing across time.</span>\n\n* <span style=\"font-size: 14px;\">**Parameter efficiency:** Without sharing, a sequence of length $T$ needs $T$ separate weight sets. Sharing keeps the parameter count independent of sequence length.</span>\n* <span style=\"font-size: 14px;\">**Generalization across positions:** The network learns one transformation that works at any position. A pattern learned at position 5 applies at position 50 without additional training.</span>\n* <span style=\"font-size: 14px;\">**Variable-length inputs:** The same cell handles any sequence length at inference, even lengths unseen during training.</span>\n\n<span style=\"font-size: 14px;\">During BPTT, gradients from every timestep flow to the same parameters. The total gradient is the sum of contributions from all $T$ steps, analogous to how a convolutional filter accumulates gradients from every spatial position.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Sequential Dependency</span>\n\n<span style=\"font-size: 14px;\">The recurrence $h_t = f(h_{t-1}, x_t)$ creates a strict sequential dependency: step $t$ cannot begin until step $t-1$ completes.</span>\n\n<span style=\"font-size: 14px;\">**Why it cannot be parallelized across time:** To compute $h_3$, you need $h_2$. To get $h_2$, you need $h_1$. The chain is inherently serial. Even on a GPU with thousands of cores, the $T$ steps execute one after another. Parallelism is limited to the batch dimension -- all $B$ sequences process simultaneously, but within each sequence, timesteps are serial.</span>\n\n<span style=\"font-size: 14px;\">**Contrast with Transformers:** Self-attention computes all pairwise token interactions in one matrix multiplication -- no recurrence, all positions in parallel. A Transformer processes 1000 tokens in one parallel step; an RNN needs 1000 sequential steps. This is the main reason Transformers replaced RNNs for most sequence tasks.</span>\n\n<span style=\"font-size: 14px;\">**The tradeoff:** RNNs use $O(1)$ memory per step (just the hidden state), while Transformers use $O(T^2)$ for the attention matrix. For very long sequences this matters, but in practice the wall-clock penalty of serial execution dominates.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why Collect All Hidden States</span>\n\n<span style=\"font-size: 14px;\">Returning only $h_T$ might seem sufficient since it summarizes the whole sequence. But intermediate states are essential for many tasks:</span>\n\n* <span style=\"font-size: 14px;\">**Sequence labeling (many-to-many):** Tasks like POS tagging require a prediction at every position. Each $h_t$ feeds an output layer to produce the label for step $t$.</span>\n* <span style=\"font-size: 14px;\">**Attention mechanisms:** In seq2seq models, the decoder attends over all encoder states $[h_1, \\ldots, h_T]$ to decide which input positions matter for each output step.</span>\n* <span style=\"font-size: 14px;\">**Bidirectional RNNs:** Forward and backward passes produce separate hidden states at each position; both are needed to concatenate into bidirectional representations.</span>\n* <span style=\"font-size: 14px;\">**Classification alternatives:** Even for many-to-one tasks, mean-pooling or max-pooling across all $h_t$ can outperform using $h_T$ alone.</span>\n\n<span style=\"font-size: 14px;\">Returning both the full tensor and $h_T$ separately follows PyTorch's `nn.RNN` convention, which returns `(output, h_n)`.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">The concept of unrolling a recurrent network through time originates with Jeffrey Elman's 1990 paper \"Finding Structure in Time.\" Elman introduced the Simple Recurrent Network (SRN), maintaining a \"context layer\" that feeds back to the hidden layer at each timestep -- exactly the $h_{t-1} \\rightarrow h_t$ recurrence implemented here.</span>\n\n<span style=\"font-size: 14px;\">The paper's key insight, captured in the quote \"The network acts as a mapping from an input sequence to an output sequence, with the hidden units providing a memory of recent context,\" is that the hidden state serves as compressed memory. At each step, the network decides what to keep from the past (via $W_{hh}$) and how to integrate new input (via $W_{xh}$). The word \"recent\" is critical -- vanilla RNNs struggle with long-range dependencies because information degrades through repeated nonlinear transformations.</span>\n\n<span style=\"font-size: 14px;\">Elman's work predates the vanishing gradient analysis by Bengio et al. (1994) and the LSTM by Hochreiter and Schmidhuber (1997). The forward sequence pass here is the simplest temporal unrolling -- no gates, no cell state, just tanh at each step. Understanding it is essential before studying gated architectures designed to fix its limitations.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Trace $T = 3$ steps with $B = 1$, $D = 2$, $H = 3$.</span>\n\n<span style=\"font-size: 14px;\">**Parameters:**</span>\n\n$$\nW_{xh} = \\begin{bmatrix} 0.5 & -0.3 \\\\ 0.2 & 0.4 \\\\ -0.1 & 0.6 \\end{bmatrix}, \\quad W_{hh} = \\begin{bmatrix} 0.1 & -0.2 & 0.3 \\\\ 0.4 & 0.1 & -0.1 \\\\ -0.3 & 0.5 & 0.2 \\end{bmatrix}, \\quad b_h = \\begin{bmatrix} 0.0 \\\\ 0.1 \\\\ -0.1 \\end{bmatrix}\n$$\n\n<span style=\"font-size: 14px;\">**Inputs:** $x_1 = [1.0, 0.5]$, $x_2 = [-0.5, 1.0]$, $x_3 = [0.8, -0.2]$. **Initial state:** $h_0 = [0, 0, 0]$.</span>\n\n<span style=\"font-size: 14px;\">**Step 1 ($h_0 \\rightarrow h_1$):**</span>\n\n<span style=\"font-size: 14px;\">$x_1 W_{xh}^T = [0.5 - 0.15,\\; 0.2 + 0.2,\\; -0.1 + 0.3] = [0.35, 0.40, 0.20]$. Recurrent term is zero ($h_0 = 0$). Pre-activation: $[0.35, 0.50, 0.10]$ (after adding $b_h$). $h_1 = \\tanh([0.35, 0.50, 0.10]) = [0.336, 0.462, 0.100]$.</span>\n\n<span style=\"font-size: 14px;\">**Step 2 ($h_1 \\rightarrow h_2$):**</span>\n\n<span style=\"font-size: 14px;\">$x_2 W_{xh}^T = [-0.25 - 0.30,\\; -0.10 + 0.40,\\; 0.05 + 0.60] = [-0.55, 0.30, 0.65]$. $h_1 W_{hh}^T = [-0.029, 0.171, 0.150]$. Pre-activation: $[-0.579, 0.571, 0.700]$. $h_2 = \\tanh([-0.579, 0.571, 0.700]) = [-0.522, 0.516, 0.604]$.</span>\n\n<span style=\"font-size: 14px;\">**Step 3 ($h_2 \\rightarrow h_3$):**</span>\n\n<span style=\"font-size: 14px;\">$x_3 W_{xh}^T = [0.40 + 0.06,\\; 0.16 - 0.08,\\; -0.08 - 0.12] = [0.46, 0.08, -0.20]$. $h_2 W_{hh}^T = [0.026, -0.218, 0.535]$. Pre-activation: $[0.486, -0.038, 0.235]$. $h_3 = \\tanh([0.486, -0.038, 0.235]) = [0.451, -0.038, 0.231]$.</span>\n\n<span style=\"font-size: 14px;\">**Output:** hidden_states shape $(1, 3, 3)$: $[[0.336, 0.462, 0.100],\\; [-0.522, 0.516, 0.604],\\; [0.451, -0.038, 0.231]]$. $h_{\\text{final}} = [0.451, -0.038, 0.231]$.</span>\n\n<span style=\"font-size: 14px;\">**Observations:** At step 1, $h_0 = 0$ so only the input matters. By step 2, the recurrent term mixes $x_1$ into the processing of $x_2$. By step 3, $h_2$ carries influence from both $x_1$ and $x_2$, so $h_3$ reflects the entire sequence. Notice how $h_3$ is not simply a function of $x_3$ -- the value $-0.038$ in the second component emerged from the recurrent mixing of all three inputs.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Truncated BPTT</span>\n\n<span style=\"font-size: 14px;\">The forward pass always unrolls all $T$ steps. But backpropagation through time (BPTT) can be truncated to $k$ steps -- a training-time optimization that does not change forward computation but affects learning.</span>\n\n<span style=\"font-size: 14px;\">**Full BPTT:** Gradients at step $t$ propagate through every prior hidden state to $h_0$, requiring $O(T)$ time and memory for all $T$ hidden states.</span>\n\n<span style=\"font-size: 14px;\">**Truncated BPTT (to $k$ steps):** Gradients at step $t$ only flow back through $h_t, h_{t-1}, \\ldots, h_{t-k+1}$, then detach.</span>\n\n* <span style=\"font-size: 14px;\">**Memory savings:** Only $k$ states stored for backward, not all $T$.</span>\n* <span style=\"font-size: 14px;\">**Faster computation:** Each backward traverses $k$ steps instead of $T$.</span>\n* <span style=\"font-size: 14px;\">**Biased gradients:** Dependencies longer than $k$ steps cannot be learned, since gradient information beyond $k$ is discarded.</span>\n\n<span style=\"font-size: 14px;\">A common implementation splits the sequence into chunks of length $k$, runs forward within each chunk, computes gradients, then carries the final hidden state (detached from the graph) as $h_0$ for the next chunk. The forward pass still sees the full sequence; only the backward pass is truncated.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n<span style=\"font-size: 14px;\">**1. Wrong loop direction.**</span>\n\n<span style=\"font-size: 14px;\">Iterating from $t = T$ to $t = 1$ reverses temporal order. The hidden state at \"step 1\" would encode $x_T$, not $x_1$. The forward pass must go in chronological order. (Backward passes in bidirectional RNNs deliberately reverse, but use separate parameters.)</span>\n\n<span style=\"font-size: 14px;\">**2. Forgetting to collect intermediate states.**</span>\n\n<span style=\"font-size: 14px;\">Only tracking $h_{\\text{prev}}$ and $h_{\\text{current}}$ without appending each $h_t$ to a list yields only the final state. Downstream tasks needing per-position representations (labeling, attention) will fail.</span>\n\n<span style=\"font-size: 14px;\">**3. Using the wrong hidden state for the next step.**</span>\n\n<span style=\"font-size: 14px;\">Forgetting $h_{\\text{prev}} = h_t$ after computing $h_t$ causes the same initial state to be reused every step. The network loses all recurrence and degenerates into a position-independent feedforward map.</span>\n\n<span style=\"font-size: 14px;\">**4. Shape mismatch when stacking.**</span>\n\n<span style=\"font-size: 14px;\">Each $h_t$ has shape $(B, H)$. Stacking $T$ of them should give $(B, T, H)$ via `torch.stack(list, dim=1)`. Stacking along dim=0 produces $(T, B, H)$, which is wrong for the batch-first convention required here.</span>\n\n<span style=\"font-size: 14px;\">**5. Not returning $h_{\\text{final}}$ separately.**</span>\n\n<span style=\"font-size: 14px;\">The problem requires both outputs. Returning only the stacked tensor and expecting the caller to slice `[:, -1, :]` violates the interface.</span>\n\n<span style=\"font-size: 14px;\">**6. Including $h_0$ in the output.**</span>\n\n<span style=\"font-size: 14px;\">Collecting $h_0$ alongside $h_1, \\ldots, h_T$ produces shape $(B, T+1, H)$ instead of $(B, T, H)$. Only the states computed by the cell belong in the output.</span>",
+  "hints": [
+    "Initialize hidden with h_0.copy().",
+    "Read X[:, step, :] inside the time loop.",
+    "Stack saved states along axis 1."
+  ],
+  "constraints": "- X has shape (N, T, D), and h_0 has shape (N, H).\n- W_xh has shape (H, D), W_hh has shape (H, H), and b_h has shape (H,).\n- Returned arrays use float64.",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef rnn_forward(X: np.ndarray, h_0: np.ndarray, W_xh: np.ndarray,\n                W_hh: np.ndarray, b_h: np.ndarray) -> dict:\n    \"\"\"\n    Returns hidden_states and final_hidden_state as float64 arrays.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-10T22:39:18.562Z",
+  "updatedAt": "2026-04-04T12:04:54.443Z",
+  "topicId": "rnn-forward-sequence",
+  "paperSnippet": "\"The network acts as a mapping from an input sequence to an output sequence, with the hidden units providing a memory of recent context.\"",
+  "visualizationComponent": "RNNUnrollViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Forward Through Sequence** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef rnn_forward(X: np.ndarray, h_0: np.ndarray, W_xh: np.ndarray,\n                W_hh: np.ndarray, b_h: np.ndarray) -> dict:\n    x_arr = np.asarray(X, dtype=float)\n    cur_h = np.asarray(h_0, dtype=float)\n    w_xh = np.asarray(W_xh, dtype=float)\n    w_hh = np.asarray(W_hh, dtype=float)\n    b = np.asarray(b_h, dtype=float)\n    \n    B, T, D = x_arr.shape\n    hidden_states = []\n    for t in range(T):\n        xt = x_arr[:, t, :]\n        lin = xt @ w_xh.T + cur_h @ w_hh.T + b\n        cur_h = np.tanh(lin)\n        hidden_states.append(cur_h)\n    stacked = np.stack(hidden_states, axis=1)\n    return {\n        \"hidden_states\": np.round(stacked, 6).tolist(),\n        \"final_hidden_state\": np.round(cur_h, 6).tolist()\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Two sequence steps",
+      "inputs": {
+        "X": [
+          [
+            [
+              1,
+              0.5
+            ],
+            [
+              0.5,
+              1
+            ]
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "h_0": [
+          [
+            0,
+            0
+          ]
+        ],
+        "W_hh": [
+          [
+            0.5,
+            0.1
+          ],
+          [
+            0.2,
+            0.3
+          ]
+        ],
+        "W_xh": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.3,
+            0.4
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.197375,
+              0.462117
+            ],
+            [
+              0.375576,
+              0.621908
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.375576,
+            0.621908
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Three steps with bias",
+      "inputs": {
+        "X": [
+          [
+            [
+              1
+            ],
+            [
+              0
+            ],
+            [
+              -1
+            ]
+          ]
+        ],
+        "b_h": [
+          0.1,
+          -0.1
+        ],
+        "h_0": [
+          [
+            0.2,
+            -0.1
+          ]
+        ],
+        "W_hh": [
+          [
+            0.4,
+            0.1
+          ],
+          [
+            0.2,
+            0.5
+          ]
+        ],
+        "W_xh": [
+          [
+            0.3
+          ],
+          [
+            -0.2
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.438199,
+              -0.300437
+            ],
+            [
+              0.240435,
+              -0.161161
+            ],
+            [
+              -0.11937,
+              0.067404
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            -0.11937,
+            0.067404
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-3",
+      "name": "Batched sequence",
+      "inputs": {
+        "X": [
+          [
+            [
+              1
+            ],
+            [
+              2
+            ]
+          ],
+          [
+            [
+              0
+            ],
+            [
+              -1
+            ]
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "h_0": [
+          [
+            0,
+            0
+          ],
+          [
+            0.5,
+            -0.5
+          ]
+        ],
+        "W_hh": [
+          [
+            0.3,
+            0.1
+          ],
+          [
+            0.2,
+            0.4
+          ]
+        ],
+        "W_xh": [
+          [
+            0.2
+          ],
+          [
+            0.4
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.197375,
+              0.379949
+            ],
+            [
+              0.459918,
+              0.757982
+            ]
+          ],
+          [
+            [
+              0.099668,
+              -0.099668
+            ],
+            [
+              -0.178145,
+              -0.396874
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.459918,
+            0.757982
+          ],
+          [
+            -0.178145,
+            -0.396874
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            [
+              1,
+              0.5
+            ],
+            [
+              0.5,
+              1
+            ]
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "h_0": [
+          [
+            0,
+            0
+          ]
+        ],
+        "W_hh": [
+          [
+            0.5,
+            0.1
+          ],
+          [
+            0.2,
+            0.3
+          ]
+        ],
+        "W_xh": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.3,
+            0.4
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.197375,
+              0.462117
+            ],
+            [
+              0.375576,
+              0.621908
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.375576,
+            0.621908
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          [
+            [
+              1
+            ],
+            [
+              0
+            ],
+            [
+              -1
+            ]
+          ]
+        ],
+        "b_h": [
+          0.1,
+          -0.1
+        ],
+        "h_0": [
+          [
+            0.2,
+            -0.1
+          ]
+        ],
+        "W_hh": [
+          [
+            0.4,
+            0.1
+          ],
+          [
+            0.2,
+            0.5
+          ]
+        ],
+        "W_xh": [
+          [
+            0.3
+          ],
+          [
+            -0.2
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.438199,
+              -0.300437
+            ],
+            [
+              0.240435,
+              -0.161161
+            ],
+            [
+              -0.11937,
+              0.067404
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            -0.11937,
+            0.067404
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            [
+              1
+            ],
+            [
+              2
+            ]
+          ],
+          [
+            [
+              0
+            ],
+            [
+              -1
+            ]
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "h_0": [
+          [
+            0,
+            0
+          ],
+          [
+            0.5,
+            -0.5
+          ]
+        ],
+        "W_hh": [
+          [
+            0.3,
+            0.1
+          ],
+          [
+            0.2,
+            0.4
+          ]
+        ],
+        "W_xh": [
+          [
+            0.2
+          ],
+          [
+            0.4
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.197375,
+              0.379949
+            ],
+            [
+              0.459918,
+              0.757982
+            ]
+          ],
+          [
+            [
+              0.099668,
+              -0.099668
+            ],
+            [
+              -0.178145,
+              -0.396874
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.459918,
+            0.757982
+          ],
+          [
+            -0.178145,
+            -0.396874
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          [
+            [
+              1,
+              0.5
+            ],
+            [
+              0.5,
+              1
+            ]
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "h_0": [
+          [
+            0,
+            0
+          ]
+        ],
+        "W_hh": [
+          [
+            0.5,
+            0.1
+          ],
+          [
+            0.2,
+            0.3
+          ]
+        ],
+        "W_xh": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.3,
+            0.4
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.197375,
+              0.462117
+            ],
+            [
+              0.375576,
+              0.621908
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.375576,
+            0.621908
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            [
+              1
+            ],
+            [
+              0
+            ],
+            [
+              -1
+            ]
+          ]
+        ],
+        "b_h": [
+          0.1,
+          -0.1
+        ],
+        "h_0": [
+          [
+            0.2,
+            -0.1
+          ]
+        ],
+        "W_hh": [
+          [
+            0.4,
+            0.1
+          ],
+          [
+            0.2,
+            0.5
+          ]
+        ],
+        "W_xh": [
+          [
+            0.3
+          ],
+          [
+            -0.2
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.438199,
+              -0.300437
+            ],
+            [
+              0.240435,
+              -0.161161
+            ],
+            [
+              -0.11937,
+              0.067404
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            -0.11937,
+            0.067404
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          [
+            [
+              1
+            ],
+            [
+              2
+            ]
+          ],
+          [
+            [
+              0
+            ],
+            [
+              -1
+            ]
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "h_0": [
+          [
+            0,
+            0
+          ],
+          [
+            0.5,
+            -0.5
+          ]
+        ],
+        "W_hh": [
+          [
+            0.3,
+            0.1
+          ],
+          [
+            0.2,
+            0.4
+          ]
+        ],
+        "W_xh": [
+          [
+            0.2
+          ],
+          [
+            0.4
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.197375,
+              0.379949
+            ],
+            [
+              0.459918,
+              0.757982
+            ]
+          ],
+          [
+            [
+              0.099668,
+              -0.099668
+            ],
+            [
+              -0.178145,
+              -0.396874
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.459918,
+            0.757982
+          ],
+          [
+            -0.178145,
+            -0.396874
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            [
+              1,
+              0.5
+            ],
+            [
+              0.5,
+              1
+            ]
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "h_0": [
+          [
+            0,
+            0
+          ]
+        ],
+        "W_hh": [
+          [
+            0.5,
+            0.1
+          ],
+          [
+            0.2,
+            0.3
+          ]
+        ],
+        "W_xh": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.3,
+            0.4
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.197375,
+              0.462117
+            ],
+            [
+              0.375576,
+              0.621908
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.375576,
+            0.621908
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          [
+            [
+              1
+            ],
+            [
+              0
+            ],
+            [
+              -1
+            ]
+          ]
+        ],
+        "b_h": [
+          0.1,
+          -0.1
+        ],
+        "h_0": [
+          [
+            0.2,
+            -0.1
+          ]
+        ],
+        "W_hh": [
+          [
+            0.4,
+            0.1
+          ],
+          [
+            0.2,
+            0.5
+          ]
+        ],
+        "W_xh": [
+          [
+            0.3
+          ],
+          [
+            -0.2
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.438199,
+              -0.300437
+            ],
+            [
+              0.240435,
+              -0.161161
+            ],
+            [
+              -0.11937,
+              0.067404
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            -0.11937,
+            0.067404
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            [
+              1
+            ],
+            [
+              2
+            ]
+          ],
+          [
+            [
+              0
+            ],
+            [
+              -1
+            ]
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "h_0": [
+          [
+            0,
+            0
+          ],
+          [
+            0.5,
+            -0.5
+          ]
+        ],
+        "W_hh": [
+          [
+            0.3,
+            0.1
+          ],
+          [
+            0.2,
+            0.4
+          ]
+        ],
+        "W_xh": [
+          [
+            0.2
+          ],
+          [
+            0.4
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.197375,
+              0.379949
+            ],
+            [
+              0.459918,
+              0.757982
+            ]
+          ],
+          [
+            [
+              0.099668,
+              -0.099668
+            ],
+            [
+              -0.178145,
+              -0.396874
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.459918,
+            0.757982
+          ],
+          [
+            -0.178145,
+            -0.396874
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          [
+            [
+              1,
+              0.5
+            ],
+            [
+              0.5,
+              1
+            ]
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "h_0": [
+          [
+            0,
+            0
+          ]
+        ],
+        "W_hh": [
+          [
+            0.5,
+            0.1
+          ],
+          [
+            0.2,
+            0.3
+          ]
+        ],
+        "W_xh": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.3,
+            0.4
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.197375,
+              0.462117
+            ],
+            [
+              0.375576,
+              0.621908
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.375576,
+            0.621908
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            [
+              1
+            ],
+            [
+              0
+            ],
+            [
+              -1
+            ]
+          ]
+        ],
+        "b_h": [
+          0.1,
+          -0.1
+        ],
+        "h_0": [
+          [
+            0.2,
+            -0.1
+          ]
+        ],
+        "W_hh": [
+          [
+            0.4,
+            0.1
+          ],
+          [
+            0.2,
+            0.5
+          ]
+        ],
+        "W_xh": [
+          [
+            0.3
+          ],
+          [
+            -0.2
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.438199,
+              -0.300437
+            ],
+            [
+              0.240435,
+              -0.161161
+            ],
+            [
+              -0.11937,
+              0.067404
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            -0.11937,
+            0.067404
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          [
+            [
+              1
+            ],
+            [
+              2
+            ]
+          ],
+          [
+            [
+              0
+            ],
+            [
+              -1
+            ]
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "h_0": [
+          [
+            0,
+            0
+          ],
+          [
+            0.5,
+            -0.5
+          ]
+        ],
+        "W_hh": [
+          [
+            0.3,
+            0.1
+          ],
+          [
+            0.2,
+            0.4
+          ]
+        ],
+        "W_xh": [
+          [
+            0.2
+          ],
+          [
+            0.4
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.197375,
+              0.379949
+            ],
+            [
+              0.459918,
+              0.757982
+            ]
+          ],
+          [
+            [
+              0.099668,
+              -0.099668
+            ],
+            [
+              -0.178145,
+              -0.396874
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.459918,
+            0.757982
+          ],
+          [
+            -0.178145,
+            -0.396874
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            [
+              1,
+              0.5
+            ],
+            [
+              0.5,
+              1
+            ]
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "h_0": [
+          [
+            0,
+            0
+          ]
+        ],
+        "W_hh": [
+          [
+            0.5,
+            0.1
+          ],
+          [
+            0.2,
+            0.3
+          ]
+        ],
+        "W_xh": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.3,
+            0.4
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.197375,
+              0.462117
+            ],
+            [
+              0.375576,
+              0.621908
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.375576,
+            0.621908
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          [
+            [
+              1
+            ],
+            [
+              0
+            ],
+            [
+              -1
+            ]
+          ]
+        ],
+        "b_h": [
+          0.1,
+          -0.1
+        ],
+        "h_0": [
+          [
+            0.2,
+            -0.1
+          ]
+        ],
+        "W_hh": [
+          [
+            0.4,
+            0.1
+          ],
+          [
+            0.2,
+            0.5
+          ]
+        ],
+        "W_xh": [
+          [
+            0.3
+          ],
+          [
+            -0.2
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.438199,
+              -0.300437
+            ],
+            [
+              0.240435,
+              -0.161161
+            ],
+            [
+              -0.11937,
+              0.067404
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            -0.11937,
+            0.067404
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            [
+              1
+            ],
+            [
+              2
+            ]
+          ],
+          [
+            [
+              0
+            ],
+            [
+              -1
+            ]
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "h_0": [
+          [
+            0,
+            0
+          ],
+          [
+            0.5,
+            -0.5
+          ]
+        ],
+        "W_hh": [
+          [
+            0.3,
+            0.1
+          ],
+          [
+            0.2,
+            0.4
+          ]
+        ],
+        "W_xh": [
+          [
+            0.2
+          ],
+          [
+            0.4
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.197375,
+              0.379949
+            ],
+            [
+              0.459918,
+              0.757982
+            ]
+          ],
+          [
+            [
+              0.099668,
+              -0.099668
+            ],
+            [
+              -0.178145,
+              -0.396874
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.459918,
+            0.757982
+          ],
+          [
+            -0.178145,
+            -0.396874
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          [
+            [
+              1,
+              0.5
+            ],
+            [
+              0.5,
+              1
+            ]
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "h_0": [
+          [
+            0,
+            0
+          ]
+        ],
+        "W_hh": [
+          [
+            0.5,
+            0.1
+          ],
+          [
+            0.2,
+            0.3
+          ]
+        ],
+        "W_xh": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.3,
+            0.4
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.197375,
+              0.462117
+            ],
+            [
+              0.375576,
+              0.621908
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.375576,
+            0.621908
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rnn-forward-sequence-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            [
+              1
+            ],
+            [
+              0
+            ],
+            [
+              -1
+            ]
+          ]
+        ],
+        "b_h": [
+          0.1,
+          -0.1
+        ],
+        "h_0": [
+          [
+            0.2,
+            -0.1
+          ]
+        ],
+        "W_hh": [
+          [
+            0.4,
+            0.1
+          ],
+          [
+            0.2,
+            0.5
+          ]
+        ],
+        "W_xh": [
+          [
+            0.3
+          ],
+          [
+            -0.2
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "hidden_states": [
+          [
+            [
+              0.438199,
+              -0.300437
+            ],
+            [
+              0.240435,
+              -0.161161
+            ],
+            [
+              -0.11937,
+              0.067404
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            -0.11937,
+            0.067404
+          ]
+        ]
+      }
+    }
+  ],
+  "functionMetadata": {
+    "name": "rnn_forward",
+    "parameters": [
+      {
+        "name": "X",
+        "type": "array",
+        "example": "[[[1,0.5],[0.5,1]]]",
+        "description": "X"
+      },
+      {
+        "name": "h_0",
+        "type": "array",
+        "example": "[[0,0]]",
+        "description": "h 0"
+      },
+      {
+        "name": "W_xh",
+        "type": "array",
+        "example": "[[0.1,0.2],[0.3,0.4]]",
+        "description": "W xh"
+      },
+      {
+        "name": "W_hh",
+        "type": "array",
+        "example": "[[0.5,0.1],[0.2,0.3]]",
+        "description": "W hh"
+      },
+      {
+        "name": "b_h",
+        "type": "array",
+        "example": "[0,0]",
+        "description": "b h"
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "rnn-forward-sequence",
+    "name": "Forward Through Sequence",
+    "description": "Process entire input sequence",
+    "color": "#06b6d4"
+  },
+  "paper": {
+    "id": "rnn",
+    "title": "Finding Structure in Time (Vanilla RNN)",
+    "authors": "Elman, 1990",
+    "year": 1990,
+    "paperUrl": "https://onlinelibrary.wiley.com/doi/abs/10.1207/s15516709cog1402_1",
+    "visualizationComponent": "RNNArchViz"
+  },
+  "navigation": {
+    "index": 3,
+    "total": 6,
+    "prev": "rnn-hidden-state",
+    "next": "rnn-bptt"
+  },
+  "cleanTitle": ""
+}

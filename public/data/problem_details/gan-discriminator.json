@@ -1,0 +1,881 @@
+{
+  "id": "gan-discriminator",
+  "title": "GAN Discriminator",
+  "description": "Implement the discriminator forward pass for a linear GAN discriminator. For a batch of samples, compute\n\n$$\nD(X) = \\sigma(XW)\n$$\n\n$$\n\\sigma(a) = \\frac{1}{1 + e^{-a}}\n$$\n\nHere, $X \\in \\mathbb{R}^{B \\times D}$ contains $B$ samples with $D$ features, $W \\in \\mathbb{R}^{D \\times 1}$ contains the supplied discriminator weights, and $D(X) \\in \\mathbb{R}^{B \\times 1}$ contains the probability assigned to each sample being real. Return $D(X)$ as a float64 NumPy array with shape $(B, 1)$.",
+  "seoDescription": "Implement a GAN discriminator that maps input samples through dense layers to real-versus-fake probabilities.",
+  "examples": [
+    "Input: x = [[1,0],[0,1],[0.5,0.5]], W = [[0.8],[-0.3]]\n\nOutput: [[0.689974],[0.425557],[0.562177]]\n\nExplanation: The matrix product produces one logit per sample, and sigmoid maps each logit to a probability.",
+    "Input: x = [[1,1,1],[-1,-1,-1]], W = [[0.5],[0.2],[-0.3]]\n\nOutput: [[0.598688],[0.401312]]",
+    "Input: x = [[0.3,-0.7,0.5,0.1]], W = [[0.4],[-0.2],[0.6],[0.1]]\n\nOutput: [[0.638763]]"
+  ],
+  "requirements": "- Use NumPy.\n- Apply the supplied weight matrix to every sample.\n- Apply the sigmoid function elementwise to the logits.\n- Return a float64 NumPy array with shape $(B, 1)$.",
+  "theory": "# <span style=\"font-size: 20px;\">GAN Discriminator</span>\n\n<span style=\"font-size: 14px;\">The discriminator is the binary classifier at the heart of a Generative Adversarial Network. Given an input $x$, it outputs a scalar probability $D(x) \\in [0, 1]$ estimating whether $x$ came from the real training data or was fabricated by the generator. Values near 1 mean \"probably real,\" values near 0 mean \"probably fake.\" This probability drives the adversarial training dynamic introduced in Goodfellow et al. (2014).</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is: A Binary Classifier</span>\n\n<span style=\"font-size: 14px;\">The discriminator distinguishes between two classes: real samples drawn from $p_{\\text{data}}(x)$, and fake samples produced by the generator $G(z)$ where $z \\sim p_z(z)$ is a latent noise vector.</span>\n\n<span style=\"font-size: 14px;\">In its simplest form, the discriminator is a single-layer feedforward network. For input $x \\in \\mathbb{R}^d$:</span>\n\n$$\nD(x) = \\sigma(x \\cdot W)\n$$\n\n<span style=\"font-size: 14px;\">where $W \\in \\mathbb{R}^{d \\times 1}$ is a learnable weight matrix and $\\sigma$ is the sigmoid function. The weight matrix projects the $d$-dimensional input to a single scalar, and sigmoid squashes it into a probability.</span>\n\n<span style=\"font-size: 14px;\">During training, the discriminator receives inputs from two sources:</span>\n\n* <span style=\"font-size: 14px;\">**Real samples** $x \\sim p_{\\text{data}}(x)$: drawn from the training dataset. Target: $D(x) \\approx 1$.</span>\n* <span style=\"font-size: 14px;\">**Fake samples** $\\tilde{x} = G(z)$: produced by the generator. Target: $D(G(z)) \\approx 0$.</span>\n\n<span style=\"font-size: 14px;\">The discriminator does not know which source a given sample comes from. It must learn to distinguish real from fake purely from the statistical properties of the data.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n### <span style=\"font-size: 14px;\">The Sigmoid Function</span>\n\n<span style=\"font-size: 14px;\">The sigmoid maps any real-valued input to $(0, 1)$:</span>\n\n$$\n\\sigma(a) = \\frac{1}{1 + e^{-a}}\n$$\n\n<span style=\"font-size: 14px;\">Properties relevant to the discriminator:</span>\n\n* <span style=\"font-size: 14px;\">**$\\sigma(0) = 0.5$:** The decision boundary. Maximum uncertainty.</span>\n* <span style=\"font-size: 14px;\">**$\\sigma(a) \\to 1$ as $a \\to +\\infty$:** High confidence the input is real.</span>\n* <span style=\"font-size: 14px;\">**$\\sigma(a) \\to 0$ as $a \\to -\\infty$:** High confidence the input is fake.</span>\n* <span style=\"font-size: 14px;\">**Derivative:** $\\sigma'(a) = \\sigma(a)(1 - \\sigma(a))$, maximized at $a = 0$, vanishing at extremes.</span>\n\n### <span style=\"font-size: 14px;\">Discriminator Forward Pass</span>\n\n<span style=\"font-size: 14px;\">For input $x \\in \\mathbb{R}^d$ and weight $W \\in \\mathbb{R}^{d \\times 1}$:</span>\n\n<span style=\"font-size: 14px;\">**Step 1.** Compute the logit: $a = x \\cdot W$, producing a scalar $a \\in \\mathbb{R}$.</span>\n\n<span style=\"font-size: 14px;\">**Step 2.** Apply sigmoid: $D(x) = \\sigma(a) = \\frac{1}{1 + e^{-a}}$.</span>\n\n<span style=\"font-size: 14px;\">The logit $a$ is a log-odds ratio: $a = \\log \\frac{D(x)}{1 - D(x)}$.</span>\n\n### <span style=\"font-size: 14px;\">Output Interpretation</span>\n\n* <span style=\"font-size: 14px;\">**$D(x) = 0.95$:** 95% confident $x$ is real. Logit $a \\approx 2.94$.</span>\n* <span style=\"font-size: 14px;\">**$D(x) = 0.50$:** Maximum uncertainty. Logit $a = 0$.</span>\n* <span style=\"font-size: 14px;\">**$D(x) = 0.05$:** 95% confident $x$ is fake. Logit $a \\approx -2.94$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Discriminator's Role in the Minimax Game</span>\n\n<span style=\"font-size: 14px;\">The GAN objective from Goodfellow et al. (2014) is a two-player minimax game:</span>\n\n$$\n\\min_G \\max_D \\; V(D, G) = \\mathbb{E}_{x \\sim p_{\\text{data}}(x)}[\\log D(x)] + \\mathbb{E}_{z \\sim p_z(z)}[\\log(1 - D(G(z)))]\n$$\n\n<span style=\"font-size: 14px;\">The discriminator maximizes $V(D, G)$. The two terms from the discriminator's perspective:</span>\n\n* <span style=\"font-size: 14px;\">**$\\mathbb{E}_{x \\sim p_{\\text{data}}}[\\log D(x)]$:** For real samples, the discriminator wants $D(x) \\to 1$, making $\\log D(x) \\to 0$ (its maximum). Small $D(x)$ yields a large negative penalty.</span>\n* <span style=\"font-size: 14px;\">**$\\mathbb{E}_{z \\sim p_z}[\\log(1 - D(G(z)))]$:** For fake samples, the discriminator wants $D(G(z)) \\to 0$, making $\\log(1 - D(G(z))) \\to 0$. Being fooled ($D(G(z))$ large) yields a large negative penalty.</span>\n\n<span style=\"font-size: 14px;\">In practice, this is equivalent to minimizing binary cross-entropy with label 1 for real and 0 for fake:</span>\n\n$$\n\\mathcal{L}_D = -\\frac{1}{m} \\sum_{i=1}^{m} \\left[ \\log D(x^{(i)}) + \\log(1 - D(G(z^{(i)}))) \\right]\n$$\n\n<span style=\"font-size: 14px;\">The discriminator performs gradient descent on $\\mathcal{L}_D$, updating weights to better separate real from fake. The generator, conversely, minimizes $V$ by making $D(G(z))$ large (fooling the discriminator). This adversarial tension drives GAN learning.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why Sigmoid</span>\n\n### <span style=\"font-size: 14px;\">Probability Output</span>\n\n<span style=\"font-size: 14px;\">Sigmoid maps the raw logit to a valid probability in $(0, 1)$. This is essential because the value function involves $\\log D(x)$ and $\\log(1 - D(G(z)))$, both requiring $D(x) \\in (0, 1)$ to avoid logarithms of non-positive numbers.</span>\n\n### <span style=\"font-size: 14px;\">Connection to Binary Cross-Entropy</span>\n\n<span style=\"font-size: 14px;\">The canonical pairing in logistic regression is sigmoid + BCE loss. When combined, the gradient with respect to the logit $a$ simplifies to:</span>\n\n$$\n\\frac{\\partial \\mathcal{L}}{\\partial a} = D(x) - y\n$$\n\n<span style=\"font-size: 14px;\">where $y \\in \\{0, 1\\}$ is the label. The gradient is simply prediction minus target, with no $\\sigma'(a)$ factor that could cause vanishing gradients in logit space. This clean gradient is why sigmoid + BCE is the standard for binary classification.</span>\n\n### <span style=\"font-size: 14px;\">Log-Likelihood Interpretation</span>\n\n<span style=\"font-size: 14px;\">The value function $V(D, G)$ is the expected log-likelihood of the discriminator under a Bernoulli model: $P(\\text{real} | x) = D(x)$ and $P(\\text{fake} | x) = 1 - D(x)$. Sigmoid ensures this probabilistic interpretation is valid.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context: Goodfellow et al. (2014)</span>\n\n<span style=\"font-size: 14px;\">In \"Generative Adversarial Nets,\" the discriminator is described: \"The discriminative model D estimates the probability that a sample came from the training data rather than G.\" The paper frames GANs through an analogy: the generator is a counterfeiter producing fake currency, the discriminator is police detecting counterfeits, and both improve through competition.</span>\n\n<span style=\"font-size: 14px;\">The paper uses multilayer perceptrons for both G and D. The theoretical analysis assumes D has enough capacity to represent the optimal discriminator for any G. Goodfellow et al. prove that for fixed $G$, the optimal discriminator is:</span>\n\n$$\nD^*_G(x) = \\frac{p_{\\text{data}}(x)}{p_{\\text{data}}(x) + p_g(x)}\n$$\n\n<span style=\"font-size: 14px;\">where $p_g(x)$ is the generator's induced distribution. The optimal discriminator compares data density to generator density: when $p_{\\text{data}}(x) > p_g(x)$, $D^*(x) > 0.5$; when $p_g(x) > p_{\\text{data}}(x)$, $D^*(x) < 0.5$. This result underpins the paper's main theorem: the global minimum of $V(D^*, G)$ is achieved if and only if $p_g = p_{\\text{data}}$, at which point $V = -\\log 4$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Optimal Discriminator</span>\n\n### <span style=\"font-size: 14px;\">Derivation Sketch</span>\n\n<span style=\"font-size: 14px;\">For fixed $G$, rewrite $V$ as an integral:</span>\n\n$$\nV(D, G) = \\int_x \\left[ p_{\\text{data}}(x) \\log D(x) + p_g(x) \\log(1 - D(x)) \\right] dx\n$$\n\n<span style=\"font-size: 14px;\">At each point $x$, let $a = p_{\\text{data}}(x)$ and $b = p_g(x)$. We maximize $f(D) = a \\log D + b \\log(1 - D)$:</span>\n\n$$\nf'(D) = \\frac{a}{D} - \\frac{b}{1 - D} = 0 \\implies D^* = \\frac{a}{a + b} = \\frac{p_{\\text{data}}(x)}{p_{\\text{data}}(x) + p_g(x)}\n$$\n\n<span style=\"font-size: 14px;\">The second derivative $f''(D) = -a/D^2 - b/(1-D)^2 < 0$ for positive $a, b$, confirming a maximum.</span>\n\n### <span style=\"font-size: 14px;\">At Equilibrium: $D^* = 0.5$ Everywhere</span>\n\n<span style=\"font-size: 14px;\">When the generator perfectly matches the data distribution ($p_g = p_{\\text{data}}$):</span>\n\n$$\nD^*(x) = \\frac{p_{\\text{data}}(x)}{p_{\\text{data}}(x) + p_{\\text{data}}(x)} = \\frac{1}{2}\n$$\n\n<span style=\"font-size: 14px;\">At Nash equilibrium, the discriminator outputs 0.5 for every input. It cannot distinguish real from fake because the distributions are identical. This is counterintuitive: perfect GAN training makes the discriminator useless. Its purpose is not to be a good classifier at convergence, but to provide a useful training signal to the generator along the way.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Consider a single-layer discriminator with $d = 3$ and weight vector $W = [0.8, -1.2, 0.5]^T$.</span>\n\n### <span style=\"font-size: 14px;\">Real Sample</span>\n\n<span style=\"font-size: 14px;\">Let $x_{\\text{real}} = [2.0, -1.0, 1.5]$ from the training data.</span>\n\n<span style=\"font-size: 14px;\">**Step 1.** Logit: $a = (2.0)(0.8) + (-1.0)(-1.2) + (1.5)(0.5) = 1.6 + 1.2 + 0.75 = 3.55$</span>\n\n<span style=\"font-size: 14px;\">**Step 2.** Sigmoid: $D(x_{\\text{real}}) = \\frac{1}{1 + e^{-3.55}} = \\frac{1}{1.0287} \\approx 0.972$</span>\n\n<span style=\"font-size: 14px;\">Output 0.972: very high confidence this is real. Correct.</span>\n\n### <span style=\"font-size: 14px;\">Fake Sample</span>\n\n<span style=\"font-size: 14px;\">Let $x_{\\text{fake}} = G(z) = [-0.5, 1.8, -0.3]$ from the generator.</span>\n\n<span style=\"font-size: 14px;\">**Step 1.** Logit: $a = (-0.5)(0.8) + (1.8)(-1.2) + (-0.3)(0.5) = -0.4 - 2.16 - 0.15 = -2.71$</span>\n\n<span style=\"font-size: 14px;\">**Step 2.** Sigmoid: $D(x_{\\text{fake}}) = \\frac{1}{1 + e^{2.71}} = \\frac{1}{16.03} \\approx 0.062$</span>\n\n<span style=\"font-size: 14px;\">Output 0.062: high confidence this is fake. Correct.</span>\n\n### <span style=\"font-size: 14px;\">Loss Computation</span>\n\n<span style=\"font-size: 14px;\">For this mini-batch of one real and one fake sample:</span>\n\n$$\n\\mathcal{L}_D = -\\frac{1}{2}\\left[\\log(0.972) + \\log(1 - 0.062)\\right] = -\\frac{1}{2}\\left[-0.0284 + (-0.0640)\\right] = 0.0462\n$$\n\n<span style=\"font-size: 14px;\">This small loss confirms good performance. A perfect discriminator achieves loss 0. A random discriminator (outputting 0.5 for everything) gets $\\log 2 \\approx 0.693$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Discriminator Evolution</span>\n\n<span style=\"font-size: 14px;\">The discriminator architecture has evolved significantly since the original MLP design.</span>\n\n### <span style=\"font-size: 14px;\">Linear and MLP Discriminators (2014)</span>\n\n<span style=\"font-size: 14px;\">The original paper used MLPs with maxout activations. These worked on simple datasets (MNIST) but struggled with complex images because fully connected layers cannot exploit spatial structure and require prohibitively many parameters for large inputs.</span>\n\n### <span style=\"font-size: 14px;\">CNN Discriminators: DCGAN (2015)</span>\n\n<span style=\"font-size: 14px;\">Radford et al. (2015) replaced fully connected layers with strided convolutions. The discriminator uses conv layers with increasing channels, batch normalization, and LeakyReLU, followed by sigmoid. This leverages spatial locality and parameter sharing, enabling realistic 64x64 image generation.</span>\n\n### <span style=\"font-size: 14px;\">PatchGAN (2016)</span>\n\n<span style=\"font-size: 14px;\">Isola et al. (2016) introduced a discriminator that outputs a grid of probabilities instead of a single scalar. Each element classifies whether a local patch is real or fake. This focuses on high-frequency structure (textures, edges) rather than global composition, producing sharper outputs.</span>\n\n### <span style=\"font-size: 14px;\">Spectral Normalization (2018)</span>\n\n<span style=\"font-size: 14px;\">Miyato et al. (2018) constrained the Lipschitz constant by dividing each weight matrix by its largest singular value. This prevents the discriminator from changing too rapidly, ensuring smoother gradients for the generator and stabilizing training.</span>\n\n### <span style=\"font-size: 14px;\">The Critic in WGAN (2017)</span>\n\n<span style=\"font-size: 14px;\">Arjovsky et al. (2017) replaced the discriminator with a \"critic\" outputting an unbounded real number (no sigmoid). The critic estimates Wasserstein distance between distributions. Lipschitz continuity is enforced through weight clipping or gradient penalty (WGAN-GP, Gulrajani et al., 2017). This addressed training instability and mode collapse.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n### <span style=\"font-size: 14px;\">Discriminator Too Strong: Gradient Vanishing</span>\n\n<span style=\"font-size: 14px;\">If the discriminator becomes too powerful, it outputs values near 1.0 for all real and near 0.0 for all fake. When $D(G(z)) \\approx 0$, the generator's gradient through $\\log(1 - D(G(z)))$ vanishes because $\\log(1 - D(G(z))) \\approx \\log(1) = 0$ is already near its maximum. The generator receives no learning signal. This is the most common GAN failure mode.</span>\n\n<span style=\"font-size: 14px;\">Mitigations: train the generator more steps per discriminator step, use label smoothing (targets of 0.9 instead of 1.0 for real), or switch to the non-saturating loss $-\\log D(G(z))$ which provides stronger gradients early in training.</span>\n\n### <span style=\"font-size: 14px;\">Discriminator Too Weak: No Signal</span>\n\n<span style=\"font-size: 14px;\">If the discriminator is underpowered (too few parameters, unstable learning rate, insufficient training), it provides random gradients. The generator has no meaningful signal to improve against, producing noisy, incoherent outputs. The discriminator must be strong enough to provide a meaningful landscape but not so strong that the landscape becomes flat.</span>\n\n### <span style=\"font-size: 14px;\">Wrong Sigmoid Application</span>\n\n<span style=\"font-size: 14px;\">A common bug is applying sigmoid twice: once in the forward pass and again in the loss. Many frameworks provide `BCEWithLogitsLoss` which internally applies sigmoid. If the network already has sigmoid and you use `BCEWithLogitsLoss`, the double sigmoid compresses output near 0.5, severely degrading training. Either use `BCELoss` with sigmoid in the network, or `BCEWithLogitsLoss` with raw logits. Never both.</span>\n\n### <span style=\"font-size: 14px;\">Forgetting That D Provides G's Training Signal</span>\n\n<span style=\"font-size: 14px;\">The generator never sees real data directly. Its only information about $p_{\\text{data}}$ comes from gradients through the discriminator. If the discriminator has blind spots (regions where it cannot distinguish real from fake), the generator has no incentive to improve there. The discriminator's quality directly bounds the generator's potential.</span>\n\n---",
+  "hints": [
+    "Use matrix multiplication to obtain one logit per row.",
+    "Apply the sigmoid elementwise with NumPy broadcasting."
+  ],
+  "constraints": "- $X$ has shape $(B, D)$.\n- $W$ has shape $(D, 1)$.\n- $1 \\le B \\le 5$ and $1 \\le D \\le 6$.\n- All input values are finite real numbers.",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef discriminator(x: np.ndarray, W: np.ndarray) -> np.ndarray:\n    \"\"\"\n    Returns discriminator probabilities as a float64 array with shape (B, 1).\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-03T21:50:31.303Z",
+  "updatedAt": "2026-04-04T12:04:51.093Z",
+  "topicId": "gan-discriminator",
+  "paperSnippet": "\"The discriminative model D estimates the probability that a sample came from the training data rather than G. D is trained to maximize the probability of assigning the correct label.\"",
+  "visualizationComponent": "GANDiscriminatorViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **GAN Discriminator** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef discriminator(x: np.ndarray, W: np.ndarray) -> np.ndarray:\n    x_arr = np.asarray(x, dtype=float)\n    w = np.asarray(W, dtype=float)\n    logits = x_arr @ w\n    probs = 1.0 / (1.0 + np.exp(-np.clip(logits, -500, 500)))\n    return np.round(probs, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "public-1",
+      "name": "Mixed batch",
+      "inputs": {
+        "W": [
+          [
+            0.8
+          ],
+          [
+            -0.3
+          ]
+        ],
+        "x": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.689974
+        ],
+        [
+          0.425557
+        ],
+        [
+          0.562177
+        ]
+      ]
+    },
+    {
+      "id": "public-2",
+      "name": "Opposite samples",
+      "inputs": {
+        "W": [
+          [
+            0.5
+          ],
+          [
+            0.2
+          ],
+          [
+            -0.3
+          ]
+        ],
+        "x": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            -1,
+            -1,
+            -1
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.598688
+        ],
+        [
+          0.401312
+        ]
+      ]
+    },
+    {
+      "id": "public-3",
+      "name": "Single sample",
+      "inputs": {
+        "W": [
+          [
+            0.4
+          ],
+          [
+            -0.2
+          ],
+          [
+            0.6
+          ],
+          [
+            0.1
+          ]
+        ],
+        "x": [
+          [
+            0.3,
+            -0.7,
+            0.5,
+            0.1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.638763
+        ]
+      ]
+    },
+    {
+      "id": "gan-discriminator-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "W": [
+          [
+            1.6
+          ],
+          [
+            -0.6
+          ]
+        ],
+        "x": [
+          [
+            2,
+            0
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.960834
+        ],
+        [
+          0.231475
+        ],
+        [
+          0.731059
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "W": [
+          [
+            0.4
+          ],
+          [
+            -0.15
+          ]
+        ],
+        "x": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0.25,
+            0.25
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.5
+        ],
+        [
+          0.5
+        ],
+        [
+          0.51562
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "W": [
+          [
+            -0.8
+          ],
+          [
+            0.3
+          ]
+        ],
+        "x": [
+          [
+            -1,
+            0
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            -0.5,
+            -0.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.689974
+        ],
+        [
+          0.425557
+        ],
+        [
+          0.562177
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "W": [
+          [
+            2.4
+          ],
+          [
+            -0.9
+          ]
+        ],
+        "x": [
+          [
+            3,
+            0
+          ],
+          [
+            0,
+            3
+          ],
+          [
+            1.5,
+            1.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.999254
+        ],
+        [
+          0.062973
+        ],
+        [
+          0.904651
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "W": [
+          [
+            1.8
+          ],
+          [
+            0.7
+          ]
+        ],
+        "x": [
+          [
+            2.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0
+          ],
+          [
+            1.5,
+            1.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.986613
+        ],
+        [
+          0.960834
+        ],
+        [
+          0.977023
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "W": [
+          [
+            -1.2
+          ],
+          [
+            -2.3
+          ]
+        ],
+        "x": [
+          [
+            -1.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -1.0
+          ],
+          [
+            -1.5,
+            -1.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.996982
+        ],
+        [
+          0.990987
+        ],
+        [
+          0.99478
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "W": [
+          [
+            0.8
+          ],
+          [
+            -0.3
+          ]
+        ],
+        "x": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.425557
+        ],
+        [
+          0.689974
+        ],
+        [
+          0.562177
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "W": [
+          [
+            -0.8
+          ],
+          [
+            0.3
+          ]
+        ],
+        "x": [
+          [
+            -1,
+            0
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            -0.5,
+            -0.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.689974
+        ],
+        [
+          0.425557
+        ],
+        [
+          0.562177
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "W": [
+          [
+            8.0
+          ],
+          [
+            -3.0
+          ]
+        ],
+        "x": [
+          [
+            10,
+            0
+          ],
+          [
+            0,
+            10
+          ],
+          [
+            5.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          1.0
+        ],
+        [
+          0.0
+        ],
+        [
+          1.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "W": [
+          [
+            0.08
+          ],
+          [
+            -0.03
+          ]
+        ],
+        "x": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0.05,
+            0.05
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.5
+        ],
+        [
+          0.5
+        ],
+        [
+          0.500625
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "W": [
+          [
+            5.8
+          ],
+          [
+            4.7
+          ]
+        ],
+        "x": [
+          [
+            6.0,
+            5.0
+          ],
+          [
+            5.0,
+            6.0
+          ],
+          [
+            5.5,
+            5.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          1.0
+        ],
+        [
+          1.0
+        ],
+        [
+          1.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "W": [
+          [
+            1.2
+          ],
+          [
+            -0.45
+          ]
+        ],
+        "x": [
+          [
+            2,
+            0
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            0.75,
+            0.75
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.916827
+        ],
+        [
+          0.28905
+        ],
+        [
+          0.637031
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "W": [
+          [
+            -1.6
+          ],
+          [
+            0.6
+          ]
+        ],
+        "x": [
+          [
+            -2,
+            0
+          ],
+          [
+            0,
+            -2
+          ],
+          [
+            -1.0,
+            -1.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.960834
+        ],
+        [
+          0.231475
+        ],
+        [
+          0.731059
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "W": [
+          [
+            0.2
+          ],
+          [
+            -0.075
+          ]
+        ],
+        "x": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0.125,
+            0.125
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.5
+        ],
+        [
+          0.5
+        ],
+        [
+          0.503906
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "W": [
+          [
+            -0.19999999999999996
+          ],
+          [
+            -1.3
+          ]
+        ],
+        "x": [
+          [
+            0.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            0.0
+          ],
+          [
+            -0.5,
+            -0.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.785835
+        ],
+        [
+          0.549834
+        ],
+        [
+          0.679179
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "W": [
+          [
+            3.2
+          ],
+          [
+            -1.2
+          ]
+        ],
+        "x": [
+          [
+            4,
+            0
+          ],
+          [
+            0,
+            4
+          ],
+          [
+            2.0,
+            2.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.999997
+        ],
+        [
+          0.008163
+        ],
+        [
+          0.982014
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gan-discriminator-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "W": [
+          [
+            0.6
+          ],
+          [
+            -0.225
+          ]
+        ],
+        "x": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0.375,
+            0.375
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.645656
+        ],
+        [
+          0.443986
+        ],
+        [
+          0.535098
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "discriminator",
+    "runtime": "numpy",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "description": "Float64 sample matrix with shape (B, D)."
+      },
+      {
+        "name": "W",
+        "type": "array",
+        "example": [
+          [
+            0.8
+          ],
+          [
+            -0.3
+          ]
+        ],
+        "description": "Float64 weight matrix with shape (D, 1)."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "gan-discriminator",
+    "name": "Discriminator",
+    "description": "Classify real vs fake",
+    "color": "#ef4444"
+  },
+  "paper": {
+    "id": "gan",
+    "title": "Generative Adversarial Networks (GAN)",
+    "authors": "Goodfellow et al., 2014",
+    "year": 2014,
+    "paperUrl": "https://arxiv.org/abs/1406.2661",
+    "visualizationComponent": "GanArchViz"
+  },
+  "navigation": {
+    "index": 2,
+    "total": 6,
+    "prev": "gan-generator",
+    "next": "gan-loss"
+  },
+  "cleanTitle": ""
+}

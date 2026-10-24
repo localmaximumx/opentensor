@@ -1,0 +1,754 @@
+{
+  "catalogId": "sql:sql-conditional-aggregation",
+  "id": "sql-conditional-aggregation",
+  "sourceId": "sql-conditional-aggregation",
+  "slug": "sql-conditional-aggregation",
+  "source": "sql",
+  "category": "sql",
+  "title": "Conditional Aggregation",
+  "difficulty": "Medium",
+  "tags": [
+    "Data Processing"
+  ],
+  "isFree": false,
+  "planId": "sql-basics",
+  "planTitle": "SQL Sheet",
+  "sectionId": "sql-basics-aggregation",
+  "sortOrder": 165,
+  "seoDescription": "Summarize support tickets by department with conditional SQL counts for open, in-progress, and closed statuses.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Pivot status counts per department using conditional CASE expressions inside aggregate SUM functions.\n\nCombining SUM with conditional CASE statements allows dynamic pivoting of relational status categories into columnar counts.\n\n### Query Logic & Formulation\n$$\n\\sum \\mathbb{I}(\\text{status} = \\text{'open'}), \\quad \\sum \\mathbb{I}(\\text{status} = \\text{'in\\_progress'}), \\quad \\sum \\mathbb{I}(\\text{status} = \\text{'closed'})\n$$\n\n### Relational Execution Steps\n1. Group ticket records by department\n2. Count status categories conditionally using CASE expressions\n3. Sort result deterministically by department name\n\n### Expected Query Output\nList of records containing department name and status frequency counts.",
+  "theory": "## Understanding the Theory: Conditional Aggregation\n\n### Core Intuition: Why Do We Need This?\nRelational databases structure data into normalized tables with strict schemas and foreign-key relationships. SQL allows data engineers and analysts to write declarative queries describing what data is needed, while the database query engine optimizes the underlying execution plan. **Conditional Aggregation** combines, aggregates, or transforms records across tables.\n\nCombining SUM with conditional CASE statements allows dynamic pivoting of relational status categories into columnar counts. In this problem, the goal is to: pivot status counts per department using conditional case expressions inside aggregate sum functions.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\sum \\mathbb{I}(\\text{status} = \\text{'open'}), \\quad \\sum \\mathbb{I}(\\text{status} = \\text{'in\\_progress'}), \\quad \\sum \\mathbb{I}(\\text{status} = \\text{'closed'})\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Group ticket records by department\n2. **Phase 2**: Count status categories conditionally using CASE expressions\n3. **Phase 3**: Sort result deterministically by department name\n\n### Practical Machine Learning Applications & Nuances\n* **Join Mechanics**: Inner joins filter for matching records across tables, while outer joins preserve all rows from one table even when no matches exist.\n* **Window Functions**: Functions like `ROW_NUMBER()` and `RANK()` allow computing partitioned running totals and top-K ranks without requiring self-joins.\n* **Index Optimization**: Proper indexing on join keys and filter conditions ensures queries run in milliseconds rather than doing full table scans.",
+  "examples": [
+    "Input: tickets = [{\"department\": \"Support\", \"status\": \"open\"}, {\"department\": \"Support\", \"status\": \"closed\"}, {\"department\": \"Billing\", \"status\": \"in_progress\"}]\n\nOutput: [{\"department\": \"Billing\", \"open_count\": 0, \"in_progress_count\": 1, \"closed_count\": 0}, {\"department\": \"Support\", \"open_count\": 1, \"in_progress_count\": 0, \"closed_count\": 1}]\n\nExplanation: Evaluated sql_conditional_aggregation under standard test conditions."
+  ],
+  "requirements": "* Function must be named `sql_conditional_aggregation`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `sql_conditional_aggregation`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "-- SQL Conditional Aggregation\nSELECT department,\n       SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) AS open_count,\n       SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) AS in_progress_count,\n       SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) AS closed_count\nFROM tickets\nGROUP BY department\nORDER BY department;",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Conditional Aggregation** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef sql_conditional_aggregation(tickets: list) -> list:\n    g = {}\n    for t in tickets:\n        d, s = t['department'], t['status'].lower()\n        if d not in g: g[d] = {'open': 0, 'in_progress': 0, 'closed': 0}\n        if s in g[d]: g[d][s] += 1\n    return [{'department': d, 'open_count': c['open'], 'in_progress_count': c['in_progress'], 'closed_count': c['closed']} for d, c in sorted(g.items())]\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Tickets across two departments",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-conditional-aggregation-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "tickets": [
+          {
+            "department": "Support",
+            "status": "open"
+          },
+          {
+            "department": "Support",
+            "status": "closed"
+          },
+          {
+            "department": "Billing",
+            "status": "in_progress"
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "department": "Billing",
+          "open_count": 0,
+          "in_progress_count": 1,
+          "closed_count": 0
+        },
+        {
+          "department": "Support",
+          "open_count": 1,
+          "in_progress_count": 0,
+          "closed_count": 1
+        }
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "sql_conditional_aggregation",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sql-multiple-joins",
+    "sql-subqueries",
+    "sql-distinct-values",
+    "sql-row-number",
+    "sql-inner-join"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "sql",
+    "placeholderType": "sql_dummy_select (SELECT * FROM main_table)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

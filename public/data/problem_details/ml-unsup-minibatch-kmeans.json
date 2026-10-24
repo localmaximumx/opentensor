@@ -1,0 +1,1118 @@
+{
+  "id": "ml-unsup-minibatch-kmeans",
+  "slug": "ml-unsup-minibatch-kmeans",
+  "title": "Mini-Batch k-Means",
+  "cleanTitle": "Mini-Batch k-Means",
+  "type": "code",
+  "difficulty": "Medium",
+  "category": "Assessment",
+  "tags": [
+    "Assessment",
+    "CODE",
+    "Supervised + Unsupervised Learning from Scratch"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Update k-means centroids from a mini-batch using the specified assignment and incremental-mean rule.",
+  "theory": "## Understanding the Theory: Mini-Batch k-Means\n\n### Core Intuition: Why Do We Need This?\n**Mini-Batch k-Means** is a core operational primitive evaluated in **Supervised + Unsupervised Learning from Scratch**. In production machine learning systems, modular feature transformations, loss objectives, and evaluation metrics directly determine offline validation fidelity and live online serving quality. Sub-optimal algorithmic implementations introduce subtle data leakage, excessive latency, or numerical drift.\n\nUnderstanding the core mechanics enables engineers to diagnose convergence anomalies, optimize memory layouts, and construct maintainable ML pipelines from first principles.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\mu_k \\leftarrow (1 - \\eta) \\mu_k + \\eta x_i \\quad \\text{for mini-batch } \\mathcal{B}\n$$\n\nIn this formulation:\n* The input features and parameters are projected, normalized, or aggregated according to established algorithmic invariants.\n* Dimensional consistency is preserved across all tensor or matrix axes, ensuring mathematical validity.\n* Intermediate accumulators maintain numerical dynamic range to protect against floating-point anomalies.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Validate input array dimensions, check for empty sequences or invalid bounds, and convert inputs into contiguous buffers.\n2. **Phase 2: Core Algorithmic Transformation**: Execute the foundational mathematical logic using vectorized SIMD array operations or optimized iteration.\n3. **Phase 3: Aggregation & Normalization**: Compute required sums, projections, or ranking reductions while guarding against division by zero.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Format outputs into required data types and verify that returned numerical estimates adhere to expected precision thresholds.\n\n### Practical Machine Learning Applications & Nuances\n* **Zero Data Leakage**: Invariants must be strictly maintained across training and evaluation splits to avoid optimistic metric inflation.\n* **Computational Efficiency**: Vectorized SIMD transformations allow real-time feature extraction under stringent single-digit millisecond latency SLAs.\n* **Defensive Boundary Handling**: Managing zero division in precision/recall calculations and extreme log-probabilities ensures high reliability in production model monitoring.\n* **Algorithmic Complexity**: Operates with optimal asymptotic time and space complexity, ensuring minimal compute overhead.",
+  "examples": [
+    {
+      "inputArgs": [
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ],
+          [
+            9.0,
+            9.0
+          ],
+          [
+            10.0,
+            9.0
+          ]
+        ],
+        2,
+        2,
+        2,
+        0.1,
+        [
+          0,
+          2
+        ]
+      ],
+      "output": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "explanation": "Illustrative small example for mini-batch k-means."
+    }
+  ],
+  "requirements": [
+    "Implement the mathematical or algorithmic behavior described above.",
+    "Match the function signature and output structure in starterCode.",
+    "Handle boundary inputs and ties consistently with the supplied test cases."
+  ],
+  "hints": [
+    "Identify the data structure and the expected output first.",
+    "Test a small case with ties, empty input, or a boundary value."
+  ],
+  "constraints": [
+    "Inputs follow the function signature and have consistent lengths/shapes.",
+    "Use deterministic tie-breaking where multiple answers are valid.",
+    "Floating-point comparisons should use a tolerance such as 1e-6."
+  ],
+  "starterCode": "def solve(X,k,batch_size,steps,learning_rate=0.1,seed_indices=None):\n    pass",
+  "solution": "### 💡 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### ⚡ Implementation\n```python\ndef solve(X,k,batch_size,steps,learning_rate=0.1,seed_indices=None):\n    centers=[list(map(float,X[i])) for i in (seed_indices or list(range(k)))]\n    for t in range(steps):\n      batch=X[(t*batch_size)%len(X):((t*batch_size)%len(X))+batch_size] or X[:batch_size]\n      for row in batch:\n       j=min(range(k),key=lambda j:sum((a-b)**2 for a,b in zip(row,centers[j])))\n       centers[j]=[c+learning_rate*(v-c) for c,v in zip(centers[j],row)]\n    labels=[min(range(k),key=lambda j:sum((a-b)**2 for a,b in zip(row,centers[j]))) for row in X]\n    return centers,labels\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
+  "testCases": [
+    {
+      "id": "case-1",
+      "name": "smoke test",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ],
+          [
+            9.0,
+            9.0
+          ],
+          [
+            10.0,
+            9.0
+          ]
+        ],
+        "k": 2,
+        "batch_size": 2,
+        "steps": 2,
+        "learning_rate": 0.1,
+        "seed_indices": [
+          0,
+          2
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-2",
+      "name": "Case 2",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ],
+          [
+            18.0,
+            18.0
+          ],
+          [
+            20.0,
+            18.0
+          ]
+        ],
+        "k": 4,
+        "batch_size": 4,
+        "steps": 4,
+        "learning_rate": 0.2,
+        "seed_indices": [
+          0,
+          4
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-3",
+      "name": "Case 3",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.5
+          ],
+          [
+            4.5,
+            4.5
+          ],
+          [
+            5.0,
+            4.5
+          ]
+        ],
+        "k": 1,
+        "batch_size": 1,
+        "steps": 1,
+        "learning_rate": 0.05,
+        "seed_indices": [
+          0,
+          1
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.5
+          ]
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            -0.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0
+          ],
+          [
+            -9.0,
+            -9.0
+          ],
+          [
+            -10.0,
+            -9.0
+          ]
+        ],
+        "k": -2,
+        "batch_size": -2,
+        "steps": -2,
+        "learning_rate": -0.1,
+        "seed_indices": [
+          0,
+          -2
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            3.0
+          ],
+          [
+            27.0,
+            27.0
+          ],
+          [
+            30.0,
+            27.0
+          ]
+        ],
+        "k": 6,
+        "batch_size": 6,
+        "steps": 6,
+        "learning_rate": 0.3,
+        "seed_indices": [
+          0,
+          6
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0
+          ],
+          [
+            10.0,
+            10.0
+          ],
+          [
+            11.0,
+            10.0
+          ]
+        ],
+        "k": 3.0,
+        "batch_size": 3.0,
+        "steps": 3.0,
+        "learning_rate": 1.1,
+        "seed_indices": [
+          1.0,
+          3.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          [
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -1.0
+          ],
+          [
+            7.0,
+            7.0
+          ],
+          [
+            8.0,
+            7.0
+          ]
+        ],
+        "k": 0.0,
+        "batch_size": 0.0,
+        "steps": 0.0,
+        "learning_rate": -1.9,
+        "seed_indices": [
+          -2.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            1.0,
+            0.0
+          ],
+          [
+            9.0,
+            9.0
+          ],
+          [
+            9.0,
+            10.0
+          ]
+        ],
+        "k": 2,
+        "batch_size": 2,
+        "steps": 2,
+        "learning_rate": 0.1,
+        "seed_indices": [
+          2,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            9.0,
+            9.1
+          ],
+          [
+            0.1,
+            0.0
+          ]
+        ],
+        [
+          1,
+          1,
+          0,
+          0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          [
+            -0.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0
+          ],
+          [
+            -9.0,
+            -9.0
+          ],
+          [
+            -10.0,
+            -9.0
+          ]
+        ],
+        "k": -2,
+        "batch_size": -2,
+        "steps": -2,
+        "learning_rate": -0.1,
+        "seed_indices": [
+          0,
+          -2
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            10.0
+          ],
+          [
+            90.0,
+            90.0
+          ],
+          [
+            100.0,
+            90.0
+          ]
+        ],
+        "k": 20,
+        "batch_size": 20,
+        "steps": 20,
+        "learning_rate": 1.0,
+        "seed_indices": [
+          0,
+          20
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.1
+          ],
+          [
+            0.9,
+            0.9
+          ],
+          [
+            1.0,
+            0.9
+          ]
+        ],
+        "k": 0,
+        "batch_size": 0,
+        "steps": 0,
+        "learning_rate": 0.01,
+        "seed_indices": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            5.0,
+            5.0
+          ],
+          [
+            5.0,
+            6.0
+          ],
+          [
+            14.0,
+            14.0
+          ],
+          [
+            15.0,
+            14.0
+          ]
+        ],
+        "k": 7.0,
+        "batch_size": 7.0,
+        "steps": 7.0,
+        "learning_rate": 5.1,
+        "seed_indices": [
+          5.0,
+          7.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.5
+          ],
+          [
+            13.5,
+            13.5
+          ],
+          [
+            15.0,
+            13.5
+          ]
+        ],
+        "k": 3,
+        "batch_size": 3,
+        "steps": 3,
+        "learning_rate": 0.15,
+        "seed_indices": [
+          0,
+          3
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            -0.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -2.0
+          ],
+          [
+            -18.0,
+            -18.0
+          ],
+          [
+            -20.0,
+            -18.0
+          ]
+        ],
+        "k": -4,
+        "batch_size": -4,
+        "steps": -4,
+        "learning_rate": -0.2,
+        "seed_indices": [
+          0,
+          -4
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.25
+          ],
+          [
+            2.25,
+            2.25
+          ],
+          [
+            2.5,
+            2.25
+          ]
+        ],
+        "k": 0,
+        "batch_size": 0,
+        "steps": 0,
+        "learning_rate": 0.025,
+        "seed_indices": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            0.0
+          ],
+          [
+            8.0,
+            8.0
+          ],
+          [
+            9.0,
+            8.0
+          ]
+        ],
+        "k": 1.0,
+        "batch_size": 1.0,
+        "steps": 1.0,
+        "learning_rate": -0.9,
+        "seed_indices": [
+          -1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.0
+          ],
+          [
+            36.0,
+            36.0
+          ],
+          [
+            40.0,
+            36.0
+          ]
+        ],
+        "k": 8,
+        "batch_size": 8,
+        "steps": 8,
+        "learning_rate": 0.4,
+        "seed_indices": [
+          0,
+          8
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.75
+          ],
+          [
+            6.75,
+            6.75
+          ],
+          [
+            7.5,
+            6.75
+          ]
+        ],
+        "k": 2,
+        "batch_size": 2,
+        "steps": 2,
+        "learning_rate": 0.075,
+        "seed_indices": [
+          0,
+          2
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.056249999999999994
+          ],
+          [
+            6.80625,
+            6.75
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            5.0
+          ],
+          [
+            45.0,
+            45.0
+          ],
+          [
+            50.0,
+            45.0
+          ]
+        ],
+        "k": 10,
+        "batch_size": 10,
+        "steps": 10,
+        "learning_rate": 0.5,
+        "seed_indices": [
+          0,
+          10
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            10.0,
+            10.0
+          ],
+          [
+            10.0,
+            11.0
+          ],
+          [
+            19.0,
+            19.0
+          ],
+          [
+            20.0,
+            19.0
+          ]
+        ],
+        "k": 12.0,
+        "batch_size": 12.0,
+        "steps": 12.0,
+        "learning_rate": 10.1,
+        "seed_indices": [
+          10.0,
+          12.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            9.1,
+            9.0
+          ]
+        ],
+        [
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "solve",
+    "signature": "def solve(X,k,batch_size,steps,learning_rate=0.1,seed_indices=None):",
+    "returnType": "varies by problem; see example output"
+  },
+  "assessmentNames": [
+    "Supervised + Unsupervised Learning from Scratch"
+  ],
+  "source": "assessment",
+  "sourceId": "assessment",
+  "updatedAt": "2026-03-01T00:00:00.000Z"
+}

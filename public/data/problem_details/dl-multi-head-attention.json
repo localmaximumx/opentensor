@@ -1,0 +1,775 @@
+{
+  "catalogId": "python:dl-multi-head-attention",
+  "id": "dl-multi-head-attention",
+  "sourceId": "dl-multi-head-attention",
+  "slug": "dl-multi-head-attention",
+  "source": "python",
+  "category": "numpy",
+  "title": "Multi-Head Attention",
+  "difficulty": "Hard",
+  "tags": [
+    "Neural Networks",
+    "Transformers"
+  ],
+  "isFree": false,
+  "planId": "cracking-dl",
+  "planTitle": "Cracking Deep Learning",
+  "sectionId": "cracking-dl-transformers",
+  "sortOrder": 660,
+  "seoDescription": "Implement NumPy multi-head attention with QKV projections, optional masking, stable softmax, and output projection.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Compute multi-head scaled dot-product self-attention purely using vectorized NumPy operations.\n\nNumPy broadcasting and tensor transposition implement multi-head projections without requiring explicit Python loops.\n\n### Mathematical Formulation\n$$\n\\mathbf{O} = \\text{Concat}(\\text{Softmax}(\\mathbf{Q}_h \\mathbf{K}_h^T / \\sqrt{d_k}) \\mathbf{V}_h)\n$$\n\n### Step-by-Step Implementation\n1. Partition input tensor into parallel head subspaces along dimension axis\n2. Evaluate scaled dot-product attention scores per head\n3. Apply numerically stabilized softmax along key dimension and recombine heads\n\n### Returns\nNested 2D list of shape (N, D) rounded to 4 decimal places.",
+  "theory": "## Understanding the Theory: Multi-Head Attention\n\n### Core Intuition: Why Do We Need This?\nNeural networks achieve their remarkable expressive power by stacking linear layers interspersed with non-linear activation functions and normalization layers. Without non-linear activations, any deep network would collapse into a single shallow linear regression. **Multi-Head Attention** ensures signals propagate cleanly through dozens or hundreds of layers without vanishing or exploding.\n\nNumPy broadcasting and tensor transposition implement multi-head projections without requiring explicit Python loops. In this problem, the goal is to: compute multi-head scaled dot-product self-attention purely using vectorized numpy operations.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\mathbf{O} = \\text{Concat}(\\text{Softmax}(\\mathbf{Q}_h \\mathbf{K}_h^T / \\sqrt{d_k}) \\mathbf{V}_h)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Partition input tensor into parallel head subspaces along dimension axis\n2. **Phase 2**: Evaluate scaled dot-product attention scores per head\n3. **Phase 3**: Apply numerically stabilized softmax along key dimension and recombine heads\n\n### Practical Machine Learning Applications & Nuances\n* **Gradient Flow**: Carefully designed activation functions (like ReLU, GELU, and Swish) maintain strong gradient signals during backpropagation.\n* **Internal Covariate Shift**: Normalization techniques (like LayerNorm and RMSNorm) standardize hidden states across channels or batch dimensions, allowing models to train stably at higher learning rates.\n* **Hardware Friendly**: Modern deep learning frameworks implement these layers using fused GPU kernels to reduce memory round-trips.",
+  "examples": [
+    "Input: x = [[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]], num_heads = 2\n\nOutput: [[0.6698, 0.3302, 0.6698, 0.3302], [0.3302, 0.6698, 0.3302, 0.6698]]\n\nExplanation: Evaluated dl_multi_head_attention under standard test conditions."
+  ],
+  "requirements": "* Function must be named `dl_multi_head_attention`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `dl_multi_head_attention`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np, math\n\ndef dl_multi_head_attention(x: list, num_heads: int = 2) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Multi-Head Attention** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np, math\n\ndef dl_multi_head_attention(x: list, num_heads: int = 2) -> list:\n    arr = np.array(x, dtype=float)\n    N, D = arr.shape\n    dk = D // num_heads\n    q = arr.reshape(N, num_heads, dk).transpose(1, 0, 2)\n    s = (q @ q.transpose(0, 2, 1)) / math.sqrt(dk)\n    e = np.exp(s - np.max(s, axis=-1, keepdims=True))\n    attn = e / np.sum(e, axis=-1, keepdims=True)\n    return np.round((attn @ q).transpose(1, 0, 2).reshape(N, D), 4).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "2 tokens 4 features 2 heads numpy",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "num_heads": 2
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "dl-multi-head-attention-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "x": [
+          [
+            2.0,
+            0.0,
+            2.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0,
+            0.0,
+            2.0
+          ]
+        ],
+        "num_heads": 4
+      },
+      "expectedOutput": [
+        [
+          1.964,
+          1.0,
+          1.964,
+          1.0
+        ],
+        [
+          1.0,
+          1.964,
+          1.0,
+          1.964
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "dl-multi-head-attention-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          [
+            0.5,
+            0.0,
+            0.5,
+            0.0
+          ],
+          [
+            0.0,
+            0.5,
+            0.0,
+            0.5
+          ]
+        ],
+        "num_heads": 1
+      },
+      "expectedOutput": [
+        [
+          0.2811,
+          0.2189,
+          0.2811,
+          0.2189
+        ],
+        [
+          0.2189,
+          0.2811,
+          0.2189,
+          0.2811
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            -0.0,
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0,
+            -0.0,
+            -1.0
+          ]
+        ],
+        "num_heads": -2
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            3.0,
+            0.0,
+            3.0,
+            0.0
+          ],
+          [
+            0.0,
+            3.0,
+            0.0,
+            3.0
+          ]
+        ],
+        "num_heads": 6
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            2.0,
+            1.0,
+            2.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0,
+            1.0,
+            2.0
+          ]
+        ],
+        "num_heads": 3.0
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            -2.0,
+            -1.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -1.0,
+            -2.0,
+            -1.0
+          ]
+        ],
+        "num_heads": 0.0
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            0.0,
+            1.0,
+            0.0,
+            1.0
+          ],
+          [
+            1.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "num_heads": 2
+      },
+      "expectedOutput": [
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ],
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            -0.0,
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0,
+            -0.0,
+            -1.0
+          ]
+        ],
+        "num_heads": -2
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            10.0,
+            0.0,
+            10.0,
+            0.0
+          ],
+          [
+            0.0,
+            10.0,
+            0.0,
+            10.0
+          ]
+        ],
+        "num_heads": 20
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            0.1,
+            0.0,
+            0.1,
+            0.0
+          ],
+          [
+            0.0,
+            0.1,
+            0.0,
+            0.1
+          ]
+        ],
+        "num_heads": 0
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            6.0,
+            5.0,
+            6.0,
+            5.0
+          ],
+          [
+            5.0,
+            6.0,
+            5.0,
+            6.0
+          ]
+        ],
+        "num_heads": 7.0
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            1.5,
+            0.0,
+            1.5,
+            0.0
+          ],
+          [
+            0.0,
+            1.5,
+            0.0,
+            1.5
+          ]
+        ],
+        "num_heads": 3
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            -2.0,
+            -0.0,
+            -2.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -2.0,
+            -0.0,
+            -2.0
+          ]
+        ],
+        "num_heads": -4
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            0.25,
+            0.0,
+            0.25,
+            0.0
+          ],
+          [
+            0.0,
+            0.25,
+            0.0,
+            0.25
+          ]
+        ],
+        "num_heads": 0
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            0.0,
+            -1.0,
+            0.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            0.0,
+            -1.0,
+            0.0
+          ]
+        ],
+        "num_heads": 1.0
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            4.0,
+            0.0,
+            4.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.0,
+            0.0,
+            4.0
+          ]
+        ],
+        "num_heads": 8
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            0.75,
+            0.0,
+            0.75,
+            0.0
+          ],
+          [
+            0.0,
+            0.75,
+            0.0,
+            0.75
+          ]
+        ],
+        "num_heads": 2
+      },
+      "expectedOutput": [
+        [
+          0.4486,
+          0.3014,
+          0.4486,
+          0.3014
+        ],
+        [
+          0.3014,
+          0.4486,
+          0.3014,
+          0.4486
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            5.0,
+            0.0,
+            5.0,
+            0.0
+          ],
+          [
+            0.0,
+            5.0,
+            0.0,
+            5.0
+          ]
+        ],
+        "num_heads": 10
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-multi-head-attention-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            11.0,
+            10.0,
+            11.0,
+            10.0
+          ],
+          [
+            10.0,
+            11.0,
+            10.0,
+            11.0
+          ]
+        ],
+        "num_heads": 12.0
+      },
+      "expectedOutput": [
+        [
+          0.6698,
+          0.3302,
+          0.6698,
+          0.3302
+        ],
+        [
+          0.3302,
+          0.6698,
+          0.3302,
+          0.6698
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "dl_multi_head_attention",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

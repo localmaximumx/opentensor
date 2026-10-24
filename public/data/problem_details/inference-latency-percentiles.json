@@ -1,0 +1,536 @@
+{
+  "catalogId": "python:inference-latency-percentiles",
+  "id": "inference-latency-percentiles",
+  "sourceId": "inference-latency-percentiles",
+  "slug": "inference-latency-percentiles",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Calculate P50, P95, and P99 Inference Latency",
+  "difficulty": "Easy",
+  "tags": [
+    "Metrics & Evaluation",
+    "Inference",
+    "Probability and Statistics"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-serving",
+  "sortOrder": 42,
+  "seoDescription": "Compute the 50th, 95th, and 99th percentile of a set of observed inference latencies, using linear interpolation between the two closest ranks.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Compute the 50th, 95th, and 99th percentile of a set of observed inference latencies using linear interpolation.\n\nPercentiles capture high-latency outliers that average latency obscures.\n\n### Mathematical Formulation\n$$\nP_p = (1 - f)x_i + f x_{i+1}, \\quad q = p(n - 1)\n$$\n\n### Step-by-Step Implementation\n1. Sort input latencies in non-decreasing order\n2. Compute quantile ranks for 50%, 95%, and 99%\n3. Linearly interpolate between adjacent values\n\n### Returns\nDictionary with keys 'p50', 'p95', and 'p99'.",
+  "theory": "## Understanding the Theory: Calculate P50, P95, and P99 Inference Latency\n\n### Core Intuition: Why Do We Need This?\nRunning large AI models in production requires massive computing power. During text generation, memory bandwidth (fetching weights and past key-value caches from VRAM) is often the primary bottleneck rather than raw arithmetic compute. **Calculate P50, P95, and P99 Inference Latency** optimizes hardware efficiency, memory consumption, or request serving throughput.\n\nPercentiles capture high-latency outliers that average latency obscures. In this problem, the goal is to: compute the 50th, 95th, and 99th percentile of a set of observed inference latencies using linear interpolation.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nP_p = (1 - f)x_i + f x_{i+1}, \\quad q = p(n - 1)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Sort input latencies in non-decreasing order\n2. **Phase 2**: Compute quantile ranks for 50%, 95%, and 99%\n3. **Phase 3**: Linearly interpolate between adjacent values\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth Bottleneck**: Quantizing weights to INT8 or INT4 cuts memory traffic in half or quarters, dramatically increasing token generation speeds.\n* **Serving Systems**: Dynamic batching and PagedAttention maximize GPU utilization by grouping requests arriving at different times.\n* **Latency vs. Throughput**: In production serving, systems engineers balance Time-To-First-Token (TTFT) against overall tokens-per-second throughput.",
+  "examples": [
+    "Input: latencies = [10.0, 12.0, 14.0, 15.0, 18.0, 22.0, 25.0, 30.0, 45.0, 90.0]\n\nOutput: {\"p50\": 20.0, \"p95\": 69.75, \"p99\": 85.95}\n\nExplanation: Evaluated inference_latency_percentiles under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_latency_percentiles`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_latency_percentiles`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef inference_latency_percentiles(latencies: list) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Calculate P50, P95, and P99 Inference Latency** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef inference_latency_percentiles(latencies: list) -> dict:\n    arr = np.array(latencies, dtype=float)\n    return {'p50': round(float(np.percentile(arr, 50, method='linear')), 6), 'p95': round(float(np.percentile(arr, 95, method='linear')), 6), 'p99': round(float(np.percentile(arr, 99, method='linear')), 6)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "10 sample latencies",
+      "inputs": {
+        "latencies": [
+          10.0,
+          12.0,
+          14.0,
+          15.0,
+          18.0,
+          22.0,
+          25.0,
+          30.0,
+          45.0,
+          90.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 20.0,
+        "p95": 69.75,
+        "p99": 85.95
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-latency-percentiles-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "latencies": [
+          20.0,
+          24.0,
+          28.0,
+          30.0,
+          36.0,
+          44.0,
+          50.0,
+          60.0,
+          90.0,
+          180.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 40.0,
+        "p95": 139.5,
+        "p99": 171.9
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-latency-percentiles-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "latencies": [
+          5.0,
+          6.0,
+          7.0,
+          7.5,
+          9.0,
+          11.0,
+          12.5,
+          15.0,
+          22.5,
+          45.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 10.0,
+        "p95": 34.875,
+        "p99": 42.975
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "latencies": [
+          10.0,
+          12.0,
+          14.0,
+          15.0,
+          18.0,
+          22.0,
+          25.0,
+          30.0,
+          45.0,
+          90.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 20.0,
+        "p95": 69.75,
+        "p99": 85.95
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "latencies": [
+          15.0,
+          18.0,
+          21.0,
+          22.5,
+          27.0,
+          33.0,
+          37.5,
+          45.0,
+          67.5,
+          135.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 30.0,
+        "p95": 104.625,
+        "p99": 128.925
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "latencies": [
+          30.0,
+          36.0,
+          42.0,
+          45.0,
+          54.0,
+          66.0,
+          75.0,
+          90.0,
+          135.0,
+          270.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 60.0,
+        "p95": 209.25,
+        "p99": 257.85
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "latencies": [
+          2.5,
+          3.0,
+          3.5,
+          3.75,
+          4.5,
+          5.5,
+          6.25,
+          7.5,
+          11.25,
+          22.5
+        ]
+      },
+      "expectedOutput": {
+        "p50": 5.0,
+        "p95": 17.4375,
+        "p99": 21.4875
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "latencies": [
+          20.0,
+          24.0,
+          28.0,
+          30.0,
+          36.0,
+          44.0,
+          50.0,
+          60.0,
+          90.0,
+          180.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 40.0,
+        "p95": 139.5,
+        "p99": 171.9
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "latencies": [
+          40.0,
+          48.0,
+          56.0,
+          60.0,
+          72.0,
+          88.0,
+          100.0,
+          120.0,
+          180.0,
+          360.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 80.0,
+        "p95": 279.0,
+        "p99": 343.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "latencies": [
+          90.0,
+          45.0,
+          30.0,
+          25.0,
+          22.0,
+          18.0,
+          15.0,
+          14.0,
+          12.0,
+          10.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 20.0,
+        "p95": 69.75,
+        "p99": 85.95
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "latencies": [
+          7.5,
+          9.0,
+          10.5,
+          11.25,
+          13.5,
+          16.5,
+          18.75,
+          22.5,
+          33.75,
+          67.5
+        ]
+      },
+      "expectedOutput": {
+        "p50": 15.0,
+        "p95": 52.3125,
+        "p99": 64.4625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "latencies": [
+          50.0,
+          60.0,
+          70.0,
+          75.0,
+          90.0,
+          110.0,
+          125.0,
+          150.0,
+          225.0,
+          450.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 100.0,
+        "p95": 348.75,
+        "p99": 429.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "latencies": [
+          30.0,
+          36.0,
+          42.0,
+          45.0,
+          54.0,
+          66.0,
+          75.0,
+          90.0,
+          135.0,
+          270.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 60.0,
+        "p95": 209.25,
+        "p99": 257.85
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "latencies": [
+          8.0,
+          9.600000000000001,
+          11.200000000000001,
+          12.0,
+          14.4,
+          17.6,
+          20.0,
+          24.0,
+          36.0,
+          72.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 16.0,
+        "p95": 55.8,
+        "p99": 68.76
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "latencies": [
+          60.0,
+          72.0,
+          84.0,
+          90.0,
+          108.0,
+          132.0,
+          150.0,
+          180.0,
+          270.0,
+          540.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 120.0,
+        "p95": 418.5,
+        "p99": 515.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "latencies": [
+          40.0,
+          48.0,
+          56.0,
+          60.0,
+          72.0,
+          88.0,
+          100.0,
+          120.0,
+          180.0,
+          360.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 80.0,
+        "p95": 279.0,
+        "p99": 343.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "latencies": [
+          12.0,
+          14.399999999999999,
+          16.8,
+          18.0,
+          21.599999999999998,
+          26.4,
+          30.0,
+          36.0,
+          54.0,
+          108.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 24.0,
+        "p95": 83.7,
+        "p99": 103.14
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "latencies": [
+          4.0,
+          4.800000000000001,
+          5.6000000000000005,
+          6.0,
+          7.2,
+          8.8,
+          10.0,
+          12.0,
+          18.0,
+          36.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 8.0,
+        "p95": 27.9,
+        "p99": 34.38
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "latencies": [
+          80.0,
+          96.0,
+          112.0,
+          120.0,
+          144.0,
+          176.0,
+          200.0,
+          240.0,
+          360.0,
+          720.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 160.0,
+        "p95": 558.0,
+        "p99": 687.6
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-latency-percentiles-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "latencies": [
+          50.0,
+          60.0,
+          70.0,
+          75.0,
+          90.0,
+          110.0,
+          125.0,
+          150.0,
+          225.0,
+          450.0
+        ]
+      },
+      "expectedOutput": {
+        "p50": 100.0,
+        "p95": 348.75,
+        "p99": 429.75
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_latency_percentiles",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-multi-head-attention"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

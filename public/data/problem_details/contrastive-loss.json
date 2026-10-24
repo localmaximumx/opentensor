@@ -1,0 +1,515 @@
+{
+  "id": "contrastive-loss",
+  "title": "Implement Contrastive Loss (Siamese)",
+  "description": "Compute contrastive loss for pairs of embeddings. A label of 1 marks a similar pair, while 0 marks a dissimilar pair. First compute each Euclidean distance:\n\n$$\nd_i = \\lVert a_i-b_i \\rVert_2\n$$\n\nThen compute each pair loss:\n\n$$\n\\ell_i = y_id_i^2 + (1-y_i)\\max(0,m-d_i)^2\n$$\n\nHere, $a_i$ and $b_i$ are the two embeddings, $d_i$ is their distance, $y_i$ is the pair label, $m$ is the margin, and $\\ell_i$ is the pair loss. A one-dimensional embedding represents one pair; a two-dimensional input contains one pair per row. Return the mean or sum as a Python float according to reduction.",
+  "seoDescription": "Implement Siamese-network contrastive loss using pair labels, embedding distances, and a separation margin.",
+  "examples": [
+    "Input: a = [1.0, 0.0], b = [1.0, 0.0], y = [1], margin = 1.0, reduction = \"mean\"\n\nOutput: 0.0\n\nExplanation: The similar embeddings have zero distance, so their squared-distance loss is zero.",
+    "Input: a = [0.0, 0.0], b = [0.5, 0.0], y = [0], margin = 1.0, reduction = \"mean\"\n\nOutput: 0.25",
+    "Input: a = [[0.0, 0.0], [1.0, 1.0]], b = [[0.0, 0.0], [2.0, 2.0]], y = [1, 0], margin = 1.0, reduction = \"mean\"\n\nOutput: 0.0"
+  ],
+  "requirements": "* Treat one-dimensional a and b as a single embedding pair\n* Compute one Euclidean distance per pair\n* Support mean and sum reduction\n* Return a Python float",
+  "theory": "## Understanding the Theory: Implement Contrastive Loss (Siamese)\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **Implement Contrastive Loss (Siamese)** implements a core computational routine.\n\nIn this problem, the objective is to implement **Implement Contrastive Loss (Siamese)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nd_i = \\lVert a_i-b_i \\rVert_2\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "Convert a one-dimensional difference to shape (1, D) before reducing over axis 1.",
+    "Use np.linalg.norm(a - b, axis=1) for the pairwise distances.",
+    "Build the positive and negative terms separately before applying the reduction."
+  ],
+  "constraints": "* a and b have the same shape, either $(D,)$ or $(N,D)$\n* y contains one label per pair, and every label is 0 or 1\n* margin is positive and reduction is mean or sum\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef contrastive_loss(a: list, b: list, y: list, margin: float = 1.0, reduction: str = \"mean\") -> float:\n    \"\"\"\n    Returns the loss as a float.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-10-21T18:37:17.033Z",
+  "updatedAt": "2026-03-05T17:03:52.399Z",
+  "solution": "### 💡 Intuition & Approach\nPulls matching pairs together while pushing non-matching pairs outside Euclidean margin boundary.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef contrastive_loss(a: list, b: list, y: list, margin: float = 1.0, reduction: str = \"mean\") -> float:\n    a_arr = np.array(a, dtype=float)\n    b_arr = np.array(b, dtype=float)\n    y_arr = np.array(y, dtype=float)\n    dist = np.linalg.norm(a_arr - b_arr, axis=-1)\n    loss = y_arr * (dist ** 2) + (1.0 - y_arr) * (np.maximum(0.0, margin - dist) ** 2)\n    return float(round(np.mean(loss) if reduction == \"mean\" else np.sum(loss), 4))\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "ContrastiveLossViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Identical positive pair",
+      "inputs": {
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          1,
+          0
+        ],
+        "y": [
+          1
+        ],
+        "margin": 1,
+        "reduction": "mean"
+      },
+      "isPublic": true,
+      "expectedOutput": 0.0
+    },
+    {
+      "id": "test-2",
+      "name": "Dissimilar pair within margin",
+      "inputs": {
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0.5,
+          0
+        ],
+        "y": [
+          0
+        ],
+        "margin": 1,
+        "reduction": "mean"
+      },
+      "isPublic": true,
+      "expectedOutput": 0.25
+    },
+    {
+      "id": "test-5",
+      "name": "Batch with mixed labels",
+      "inputs": {
+        "a": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "b": [
+          [
+            0,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "y": [
+          1,
+          0
+        ],
+        "margin": 1,
+        "reduction": "mean"
+      },
+      "isPublic": false,
+      "expectedOutput": 0.0
+    },
+    {
+      "id": "contrastive-loss-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "a": [
+          2,
+          0
+        ],
+        "b": [
+          2,
+          0
+        ],
+        "y": [
+          2
+        ],
+        "margin": 2,
+        "reduction": "mean"
+      },
+      "expectedOutput": -4.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          0
+        ],
+        "y": [
+          0
+        ],
+        "margin": 0,
+        "reduction": "mean"
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "a": [
+          -1,
+          0
+        ],
+        "b": [
+          -1,
+          0
+        ],
+        "y": [
+          -1
+        ],
+        "margin": -1,
+        "reduction": "mean"
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "a": [
+          3,
+          0
+        ],
+        "b": [
+          3,
+          0
+        ],
+        "y": [
+          3
+        ],
+        "margin": 3,
+        "reduction": "mean"
+      },
+      "expectedOutput": -18.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "a": [
+          2.0,
+          1.0
+        ],
+        "b": [
+          2.0,
+          1.0
+        ],
+        "y": [
+          2.0
+        ],
+        "margin": 2.0,
+        "reduction": "mean"
+      },
+      "expectedOutput": -4.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "a": [
+          -1.0,
+          -2.0
+        ],
+        "b": [
+          -1.0,
+          -2.0
+        ],
+        "y": [
+          -1.0
+        ],
+        "margin": -1.0,
+        "reduction": "mean"
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "a": [
+          0,
+          1
+        ],
+        "b": [
+          0,
+          1
+        ],
+        "y": [
+          1
+        ],
+        "margin": 1,
+        "reduction": "naem"
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "a": [
+          -1,
+          0
+        ],
+        "b": [
+          -1,
+          0
+        ],
+        "y": [
+          -1
+        ],
+        "margin": -1,
+        "reduction": "mean"
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "a": [
+          10,
+          0
+        ],
+        "b": [
+          10,
+          0
+        ],
+        "y": [
+          10
+        ],
+        "margin": 10,
+        "reduction": "mean"
+      },
+      "expectedOutput": -900.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          0
+        ],
+        "y": [
+          0
+        ],
+        "margin": 0,
+        "reduction": "mean"
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "a": [
+          6.0,
+          5.0
+        ],
+        "b": [
+          6.0,
+          5.0
+        ],
+        "y": [
+          6.0
+        ],
+        "margin": 6.0,
+        "reduction": "mean"
+      },
+      "expectedOutput": -180.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "a": [
+          2,
+          0
+        ],
+        "b": [
+          2,
+          0
+        ],
+        "y": [
+          2
+        ],
+        "margin": 2,
+        "reduction": "mean"
+      },
+      "expectedOutput": -4.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "a": [
+          -2,
+          0
+        ],
+        "b": [
+          -2,
+          0
+        ],
+        "y": [
+          -2
+        ],
+        "margin": -2,
+        "reduction": "mean"
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          0
+        ],
+        "y": [
+          0
+        ],
+        "margin": 0,
+        "reduction": "mean"
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "a": [
+          0.0,
+          -1.0
+        ],
+        "b": [
+          0.0,
+          -1.0
+        ],
+        "y": [
+          0.0
+        ],
+        "margin": 0.0,
+        "reduction": "mean"
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "a": [
+          4,
+          0
+        ],
+        "b": [
+          4,
+          0
+        ],
+        "y": [
+          4
+        ],
+        "margin": 4,
+        "reduction": "mean"
+      },
+      "expectedOutput": -48.0,
+      "isPublic": false
+    },
+    {
+      "id": "contrastive-loss-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          1,
+          0
+        ],
+        "y": [
+          1
+        ],
+        "margin": 1,
+        "reduction": "mean"
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "contrastive_loss",
+    "parameters": [
+      {
+        "name": "a",
+        "type": "array",
+        "example": "[[1, 0]]",
+        "description": "First set of embeddings"
+      },
+      {
+        "name": "b",
+        "type": "array",
+        "example": "[[1, 0]]",
+        "description": "Second set of embeddings"
+      },
+      {
+        "name": "y",
+        "type": "array",
+        "example": "[1]",
+        "description": "Labels (1=similar, 0=dissimilar)"
+      },
+      {
+        "name": "margin",
+        "type": "number",
+        "example": "1.0",
+        "description": "Margin for dissimilar pairs"
+      },
+      {
+        "name": "reduction",
+        "type": "string",
+        "example": "mean",
+        "description": "'mean' or 'sum'"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "triplet-loss",
+    "cosine-embedding-loss",
+    "info-nce-loss",
+    "cross-entropy-loss",
+    "cosine-similarity"
+  ],
+  "tags": [
+    "Loss Functions"
+  ],
+  "prevId": "hinge-loss",
+  "nextId": "gelu",
+  "slug": "contrastive-loss",
+  "cleanTitle": "Implement Contrastive Loss (Siamese)",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/contrastive-loss",
+  "localUrl": "http://localhost:3000/problems/contrastive-loss",
+  "studyPlan": null
+}

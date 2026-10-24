@@ -1,0 +1,1495 @@
+{
+  "catalogId": "python:inference-multi-head-attention",
+  "id": "inference-multi-head-attention",
+  "sourceId": "inference-multi-head-attention",
+  "slug": "inference-multi-head-attention",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Implement Multi-Head Attention (MHA)",
+  "difficulty": "Medium",
+  "tags": [
+    "Inference",
+    "Transformers"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-attention",
+  "sortOrder": 49,
+  "seoDescription": "Split into h heads, run scaled dot-product attention per head with an optional causal mask, concatenate the heads, and apply an output projection.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Split representations into H heads, compute scaled dot-product attention per head, and concatenate outputs.\n\nSplitting into multiple heads allows models to attend to information from different representation subspaces at different positions.\n\n### Mathematical Formulation\n$$\n\\operatorname{MHA}(Q, K, V) = \\operatorname{Concat}(\\text{head}_1, \\dots, \\text{head}_H), \\quad \\text{head}_i = \\operatorname{softmax}\\left(\\frac{Q_i K_i^\\top}{\\sqrt{d_k}}\\right)V_i\n$$\n\n### Step-by-Step Implementation\n1. Project and partition features into H attention heads of width d_k\n2. Compute scaled dot-product scores Q K^T / sqrt(d_k)\n3. Apply softmax normalization along key dimension\n4. Weight values V and concatenate head outputs back to model dimension D\n\n### Returns\nOutput tensor of shape (B, S, D).",
+  "theory": "## Understanding the Theory: Implement Multi-Head Attention (MHA)\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of discrete words and symbols arranged in sequential order. To process text with neural networks, we convert words into continuous embedding vectors and model their grammatical and semantic relationships. **Implement Multi-Head Attention (MHA)** is a core sequence-processing mechanism used in modern Transformer and LLM architectures.\n\nSplitting into multiple heads allows models to attend to information from different representation subspaces at different positions. In this problem, the goal is to: split representations into h heads, compute scaled dot-product attention per head, and concatenate outputs.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\operatorname{MHA}(Q, K, V) = \\operatorname{Concat}(\\text{head}_1, \\dots, \\text{head}_H), \\quad \\text{head}_i = \\operatorname{softmax}\\left(\\frac{Q_i K_i^\\top}{\\sqrt{d_k}}\\right)V_i\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Project and partition features into H attention heads of width d_k\n2. **Phase 2**: Compute scaled dot-product scores Q K^T / sqrt(d_k)\n3. **Phase 3**: Apply softmax normalization along key dimension\n4. **Phase 4**: Weight values V and concatenate head outputs back to model dimension D\n\n### Practical Machine Learning Applications & Nuances\n* **Self-Attention Mechanics**: Scaled dot-product attention computes all-to-all token interactions dynamically, allowing tokens to gather context from the entire sentence simultaneously.\n* **Position Encodings**: Because self-attention is permutation-invariant, positional encodings (like sinusoidal or Rotary Position Embeddings) inject word order into the representations.\n* **Vocabulary & Subwords**: Algorithms like BPE tokenize text into frequent subwords, allowing models to represent rare words without requiring an infinite vocabulary.",
+  "examples": [
+    "Input: Q = [[[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]]], K = [[[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]]], V = [[[2.0, 1.0, 0.0, 3.0], [1.0, 2.0, 3.0, 0.0]]], num_heads = 2\n\nOutput: [[[1.669762, 1.330238, 0.990715, 2.009285], [1.330238, 1.669762, 2.009285, 0.990715]]]\n\nExplanation: Evaluated inference_multi_head_attention under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_multi_head_attention`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_multi_head_attention`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef inference_multi_head_attention(Q: list, K: list, V: list, num_heads: int) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Implement Multi-Head Attention (MHA)** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\nimport math\n\ndef inference_multi_head_attention(Q: list, K: list, V: list, num_heads: int) -> list:\n    q = np.array(Q, dtype=float)\n    k = np.array(K, dtype=float)\n    v = np.array(V, dtype=float)\n    B, S, D = q.shape\n    H = int(num_heads)\n    dk = D // H\n    qh = q.reshape(B, S, H, dk).swapaxes(1, 2)\n    kh = k.reshape(B, S, H, dk).swapaxes(1, 2)\n    vh = v.reshape(B, S, H, dk).swapaxes(1, 2)\n    scores = (qh @ kh.swapaxes(-1, -2)) / math.sqrt(dk)\n    exps = np.exp(scores - np.max(scores, axis=-1, keepdims=True))\n    attn = exps / np.sum(exps, axis=-1, keepdims=True)\n    out = (attn @ vh).swapaxes(1, 2).reshape(B, S, D)\n    return np.round(out, 6).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Batch 1, Seq 2, Dim 4, 2 heads",
+      "inputs": {
+        "Q": [
+          [
+            [
+              1.0,
+              0.0,
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0,
+              0.0,
+              1.0
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              1.0,
+              0.0,
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0,
+              0.0,
+              1.0
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              2.0,
+              1.0,
+              0.0,
+              3.0
+            ],
+            [
+              1.0,
+              2.0,
+              3.0,
+              0.0
+            ]
+          ]
+        ],
+        "num_heads": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            1.669762,
+            1.330238,
+            0.990715,
+            2.009285
+          ],
+          [
+            1.330238,
+            1.669762,
+            2.009285,
+            0.990715
+          ]
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "inference-multi-head-attention-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "Q": [
+          [
+            [
+              2.0,
+              0.0,
+              2.0,
+              0.0
+            ],
+            [
+              0.0,
+              2.0,
+              0.0,
+              2.0
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              2.0,
+              0.1,
+              2.0,
+              0.1
+            ],
+            [
+              0.1,
+              2.0,
+              0.1,
+              2.0
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              4.0,
+              2.0,
+              0.0,
+              6.0
+            ],
+            [
+              2.0,
+              4.0,
+              6.0,
+              0.0
+            ]
+          ]
+        ],
+        "num_heads": 4
+      },
+      "expectedOutput": [
+        [
+          [
+            3.956237,
+            3.0,
+            0.131288,
+            3.0
+          ],
+          [
+            3.0,
+            3.956237,
+            3.0,
+            0.131288
+          ]
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "inference-multi-head-attention-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "Q": [
+          [
+            [
+              0.5,
+              0.0,
+              0.5,
+              0.0
+            ],
+            [
+              0.0,
+              0.5,
+              0.0,
+              0.5
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              0.5,
+              0.1,
+              0.5,
+              0.1
+            ],
+            [
+              0.1,
+              0.5,
+              0.1,
+              0.5
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              1.0,
+              0.5,
+              0.0,
+              1.5
+            ],
+            [
+              0.5,
+              1.0,
+              1.5,
+              0.0
+            ]
+          ]
+        ],
+        "num_heads": 1
+      },
+      "expectedOutput": [
+        [
+          [
+            0.774917,
+            0.725083,
+            0.675249,
+            0.824751
+          ],
+          [
+            0.725083,
+            0.774917,
+            0.824751,
+            0.675249
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "Q": [
+          [
+            [
+              2.0,
+              1.0,
+              2.0,
+              1.0
+            ],
+            [
+              1.0,
+              2.0,
+              1.0,
+              2.0
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              1.0,
+              0.1,
+              1.0,
+              0.1
+            ],
+            [
+              0.1,
+              1.0,
+              0.1,
+              1.0
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              3.0,
+              2.0,
+              1.0,
+              4.0
+            ],
+            [
+              2.0,
+              3.0,
+              4.0,
+              1.0
+            ]
+          ]
+        ],
+        "num_heads": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            2.653938,
+            2.346062,
+            2.038185,
+            2.961815
+          ],
+          [
+            2.346062,
+            2.653938,
+            2.961815,
+            2.038185
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "Q": [
+          [
+            [
+              1.5,
+              0.0,
+              1.5,
+              0.0
+            ],
+            [
+              0.0,
+              1.5,
+              0.0,
+              1.5
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              1.5,
+              0.1,
+              1.5,
+              0.1
+            ],
+            [
+              0.1,
+              1.5,
+              0.1,
+              1.5
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              3.0,
+              1.5,
+              0.0,
+              4.5
+            ],
+            [
+              1.5,
+              3.0,
+              4.5,
+              0.0
+            ]
+          ]
+        ],
+        "num_heads": 3
+      },
+      "expectedOutput": [
+        [
+          [
+            1.669762,
+            1.330238,
+            0.990715,
+            2.009285
+          ],
+          [
+            1.330238,
+            1.669762,
+            2.009285,
+            0.990715
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "Q": [
+          [
+            [
+              3.0,
+              0.0,
+              3.0,
+              0.0
+            ],
+            [
+              0.0,
+              3.0,
+              0.0,
+              3.0
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              3.0,
+              0.1,
+              3.0,
+              0.1
+            ],
+            [
+              0.1,
+              3.0,
+              0.1,
+              3.0
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              6.0,
+              3.0,
+              0.0,
+              9.0
+            ],
+            [
+              3.0,
+              6.0,
+              9.0,
+              0.0
+            ]
+          ]
+        ],
+        "num_heads": 6
+      },
+      "expectedOutput": [
+        [
+          [
+            1.669762,
+            1.330238,
+            0.990715,
+            2.009285
+          ],
+          [
+            1.330238,
+            1.669762,
+            2.009285,
+            0.990715
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "Q": [
+          [
+            [
+              0.25,
+              0.0,
+              0.25,
+              0.0
+            ],
+            [
+              0.0,
+              0.25,
+              0.0,
+              0.25
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              0.25,
+              0.1,
+              0.25,
+              0.1
+            ],
+            [
+              0.1,
+              0.25,
+              0.1,
+              0.25
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              0.5,
+              0.25,
+              0.0,
+              0.75
+            ],
+            [
+              0.25,
+              0.5,
+              0.75,
+              0.0
+            ]
+          ]
+        ],
+        "num_heads": 1
+      },
+      "expectedOutput": [
+        [
+          [
+            0.377343,
+            0.372657,
+            0.36797,
+            0.38203
+          ],
+          [
+            0.372657,
+            0.377343,
+            0.38203,
+            0.36797
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "Q": [
+          [
+            [
+              3.0,
+              2.0,
+              3.0,
+              2.0
+            ],
+            [
+              2.0,
+              3.0,
+              2.0,
+              3.0
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              2.0,
+              0.1,
+              2.0,
+              0.1
+            ],
+            [
+              0.1,
+              2.0,
+              0.1,
+              2.0
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              4.0,
+              3.0,
+              2.0,
+              5.0
+            ],
+            [
+              3.0,
+              4.0,
+              5.0,
+              2.0
+            ]
+          ]
+        ],
+        "num_heads": 4
+      },
+      "expectedOutput": [
+        [
+          [
+            3.996665,
+            3.978119,
+            2.010004,
+            2.065644
+          ],
+          [
+            3.978119,
+            3.996665,
+            2.065644,
+            2.010004
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "Q": [
+          [
+            [
+              4.0,
+              0.0,
+              4.0,
+              0.0
+            ],
+            [
+              0.0,
+              4.0,
+              0.0,
+              4.0
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              4.0,
+              0.1,
+              4.0,
+              0.1
+            ],
+            [
+              0.1,
+              4.0,
+              0.1,
+              4.0
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              8.0,
+              4.0,
+              0.0,
+              12.0
+            ],
+            [
+              4.0,
+              8.0,
+              12.0,
+              0.0
+            ]
+          ]
+        ],
+        "num_heads": 8
+      },
+      "expectedOutput": [
+        [
+          [
+            1.669762,
+            1.330238,
+            0.990715,
+            2.009285
+          ],
+          [
+            1.330238,
+            1.669762,
+            2.009285,
+            0.990715
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "Q": [
+          [
+            [
+              0.0,
+              1.0,
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.0,
+              1.0,
+              0.0
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              0.0,
+              1.0,
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.0,
+              1.0,
+              0.0
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              3.0,
+              0.0,
+              1.0,
+              2.0
+            ],
+            [
+              0.0,
+              3.0,
+              2.0,
+              1.0
+            ]
+          ]
+        ],
+        "num_heads": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            2.009285,
+            0.990715,
+            1.330238,
+            1.669762
+          ],
+          [
+            0.990715,
+            2.009285,
+            1.669762,
+            1.330238
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "Q": [
+          [
+            [
+              0.75,
+              0.0,
+              0.75,
+              0.0
+            ],
+            [
+              0.0,
+              0.75,
+              0.0,
+              0.75
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              0.75,
+              0.1,
+              0.75,
+              0.1
+            ],
+            [
+              0.1,
+              0.75,
+              0.1,
+              0.75
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              1.5,
+              0.75,
+              0.0,
+              2.25
+            ],
+            [
+              0.75,
+              1.5,
+              2.25,
+              0.0
+            ]
+          ]
+        ],
+        "num_heads": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            1.189001,
+            1.060999,
+            0.932996,
+            1.317004
+          ],
+          [
+            1.060999,
+            1.189001,
+            1.317004,
+            0.932996
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "Q": [
+          [
+            [
+              5.0,
+              0.0,
+              5.0,
+              0.0
+            ],
+            [
+              0.0,
+              5.0,
+              0.0,
+              5.0
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              5.0,
+              0.1,
+              5.0,
+              0.1
+            ],
+            [
+              0.1,
+              5.0,
+              0.1,
+              5.0
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              10.0,
+              5.0,
+              0.0,
+              15.0
+            ],
+            [
+              5.0,
+              10.0,
+              15.0,
+              0.0
+            ]
+          ]
+        ],
+        "num_heads": 10
+      },
+      "expectedOutput": [
+        [
+          [
+            1.669762,
+            1.330238,
+            0.990715,
+            2.009285
+          ],
+          [
+            1.330238,
+            1.669762,
+            2.009285,
+            0.990715
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "Q": [
+          [
+            [
+              4.0,
+              3.0,
+              4.0,
+              3.0
+            ],
+            [
+              3.0,
+              4.0,
+              3.0,
+              4.0
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              3.0,
+              0.1,
+              3.0,
+              0.1
+            ],
+            [
+              0.1,
+              3.0,
+              0.1,
+              3.0
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              5.0,
+              4.0,
+              3.0,
+              6.0
+            ],
+            [
+              4.0,
+              5.0,
+              6.0,
+              3.0
+            ]
+          ]
+        ],
+        "num_heads": 6
+      },
+      "expectedOutput": [
+        [
+          [
+            1.669762,
+            1.330238,
+            0.990715,
+            2.009285
+          ],
+          [
+            1.330238,
+            1.669762,
+            2.009285,
+            0.990715
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "Q": [
+          [
+            [
+              0.8,
+              0.0,
+              0.8,
+              0.0
+            ],
+            [
+              0.0,
+              0.8,
+              0.0,
+              0.8
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              0.8,
+              0.1,
+              0.8,
+              0.1
+            ],
+            [
+              0.1,
+              0.8,
+              0.1,
+              0.8
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              1.6,
+              0.8,
+              0.0,
+              2.4
+            ],
+            [
+              0.8,
+              1.6,
+              2.4,
+              0.0
+            ]
+          ]
+        ],
+        "num_heads": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            1.278177,
+            1.121823,
+            0.965469,
+            1.434531
+          ],
+          [
+            1.121823,
+            1.278177,
+            1.434531,
+            0.965469
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "Q": [
+          [
+            [
+              6.0,
+              0.0,
+              6.0,
+              0.0
+            ],
+            [
+              0.0,
+              6.0,
+              0.0,
+              6.0
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              6.0,
+              0.1,
+              6.0,
+              0.1
+            ],
+            [
+              0.1,
+              6.0,
+              0.1,
+              6.0
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              12.0,
+              6.0,
+              0.0,
+              18.0
+            ],
+            [
+              6.0,
+              12.0,
+              18.0,
+              0.0
+            ]
+          ]
+        ],
+        "num_heads": 12
+      },
+      "expectedOutput": [
+        [
+          [
+            1.669762,
+            1.330238,
+            0.990715,
+            2.009285
+          ],
+          [
+            1.330238,
+            1.669762,
+            2.009285,
+            0.990715
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "Q": [
+          [
+            [
+              5.0,
+              4.0,
+              5.0,
+              4.0
+            ],
+            [
+              4.0,
+              5.0,
+              4.0,
+              5.0
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              4.0,
+              0.1,
+              4.0,
+              0.1
+            ],
+            [
+              0.1,
+              4.0,
+              0.1,
+              4.0
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              6.0,
+              5.0,
+              4.0,
+              7.0
+            ],
+            [
+              5.0,
+              6.0,
+              7.0,
+              4.0
+            ]
+          ]
+        ],
+        "num_heads": 8
+      },
+      "expectedOutput": [
+        [
+          [
+            1.669762,
+            1.330238,
+            0.990715,
+            2.009285
+          ],
+          [
+            1.330238,
+            1.669762,
+            2.009285,
+            0.990715
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "Q": [
+          [
+            [
+              1.2,
+              0.0,
+              1.2,
+              0.0
+            ],
+            [
+              0.0,
+              1.2,
+              0.0,
+              1.2
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              1.2,
+              0.1,
+              1.2,
+              0.1
+            ],
+            [
+              0.1,
+              1.2,
+              0.1,
+              1.2
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              2.4,
+              1.2,
+              0.0,
+              3.6
+            ],
+            [
+              1.2,
+              2.4,
+              3.6,
+              0.0
+            ]
+          ]
+        ],
+        "num_heads": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            2.061313,
+            1.538687,
+            1.016061,
+            2.583939
+          ],
+          [
+            1.538687,
+            2.061313,
+            2.583939,
+            1.016061
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "Q": [
+          [
+            [
+              0.4,
+              0.0,
+              0.4,
+              0.0
+            ],
+            [
+              0.0,
+              0.4,
+              0.0,
+              0.4
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              0.4,
+              0.1,
+              0.4,
+              0.1
+            ],
+            [
+              0.1,
+              0.4,
+              0.1,
+              0.4
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              0.8,
+              0.4,
+              0.0,
+              1.2
+            ],
+            [
+              0.4,
+              0.8,
+              1.2,
+              0.0
+            ]
+          ]
+        ],
+        "num_heads": 1
+      },
+      "expectedOutput": [
+        [
+          [
+            0.611986,
+            0.588014,
+            0.564043,
+            0.635957
+          ],
+          [
+            0.588014,
+            0.611986,
+            0.635957,
+            0.564043
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "Q": [
+          [
+            [
+              8.0,
+              0.0,
+              8.0,
+              0.0
+            ],
+            [
+              0.0,
+              8.0,
+              0.0,
+              8.0
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              8.0,
+              0.1,
+              8.0,
+              0.1
+            ],
+            [
+              0.1,
+              8.0,
+              0.1,
+              8.0
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              16.0,
+              8.0,
+              0.0,
+              24.0
+            ],
+            [
+              8.0,
+              16.0,
+              24.0,
+              0.0
+            ]
+          ]
+        ],
+        "num_heads": 16
+      },
+      "expectedOutput": [
+        [
+          [
+            1.669762,
+            1.330238,
+            0.990715,
+            2.009285
+          ],
+          [
+            1.330238,
+            1.669762,
+            2.009285,
+            0.990715
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-multi-head-attention-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "Q": [
+          [
+            [
+              6.0,
+              5.0,
+              6.0,
+              5.0
+            ],
+            [
+              5.0,
+              6.0,
+              5.0,
+              6.0
+            ]
+          ]
+        ],
+        "K": [
+          [
+            [
+              5.0,
+              0.1,
+              5.0,
+              0.1
+            ],
+            [
+              0.1,
+              5.0,
+              0.1,
+              5.0
+            ]
+          ]
+        ],
+        "V": [
+          [
+            [
+              7.0,
+              6.0,
+              5.0,
+              8.0
+            ],
+            [
+              6.0,
+              7.0,
+              8.0,
+              5.0
+            ]
+          ]
+        ],
+        "num_heads": 10
+      },
+      "expectedOutput": [
+        [
+          [
+            1.669762,
+            1.330238,
+            0.990715,
+            2.009285
+          ],
+          [
+            1.330238,
+            1.669762,
+            2.009285,
+            0.990715
+          ]
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_multi_head_attention",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

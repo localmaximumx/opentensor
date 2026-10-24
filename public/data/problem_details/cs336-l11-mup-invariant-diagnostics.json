@@ -1,0 +1,679 @@
+{
+  "id": "cs336-l11-mup-invariant-diagnostics",
+  "slug": "cs336-l11-mup-invariant-diagnostics",
+  "title": "Maximal Update Parametrization (muP) Invariance Diagnostics",
+  "cleanTitle": "Maximal Update Parametrization (muP) Invariance Diagnostics",
+  "category": "pytorch",
+  "difficulty": "Medium",
+  "tags": [
+    "Scaling Laws",
+    "Language Models"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "language-modeling-from-scratch",
+    "title": "Language Modeling from Scratch",
+    "sectionId": "cs336-l11"
+  },
+  "seoDescription": "Fit log-log width slopes for activation RMS and one-step activation-change RMS, then test both against a supplied invariant tolerance.",
+  "description": "Fit log-log width scaling slopes for forward activation RMS and backward update RMS to verify muP width-transfer stability.\n\n**Mathematical Formulation:**\n\n$$\n\\text{Slope} = \\frac{\\Delta \\log \\text{RMS}}{\\Delta \\log \\text{Width}} \\approx 0\n$$\n\n**Step-by-Step Implementation:**\n1. Compute log widths and log activation RMS values across width sweep.\n2. Fit regression line slope in log-log space.\n3. Test whether slope magnitudes fall within specified invariance tolerance.\n4. Return diagnostic slopes and boolean invariance flag.\n\n**Returns:** Dictionary with keys 'act_rms_slope', 'chg_rms_slope', and 'is_mup_invariant'.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Diagnose muP Width Invariants specification."
+  ],
+  "requirements": "* Must implement `cs336_l11_mup_invariant_diagnostics` using PYTORCH.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Maximal Update Parametrization (muP) Invariance Diagnostics\n\n### Core Intuition: Why Do We Need This?\nFit log-log width scaling slopes for forward activation RMS and backward update RMS to verify muP width-transfer stability. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\n\\text{Slope} = \\frac{\\Delta \\log \\text{RMS}}{\\Delta \\log \\text{Width}} \\approx 0\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Compute log widths and log activation RMS values across width sweep.\n3. **Phase 3: Iterative Execution & Reduction**: Fit regression line slope in log-log space.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return diagnostic slopes and boolean invariance flag.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard PYTORCH documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `torch.Tensor` specifications."
+  ],
+  "constraints": "* Category: PYTORCH\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, PYTORCH\n",
+  "starterCode": "import numpy as np\n\ndef cs336_l11_mup_invariant_diagnostics(widths: list, rms_activations: list, rms_changes: list, tolerance: float = 0.2) -> dict:\n    \"\"\"\n    Fit log-log width scaling slopes for forward activation RMS and backward update RMS to verify muP width-transfer stability.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nFit log-log width scaling slopes for forward activation RMS and backward update RMS to verify muP width-transfer stability.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cs336_l11_mup_invariant_diagnostics(widths: list, rms_activations: list, rms_changes: list, tolerance: float = 0.2) -> dict:\n    x = np.log(np.array(widths, dtype=float))\n    s_act = float(np.polyfit(x, np.log(np.array(rms_activations, dtype=float)), 1)[0])\n    s_chg = float(np.polyfit(x, np.log(np.array(rms_changes, dtype=float)), 1)[0])\n    return {'act_rms_slope': round(s_act, 6), 'chg_rms_slope': round(s_chg, 6), 'is_mup_invariant': abs(s_act) <= tolerance and abs(s_chg) <= tolerance}\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "widths": [
+          256,
+          512,
+          1024,
+          2048
+        ],
+        "rms_activations": [
+          1.02,
+          1.01,
+          0.99,
+          1.0
+        ],
+        "rms_changes": [
+          0.05,
+          0.051,
+          0.049,
+          0.05
+        ],
+        "tolerance": 0.1
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011456,
+        "chg_rms_slope": -0.005772,
+        "is_mup_invariant": 1
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "widths": [
+          128,
+          512
+        ],
+        "rms_activations": [
+          1.0,
+          4.0
+        ],
+        "rms_changes": [
+          1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": {
+        "act_rms_slope": 1.0,
+        "chg_rms_slope": 0.5,
+        "is_mup_invariant": 0
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "widths": [
+          512,
+          1024,
+          2048,
+          4096
+        ],
+        "rms_activations": [
+          2.04,
+          2.02,
+          1.98,
+          2.0
+        ],
+        "rms_changes": [
+          0.1,
+          0.102,
+          0.098,
+          0.1
+        ],
+        "tolerance": 0.2
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011456,
+        "chg_rms_slope": -0.005772,
+        "is_mup_invariant": true
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "widths": [
+          128,
+          256,
+          512,
+          1024
+        ],
+        "rms_activations": [
+          0.51,
+          0.505,
+          0.495,
+          0.5
+        ],
+        "rms_changes": [
+          0.025,
+          0.0255,
+          0.0245,
+          0.025
+        ],
+        "tolerance": 0.05
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011456,
+        "chg_rms_slope": -0.005772,
+        "is_mup_invariant": true
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "widths": [
+          -256,
+          -512,
+          -1024,
+          -2048
+        ],
+        "rms_activations": [
+          -1.02,
+          -1.01,
+          -0.99,
+          -1.0
+        ],
+        "rms_changes": [
+          -0.05,
+          -0.051,
+          -0.049,
+          -0.05
+        ],
+        "tolerance": -0.1
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011456,
+        "chg_rms_slope": -0.005772,
+        "is_mup_invariant": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "widths": [
+          768,
+          1536,
+          3072,
+          6144
+        ],
+        "rms_activations": [
+          3.06,
+          3.03,
+          2.97,
+          3.0
+        ],
+        "rms_changes": [
+          0.15,
+          0.153,
+          0.147,
+          0.15
+        ],
+        "tolerance": 0.3
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011456,
+        "chg_rms_slope": -0.005772,
+        "is_mup_invariant": true
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "widths": [
+          257.0,
+          513.0,
+          1025.0,
+          2049.0
+        ],
+        "rms_activations": [
+          2.02,
+          2.01,
+          1.99,
+          2.0
+        ],
+        "rms_changes": [
+          1.05,
+          1.051,
+          1.049,
+          1.05
+        ],
+        "tolerance": 1.1
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.005757,
+        "chg_rms_slope": -0.000275,
+        "is_mup_invariant": true
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "widths": [
+          254.0,
+          510.0,
+          1022.0,
+          2046.0
+        ],
+        "rms_activations": [
+          -0.98,
+          -0.99,
+          -1.01,
+          -1.0
+        ],
+        "rms_changes": [
+          -1.95,
+          -1.949,
+          -1.951,
+          -1.95
+        ],
+        "tolerance": -1.9
+      },
+      "expectedOutput": {
+        "act_rms_slope": 0.0,
+        "chg_rms_slope": 0.0,
+        "is_mup_invariant": false
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "widths": [
+          2048,
+          1024,
+          512,
+          256
+        ],
+        "rms_activations": [
+          1.0,
+          0.99,
+          1.01,
+          1.02
+        ],
+        "rms_changes": [
+          0.05,
+          0.049,
+          0.051,
+          0.05
+        ],
+        "tolerance": 0.1
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011456,
+        "chg_rms_slope": -0.005772,
+        "is_mup_invariant": true
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "widths": [
+          -256,
+          -512,
+          -1024,
+          -2048
+        ],
+        "rms_activations": [
+          -1.02,
+          -1.01,
+          -0.99,
+          -1.0
+        ],
+        "rms_changes": [
+          -0.05,
+          -0.051,
+          -0.049,
+          -0.05
+        ],
+        "tolerance": -0.1
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011456,
+        "chg_rms_slope": -0.005772,
+        "is_mup_invariant": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "widths": [
+          2560,
+          5120,
+          10240,
+          20480
+        ],
+        "rms_activations": [
+          10.2,
+          10.1,
+          9.9,
+          10.0
+        ],
+        "rms_changes": [
+          0.5,
+          0.51,
+          0.49,
+          0.5
+        ],
+        "tolerance": 1.0
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011456,
+        "chg_rms_slope": -0.005772,
+        "is_mup_invariant": true
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "widths": [
+          26,
+          51,
+          102,
+          205
+        ],
+        "rms_activations": [
+          0.102,
+          0.101,
+          0.099,
+          0.1
+        ],
+        "rms_changes": [
+          0.005,
+          0.0051,
+          0.0049,
+          0.005
+        ],
+        "tolerance": 0.01
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011489,
+        "chg_rms_slope": -0.005843,
+        "is_mup_invariant": false
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "widths": [
+          261.0,
+          517.0,
+          1029.0,
+          2053.0
+        ],
+        "rms_activations": [
+          6.02,
+          6.01,
+          5.99,
+          6.0
+        ],
+        "rms_changes": [
+          5.05,
+          5.051,
+          5.049,
+          5.05
+        ],
+        "tolerance": 5.1
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.001935,
+        "chg_rms_slope": -5.8e-05,
+        "is_mup_invariant": true
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "widths": [
+          384,
+          768,
+          1536,
+          3072
+        ],
+        "rms_activations": [
+          1.53,
+          1.515,
+          1.485,
+          1.5
+        ],
+        "rms_changes": [
+          0.075,
+          0.0765,
+          0.0735,
+          0.075
+        ],
+        "tolerance": 0.15
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011456,
+        "chg_rms_slope": -0.005772,
+        "is_mup_invariant": true
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "widths": [
+          -512,
+          -1024,
+          -2048,
+          -4096
+        ],
+        "rms_activations": [
+          -2.04,
+          -2.02,
+          -1.98,
+          -2.0
+        ],
+        "rms_changes": [
+          -0.1,
+          -0.102,
+          -0.098,
+          -0.1
+        ],
+        "tolerance": -0.2
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011456,
+        "chg_rms_slope": -0.005772,
+        "is_mup_invariant": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "widths": [
+          64,
+          128,
+          256,
+          512
+        ],
+        "rms_activations": [
+          0.255,
+          0.2525,
+          0.2475,
+          0.25
+        ],
+        "rms_changes": [
+          0.0125,
+          0.0127,
+          0.0123,
+          0.0125
+        ],
+        "tolerance": 0.025
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011456,
+        "chg_rms_slope": -0.004617,
+        "is_mup_invariant": true
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "widths": [
+          255.0,
+          511.0,
+          1023.0,
+          2047.0
+        ],
+        "rms_activations": [
+          0.020000000000000018,
+          0.010000000000000009,
+          -0.010000000000000009,
+          0.0
+        ],
+        "rms_changes": [
+          -0.95,
+          -0.949,
+          -0.951,
+          -0.95
+        ],
+        "tolerance": -0.9
+      },
+      "expectedOutput": {
+        "act_rms_slope": 0.0,
+        "chg_rms_slope": 0.0,
+        "is_mup_invariant": false
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "widths": [
+          1024,
+          2048,
+          4096,
+          8192
+        ],
+        "rms_activations": [
+          4.08,
+          4.04,
+          3.96,
+          4.0
+        ],
+        "rms_changes": [
+          0.2,
+          0.204,
+          0.196,
+          0.2
+        ],
+        "tolerance": 0.4
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011456,
+        "chg_rms_slope": -0.005772,
+        "is_mup_invariant": true
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "widths": [
+          192,
+          384,
+          768,
+          1536
+        ],
+        "rms_activations": [
+          0.765,
+          0.7575,
+          0.7425,
+          0.75
+        ],
+        "rms_changes": [
+          0.0375,
+          0.0382,
+          0.0368,
+          0.0375
+        ],
+        "tolerance": 0.075
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011456,
+        "chg_rms_slope": -0.005387,
+        "is_mup_invariant": true
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l11-mup-invariant-diagnostics-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "widths": [
+          1280,
+          2560,
+          5120,
+          10240
+        ],
+        "rms_activations": [
+          5.1,
+          5.05,
+          4.95,
+          5.0
+        ],
+        "rms_changes": [
+          0.25,
+          0.255,
+          0.245,
+          0.25
+        ],
+        "tolerance": 0.5
+      },
+      "expectedOutput": {
+        "act_rms_slope": -0.011456,
+        "chg_rms_slope": -0.005772,
+        "is_mup_invariant": true
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cs336_l11_mup_invariant_diagnostics",
+    "parameters": [
+      {
+        "name": "widths",
+        "type": "any"
+      },
+      {
+        "name": "rms_activations",
+        "type": "any"
+      },
+      {
+        "name": "rms_changes",
+        "type": "any"
+      },
+      {
+        "name": "tolerance",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/cs336-l11-mup-invariant-diagnostics",
+  "localUrl": "http://localhost:3000/problems/cs336-l11-mup-invariant-diagnostics"
+}

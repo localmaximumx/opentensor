@@ -1,0 +1,525 @@
+{
+  "id": "log-loss-per-sample",
+  "title": "Log Loss (Per-Sample)",
+  "description": "Compute binary log loss independently for every sample. Clip each predicted probability before applying the logarithm:\n\n$$\n\\widehat p=\\min(1-\\varepsilon,\\max(\\varepsilon,p))\n$$\n\n$$\nL(y,p)=-\\left[y\\ln(\\widehat p)+(1-y)\\ln(1-\\widehat p)\\right]\n$$\n\nHere, $y$ is a binary target, $p$ is its predicted probability, and $\\varepsilon$ is eps. Use the natural logarithm and return a list of losses in input order.",
+  "seoDescription": "Compute binary log loss for each prediction with clipped probabilities to prevent undefined logarithms.",
+  "examples": [
+    "Input: y_true = [1, 0, 1], y_pred = [0.9, 0.1, 0.8], eps = 1e-15\n\nOutput: [0.105361, 0.105361, 0.223144]\n\nExplanation: Each confident correct prediction produces a small positive loss.",
+    "Input: y_true = [1, 0], y_pred = [1, 0], eps = 1e-15\n\nOutput: [0, 0]"
+  ],
+  "requirements": "* Clip every prediction to [eps, 1 - eps]\n* Compute binary log loss separately for each pair\n* Use the natural logarithm\n* Return a list of Python floats in sample order",
+  "theory": "## Understanding the Theory: Log Loss (Per-Sample)\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **Log Loss (Per-Sample)** implements a core computational routine.\n\nIn this problem, the objective is to implement **Log Loss (Per-Sample)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\widehat p=\\min(1-\\varepsilon,\\max(\\varepsilon,p))\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "Clip with max(eps, min(1 - eps, probability)).",
+    "Append -(y * math.log(p) + (1 - y) * math.log(1 - p)) for each pair."
+  ],
+  "constraints": "* 1 <= len(y_true) == len(y_pred) <= 10000\n* Targets are 0 or 1\n* Predictions lie between 0 and 1\n* 0 < eps < 0.5",
+  "difficulty": "Easy",
+  "starterCode": "import math\n\ndef log_loss(y_true: list, y_pred: list, eps: float = 1e-15) -> list:\n    \"\"\"\n    Returns a list of loss values.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-30T22:28:11.276Z",
+  "updatedAt": "2026-08-23T11:59:44.127Z",
+  "solution": "### 💡 Intuition & Approach\nBinary cross-entropy loss evaluated on an individual sample basis.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef sample_log_loss(y_true: list, y_pred: list, eps: float = 1e-15) -> list:\n    yt = np.array(y_true, dtype=float)\n    yp = np.clip(np.array(y_pred, dtype=float), eps, 1.0 - eps)\n    loss = - (yt * np.log(yp) + (1.0 - yt) * np.log(1.0 - yp))\n    return np.round(loss, 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "LogLossPerSampleViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Simple",
+      "inputs": {
+        "eps": 1e-15,
+        "y_pred": [
+          0.9,
+          0.1,
+          0.8
+        ],
+        "y_true": [
+          1,
+          0,
+          1
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        0.105361,
+        0.105361,
+        0.223144
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Clipping",
+      "inputs": {
+        "eps": 1e-15,
+        "y_pred": [
+          1,
+          0
+        ],
+        "y_true": [
+          1,
+          0
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "log-loss-per-sample-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "eps": 0.0,
+        "y_pred": [
+          1.8,
+          0.2,
+          1.6
+        ],
+        "y_true": [
+          2,
+          0,
+          2
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.223144,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "eps": 0.0,
+        "y_pred": [
+          0.45,
+          0.05,
+          0.4
+        ],
+        "y_true": [
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0.597837,
+        0.051293,
+        0.510826
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "eps": 1.0,
+        "y_pred": [
+          1.9,
+          1.1,
+          1.8
+        ],
+        "y_true": [
+          2,
+          1,
+          2
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "eps": 0.0,
+        "y_pred": [
+          1.35,
+          0.15,
+          1.2
+        ],
+        "y_true": [
+          2,
+          0,
+          2
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.162519,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "eps": 0.0,
+        "y_pred": [
+          2.7,
+          0.3,
+          2.4
+        ],
+        "y_true": [
+          3,
+          0,
+          3
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.356675,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "eps": 0.0,
+        "y_pred": [
+          0.225,
+          0.025,
+          0.2
+        ],
+        "y_true": [
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0.254892,
+        0.025318,
+        0.223144
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "eps": 2.0,
+        "y_pred": [
+          2.9,
+          2.1,
+          2.8
+        ],
+        "y_true": [
+          3,
+          2,
+          3
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "eps": 0.0,
+        "y_pred": [
+          3.6,
+          0.4,
+          3.2
+        ],
+        "y_true": [
+          4,
+          0,
+          4
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.510826,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "eps": 0.0,
+        "y_pred": [
+          0.8,
+          0.1,
+          0.9
+        ],
+        "y_true": [
+          1,
+          0,
+          1
+        ]
+      },
+      "expectedOutput": [
+        0.223144,
+        0.105361,
+        0.105361
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "eps": 0.0,
+        "y_pred": [
+          0.675,
+          0.075,
+          0.6
+        ],
+        "y_true": [
+          1,
+          0,
+          1
+        ]
+      },
+      "expectedOutput": [
+        0.393043,
+        0.077962,
+        0.510826
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "eps": 0.0,
+        "y_pred": [
+          4.5,
+          0.5,
+          4.0
+        ],
+        "y_true": [
+          5,
+          0,
+          5
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.693147,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "eps": 3.0,
+        "y_pred": [
+          3.9,
+          3.1,
+          3.8
+        ],
+        "y_true": [
+          4,
+          3,
+          4
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "eps": 0.0,
+        "y_pred": [
+          0.72,
+          0.08,
+          0.64
+        ],
+        "y_true": [
+          1,
+          0,
+          1
+        ]
+      },
+      "expectedOutput": [
+        0.328504,
+        0.083382,
+        0.446287
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "eps": 0.0,
+        "y_pred": [
+          5.4,
+          0.6,
+          4.8
+        ],
+        "y_true": [
+          6,
+          0,
+          6
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.916291,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "eps": 4.0,
+        "y_pred": [
+          4.9,
+          4.1,
+          4.8
+        ],
+        "y_true": [
+          5,
+          4,
+          5
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "eps": 0.0,
+        "y_pred": [
+          1.08,
+          0.12,
+          0.96
+        ],
+        "y_true": [
+          1,
+          0,
+          1
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.127833,
+        0.040822
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "eps": 0.0,
+        "y_pred": [
+          0.36,
+          0.04,
+          0.32
+        ],
+        "y_true": [
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0.446287,
+        0.040822,
+        0.385662
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "log-loss-per-sample-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "eps": 0.0,
+        "y_pred": [
+          7.2,
+          0.8,
+          6.4
+        ],
+        "y_true": [
+          8,
+          0,
+          8
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        1.609438,
+        0.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "log_loss",
+    "parameters": [
+      {
+        "name": "y_true",
+        "type": "array",
+        "example": "[1, 0, 1]",
+        "description": "True binary labels (0 or 1)"
+      },
+      {
+        "name": "y_pred",
+        "type": "array",
+        "example": "[0.9, 0.1, 0.8]",
+        "description": "Predicted probabilities (between 0 and 1)"
+      },
+      {
+        "name": "eps",
+        "type": "number",
+        "example": "1e-15",
+        "description": "Small constant for numerical stability (clipping)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "cross-entropy-loss",
+    "logistic-regression-training",
+    "softmax-function",
+    "classification-metrics",
+    "metrics-f1-micro"
+  ],
+  "tags": [
+    "Metrics & Evaluation"
+  ],
+  "prevId": "cohens-kappa",
+  "nextId": "expected-calibration-error",
+  "slug": "log-loss-per-sample",
+  "cleanTitle": "Log Loss (Per-Sample)",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/log-loss-per-sample",
+  "localUrl": "http://localhost:3000/problems/log-loss-per-sample",
+  "studyPlan": null
+}

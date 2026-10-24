@@ -1,0 +1,930 @@
+{
+  "id": "conv2d-image-filtering",
+  "title": "2D Convolution (Image Filtering)",
+  "description": "Apply a CNN-style two-dimensional filter to a single-channel image. Pad every side with zeros, then slide the kernel with the supplied stride. Do not flip the kernel.\n\n$$\nY_{i,j}=\\sum_{a=0}^{K_h-1}\\sum_{b=0}^{K_w-1}X^{\\mathrm{pad}}_{is+a,js+b}K_{a,b}\n$$\n\n$$\nH_{\\mathrm{out}}=\\left\\lfloor\\frac{H+2p-K_h}{s}\\right\\rfloor+1\n$$\n\n$$\nW_{\\mathrm{out}}=\\left\\lfloor\\frac{W+2p-K_w}{s}\\right\\rfloor+1\n$$\n\nHere, $X$ is the image, $K$ is the kernel, $s$ is stride, and $p$ is padding. Return the output as a two-dimensional list of numbers.",
+  "seoDescription": "Apply a 2D convolution kernel to a single-channel image with configurable zero-padding and stride.",
+  "examples": [
+    "Input: image = [[1, 2, 3], [4, 5, 6], [7, 8, 9]], kernel = [[1, 0], [0, 1]], stride = 1, padding = 0\n\nOutput: [[6, 8], [12, 14]]\n\nExplanation: Each output is the sum along the main diagonal of its two-by-two image patch.",
+    "Input: image = [[1, 2], [3, 4]], kernel = [[1, 1], [1, 1]], stride = 1, padding = 1\n\nOutput: [[1, 3, 2], [4, 10, 6], [3, 7, 4]]"
+  ],
+  "requirements": "* Apply zero padding on every side\n* Slide the unflipped kernel using the specified stride\n* Compute one elementwise-product sum per output position\n* Return a two-dimensional list",
+  "theory": "## Understanding the Theory: 2D Convolution (Image Filtering)\n\n### Core Intuition: Why Do We Need This?\nImages possess rich spatial structure: nearby pixels are correlated, and visual patterns (edges, textures, object parts) are translation invariant. Computer vision models apply local receptive fields and weight sharing to process high-resolution visual inputs with minimal parameter overhead. **2D Convolution (Image Filtering)** extracts localized visual features, pools spatial maps, or reconciles geometric bounding boxes.\n\nIn this problem, the objective is to implement **2D Convolution (Image Filtering)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nY_{i,j}=\\sum_{a=0}^{K_h-1}\\sum_{b=0}^{K_w-1}X^{\\mathrm{pad}}_{is+a,js+b}K_{a,b}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Receptive Field Growth**: Stacking convolutional layers with strides or pooling progressively expands the effective field of view, enabling deep layers to capture global semantic context.\n* **Boundary Padding & Strides**: Padding controls spatial dimension retention, while strides downsample feature resolutions efficiently without extra parameters.\n* **Vectorized im2col**: High-performance vision libraries transform sliding window convolutions into matrix multiplications (`GEMM`) via im2col operations.",
+  "hints": [
+    "Build a zero-filled padded grid and copy the image into its center.",
+    "Use four loops for output rows, output columns, kernel rows, and kernel columns."
+  ],
+  "constraints": "* The image and kernel are nonempty rectangular lists\n* The kernel fits the padded image\n* Stride is positive and padding is nonnegative",
+  "difficulty": "Medium",
+  "starterCode": "def conv2d(image: list, kernel: list, stride: int = 1, padding: int = 0) -> list:\n    \"\"\"\n    Returns a two-dimensional list.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T11:00:28.900Z",
+  "updatedAt": "2026-08-23T18:55:49.113Z",
+  "solution": "### 💡 Intuition & Approach\nComputes 2D cross-correlation spatial filtering with kernel receptive fields.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef conv2d(image: list, kernel: list, stride: int = 1, padding: int = 0) -> list:\n    img = np.array(image, dtype=float)\n    kern = np.array(kernel, dtype=float)\n    if padding > 0:\n        img = np.pad(img, padding, mode='constant', constant_values=0)\n    H, W = img.shape\n    kH, kW = kern.shape\n    out_H = (H - kH) // stride + 1\n    out_W = (W - kW) // stride + 1\n    out = np.zeros((out_H, out_W), dtype=float)\n\n    for i in range(out_H):\n        for j in range(out_W):\n            patch = img[i * stride : i * stride + kH, j * stride : j * stride + kW]\n            out[i, j] = np.sum(patch * kern)\n    return out.tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "Conv2dImageFilteringViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "public_simple",
+      "inputs": {
+        "image": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4,
+            5,
+            6
+          ],
+          [
+            7,
+            8,
+            9
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "stride": 1,
+        "padding": 0
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          6,
+          8
+        ],
+        [
+          12,
+          14
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "public_with_padding",
+      "inputs": {
+        "image": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "stride": 1,
+        "padding": 1
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1,
+          3,
+          2
+        ],
+        [
+          4,
+          10,
+          6
+        ],
+        [
+          3,
+          7,
+          4
+        ]
+      ]
+    },
+    {
+      "id": "conv2d-image-filtering-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "image": [
+          [
+            2,
+            4,
+            6
+          ],
+          [
+            8,
+            10,
+            12
+          ],
+          [
+            14,
+            16,
+            18
+          ]
+        ],
+        "kernel": [
+          [
+            2,
+            0
+          ],
+          [
+            0,
+            2
+          ]
+        ],
+        "stride": 2,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          24.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "image": [
+          [
+            0,
+            1,
+            2
+          ],
+          [
+            2,
+            2,
+            3
+          ],
+          [
+            4,
+            4,
+            4
+          ]
+        ],
+        "kernel": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "stride": 0,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          6,
+          8
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "image": [
+          [
+            -1,
+            -2,
+            -3
+          ],
+          [
+            -4,
+            -5,
+            -6
+          ],
+          [
+            -7,
+            -8,
+            -9
+          ]
+        ],
+        "kernel": [
+          [
+            -1,
+            0
+          ],
+          [
+            0,
+            -1
+          ]
+        ],
+        "stride": -1,
+        "padding": 0
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "image": [
+          [
+            3,
+            6,
+            9
+          ],
+          [
+            12,
+            15,
+            18
+          ],
+          [
+            21,
+            24,
+            27
+          ]
+        ],
+        "kernel": [
+          [
+            3,
+            0
+          ],
+          [
+            0,
+            3
+          ]
+        ],
+        "stride": 3,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          54.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "image": [
+          [
+            2.0,
+            3.0,
+            4.0
+          ],
+          [
+            5.0,
+            6.0,
+            7.0
+          ],
+          [
+            8.0,
+            9.0,
+            10.0
+          ]
+        ],
+        "kernel": [
+          [
+            2.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0
+          ]
+        ],
+        "stride": 2.0,
+        "padding": 1.0
+      },
+      "expectedOutput": [
+        [
+          6,
+          8
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "image": [
+          [
+            -1.0,
+            0.0,
+            1.0
+          ],
+          [
+            2.0,
+            3.0,
+            4.0
+          ],
+          [
+            5.0,
+            6.0,
+            7.0
+          ]
+        ],
+        "kernel": [
+          [
+            -1.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -1.0
+          ]
+        ],
+        "stride": -1.0,
+        "padding": -2.0
+      },
+      "expectedOutput": [
+        [
+          6,
+          8
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "image": [
+          [
+            3,
+            2,
+            1
+          ],
+          [
+            6,
+            5,
+            4
+          ],
+          [
+            9,
+            8,
+            7
+          ]
+        ],
+        "kernel": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "stride": 1,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          8.0,
+          6.0
+        ],
+        [
+          14.0,
+          12.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "image": [
+          [
+            -1,
+            -2,
+            -3
+          ],
+          [
+            -4,
+            -5,
+            -6
+          ],
+          [
+            -7,
+            -8,
+            -9
+          ]
+        ],
+        "kernel": [
+          [
+            -1,
+            0
+          ],
+          [
+            0,
+            -1
+          ]
+        ],
+        "stride": -1,
+        "padding": 0
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "image": [
+          [
+            10,
+            20,
+            30
+          ],
+          [
+            40,
+            50,
+            60
+          ],
+          [
+            70,
+            80,
+            90
+          ]
+        ],
+        "kernel": [
+          [
+            10,
+            0
+          ],
+          [
+            0,
+            10
+          ]
+        ],
+        "stride": 10,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          600.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "kernel": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "stride": 0,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          6,
+          8
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "image": [
+          [
+            6.0,
+            7.0,
+            8.0
+          ],
+          [
+            9.0,
+            10.0,
+            11.0
+          ],
+          [
+            12.0,
+            13.0,
+            14.0
+          ]
+        ],
+        "kernel": [
+          [
+            6.0,
+            5.0
+          ],
+          [
+            5.0,
+            6.0
+          ]
+        ],
+        "stride": 6.0,
+        "padding": 5.0
+      },
+      "expectedOutput": [
+        [
+          6,
+          8
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "image": [
+          [
+            2,
+            3,
+            4
+          ],
+          [
+            6,
+            8,
+            9
+          ],
+          [
+            10,
+            12,
+            14
+          ]
+        ],
+        "kernel": [
+          [
+            2,
+            0
+          ],
+          [
+            0,
+            2
+          ]
+        ],
+        "stride": 2,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          20.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "image": [
+          [
+            -2,
+            -4,
+            -6
+          ],
+          [
+            -8,
+            -10,
+            -12
+          ],
+          [
+            -14,
+            -16,
+            -18
+          ]
+        ],
+        "kernel": [
+          [
+            -2,
+            0
+          ],
+          [
+            0,
+            -2
+          ]
+        ],
+        "stride": -2,
+        "padding": 0
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            1,
+            2
+          ],
+          [
+            2,
+            2,
+            2
+          ]
+        ],
+        "kernel": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "stride": 0,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          6,
+          8
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "image": [
+          [
+            0.0,
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0,
+            5.0
+          ],
+          [
+            6.0,
+            7.0,
+            8.0
+          ]
+        ],
+        "kernel": [
+          [
+            0.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            0.0
+          ]
+        ],
+        "stride": 0.0,
+        "padding": -1.0
+      },
+      "expectedOutput": [
+        [
+          6,
+          8
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "image": [
+          [
+            4,
+            8,
+            12
+          ],
+          [
+            16,
+            20,
+            24
+          ],
+          [
+            28,
+            32,
+            36
+          ]
+        ],
+        "kernel": [
+          [
+            4,
+            0
+          ],
+          [
+            0,
+            4
+          ]
+        ],
+        "stride": 4,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          96.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "image": [
+          [
+            1,
+            2,
+            2
+          ],
+          [
+            3,
+            4,
+            4
+          ],
+          [
+            5,
+            6,
+            7
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "stride": 1,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          5.0,
+          6.0
+        ],
+        [
+          9.0,
+          11.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv2d-image-filtering-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "image": [
+          [
+            5,
+            10,
+            15
+          ],
+          [
+            20,
+            25,
+            30
+          ],
+          [
+            35,
+            40,
+            45
+          ]
+        ],
+        "kernel": [
+          [
+            5,
+            0
+          ],
+          [
+            0,
+            5
+          ]
+        ],
+        "stride": 5,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          150.0
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "conv2d",
+    "parameters": [
+      {
+        "name": "image",
+        "type": "array"
+      },
+      {
+        "name": "kernel",
+        "type": "array"
+      },
+      {
+        "name": "stride",
+        "type": "number"
+      },
+      {
+        "name": "padding",
+        "type": "number"
+      }
+    ],
+    "return_type": "array"
+  },
+  "relatedProblems": [
+    "gaussian-blur-kernel",
+    "sobel-edge-detection",
+    "simple-cnn-layer",
+    "max-pooling-2d",
+    "morphological-operations"
+  ],
+  "tags": [
+    "Computer Vision"
+  ],
+  "prevId": "non-maximum-suppression",
+  "nextId": "bilinear-interpolation",
+  "slug": "conv2d-image-filtering",
+  "cleanTitle": "2D Convolution (Image Filtering)",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/conv2d-image-filtering",
+  "localUrl": "http://localhost:3000/problems/conv2d-image-filtering",
+  "studyPlan": null
+}

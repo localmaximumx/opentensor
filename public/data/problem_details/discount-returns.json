@@ -1,0 +1,427 @@
+{
+  "id": "discount-returns",
+  "title": "Discounted Returns",
+  "description": "In reinforcement learning, an agent collects rewards at each timestep. The discounted return at timestep t is the sum of all future rewards, where each reward is discounted by a factor of gamma raised to the power of how far in the future it occurs. This captures the idea that immediate rewards are worth more than distant ones.\n\nGiven a list of rewards collected over T timesteps and a discount factor gamma, compute the discounted return for every timestep.\n\n### Formula\n\nThe discounted return at timestep t is:\n\n$$\nG_t = r_t + \\gamma \\cdot r_{t+1} + \\gamma^2 \\cdot r_{t+2} + \\cdots + \\gamma^{T-1-t} \\cdot r_{T-1}\n$$\n\nThis can be computed efficiently using the backward recursive relation:\n\n$$\nG_t = r_t + \\gamma \\cdot G_{t+1}\n$$\n\n$$\nG_{T-1} = r_{T-1}\n$$\n\nReturn the discounted returns as a list of floats with the same length as rewards.",
+  "seoDescription": "Compute discounted reinforcement-learning returns backward through a reward sequence using a discount factor.",
+  "examples": [
+    "Input: rewards = [1, 1, 1], gamma = 1\n\nOutput: [3.0, 2.0, 1.0]\n\nExplanation: With no discounting, each position contains the sum of all rewards from that position onward.",
+    "Input: rewards = [0, 0, 0, 10], gamma = 0.9\n\nOutput: [7.29, 8.1, 9.0, 10.0]"
+  ],
+  "requirements": "* Compute the discounted return for every timestep using backward recursion\n* Start from the last timestep where G[T-1] = rewards[T-1]\n* For each earlier timestep: G[t] = rewards[t] + gamma * G[t+1]\n* Return a list of floats with the same length as rewards\n* Round numeric outputs to 4 decimal places.",
+  "theory": "## Understanding the Theory: Discounted Returns\n\n### Core Intuition: Why Do We Need This?\nIn reinforcement learning, an agent learns optimal decision policies through environmental trial-and-error without explicit target labels. The agent must balance exploiting known high-value actions against exploring uncertain actions that may yield higher cumulative discounted rewards. **Discounted Returns** provides the algorithmic rule for updating state values, policy distributions, or Q-tables.\n\nIn this problem, the objective is to implement **Discounted Returns** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nG_t = r_t + \\gamma \\cdot r_{t+1} + \\gamma^2 \\cdot r_{t+2} + \\cdots + \\gamma^{T-1-t} \\cdot r_{T-1}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Bellman Optimality**: Dynamic programming in RL computes value functions iteratively: current value equals immediate reward plus discounted expectation of subsequent state values.\n* **Exploration Strategies**: Techniques like $\\\\epsilon$-greedy and entropy regularization prevent the policy from collapsing prematurely into sub-optimal actions.\n* **Credit Assignment**: Temporal difference learning allows agents to update value estimates after every step rather than waiting until the end of an episode.",
+  "hints": [
+    "Traverse rewards from right to left while carrying the next return.",
+    "Store reward plus gamma times the carried return at each position."
+  ],
+  "constraints": "* rewards has at least one element\n* 0 <= gamma <= 1\n* Return a list of floats with the same length as rewards\n* Time limit: 300 ms",
+  "difficulty": "Easy",
+  "starterCode": "def discount_returns(rewards: list, gamma: float) -> list:\n    \"\"\"\n    Returns the discounted return at every timestep.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T17:14:26.025Z",
+  "updatedAt": "2026-10-12T07:46:35.024Z",
+  "solution": "### 💡 Intuition & Approach\nBackward recursion computing discounted future trajectory reward $G_t = r_t + \\gamma G_{t+1}$.\n\n### ⚡ Python Reference Implementation\n```python\ndef discount_returns(rewards: list, gamma: float) -> list:\n    n = len(rewards)\n    returns = [0.0] * n\n    G = 0.0\n    for t in reversed(range(n)):\n        G = rewards[t] + gamma * G\n        returns[t] = round(G, 4)\n    return returns\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "DiscountReturnsViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "public_ones_g1",
+      "inputs": {
+        "gamma": 1,
+        "rewards": [
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        3.0,
+        2.0,
+        1.0
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "public_end_reward",
+      "inputs": {
+        "gamma": 0.9,
+        "rewards": [
+          0,
+          0,
+          0,
+          10
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        7.29,
+        8.1,
+        9.0,
+        10.0
+      ]
+    },
+    {
+      "id": "discount-returns-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "gamma": 2,
+        "rewards": [
+          2,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": [
+        14.0,
+        6.0,
+        2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "gamma": 0,
+        "rewards": [
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "gamma": -1,
+        "rewards": [
+          -1,
+          -1,
+          -1
+        ]
+      },
+      "expectedOutput": [
+        -1.0,
+        0.0,
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "gamma": 3,
+        "rewards": [
+          3,
+          3,
+          3
+        ]
+      },
+      "expectedOutput": [
+        39.0,
+        12.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "gamma": 2.0,
+        "rewards": [
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        14.0,
+        6.0,
+        2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "gamma": -1.0,
+        "rewards": [
+          -1.0,
+          -1.0,
+          -1.0
+        ]
+      },
+      "expectedOutput": [
+        -1.0,
+        0.0,
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "gamma": 1,
+        "rewards": [
+          1,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": [
+        3.0,
+        2.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "gamma": -1,
+        "rewards": [
+          -1,
+          -1,
+          -1
+        ]
+      },
+      "expectedOutput": [
+        -1.0,
+        0.0,
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "gamma": 10,
+        "rewards": [
+          10,
+          10,
+          10
+        ]
+      },
+      "expectedOutput": [
+        1110.0,
+        110.0,
+        10.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "gamma": 0,
+        "rewards": [
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "gamma": 6.0,
+        "rewards": [
+          6.0,
+          6.0,
+          6.0
+        ]
+      },
+      "expectedOutput": [
+        258.0,
+        42.0,
+        6.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "gamma": 2,
+        "rewards": [
+          2,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": [
+        14.0,
+        6.0,
+        2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "gamma": -2,
+        "rewards": [
+          -2,
+          -2,
+          -2
+        ]
+      },
+      "expectedOutput": [
+        -6.0,
+        2.0,
+        -2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "gamma": 0,
+        "rewards": [
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "gamma": 0.0,
+        "rewards": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "gamma": 4,
+        "rewards": [
+          4,
+          4,
+          4
+        ]
+      },
+      "expectedOutput": [
+        84.0,
+        20.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "gamma": 1,
+        "rewards": [
+          1,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": [
+        3.0,
+        2.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "discount-returns-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "gamma": 5,
+        "rewards": [
+          5,
+          5,
+          5
+        ]
+      },
+      "expectedOutput": [
+        155.0,
+        30.0,
+        5.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "discount_returns",
+    "returns": {
+      "type": "array"
+    },
+    "parameters": [
+      {
+        "name": "rewards",
+        "type": "array",
+        "example": "[1, 1, 1]",
+        "description": "Sequence of rewards at each timestep"
+      },
+      {
+        "name": "gamma",
+        "type": "number",
+        "example": "1.0",
+        "description": "Discount factor (0 to 1)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "compute-advantage",
+    "gae-computation",
+    "policy-gradient-loss",
+    "mc-policy-evaluation",
+    "value-iteration-step"
+  ],
+  "tags": [
+    "Reinforcement Learning"
+  ],
+  "prevId": "binary-focal-loss",
+  "nextId": "sarsa-update",
+  "slug": "discount-returns",
+  "cleanTitle": "Discounted Returns",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/discount-returns",
+  "localUrl": "http://localhost:3000/problems/discount-returns",
+  "studyPlan": null
+}

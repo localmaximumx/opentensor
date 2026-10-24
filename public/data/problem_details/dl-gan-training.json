@@ -1,0 +1,955 @@
+{
+  "catalogId": "python:dl-gan-training",
+  "id": "dl-gan-training",
+  "sourceId": "dl-gan-training",
+  "slug": "dl-gan-training",
+  "source": "python",
+  "category": "numpy",
+  "title": "GAN Training Step",
+  "difficulty": "Hard",
+  "tags": [
+    "Generative Models",
+    "Neural Networks"
+  ],
+  "isFree": false,
+  "planId": "cracking-dl",
+  "planTitle": "Cracking Deep Learning",
+  "sectionId": "cracking-dl-generative-models",
+  "sortOrder": 376,
+  "seoDescription": "Implement a single forward-pass training step for a Generative Adversarial Network (GAN).",
+  "solved": false,
+  "isLocked": true,
+  "description": "Evaluate generator and discriminator forward activations and compute minimax binary cross-entropy losses.\n\nGANs frame generative modeling as a two-player zero-sum game whose Nash equilibrium recovers the empirical data distribution.\n\n### Mathematical Formulation\n$$\n\\mathcal{L}_D = -\\mathbb{E}[\\log D(x)] - \\mathbb{E}[\\log(1 - D(G(z)))], \\quad \\mathcal{L}_G = -\\mathbb{E}[\\log D(G(z))]\n$$\n\n### Step-by-Step Implementation\n1. Transform latent Gaussian noise through generator to synthesize fake samples\n2. Evaluate discriminator probabilities on both real and fake data batches\n3. Compute discriminator classification loss and generator non-saturating objective\n\n### Returns\nDictionary with 'd_loss', 'g_loss', 'd_real_mean', and 'd_fake_mean'.",
+  "theory": "## Understanding the Theory: GAN Training Step\n\n### Core Intuition: Why Do We Need This?\nNeural networks achieve their remarkable expressive power by stacking linear layers interspersed with non-linear activation functions and normalization layers. Without non-linear activations, any deep network would collapse into a single shallow linear regression. **GAN Training Step** ensures signals propagate cleanly through dozens or hundreds of layers without vanishing or exploding.\n\nGANs frame generative modeling as a two-player zero-sum game whose Nash equilibrium recovers the empirical data distribution. In this problem, the goal is to: evaluate generator and discriminator forward activations and compute minimax binary cross-entropy losses.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\mathcal{L}_D = -\\mathbb{E}[\\log D(x)] - \\mathbb{E}[\\log(1 - D(G(z)))], \\quad \\mathcal{L}_G = -\\mathbb{E}[\\log D(G(z))]\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Transform latent Gaussian noise through generator to synthesize fake samples\n2. **Phase 2**: Evaluate discriminator probabilities on both real and fake data batches\n3. **Phase 3**: Compute discriminator classification loss and generator non-saturating objective\n\n### Practical Machine Learning Applications & Nuances\n* **Gradient Flow**: Carefully designed activation functions (like ReLU, GELU, and Swish) maintain strong gradient signals during backpropagation.\n* **Internal Covariate Shift**: Normalization techniques (like LayerNorm and RMSNorm) standardize hidden states across channels or batch dimensions, allowing models to train stably at higher learning rates.\n* **Hardware Friendly**: Modern deep learning frameworks implement these layers using fused GPU kernels to reduce memory round-trips.",
+  "examples": [
+    "Input: real_data = [[1.0, 2.0], [2.0, 3.0]], noise = [[0.5], [-0.5]], W_gen = [[1.5, 2.5]], W_disc = [[0.5], [-0.5]]\n\nOutput: {\"d_loss\": 1.675, \"g_loss\": 0.7009, \"d_real_mean\": 0.3775, \"d_fake_mean\": 0.5}\n\nExplanation: Evaluated dl_gan_training under standard test conditions."
+  ],
+  "requirements": "* Function must be named `dl_gan_training`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `dl_gan_training`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef dl_gan_training(real_data: list, noise: list, W_gen: list, W_disc: list) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **GAN Training Step** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef dl_gan_training(real_data: list, noise: list, W_gen: list, W_disc: list) -> dict:\n    Xr, z, Wg, Wd = np.array(real_data, dtype=np.float64), np.array(noise, dtype=np.float64), np.array(W_gen, dtype=np.float64), np.array(W_disc, dtype=np.float64)\n    sigm = lambda v: 1.0 / (1.0 + np.exp(-np.clip(v, -20.0, 20.0)))\n    dr, df = sigm(np.dot(Xr, Wd)), sigm(np.dot(np.dot(z, Wg), Wd))\n    return {'d_loss': round(float(-np.mean(np.log(np.clip(dr, 1e-12, 1.0)) + np.log(np.clip(1.0 - df, 1e-12, 1.0)))), 4), 'g_loss': round(float(-np.mean(np.log(np.clip(df, 1e-12, 1.0)))), 4), 'd_real_mean': round(float(np.mean(dr)), 4), 'd_fake_mean': round(float(np.mean(df)), 4)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Basic GAN step",
+      "inputs": {
+        "real_data": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            2.0,
+            3.0
+          ]
+        ],
+        "noise": [
+          [
+            0.5
+          ],
+          [
+            -0.5
+          ]
+        ],
+        "W_gen": [
+          [
+            1.5,
+            2.5
+          ]
+        ],
+        "W_disc": [
+          [
+            0.5
+          ],
+          [
+            -0.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 1.675,
+        "g_loss": 0.7009,
+        "d_real_mean": 0.3775,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": true
+    },
+    {
+      "id": "dl-gan-training-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "real_data": [
+          [
+            2.0,
+            4.0
+          ],
+          [
+            4.0,
+            6.0
+          ]
+        ],
+        "noise": [
+          [
+            1.0
+          ],
+          [
+            -1.0
+          ]
+        ],
+        "W_gen": [
+          [
+            3.0,
+            5.0
+          ]
+        ],
+        "W_disc": [
+          [
+            1.0
+          ],
+          [
+            -1.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 3.2539,
+        "g_loss": 1.1269,
+        "d_real_mean": 0.1192,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": true
+    },
+    {
+      "id": "dl-gan-training-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "real_data": [
+          [
+            0.5,
+            1.0
+          ],
+          [
+            1.0,
+            1.5
+          ]
+        ],
+        "noise": [
+          [
+            0.25
+          ],
+          [
+            -0.25
+          ]
+        ],
+        "W_gen": [
+          [
+            0.75,
+            1.25
+          ]
+        ],
+        "W_disc": [
+          [
+            0.25
+          ],
+          [
+            -0.25
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 1.4509,
+        "g_loss": 0.6933,
+        "d_real_mean": 0.4688,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "real_data": [
+          [
+            -1.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -3.0
+          ]
+        ],
+        "noise": [
+          [
+            -0.5
+          ],
+          [
+            0.5
+          ]
+        ],
+        "W_gen": [
+          [
+            -1.5,
+            -2.5
+          ]
+        ],
+        "W_disc": [
+          [
+            -0.5
+          ],
+          [
+            0.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 1.675,
+        "g_loss": 0.7009,
+        "d_real_mean": 0.3775,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "real_data": [
+          [
+            3.0,
+            6.0
+          ],
+          [
+            6.0,
+            9.0
+          ]
+        ],
+        "noise": [
+          [
+            1.5
+          ],
+          [
+            -1.5
+          ]
+        ],
+        "W_gen": [
+          [
+            4.5,
+            7.5
+          ]
+        ],
+        "W_disc": [
+          [
+            1.5
+          ],
+          [
+            -1.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 7.8872,
+        "g_loss": 3.3762,
+        "d_real_mean": 0.011,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "real_data": [
+          [
+            2.0,
+            3.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "noise": [
+          [
+            1.5
+          ],
+          [
+            0.5
+          ]
+        ],
+        "W_gen": [
+          [
+            2.5,
+            3.5
+          ]
+        ],
+        "W_disc": [
+          [
+            1.5
+          ],
+          [
+            0.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 5.5374,
+        "g_loss": 0.0311,
+        "d_real_mean": 0.9938,
+        "d_fake_mean": 0.9698
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "real_data": [
+          [
+            -1.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "noise": [
+          [
+            -1.5
+          ],
+          [
+            -2.5
+          ]
+        ],
+        "W_gen": [
+          [
+            -0.5,
+            0.5
+          ]
+        ],
+        "W_disc": [
+          [
+            -1.5
+          ],
+          [
+            -2.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 2.7096,
+        "g_loss": 0.3194,
+        "d_real_mean": 0.4467,
+        "d_fake_mean": 0.7282
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "real_data": [
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            2.0
+          ]
+        ],
+        "noise": [
+          [
+            0.5
+          ],
+          [
+            -0.5
+          ]
+        ],
+        "W_gen": [
+          [
+            2.5,
+            1.5
+          ]
+        ],
+        "W_disc": [
+          [
+            0.5
+          ],
+          [
+            -0.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 1.175,
+        "g_loss": 0.7009,
+        "d_real_mean": 0.6225,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "real_data": [
+          [
+            -1.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -3.0
+          ]
+        ],
+        "noise": [
+          [
+            -0.5
+          ],
+          [
+            0.5
+          ]
+        ],
+        "W_gen": [
+          [
+            -1.5,
+            -2.5
+          ]
+        ],
+        "W_disc": [
+          [
+            -0.5
+          ],
+          [
+            0.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 1.675,
+        "g_loss": 0.7009,
+        "d_real_mean": 0.3775,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "real_data": [
+          [
+            10.0,
+            20.0
+          ],
+          [
+            20.0,
+            30.0
+          ]
+        ],
+        "noise": [
+          [
+            5.0
+          ],
+          [
+            -5.0
+          ]
+        ],
+        "W_gen": [
+          [
+            15.0,
+            25.0
+          ]
+        ],
+        "W_disc": [
+          [
+            5.0
+          ],
+          [
+            -5.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 30.0,
+        "g_loss": 10.0,
+        "d_real_mean": 0.0,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "real_data": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.2,
+            0.3
+          ]
+        ],
+        "noise": [
+          [
+            0.05
+          ],
+          [
+            -0.05
+          ]
+        ],
+        "W_gen": [
+          [
+            0.15,
+            0.25
+          ]
+        ],
+        "W_disc": [
+          [
+            0.05
+          ],
+          [
+            -0.05
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 1.3888,
+        "g_loss": 0.6931,
+        "d_real_mean": 0.4988,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "real_data": [
+          [
+            6.0,
+            7.0
+          ],
+          [
+            7.0,
+            8.0
+          ]
+        ],
+        "noise": [
+          [
+            5.5
+          ],
+          [
+            4.5
+          ]
+        ],
+        "W_gen": [
+          [
+            6.5,
+            7.5
+          ]
+        ],
+        "W_disc": [
+          [
+            5.5
+          ],
+          [
+            4.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 20.0,
+        "g_loss": 0.0,
+        "d_real_mean": 1.0,
+        "d_fake_mean": 1.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "real_data": [
+          [
+            1.5,
+            3.0
+          ],
+          [
+            3.0,
+            4.5
+          ]
+        ],
+        "noise": [
+          [
+            0.75
+          ],
+          [
+            -0.75
+          ]
+        ],
+        "W_gen": [
+          [
+            2.25,
+            3.75
+          ]
+        ],
+        "W_disc": [
+          [
+            0.75
+          ],
+          [
+            -0.75
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 2.1858,
+        "g_loss": 0.7796,
+        "d_real_mean": 0.2451,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "real_data": [
+          [
+            -2.0,
+            -4.0
+          ],
+          [
+            -4.0,
+            -6.0
+          ]
+        ],
+        "noise": [
+          [
+            -1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "W_gen": [
+          [
+            -3.0,
+            -5.0
+          ]
+        ],
+        "W_disc": [
+          [
+            -1.0
+          ],
+          [
+            1.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 3.2539,
+        "g_loss": 1.1269,
+        "d_real_mean": 0.1192,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "real_data": [
+          [
+            0.25,
+            0.5
+          ],
+          [
+            0.5,
+            0.75
+          ]
+        ],
+        "noise": [
+          [
+            0.125
+          ],
+          [
+            -0.125
+          ]
+        ],
+        "W_gen": [
+          [
+            0.375,
+            0.625
+          ]
+        ],
+        "W_disc": [
+          [
+            0.125
+          ],
+          [
+            -0.125
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 1.402,
+        "g_loss": 0.6931,
+        "d_real_mean": 0.4922,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "real_data": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0
+          ]
+        ],
+        "noise": [
+          [
+            -0.5
+          ],
+          [
+            -1.5
+          ]
+        ],
+        "W_gen": [
+          [
+            0.5,
+            1.5
+          ]
+        ],
+        "W_disc": [
+          [
+            -0.5
+          ],
+          [
+            -1.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 5.2532,
+        "g_loss": 0.1376,
+        "d_real_mean": 0.1059,
+        "d_fake_mean": 0.8772
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "real_data": [
+          [
+            4.0,
+            8.0
+          ],
+          [
+            8.0,
+            12.0
+          ]
+        ],
+        "noise": [
+          [
+            2.0
+          ],
+          [
+            -2.0
+          ]
+        ],
+        "W_gen": [
+          [
+            6.0,
+            10.0
+          ]
+        ],
+        "W_disc": [
+          [
+            2.0
+          ],
+          [
+            -2.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 16.0003,
+        "g_loss": 8.0,
+        "d_real_mean": 0.0003,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "real_data": [
+          [
+            0.75,
+            1.5
+          ],
+          [
+            1.5,
+            2.25
+          ]
+        ],
+        "noise": [
+          [
+            0.375
+          ],
+          [
+            -0.375
+          ]
+        ],
+        "W_gen": [
+          [
+            1.125,
+            1.875
+          ]
+        ],
+        "W_disc": [
+          [
+            0.375
+          ],
+          [
+            -0.375
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 1.5382,
+        "g_loss": 0.6945,
+        "d_real_mean": 0.4301,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "real_data": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            10.0,
+            15.0
+          ]
+        ],
+        "noise": [
+          [
+            2.5
+          ],
+          [
+            -2.5
+          ]
+        ],
+        "W_gen": [
+          [
+            7.5,
+            12.5
+          ]
+        ],
+        "W_disc": [
+          [
+            2.5
+          ],
+          [
+            -2.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 22.5,
+        "g_loss": 10.0,
+        "d_real_mean": 0.0,
+        "d_fake_mean": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-gan-training-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "real_data": [
+          [
+            11.0,
+            12.0
+          ],
+          [
+            12.0,
+            13.0
+          ]
+        ],
+        "noise": [
+          [
+            10.5
+          ],
+          [
+            9.5
+          ]
+        ],
+        "W_gen": [
+          [
+            11.5,
+            12.5
+          ]
+        ],
+        "W_disc": [
+          [
+            10.5
+          ],
+          [
+            9.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "d_loss": 20.0,
+        "g_loss": 0.0,
+        "d_real_mean": 1.0,
+        "d_fake_mean": 1.0
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "dl_gan_training",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

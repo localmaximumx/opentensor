@@ -1,0 +1,394 @@
+{
+  "id": "binary-focal-loss",
+  "title": "Binary Focal Loss",
+  "description": "Binary focal loss addresses the class imbalance problem in binary classification by down-weighting the loss contribution from easy (well-classified) examples. This allows the model to focus training on hard, misclassified examples. It was introduced in the RetinaNet paper for object detection.\n\nGiven predicted probabilities, binary targets, a balancing factor alpha, and a focusing parameter gamma, compute the mean binary focal loss.\n\n### Algorithm\n\nFor each sample, let p be the predicted probability and y be the target (0 or 1):\n\n1. Compute the probability assigned to the true class:\n\n$$\np_t = p \\quad \\text{if } y = 1\n$$\n\n$$\np_t = 1 - p \\quad \\text{if } y = 0\n$$\n\n2. Compute the focal loss for this sample:\n\n$$\nFL = -\\alpha \\cdot (1 - p_t)^{\\gamma} \\cdot \\ln(p_t)\n$$\n\n3. Return the mean focal loss across all samples.\n\nReturn the mean focal loss as a float.",
+  "seoDescription": "Compute binary focal loss from predicted probabilities with class balancing, focusing strength, and stable logarithms.",
+  "examples": [
+    "Input: predictions = [0.9], targets = [1], alpha = 1, gamma = 2\n\nOutput: 0.001054\n\nExplanation: The factor (1 - 0.9)² strongly reduces the loss of this confident correct prediction.",
+    "Input: predictions = [0.1], targets = [1], alpha = 1, gamma = 2\n\nOutput: 1.865094"
+  ],
+  "requirements": "* Compute p_t based on whether the target is 1 or 0\n* Apply the focal modulating factor (1 - p_t)^gamma\n* Scale by the alpha parameter\n* Return the mean loss across all samples",
+  "theory": "## Understanding the Theory: Binary Focal Loss\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **Binary Focal Loss** implements a core computational routine.\n\nIn this problem, the objective is to implement **Binary Focal Loss** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\np_t = p \\quad \\text{if } y = 1\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "Select p when the target is 1 and one minus p when the target is 0.",
+    "Accumulate the focal term with math.log, then divide by the sample count."
+  ],
+  "constraints": "* predictions contains values strictly between 0 and 1\n* targets contains only 0s and 1s\n* predictions and targets have the same length (at least 1)\n* alpha > 0, gamma >= 0\n* Return a single float (mean loss)\n* Time limit: 300 ms",
+  "difficulty": "Medium",
+  "starterCode": "import math\n\ndef binary_focal_loss(predictions: list, targets: list, alpha: float, gamma: float) -> float:\n    \"\"\"\n    Returns the mean binary focal loss as a float.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T16:55:07.511Z",
+  "updatedAt": "2026-08-23T20:14:05.557Z",
+  "solution": "### 💡 Intuition & Approach\nDown-weights well-classified examples with modulating factor $(1 - p_t)^\\gamma$ to prevent overwhelming gradients from class imbalance.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef binary_focal_loss(predictions: list, targets: list, alpha: float, gamma: float) -> float:\n    p = np.clip(np.array(predictions, dtype=float), 1e-15, 1.0 - 1e-15)\n    y = np.array(targets, dtype=float)\n    p_t = np.where(y == 1, p, 1.0 - p)\n    alpha_t = np.where(y == 1, alpha, 1.0 - alpha)\n    loss = - alpha_t * ((1.0 - p_t) ** gamma) * np.log(p_t)\n    return float(round(np.mean(loss), 6))\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "BinaryFocalLossViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Confident correct prediction",
+      "inputs": {
+        "alpha": 1,
+        "gamma": 2,
+        "targets": [
+          1
+        ],
+        "predictions": [
+          0.9
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 0.001054
+    },
+    {
+      "id": "test-2",
+      "name": "Wrong prediction",
+      "inputs": {
+        "alpha": 1,
+        "gamma": 2,
+        "targets": [
+          1
+        ],
+        "predictions": [
+          0.1
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 1.865094
+    },
+    {
+      "id": "binary-focal-loss-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "alpha": 2,
+        "gamma": 4,
+        "targets": [
+          2
+        ],
+        "predictions": [
+          1.8
+        ]
+      },
+      "expectedOutput": -34.539576,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "alpha": 0,
+        "gamma": 1,
+        "targets": [
+          0
+        ],
+        "predictions": [
+          0.45
+        ]
+      },
+      "expectedOutput": 0.269027,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "alpha": -1,
+        "gamma": -2,
+        "targets": [
+          -1
+        ],
+        "predictions": [
+          -0.9
+        ]
+      },
+      "expectedOutput": 2001599834386888.2,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "alpha": 3,
+        "gamma": 6,
+        "targets": [
+          3
+        ],
+        "predictions": [
+          2.7
+        ]
+      },
+      "expectedOutput": -69.079152,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "alpha": 2.0,
+        "gamma": 3.0,
+        "targets": [
+          2.0
+        ],
+        "predictions": [
+          1.9
+        ]
+      },
+      "expectedOutput": -34.539576,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "alpha": -1.0,
+        "gamma": 0.0,
+        "targets": [
+          -1.0
+        ],
+        "predictions": [
+          -1.1
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "alpha": 1,
+        "gamma": 2,
+        "targets": [
+          1
+        ],
+        "predictions": [
+          0.9
+        ]
+      },
+      "expectedOutput": 0.001054,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "alpha": -1,
+        "gamma": -2,
+        "targets": [
+          -1
+        ],
+        "predictions": [
+          -0.9
+        ]
+      },
+      "expectedOutput": 2001599834386888.2,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "alpha": 10,
+        "gamma": 20,
+        "targets": [
+          10
+        ],
+        "predictions": [
+          9.0
+        ]
+      },
+      "expectedOutput": -310.856184,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "alpha": 0,
+        "gamma": 0,
+        "targets": [
+          0
+        ],
+        "predictions": [
+          0.09
+        ]
+      },
+      "expectedOutput": 0.094311,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "alpha": 6.0,
+        "gamma": 7.0,
+        "targets": [
+          6.0
+        ],
+        "predictions": [
+          5.9
+        ]
+      },
+      "expectedOutput": -172.69788,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "alpha": 2,
+        "gamma": 3,
+        "targets": [
+          2
+        ],
+        "predictions": [
+          1.35
+        ]
+      },
+      "expectedOutput": -34.539576,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "alpha": -2,
+        "gamma": -4,
+        "targets": [
+          -2
+        ],
+        "predictions": [
+          -1.8
+        ]
+      },
+      "expectedOutput": 3.0072050150841645e+45,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "alpha": 0,
+        "gamma": 0,
+        "targets": [
+          0
+        ],
+        "predictions": [
+          0.225
+        ]
+      },
+      "expectedOutput": 0.254892,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "alpha": 0.0,
+        "gamma": 1.0,
+        "targets": [
+          0.0
+        ],
+        "predictions": [
+          -0.09999999999999998
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "alpha": 4,
+        "gamma": 8,
+        "targets": [
+          4
+        ],
+        "predictions": [
+          3.6
+        ]
+      },
+      "expectedOutput": -103.618728,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "alpha": 1,
+        "gamma": 2,
+        "targets": [
+          1
+        ],
+        "predictions": [
+          0.675
+        ]
+      },
+      "expectedOutput": 0.041515,
+      "isPublic": false
+    },
+    {
+      "id": "binary-focal-loss-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "alpha": 5,
+        "gamma": 10,
+        "targets": [
+          5
+        ],
+        "predictions": [
+          4.5
+        ]
+      },
+      "expectedOutput": -138.158304,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "binary_focal_loss",
+    "parameters": [
+      {
+        "name": "predictions",
+        "type": "array",
+        "example": "[0.9, 0.2]",
+        "description": "Predicted probabilities, values in (0, 1)"
+      },
+      {
+        "name": "targets",
+        "type": "array",
+        "example": "[1, 0]",
+        "description": "Binary targets {0, 1}"
+      },
+      {
+        "name": "alpha",
+        "type": "number",
+        "example": "1.0",
+        "description": "Balancing factor alpha > 0"
+      },
+      {
+        "name": "gamma",
+        "type": "number",
+        "example": "2.0",
+        "description": "Focusing parameter gamma >= 0"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "focal-loss",
+    "cross-entropy-loss",
+    "hinge-loss",
+    "log-loss-per-sample",
+    "dice-loss"
+  ],
+  "tags": [
+    "Loss Functions"
+  ],
+  "prevId": "cosine-embedding-loss",
+  "nextId": "discount-returns",
+  "slug": "binary-focal-loss",
+  "cleanTitle": "Binary Focal Loss",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/binary-focal-loss",
+  "localUrl": "http://localhost:3000/problems/binary-focal-loss",
+  "studyPlan": null
+}

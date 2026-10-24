@@ -1,0 +1,534 @@
+{
+  "id": "triton-relu",
+  "slug": "triton-relu",
+  "title": "Triton ReLU Activation Kernel",
+  "cleanTitle": "Triton ReLU Activation Kernel",
+  "category": "triton",
+  "difficulty": "Easy",
+  "tags": [
+    "Activation Functions",
+    "GPU Programming"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "triton-basics",
+    "title": "Triton Kernels",
+    "sectionId": "triton-basics-foundations"
+  },
+  "seoDescription": "Implement ReLU activation in Triton with contiguous program tiles, branch-free rectification, and masked tails.",
+  "description": "Implement standard Rectified Linear Unit (ReLU) activation in Triton using SIMD maximum comparisons and masked boundary tiles.\n\n**Mathematical Formulation:**\n\n$$\n\\text{ReLU}(x) = \\max(0, x)\n$$\n\n**Step-by-Step Implementation:**\n1. Load contiguous vector tiles into registers.\n2. Execute elementwise maximum with zero using tl.maximum.\n3. Store rectified activations back to memory.\n4. Return output array.\n\n**Returns:** List of rectified floats.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching ReLU specification."
+  ],
+  "requirements": "* Must implement `triton_relu` using TRITON.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Triton ReLU Activation Kernel\n\n### Core Intuition: Why Do We Need This?\nImplement standard Rectified Linear Unit (ReLU) activation in Triton using SIMD maximum comparisons and masked boundary tiles. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\n\\text{ReLU}(x) = \\max(0, x)\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Load contiguous vector tiles into registers.\n3. **Phase 3: Iterative Execution & Reduction**: Execute elementwise maximum with zero using tl.maximum.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return output array.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard TRITON documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `torch.Tensor` specifications."
+  ],
+  "constraints": "* Category: TRITON\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, TRITON\n",
+  "starterCode": "import numpy as np\n\ndef triton_relu(x: list) -> list:\n    \"\"\"\n    Implement standard Rectified Linear Unit (ReLU) activation in Triton using SIMD maximum comparisons and masked boundary tiles.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nImplement standard Rectified Linear Unit (ReLU) activation in Triton using SIMD maximum comparisons and masked boundary tiles.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef triton_relu(x: list) -> list:\n    return np.round(np.maximum(0.0, np.array(x, dtype=float)), 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "triton-relu-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "x": [
+          -2.0,
+          -0.5,
+          0.0,
+          1.5,
+          3.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        1.5,
+        3.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "triton-relu-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            2.0
+          ],
+          [
+            3.0,
+            -4.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          2.0
+        ],
+        [
+          3.0,
+          0.0
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "triton-relu-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          -2.0,
+          -0.5,
+          0.0,
+          1.5,
+          3.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        1.5,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            2.0
+          ],
+          [
+            3.0,
+            -4.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          2.0
+        ],
+        [
+          3.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          -2.0,
+          -0.5,
+          0.0,
+          1.5,
+          3.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        1.5,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            2.0
+          ],
+          [
+            3.0,
+            -4.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          2.0
+        ],
+        [
+          3.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          -2.0,
+          -0.5,
+          0.0,
+          1.5,
+          3.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        1.5,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            2.0
+          ],
+          [
+            3.0,
+            -4.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          2.0
+        ],
+        [
+          3.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          -2.0,
+          -0.5,
+          0.0,
+          1.5,
+          3.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        1.5,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            2.0
+          ],
+          [
+            3.0,
+            -4.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          2.0
+        ],
+        [
+          3.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          -2.0,
+          -0.5,
+          0.0,
+          1.5,
+          3.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        1.5,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            2.0
+          ],
+          [
+            3.0,
+            -4.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          2.0
+        ],
+        [
+          3.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          -2.0,
+          -0.5,
+          0.0,
+          1.5,
+          3.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        1.5,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            2.0
+          ],
+          [
+            3.0,
+            -4.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          2.0
+        ],
+        [
+          3.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          -2.0,
+          -0.5,
+          0.0,
+          1.5,
+          3.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        1.5,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            2.0
+          ],
+          [
+            3.0,
+            -4.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          2.0
+        ],
+        [
+          3.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          -2.0,
+          -0.5,
+          0.0,
+          1.5,
+          3.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        1.5,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            2.0
+          ],
+          [
+            3.0,
+            -4.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          2.0
+        ],
+        [
+          3.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          -2.0,
+          -0.5,
+          0.0,
+          1.5,
+          3.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        1.5,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-relu-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            2.0
+          ],
+          [
+            3.0,
+            -4.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          2.0
+        ],
+        [
+          3.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "triton_relu",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "triton-layernorm-backward",
+    "triton-dropout",
+    "triton-sum",
+    "triton-split-k-matmul",
+    "triton-logsumexp"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/triton-relu",
+  "localUrl": "http://localhost:3000/problems/triton-relu"
+}

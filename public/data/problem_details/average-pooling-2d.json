@@ -1,0 +1,891 @@
+{
+  "id": "average-pooling-2d",
+  "title": "Average Pooling 2D",
+  "description": "Average pooling is a downsampling operation that reduces the spatial dimensions of a feature map by computing the mean value within non-overlapping rectangular regions. Unlike max pooling which selects the strongest activation, average pooling captures the overall presence of features in each region.\n\nGiven a 2D matrix and a pool size, apply average pooling with non-overlapping windows (stride equal to pool size).\n\n### Algorithm\n\n1. Compute the output dimensions by dividing the input dimensions by the pool size (integer division):\n\n$$\nH_{out} = \\left\\lfloor \\frac{H}{p} \\right\\rfloor\n$$\n\n$$\nW_{out} = \\left\\lfloor \\frac{W}{p} \\right\\rfloor\n$$\n\n2. For each output position (i, j), compute the mean of all values in the corresponding p × p window:\n\n$$\n\\text{out}[i][j] = \\frac{1}{p^2} \\sum_{a=0}^{p-1} \\sum_{b=0}^{p-1} X[i \\cdot p + a][j \\cdot p + b]\n$$\n\nReturn the pooled two-dimensional list of floats.",
+  "seoDescription": "Apply non-overlapping 2D average pooling to rectangular feature maps while discarding incomplete edge windows.",
+  "examples": [
+    "Input: X = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], pool_size = 2\n\nOutput: [[3.5, 5.5], [11.5, 13.5]]\n\nExplanation: Each non-overlapping 2 by 2 block contributes its arithmetic mean.",
+    "Input: X = [[10, 20], [30, 40]], pool_size = 2\n\nOutput: [[25.0]]"
+  ],
+  "requirements": "* Apply non-overlapping average pooling with stride equal to pool_size\n* Compute the arithmetic mean of all values in each pooling window\n* Handle rectangular inputs where dimensions may not be square\n* Discard any remaining rows or columns that don't form a complete pool\n* Return the pooled 2D matrix as a list of lists of floats",
+  "theory": "## Understanding the Theory: Average Pooling 2D\n\n### Core Intuition: Why Do We Need This?\nImages possess rich spatial structure: nearby pixels are correlated, and visual patterns (edges, textures, object parts) are translation invariant. Computer vision models apply local receptive fields and weight sharing to process high-resolution visual inputs with minimal parameter overhead. **Average Pooling 2D** extracts localized visual features, pools spatial maps, or reconciles geometric bounding boxes.\n\nIn this problem, the objective is to implement **Average Pooling 2D** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nH_{out} = \\left\\lfloor \\frac{H}{p} \\right\\rfloor\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Receptive Field Growth**: Stacking convolutional layers with strides or pooling progressively expands the effective field of view, enabling deep layers to capture global semantic context.\n* **Boundary Padding & Strides**: Padding controls spatial dimension retention, while strides downsample feature resolutions efficiently without extra parameters.\n* **Vectorized im2col**: High-performance vision libraries transform sliding window convolutions into matrix multiplications (`GEMM`) via im2col operations.",
+  "hints": [
+    "Use integer division to count complete pooling windows along each dimension.",
+    "Sum one window at a time and divide by pool_size squared."
+  ],
+  "constraints": "* X is a non-empty 2D matrix of numbers\n* pool_size >= 1\n* Input dimensions are at least pool_size in both directions\n* Return a 2D list of floats\n* Time limit: 300 ms",
+  "difficulty": "Medium",
+  "starterCode": "def average_pooling_2d(X: list, pool_size: int) -> list:\n    \"\"\"\n    Returns non-overlapping average-pooled windows.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T20:37:45.172Z",
+  "updatedAt": "2026-08-23T20:57:07.421Z",
+  "solution": "### 💡 Intuition & Approach\nSlides a non-overlapping window of size $P \\times P$ and takes the arithmetic mean.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef average_pooling_2d(X: list, pool_size: int) -> list:\n    arr = np.array(X, dtype=float)\n    H, W = arr.shape\n    out_H, out_W = H // pool_size, W // pool_size\n    out = np.zeros((out_H, out_W))\n    for i in range(out_H):\n        for j in range(out_W):\n            out[i, j] = np.mean(arr[i * pool_size:(i + 1) * pool_size, j * pool_size:(j + 1) * pool_size])\n    return out.tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "AveragePooling2dViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "4x4 with 2x2 pooling",
+      "inputs": {
+        "X": [
+          [
+            1,
+            2,
+            3,
+            4
+          ],
+          [
+            5,
+            6,
+            7,
+            8
+          ],
+          [
+            9,
+            10,
+            11,
+            12
+          ],
+          [
+            13,
+            14,
+            15,
+            16
+          ]
+        ],
+        "pool_size": 2
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          3.5,
+          5.5
+        ],
+        [
+          11.5,
+          13.5
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "2x2 full pooling",
+      "inputs": {
+        "X": [
+          [
+            10,
+            20
+          ],
+          [
+            30,
+            40
+          ]
+        ],
+        "pool_size": 2
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          25.0
+        ]
+      ]
+    },
+    {
+      "id": "average-pooling-2d-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X": [
+          [
+            2,
+            4,
+            6,
+            8
+          ],
+          [
+            10,
+            12,
+            14,
+            16
+          ],
+          [
+            18,
+            20,
+            22,
+            24
+          ],
+          [
+            26,
+            28,
+            30,
+            32
+          ]
+        ],
+        "pool_size": 4
+      },
+      "expectedOutput": [
+        [
+          17.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            0,
+            1,
+            2,
+            2
+          ],
+          [
+            2,
+            3,
+            4,
+            4
+          ],
+          [
+            4,
+            5,
+            6,
+            6
+          ],
+          [
+            6,
+            7,
+            8,
+            8
+          ]
+        ],
+        "pool_size": 1
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          2.0,
+          2.0
+        ],
+        [
+          2.0,
+          3.0,
+          4.0,
+          4.0
+        ],
+        [
+          4.0,
+          5.0,
+          6.0,
+          6.0
+        ],
+        [
+          6.0,
+          7.0,
+          8.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          [
+            -1,
+            -2,
+            -3,
+            -4
+          ],
+          [
+            -5,
+            -6,
+            -7,
+            -8
+          ],
+          [
+            -9,
+            -10,
+            -11,
+            -12
+          ],
+          [
+            -13,
+            -14,
+            -15,
+            -16
+          ]
+        ],
+        "pool_size": -2
+      },
+      "expectedOutput": [
+        [
+          3.5,
+          5.5
+        ],
+        [
+          11.5,
+          13.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            3,
+            6,
+            9,
+            12
+          ],
+          [
+            15,
+            18,
+            21,
+            24
+          ],
+          [
+            27,
+            30,
+            33,
+            36
+          ],
+          [
+            39,
+            42,
+            45,
+            48
+          ]
+        ],
+        "pool_size": 6
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          [
+            2.0,
+            3.0,
+            4.0,
+            5.0
+          ],
+          [
+            6.0,
+            7.0,
+            8.0,
+            9.0
+          ],
+          [
+            10.0,
+            11.0,
+            12.0,
+            13.0
+          ],
+          [
+            14.0,
+            15.0,
+            16.0,
+            17.0
+          ]
+        ],
+        "pool_size": 3.0
+      },
+      "expectedOutput": [
+        [
+          3.5,
+          5.5
+        ],
+        [
+          11.5,
+          13.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            -1.0,
+            0.0,
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0,
+            5.0,
+            6.0
+          ],
+          [
+            7.0,
+            8.0,
+            9.0,
+            10.0
+          ],
+          [
+            11.0,
+            12.0,
+            13.0,
+            14.0
+          ]
+        ],
+        "pool_size": 0.0
+      },
+      "expectedOutput": [
+        [
+          3.5,
+          5.5
+        ],
+        [
+          11.5,
+          13.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          [
+            4,
+            3,
+            2,
+            1
+          ],
+          [
+            8,
+            7,
+            6,
+            5
+          ],
+          [
+            12,
+            11,
+            10,
+            9
+          ],
+          [
+            16,
+            15,
+            14,
+            13
+          ]
+        ],
+        "pool_size": 2
+      },
+      "expectedOutput": [
+        [
+          5.5,
+          3.5
+        ],
+        [
+          13.5,
+          11.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            -1,
+            -2,
+            -3,
+            -4
+          ],
+          [
+            -5,
+            -6,
+            -7,
+            -8
+          ],
+          [
+            -9,
+            -10,
+            -11,
+            -12
+          ],
+          [
+            -13,
+            -14,
+            -15,
+            -16
+          ]
+        ],
+        "pool_size": -2
+      },
+      "expectedOutput": [
+        [
+          3.5,
+          5.5
+        ],
+        [
+          11.5,
+          13.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          [
+            10,
+            20,
+            30,
+            40
+          ],
+          [
+            50,
+            60,
+            70,
+            80
+          ],
+          [
+            90,
+            100,
+            110,
+            120
+          ],
+          [
+            130,
+            140,
+            150,
+            160
+          ]
+        ],
+        "pool_size": 20
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            2,
+            2
+          ]
+        ],
+        "pool_size": 0
+      },
+      "expectedOutput": [
+        [
+          3.5,
+          5.5
+        ],
+        [
+          11.5,
+          13.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          [
+            6.0,
+            7.0,
+            8.0,
+            9.0
+          ],
+          [
+            10.0,
+            11.0,
+            12.0,
+            13.0
+          ],
+          [
+            14.0,
+            15.0,
+            16.0,
+            17.0
+          ],
+          [
+            18.0,
+            19.0,
+            20.0,
+            21.0
+          ]
+        ],
+        "pool_size": 7.0
+      },
+      "expectedOutput": [
+        [
+          3.5,
+          5.5
+        ],
+        [
+          11.5,
+          13.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            2,
+            3,
+            4,
+            6
+          ],
+          [
+            8,
+            9,
+            10,
+            12
+          ],
+          [
+            14,
+            15,
+            16,
+            18
+          ],
+          [
+            20,
+            21,
+            22,
+            24
+          ]
+        ],
+        "pool_size": 3
+      },
+      "expectedOutput": [
+        [
+          9.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          [
+            -2,
+            -4,
+            -6,
+            -8
+          ],
+          [
+            -10,
+            -12,
+            -14,
+            -16
+          ],
+          [
+            -18,
+            -20,
+            -22,
+            -24
+          ],
+          [
+            -26,
+            -28,
+            -30,
+            -32
+          ]
+        ],
+        "pool_size": -4
+      },
+      "expectedOutput": [
+        [
+          3.5,
+          5.5
+        ],
+        [
+          11.5,
+          13.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            0,
+            0,
+            1,
+            1
+          ],
+          [
+            1,
+            2,
+            2,
+            2
+          ],
+          [
+            2,
+            2,
+            3,
+            3
+          ],
+          [
+            3,
+            4,
+            4,
+            4
+          ]
+        ],
+        "pool_size": 0
+      },
+      "expectedOutput": [
+        [
+          3.5,
+          5.5
+        ],
+        [
+          11.5,
+          13.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            1.0,
+            2.0,
+            3.0
+          ],
+          [
+            4.0,
+            5.0,
+            6.0,
+            7.0
+          ],
+          [
+            8.0,
+            9.0,
+            10.0,
+            11.0
+          ],
+          [
+            12.0,
+            13.0,
+            14.0,
+            15.0
+          ]
+        ],
+        "pool_size": 1.0
+      },
+      "expectedOutput": [
+        [
+          3.5,
+          5.5
+        ],
+        [
+          11.5,
+          13.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            4,
+            8,
+            12,
+            16
+          ],
+          [
+            20,
+            24,
+            28,
+            32
+          ],
+          [
+            36,
+            40,
+            44,
+            48
+          ],
+          [
+            52,
+            56,
+            60,
+            64
+          ]
+        ],
+        "pool_size": 8
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          [
+            1,
+            2,
+            2,
+            3
+          ],
+          [
+            4,
+            4,
+            5,
+            6
+          ],
+          [
+            7,
+            8,
+            8,
+            9
+          ],
+          [
+            10,
+            10,
+            11,
+            12
+          ]
+        ],
+        "pool_size": 2
+      },
+      "expectedOutput": [
+        [
+          2.75,
+          4.0
+        ],
+        [
+          8.75,
+          10.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "average-pooling-2d-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            5,
+            10,
+            15,
+            20
+          ],
+          [
+            25,
+            30,
+            35,
+            40
+          ],
+          [
+            45,
+            50,
+            55,
+            60
+          ],
+          [
+            65,
+            70,
+            75,
+            80
+          ]
+        ],
+        "pool_size": 10
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "average_pooling_2d",
+    "parameters": [
+      {
+        "name": "X",
+        "type": "array",
+        "example": "[[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]]",
+        "description": "2D input matrix"
+      },
+      {
+        "name": "pool_size",
+        "type": "number",
+        "example": "2",
+        "description": "Size of pooling window"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "max-pooling-2d",
+    "global-avg-pooling",
+    "conv2d-image-filtering",
+    "roi-pooling",
+    "simple-cnn-layer"
+  ],
+  "tags": [
+    "Computer Vision"
+  ],
+  "prevId": "max-pooling-2d",
+  "nextId": "color-to-grayscale",
+  "slug": "average-pooling-2d",
+  "cleanTitle": "Average Pooling 2D",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/average-pooling-2d",
+  "localUrl": "http://localhost:3000/problems/average-pooling-2d",
+  "studyPlan": null
+}

@@ -1,0 +1,2154 @@
+{
+  "id": "k3-kda-recurrence",
+  "title": "KDA Recurrence",
+  "description": "Kimi Delta Attention updates one matrix state per batch item and head after every token. Queries and keys have shape $(B,S,H,D_k)$, values and output-gate logits have shape $(B,S,H,D_v)$, and the state has shape $(B,H,D_k,D_v)$. The write strength supplies one scalar per token and head, while the decay logits have the same shape as the keys.\n\nFor retention vector $\\alpha_t$, write strength $\\beta_t$, key $k_t$, value $v_t$, and previous state $S_{t-1}$, update the state in sequence order with\n\n$$\nS_t=\\left(I-\\beta_tk_tk_t^{\\mathsf T}\\right)\\operatorname{Diag}(\\alpha_t)S_{t-1}+\\beta_tk_tv_t^{\\mathsf T}.\n$$\n\nFor lower log-decay bound $g_{\\min}<0$ and decay logit $z_t$, compute\n\n$$\n\\alpha_t=\\exp\\left(g_{\\min}\\operatorname{sigmoid}(z_t)\\right).\n$$\n\nRead from the updated state, not the previous state:\n\n$$\n\\widetilde{o}_t=S_t^{\\mathsf T}q_t.\n$$\n\nApply RMS normalization independently over each head's $D_v$ values, multiply by the sigmoid output gate, concatenate the $H$ heads, and apply the supplied projection from width $HD_v$ to model width. Return a dictionary with outputs and final_state. Their shapes are $(B,S,D_{model})$ and $(B,H,D_k,D_v)$, and both preserve the input floating-point dtype and device.",
+  "seoDescription": "Implement Kimi K3's KDA recurrence with gated state updates, normalized queries and keys, and ordered token readouts.",
+  "examples": [
+    "Input: query = [[[[1]]]], key = [[[[1]]]], value = [[[[2]]]], decay_logits = [[[[0]]]], write_strength = [[[[0.5]]]], output_gate_logits = [[[[0]]]], output_projection = [[1]], initial_state = [[[[0]]]], g_min = -5, eps = 1e-06\n\nOutput: {\"outputs\": tensor([[[0.4999997500001875]]]), \"final_state\": tensor([[[[1.0]]]])}\n\nExplanation: The write creates a state value of 1. RMS normalization keeps the scalar readout near 1, and the sigmoid gate scales it by 0.5.",
+    "Input: query/key/decay logits shape (1, 2, 1, 2), value shape (1, 2, 1, 1), initial state shape (1, 1, 2, 1), output projection shape (2, 1)\n\nOutput: {\"outputs\": tensor of shape (1, 2, 2), \"final_state\": tensor of shape (1, 1, 2, 1)}",
+    "Input: query/key/decay logits shape (1, 2, 2, 1), value shape (1, 2, 2, 1), initial state shape (1, 2, 1, 1), output projection shape (2, 2)\n\nOutput: {\"outputs\": tensor of shape (1, 2, 2), \"final_state\": tensor of shape (1, 2, 1, 1)}"
+  ],
+  "requirements": "- Return a dictionary with exactly outputs and final_state. The output tensor has shape (batch, sequence, model width).\n- Preserve the floating-point dtype and device of the tensor inputs.\n- Do not mutate any input tensor.\n- Match the stated recurrence within absolute tolerance 1e-6 and relative tolerance 1e-5.",
+  "theory": "# KDA Recurrence\n\nKimi Delta Attention, or KDA, reads a sequence through a running memory matrix. Instead of keeping every earlier key and value, it updates one fixed-size state after each token. The important idea in this problem is that the state can forget old information, correct information associated with a key, and write new information before the current query reads from it.\n\n## What the state remembers\n\nThink of the state as a small associative memory. A key describes where information belongs, a value is the information being stored, and a query asks the memory what it currently knows. The matrix state connects key features to value features, so multiplying the updated state by a query produces a value-like output.\n\nKDA processes tokens in sequence order because every update depends on the state left by the previous token. For the current token, the update is\n\n$$\nS_t = \\left(I-\\beta_t k_t k_t^{\\mathsf T}\\right)\\operatorname{Diag}(\\alpha_t)S_{t-1} + \\beta_t k_t v_t^{\\mathsf T}\n$$\n\nThis formula has three understandable parts:\n\n- **Decay:** the retention vector $\\alpha_t$ reduces selected channels of the old state.\n- **Erase:** the factor involving $k_t k_t^{\\mathsf T}$ removes part of what the state currently associates with this key.\n- **Write:** the outer product $k_t v_t^{\\mathsf T}$ stores the new value at the location described by the key.\n\nThe erase and write terms use the same strength $\\beta_t$. A small value makes the update cautious, while a value near one makes the new token change the memory strongly.\n\n## Why KDA decays channels separately\n\nA single scalar forget gate would retain or fade every key feature by the same amount. KDA instead computes one retention value for each key channel. This allows some parts of the memory to remain stable while others change quickly.\n\nThe decay logits are converted to retention values with\n\n$$\n\\alpha_t = \\exp\\left(g_{\\min}\\operatorname{sigmoid}(z_t)\\right)\n$$\n\nSince $g_{\\min}$ is negative and sigmoid returns a value between zero and one, every retention value lies between $\\exp(g_{\\min})$ and one. In Kimi K3, the fixed lower log-decay bound prevents the decay from becoming arbitrarily extreme. For this exercise, the practical consequence is simple: apply sigmoid first, multiply by the negative bound, then exponentiate element by element.\n\n## Read after writing\n\nThe current output is read from $S_t$, not from $S_{t-1}$:\n\n$$\n\\widetilde{o}_t = S_t^{\\mathsf T}q_t\n$$\n\nThat ordering means a token can contribute to its own result. If the implementation reads first and updates afterward, every output is shifted by one step and the first token cannot use its own value.\n\nThe raw readout is normalized independently within each head. RMS normalization divides a head vector by the square root of its mean squared value plus a small epsilon. This controls scale without subtracting the mean. A sigmoid gate then decides, channel by channel, how much of the normalized readout should pass. Finally, the heads are joined and the supplied output projection mixes their channels into model width.\n\n## A one-dimensional example\n\nUse a single head with one key channel and one value channel. Let the previous state be $2$, retention be $0.5$, key be $1$, value be $4$, and write strength be $0.25$.\n\nFirst decay the old state:\n\n$$\n0.5 \\times 2 = 1\n$$\n\nThe erase factor is $1-0.25\\times1\\times1=0.75$, so the retained part becomes $0.75$. The new write is $0.25\\times1\\times4=1$. The updated state is therefore $1.75$.\n\nIf the query is $2$, the raw readout is $1.75\\times2=3.5$. This example shows why the update is more than ordinary accumulation: part of the old association is deliberately erased before the new one is written.\n\n## Implementation order\n\n- Convert every decay logit into a channel-wise retention value.\n- Start from the supplied initial state and iterate over sequence positions.\n- For each batch item and head, decay the old state, apply the erase term, and add the write outer product.\n- Read the current query from the newly updated state.\n- RMS-normalize each head readout, apply the sigmoid output gate, join the heads, and apply the output projection.\n- Stack the per-token outputs and return them with the final state.\n\n## Common mistakes to avoid\n\n- **Reading the previous state.** The problem requires the query to use the state after the current update.\n- **Using one decay value per head.** Decay is channel-wise and must match the key features.\n- **Reversing the outer product.** The state maps key width to value width, so the write must follow $k_t v_t^{\\mathsf T}$.\n- **Normalizing across heads.** RMS normalization is independent for each head's value channels.\n- **Mutating the initial state.** Build a working state without changing the supplied tensor.\n",
+  "hints": [
+    "Broadcast each retention vector across the value dimension before applying it to the state.",
+    "Use outer products for both the erase term and the key-value write term.",
+    "Read from the updated state, normalize each head over its value width, then concatenate the heads."
+  ],
+  "constraints": "- Query and key tensors have shape (batch, sequence, heads, key width).\n- Value and gate tensors have shape (batch, sequence, heads, value width).\n- Write strengths lie in [0, 1], and the lower log-decay bound is negative.\n- The output projection accepts the concatenated head values.",
+  "difficulty": "Hard",
+  "starterCode": "import torch\n\ndef kda_recurrence(query: torch.Tensor, key: torch.Tensor, value: torch.Tensor, decay_logits: torch.Tensor, write_strength: torch.Tensor, output_gate_logits: torch.Tensor, output_projection: torch.Tensor, initial_state: torch.Tensor, g_min: float = -5.0, eps: float = 1e-6) -> dict[str, torch.Tensor]:\n    \"\"\"\n    Returns a dictionary containing sequence outputs and the final recurrent state.\n    \"\"\"\n    pass",
+  "createdAt": "2026-07-29T07:43:16.647Z",
+  "updatedAt": "2026-09-03T19:22:49.691Z",
+  "topicId": "k3-kda-recurrence",
+  "paperSnippet": "\"channel-wise forget gate\"",
+  "visualizationComponent": "K3KDARecurrenceViz",
+  "solution": "```python\nimport torch\nimport torch.nn.functional as F\n\ndef kda_recurrence(\n    query: torch.Tensor,\n    key: torch.Tensor,\n    value: torch.Tensor,\n    decay_logits: torch.Tensor,\n    write_strength: torch.Tensor,\n    output_gate_logits: torch.Tensor,\n    output_projection: torch.Tensor,\n    initial_state: torch.Tensor,\n    g_min: float = -5.0,\n    eps: float = 1e-6\n) -> dict[str, torch.Tensor]:\n    B, S, H, Dk = query.shape\n    Dv = value.shape[-1]\n\n    # Handle output projection orientation if needed\n    proj = output_projection\n    expected_in = H * Dv\n    if proj.shape[0] != expected_in and proj.shape[1] == expected_in:\n        proj = proj.T\n\n    state = initial_state.clone()\n    outputs = []\n\n    for t in range(S):\n        q_t = query[:, t]\n        k_t = key[:, t]\n        v_t = value[:, t]\n        z_t = decay_logits[:, t]\n        beta_t = write_strength[:, t]\n        gate_t = output_gate_logits[:, t]\n\n        if beta_t.dim() == 2:\n            beta_t = beta_t.unsqueeze(-1)\n\n        # 1. Decay: alpha_t = exp(g_min * sigmoid(z_t))\n        alpha_t = torch.exp(g_min * torch.sigmoid(z_t))\n        S_decayed = state * alpha_t.unsqueeze(-1)\n\n        # 2. Erase: beta_t * k_t * (k_t^T S_decayed)\n        k_vec = k_t.unsqueeze(-2)\n        k_S = torch.matmul(k_vec, S_decayed)\n        erase = beta_t.unsqueeze(-1) * torch.matmul(k_t.unsqueeze(-1), k_S)\n\n        # 3. Write: beta_t * k_t * v_t^T\n        write = beta_t.unsqueeze(-1) * torch.matmul(k_t.unsqueeze(-1), v_t.unsqueeze(-2))\n\n        # 4. Update recurrent state\n        state = S_decayed - erase + write\n\n        # 5. Readout: S_t^T @ q_t\n        o_tilde = torch.matmul(state.transpose(-1, -2), q_t.unsqueeze(-1)).squeeze(-1)\n\n        # 6. RMS Normalization over Dv for each head\n        rms = torch.sqrt(torch.mean(o_tilde ** 2, dim=-1, keepdim=True) + eps)\n        o_norm = o_tilde / rms\n\n        # 7. Gated output\n        o_gated = o_norm * torch.sigmoid(gate_t)\n\n        # 8. Concatenate heads and project to D_model\n        o_concat = o_gated.reshape(B, H * Dv)\n        out_t = torch.matmul(o_concat, proj)\n        outputs.append(out_t)\n\n    outputs = torch.stack(outputs, dim=1)\n    return {\"outputs\": outputs, \"final_state\": state}\n```",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "One token write and read",
+      "inputs": {
+        "eps": 1e-06,
+        "key": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "g_min": -5,
+        "query": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                0.5
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Repeated key erases stale value",
+      "inputs": {
+        "eps": 1e-06,
+        "key": [
+          [
+            [
+              [
+                1,
+                0
+              ]
+            ],
+            [
+              [
+                1,
+                0
+              ]
+            ]
+          ]
+        ],
+        "g_min": -5,
+        "query": [
+          [
+            [
+              [
+                1,
+                0
+              ]
+            ],
+            [
+              [
+                1,
+                0
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                1
+              ]
+            ],
+            [
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0,
+                1
+              ]
+            ],
+            [
+              [
+                -1,
+                0.5
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                0.25
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                0.4
+              ]
+            ],
+            [
+              [
+                0.7
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ],
+          [
+            0.5
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0.4
+              ]
+            ],
+            [
+              [
+                -0.3
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.5986859798431396,
+              0.2993429899215698
+            ],
+            [
+              0.4255574345588684,
+              0.2127787172794342
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                2.1331992149353027
+              ],
+              [
+                0.00028761604335159063
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-3",
+      "name": "Two heads with a nonzero state",
+      "inputs": {
+        "eps": 1e-06,
+        "key": [
+          [
+            [
+              [
+                0.8
+              ],
+              [
+                0.4
+              ]
+            ],
+            [
+              [
+                0.3
+              ],
+              [
+                0.9
+              ]
+            ]
+          ]
+        ],
+        "g_min": -4,
+        "query": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                0.5
+              ]
+            ],
+            [
+              [
+                0.25
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                1.2
+              ],
+              [
+                -0.5
+              ]
+            ],
+            [
+              [
+                0.7
+              ],
+              [
+                1.5
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0.2
+              ],
+              [
+                -0.7
+              ]
+            ],
+            [
+              [
+                1.1
+              ],
+              [
+                0.3
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                0.1
+              ]
+            ],
+            [
+              [
+                -0.2
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                0.6
+              ],
+              [
+                0.2
+              ]
+            ],
+            [
+              [
+                0.5
+              ],
+              [
+                0.8
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            1,
+            0.2
+          ],
+          [
+            -0.3,
+            0.7
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0.1
+              ],
+              [
+                0.8
+              ]
+            ],
+            [
+              [
+                -0.4
+              ],
+              [
+                0.2
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.7319210767745972,
+              -0.37787073850631714
+            ],
+            [
+              0.23618002235889435,
+              0.46510961651802063
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                0.13268280029296875
+              ]
+            ],
+            [
+              [
+                1.0767691135406494
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "k3-kda-recurrence-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "eps": 0.0,
+        "key": [
+          [
+            [
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                4
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            2
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "eps": 0.0,
+        "key": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                0.25
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "eps": 1.0,
+        "key": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                0.5
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "eps": 0.0,
+        "key": [
+          [
+            [
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                0.75
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            2
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "eps": 0.0,
+        "key": [
+          [
+            [
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                6
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                1.5
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            3
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "eps": 0.0,
+        "key": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                0.125
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "eps": 2.0,
+        "key": [
+          [
+            [
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                4
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            2
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                2
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "eps": 0.0,
+        "key": [
+          [
+            [
+              [
+                4
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                4
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                8
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                2.0
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            4
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "eps": 0.0,
+        "key": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                0.5
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "eps": 0.0,
+        "key": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                0.375
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "eps": 0.0,
+        "key": [
+          [
+            [
+              [
+                5
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                5
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                10
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                2.5
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            5
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "eps": 3.0,
+        "key": [
+          [
+            [
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                4
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                5
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                1.5
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            3
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                3
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "eps": 0.0,
+        "key": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                0.4
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "eps": 0.0,
+        "key": [
+          [
+            [
+              [
+                6
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                6
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                12
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                3.0
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            6
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "eps": 4.0,
+        "key": [
+          [
+            [
+              [
+                4
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                5
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                6
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                4
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                2.0
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            4
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                4
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "eps": 0.0,
+        "key": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                0.6
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-recurrence-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "eps": 0.0,
+        "key": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "g_min": 1,
+        "query": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "value": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "decay_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "initial_state": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "write_strength": [
+          [
+            [
+              [
+                0.2
+              ]
+            ]
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_logits": [
+          [
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.4999997615814209
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            [
+              [
+                1.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "kda_recurrence",
+    "runtime": "pytorch",
+    "parameters": [
+      {
+        "name": "query",
+        "type": "array",
+        "example": "[[[[1]]]]",
+        "description": "Preprojected queries."
+      },
+      {
+        "name": "key",
+        "type": "array",
+        "example": "[[[[1]]]]",
+        "description": "Preprojected keys."
+      },
+      {
+        "name": "value",
+        "type": "array",
+        "example": "[[[[2]]]]",
+        "description": "Preprojected values."
+      },
+      {
+        "name": "decay_logits",
+        "type": "array",
+        "example": "[[[[0]]]]",
+        "description": "Channel decay logits."
+      },
+      {
+        "name": "write_strength",
+        "type": "array",
+        "example": "[[[[0.5]]]]",
+        "description": "Per-token write strengths."
+      },
+      {
+        "name": "output_gate_logits",
+        "type": "array",
+        "example": "[[[[0]]]]",
+        "description": "Output gate logits."
+      },
+      {
+        "name": "output_projection",
+        "type": "array",
+        "example": "[[1]]",
+        "description": "Projection after head concatenation."
+      },
+      {
+        "name": "initial_state",
+        "type": "array",
+        "example": "[[[[0]]]]",
+        "description": "Initial recurrent state."
+      },
+      {
+        "name": "g_min",
+        "type": "number",
+        "example": "-5",
+        "description": "Lower log-decay bound."
+      },
+      {
+        "name": "eps",
+        "type": "number",
+        "example": "0.000001",
+        "description": "Normalization constant."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "k3-kda-recurrence",
+    "name": "KDA Recurrence",
+    "description": "Apply Kimi Delta Attention's channel-wise decay, erase-write state update, and gated readout.",
+    "color": "#3b82f6"
+  },
+  "paper": {
+    "id": "kimik3",
+    "title": "Kimi K3",
+    "authors": "Kimi Team",
+    "year": 2026,
+    "paperUrl": "https://github.com/MoonshotAI/Kimi-K3/blob/main/k3_tech_report.pdf",
+    "visualizationComponent": "KimiK3ArchViz"
+  },
+  "navigation": {
+    "index": 1,
+    "total": 11,
+    "prev": null,
+    "next": "k3-gated-mla"
+  },
+  "cleanTitle": ""
+}

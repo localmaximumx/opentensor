@@ -1,0 +1,534 @@
+{
+  "id": "conv-1d",
+  "slug": "conv-1d",
+  "title": "1D Convolution",
+  "cleanTitle": "1D Convolution",
+  "category": "cuda",
+  "difficulty": "Easy",
+  "tags": [
+    "Computer Vision",
+    "GPU Programming"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "cuda-basics",
+    "title": "CUDA Kernels",
+    "sectionId": "cuda-basics-convolutions"
+  },
+  "seoDescription": "Implement 1D cross-correlation in CUDA with one thread per output element and register accumulation over the kernel.",
+  "description": "Compute 1D cross-correlation between a 1D input sequence and a 1D convolution kernel.\n\n**Mathematical Formulation:**\n\n$$\nY(i) = \\sum_{k=0}^{K-1} X(i+k) \\cdot W(k)\n$$\n\n**Step-by-Step Implementation:**\n1. Slide kernel over 1D sequence.\n2. Compute dot product of kernel and overlapping window.\n3. Return 1D convolved feature array.\n\n**Returns:** List of convolved values.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching 1D Convolution specification."
+  ],
+  "requirements": "* Must implement `conv_1d` using CUDA.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: 1D Convolution\n\n### Core Intuition: Why Do We Need This?\nCompute 1D cross-correlation between a 1D input sequence and a 1D convolution kernel. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\nY(i) = \\sum_{k=0}^{K-1} X(i+k) \\cdot W(k)\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Slide kernel over 1D sequence.\n3. **Phase 3: Iterative Execution & Reduction**: Compute dot product of kernel and overlapping window.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return 1D convolved feature array.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard CUDA documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `torch.Tensor` specifications."
+  ],
+  "constraints": "* Category: CUDA\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, CUDA\n",
+  "starterCode": "import numpy as np\n\ndef conv_1d(x: list, kernel: list) -> list:\n    \"\"\"\n    Compute 1D cross-correlation between a 1D input sequence and a 1D convolution kernel.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nCompute 1D cross-correlation between a 1D input sequence and a 1D convolution kernel.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef conv_1d(x: list, kernel: list) -> list:\n    X, K = np.array(x, dtype=float), np.array(kernel, dtype=float)\n    out = [np.sum(X[i:i+len(K)] * K) for i in range(len(X) - len(K) + 1)]\n    return np.round(out, 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "conv-1d-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0,
+          3.0,
+          4.0,
+          5.0
+        ],
+        "kernel": [
+          1.0,
+          -1.0
+        ]
+      },
+      "expectedOutput": [
+        -1.0,
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "conv-1d-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "kernel": [
+          0.5,
+          0.5
+        ]
+      },
+      "expectedOutput": [
+        3.0,
+        5.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "conv-1d-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0,
+          6.0,
+          8.0,
+          10.0
+        ],
+        "kernel": [
+          2.0,
+          -2.0
+        ]
+      },
+      "expectedOutput": [
+        -4.0,
+        -4.0,
+        -4.0,
+        -4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          0.5,
+          1.0,
+          1.5,
+          2.0,
+          2.5
+        ],
+        "kernel": [
+          0.5,
+          -0.5
+        ]
+      },
+      "expectedOutput": [
+        -0.25,
+        -0.25,
+        -0.25,
+        -0.25
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          -1.0,
+          -2.0,
+          -3.0,
+          -4.0,
+          -5.0
+        ],
+        "kernel": [
+          -1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        -1.0,
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          3.0,
+          6.0,
+          9.0,
+          12.0,
+          15.0
+        ],
+        "kernel": [
+          3.0,
+          -3.0
+        ]
+      },
+      "expectedOutput": [
+        -9.0,
+        -9.0,
+        -9.0,
+        -9.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          2.0,
+          3.0,
+          4.0,
+          5.0,
+          6.0
+        ],
+        "kernel": [
+          2.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        4.0,
+        6.0,
+        8.0,
+        10.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          -1.0,
+          0.0,
+          1.0,
+          2.0,
+          3.0
+        ],
+        "kernel": [
+          -1.0,
+          -3.0
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        -3.0,
+        -7.0,
+        -11.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          5.0,
+          4.0,
+          3.0,
+          2.0,
+          1.0
+        ],
+        "kernel": [
+          -1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        -1.0,
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          -1.0,
+          -2.0,
+          -3.0,
+          -4.0,
+          -5.0
+        ],
+        "kernel": [
+          -1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        -1.0,
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          10.0,
+          20.0,
+          30.0,
+          40.0,
+          50.0
+        ],
+        "kernel": [
+          10.0,
+          -10.0
+        ]
+      },
+      "expectedOutput": [
+        -100.0,
+        -100.0,
+        -100.0,
+        -100.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          0.1,
+          0.2,
+          0.3,
+          0.4,
+          0.5
+        ],
+        "kernel": [
+          0.1,
+          -0.1
+        ]
+      },
+      "expectedOutput": [
+        -0.01,
+        -0.01,
+        -0.01,
+        -0.01
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          6.0,
+          7.0,
+          8.0,
+          9.0,
+          10.0
+        ],
+        "kernel": [
+          6.0,
+          4.0
+        ]
+      },
+      "expectedOutput": [
+        64.0,
+        74.0,
+        84.0,
+        94.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          1.5,
+          3.0,
+          4.5,
+          6.0,
+          7.5
+        ],
+        "kernel": [
+          1.5,
+          -1.5
+        ]
+      },
+      "expectedOutput": [
+        -2.25,
+        -2.25,
+        -2.25,
+        -2.25
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          -2.0,
+          -4.0,
+          -6.0,
+          -8.0,
+          -10.0
+        ],
+        "kernel": [
+          -2.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        -4.0,
+        -4.0,
+        -4.0,
+        -4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          0.25,
+          0.5,
+          0.75,
+          1.0,
+          1.25
+        ],
+        "kernel": [
+          0.25,
+          -0.25
+        ]
+      },
+      "expectedOutput": [
+        -0.0625,
+        -0.0625,
+        -0.0625,
+        -0.0625
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "kernel": [
+          0.0,
+          -2.0
+        ]
+      },
+      "expectedOutput": [
+        -2.0,
+        -4.0,
+        -6.0,
+        -8.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          4.0,
+          8.0,
+          12.0,
+          16.0,
+          20.0
+        ],
+        "kernel": [
+          4.0,
+          -4.0
+        ]
+      },
+      "expectedOutput": [
+        -16.0,
+        -16.0,
+        -16.0,
+        -16.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          0.75,
+          1.5,
+          2.25,
+          3.0,
+          3.75
+        ],
+        "kernel": [
+          0.75,
+          -0.75
+        ]
+      },
+      "expectedOutput": [
+        -0.5625,
+        -0.5625,
+        -0.5625,
+        -0.5625
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "conv-1d-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          5.0,
+          10.0,
+          15.0,
+          20.0,
+          25.0
+        ],
+        "kernel": [
+          5.0,
+          -5.0
+        ]
+      },
+      "expectedOutput": [
+        -25.0,
+        -25.0,
+        -25.0,
+        -25.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "conv_1d",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "any"
+      },
+      {
+        "name": "kernel",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "swish",
+    "relu",
+    "outer-product",
+    "argmax",
+    "rms-norm"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/conv-1d",
+  "localUrl": "http://localhost:3000/problems/conv-1d"
+}

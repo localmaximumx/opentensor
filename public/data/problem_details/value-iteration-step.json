@@ -1,0 +1,1254 @@
+{
+  "id": "value-iteration-step",
+  "title": "Value Iteration Step",
+  "description": "Perform one value-iteration update for a Markov decision process. For every state, evaluate each action using its immediate reward and expected discounted next-state value, then keep the best action value.\n\n$$\nV_{\\mathrm{new}}(s) = \\max_a \\left[ R(s,a) + \\gamma \\sum_{s'} T(s,a,s')V(s') \\right]\n$$\n\nHere:\n\n* $s$ is the current state and $s'$ is a possible next state\n* $a$ is an available action\n* $R(s,a)$ is the immediate reward\n* $T(s,a,s')$ is the probability of transitioning to $s'$\n* $V(s')$ is the current value estimate\n* $\\gamma$ is the discount factor\n\nReturn the updated value of every state as a list of floats.",
+  "seoDescription": "Perform one Bellman optimality update across states and actions for a tabular Markov decision process.",
+  "examples": [
+    "Input: values = [0, 0], transitions = [[[0.8, 0.2], [0.3, 0.7]], [[0.5, 0.5], [0.1, 0.9]]], rewards = [[1, 2], [-1, 0]], gamma = 0.9\n\nOutput: [2.0, 0.0]\n\nExplanation: With zero current values, only immediate rewards contribute, so the best rewards are 2 and 0.",
+    "Input: values = [0, 0, 0], transitions = [[[0, 1, 0], [0, 0, 1]], [[1, 0, 0], [0, 0, 1]], [[0, 1, 0], [1, 0, 0]]], rewards = [[1, 2], [3, 0], [-1, 5]], gamma = 0.9\n\nOutput: [2.0, 3.0, 5.0]"
+  ],
+  "requirements": "* values contains one current value for every state\n* transitions has shape $(S, A, S)$ and rewards has shape $(S, A)$\n* Use the supplied transition probabilities, rewards, and discount factor without modifying them\n* Return a list of $S$ updated floating-point values",
+  "theory": "## Understanding the Theory: Value Iteration Step\n\n### Core Intuition: Why Do We Need This?\nIn reinforcement learning, an agent learns optimal decision policies through environmental trial-and-error without explicit target labels. The agent must balance exploiting known high-value actions against exploring uncertain actions that may yield higher cumulative discounted rewards. **Value Iteration Step** provides the algorithmic rule for updating state values, policy distributions, or Q-tables.\n\nIn this problem, the objective is to implement **Value Iteration Step** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nV_{\\mathrm{new}}(s) = \\max_a \\left[ R(s,a) + \\gamma \\sum_{s'} T(s,a,s')V(s') \\right]\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Bellman Optimality**: Dynamic programming in RL computes value functions iteratively: current value equals immediate reward plus discounted expectation of subsequent state values.\n* **Exploration Strategies**: Techniques like $\\\\epsilon$-greedy and entropy regularization prevent the policy from collapsing prematurely into sub-optimal actions.\n* **Credit Assignment**: Temporal difference learning allows agents to update value estimates after every step rather than waiting until the end of an episode.",
+  "hints": [
+    "sum(probability * value for probability, value in zip(action_transitions, values)) computes one expected next-state value.",
+    "Use max() over the action values computed for each state."
+  ],
+  "constraints": "* The process contains at least one state and one action\n* Every transition-probability row sums to 1\n* $0 \\leq \\gamma \\leq 1$",
+  "difficulty": "Medium",
+  "starterCode": "def value_iteration_step(values: list, transitions: list, rewards: list, gamma: float) -> list[float]:\n    \"\"\"\n    Returns one updated floating-point value for every state.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T17:15:22.399Z",
+  "updatedAt": "2026-03-05T20:47:30.361Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef value_iteration_step(values: list, transitions: list, rewards: list, gamma: float) -> list[float]:\n    v_arr = np.array(values, dtype=float)\n    T = np.array(transitions, dtype=float)\n    R = np.array(rewards, dtype=float)\n    n_states, n_actions = R.shape\n    new_v = []\n    for s in range(n_states):\n        q_vals = []\n        for a in range(n_actions):\n            q = R[s, a] + gamma * np.sum(T[s, a] * v_arr)\n            q_vals.append(q)\n        new_v.append(round(float(max(q_vals)), 6))\n    return new_v\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "ValueIterationStepViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "2-state MDP with zero initial values",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            -1,
+            0
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0.8,
+              0.2
+            ],
+            [
+              0.3,
+              0.7
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.5
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "3-state MDP with zero initial values",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            -1,
+            5
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        2.0,
+        3.0,
+        5.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            -1,
+            0
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0.8,
+              0.2
+            ],
+            [
+              0.3,
+              0.7
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.5
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            -1,
+            5
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        3.0,
+        5.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            -1,
+            0
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0.8,
+              0.2
+            ],
+            [
+              0.3,
+              0.7
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.5
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            -1,
+            5
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        3.0,
+        5.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            -1,
+            0
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0.8,
+              0.2
+            ],
+            [
+              0.3,
+              0.7
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.5
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            -1,
+            5
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        3.0,
+        5.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            -1,
+            0
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0.8,
+              0.2
+            ],
+            [
+              0.3,
+              0.7
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.5
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            -1,
+            5
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        3.0,
+        5.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            -1,
+            0
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0.8,
+              0.2
+            ],
+            [
+              0.3,
+              0.7
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.5
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            -1,
+            5
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        3.0,
+        5.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            -1,
+            0
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0.8,
+              0.2
+            ],
+            [
+              0.3,
+              0.7
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.5
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            -1,
+            5
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        3.0,
+        5.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            -1,
+            0
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0.8,
+              0.2
+            ],
+            [
+              0.3,
+              0.7
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.5
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            -1,
+            5
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        3.0,
+        5.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            -1,
+            0
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0.8,
+              0.2
+            ],
+            [
+              0.3,
+              0.7
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.5
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            -1,
+            5
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        3.0,
+        5.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            -1,
+            0
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0.8,
+              0.2
+            ],
+            [
+              0.3,
+              0.7
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.5
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "id": "value-iteration-step-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "gamma": 0.9,
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            -1,
+            5
+          ]
+        ],
+        "transitions": [
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2.0,
+        3.0,
+        5.0
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "value_iteration_step",
+    "parameters": [
+      {
+        "name": "values",
+        "type": "array",
+        "example": "[0, 0]",
+        "description": "Current value estimates for each state"
+      },
+      {
+        "name": "transitions",
+        "type": "array",
+        "example": "[[[0.8, 0.2], [0.3, 0.7]], [[0.5, 0.5], [0.1, 0.9]]]",
+        "description": "Transition probabilities T[s][a][s'] - 3D array"
+      },
+      {
+        "name": "rewards",
+        "type": "array",
+        "example": "[[1, 2], [-1, 0]]",
+        "description": "Rewards R[s][a] - 2D array of immediate rewards"
+      },
+      {
+        "name": "gamma",
+        "type": "number",
+        "example": "0.9",
+        "description": "Discount factor between 0 and 1"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "q-learning-update",
+    "sarsa-update",
+    "td-value-update",
+    "mc-policy-evaluation",
+    "discount-returns"
+  ],
+  "tags": [
+    "Reinforcement Learning"
+  ],
+  "prevId": "homogeneous-transform",
+  "nextId": "expected-value-discrete",
+  "slug": "value-iteration-step",
+  "cleanTitle": "Value Iteration Step",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/value-iteration-step",
+  "localUrl": "http://localhost:3000/problems/value-iteration-step",
+  "studyPlan": null
+}

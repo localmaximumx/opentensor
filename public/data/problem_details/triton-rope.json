@@ -1,0 +1,682 @@
+{
+  "id": "triton-rope",
+  "slug": "triton-rope",
+  "title": "Triton Rotary Position Embeddings (RoPE)",
+  "cleanTitle": "Triton Rotary Position Embeddings (RoPE)",
+  "category": "triton",
+  "difficulty": "Medium",
+  "tags": [
+    "Transformers",
+    "GPU Programming"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "triton-basics",
+    "title": "Triton Kernels",
+    "sectionId": "triton-basics-attention-and-llm"
+  },
+  "seoDescription": "Implement Rotary Position Embeddings in Triton with per-token pair rotations, precomputed sine and cosine, and tail masks.",
+  "description": "Apply Rotary Position Embedding transformations to query or key token vectors in Triton using precomputed cosine and sine frequencies.\n\n**Mathematical Formulation:**\n\n$$\n\\text{RoPE}(x, m) = x \\odot \\cos(m \\theta) + \\text{RotateHalf}(x) \\odot \\sin(m \\theta)\n$$\n\n**Step-by-Step Implementation:**\n1. Split feature dimension into symmetric halves.\n2. Rotate coordinates by swapping halves with appropriate signs.\n3. Multiply original and rotated coordinates by cosine and sine frequencies.\n4. Return rotated embeddings.\n\n**Returns:** List of rotated token embedding vectors.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Rotary Position Embedding specification."
+  ],
+  "requirements": "* Must implement `triton_rope` using TRITON.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Triton Rotary Position Embeddings (RoPE)\n\n### Core Intuition: Why Do We Need This?\nApply Rotary Position Embedding transformations to query or key token vectors in Triton using precomputed cosine and sine frequencies. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\n\\text{RoPE}(x, m) = x \\odot \\cos(m \\theta) + \\text{RotateHalf}(x) \\odot \\sin(m \\theta)\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Split feature dimension into symmetric halves.\n3. **Phase 3: Iterative Execution & Reduction**: Rotate coordinates by swapping halves with appropriate signs.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return rotated embeddings.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard TRITON documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `torch.Tensor` specifications."
+  ],
+  "constraints": "* Category: TRITON\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, TRITON\n",
+  "starterCode": "import numpy as np\n\ndef triton_rope(x: list, freqs_cos: list, freqs_sin: list) -> list:\n    \"\"\"\n    Apply Rotary Position Embedding transformations to query or key token vectors in Triton using precomputed cosine and sine frequencies.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nApply Rotary Position Embedding transformations to query or key token vectors in Triton using precomputed cosine and sine frequencies.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef triton_rope(x: list, freqs_cos: list, freqs_sin: list) -> list:\n    arr = np.array(x, dtype=float)\n    cos, sin = np.array(freqs_cos, dtype=float), np.array(freqs_sin, dtype=float)\n    d = arr.shape[-1]\n    x1, x2 = arr[..., :d//2], arr[..., d//2:]\n    rotated = np.concatenate([-x2, x1], axis=-1)\n    return np.round(arr * cos + rotated * sin, 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "triton-rope-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "freqs_cos": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "freqs_sin": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "triton-rope-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "x": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "freqs_cos": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "freqs_sin": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "triton-rope-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "freqs_cos": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "freqs_sin": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "freqs_cos": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "freqs_sin": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "freqs_cos": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "freqs_sin": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "freqs_cos": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "freqs_sin": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "freqs_cos": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "freqs_sin": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "freqs_cos": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "freqs_sin": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "freqs_cos": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "freqs_sin": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "freqs_cos": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "freqs_sin": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "freqs_cos": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "freqs_sin": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "freqs_cos": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "freqs_sin": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "freqs_cos": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "freqs_sin": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "freqs_cos": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "freqs_sin": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "freqs_cos": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "freqs_sin": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "freqs_cos": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "freqs_sin": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "freqs_cos": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "freqs_sin": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "freqs_cos": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "freqs_sin": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "freqs_cos": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "freqs_sin": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-rope-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "freqs_cos": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "freqs_sin": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "triton_rope",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "any"
+      },
+      {
+        "name": "freqs_cos",
+        "type": "any"
+      },
+      {
+        "name": "freqs_sin",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "triton-layernorm-backward",
+    "triton-dropout",
+    "triton-sum",
+    "triton-split-k-matmul",
+    "triton-logsumexp"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/triton-rope",
+  "localUrl": "http://localhost:3000/problems/triton-rope"
+}

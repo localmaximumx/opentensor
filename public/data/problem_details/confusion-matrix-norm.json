@@ -1,0 +1,904 @@
+{
+  "id": "confusion-matrix-norm",
+  "title": "Compute Confusion Matrix with Normalization",
+  "description": "Build a $K\\times K$ confusion matrix whose row is the true class and whose column is the predicted class:\n\n$$\nC_{ij}=\\sum_{n=1}^{N}\\mathbf{1}[y_n=i\\ \\text{and}\\ \\hat{y}_n=j]\n$$\n\nHere, $N$ is the sample count, $K$ is the number of classes, $y_n$ is the true label, and $\\hat{y}_n$ is the predicted label. The normalize mode is \"none\" for counts, \"true\" for rows summing to one, \"pred\" for columns summing to one, or \"all\" for the entire matrix summing to one. A zero row or column remains zero. Return the matrix as a NumPy array.",
+  "seoDescription": "Build a multiclass confusion matrix and optionally normalize counts by true-class rows or predicted-class columns.",
+  "examples": [
+    "Input: y_true = [0, 1, 1], y_pred = [0, 1, 0], num_classes = None, normalize = \"none\"\n\nOutput: [[1, 0], [1, 1]]\n\nExplanation: One class-0 sample is correct, while the two class-1 samples split between predictions 0 and 1.",
+    "Input: y_true = [0, 1, 1], y_pred = [0, 1, 0], num_classes = None, normalize = \"true\"\n\nOutput: [[1, 0], [0.5, 0.5]]"
+  ],
+  "requirements": "* Count samples at their true-label row and predicted-label column\n* Infer the class count when num_classes is None\n* Apply the requested normalization without changing zero rows or columns\n* Return an integer NumPy array for \"none\" and a float NumPy array otherwise",
+  "theory": "## Understanding the Theory: Compute Confusion Matrix with Normalization\n\n### Core Intuition: Why Do We Need This?\nLinear algebra is the foundational mathematical language of artificial intelligence. Image pixels, word embeddings, and hidden representations are all structured as multi-dimensional vectors and matrices. **Compute Confusion Matrix with Normalization** allows machine learning practitioners to project representations into informative subspaces, rotate coordinate frames, or decompose complex transformations into simpler geometric building blocks.\n\nIn this problem, the objective is to implement **Compute Confusion Matrix with Normalization** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nC_{ij}=\\sum_{n=1}^{N}\\mathbf{1}[y_n=i\\ \\text{and}\\ \\hat{y}_n=j]\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Dimensionality & Subspaces**: Orthogonal projections and low-rank factorizations compress massive feature vectors while preserving maximum variance.\n* **Condition Numbers & Inversion**: Inverting ill-conditioned matrices (matrices with near-zero determinants) causes numerical explosion; regularization (e.g. Ridge / Tikhonov) stabilizes these systems.\n* **Tensor Core Acceleration**: Modern hardware accelerators (GPUs and TPUs) are specialized matrix multiplication engines; formulating operations linearly maximizes throughput.",
+  "hints": [
+    "Flatten each pair into y_true * K + y_pred before calling np.bincount.",
+    "Use np.divide(matrix, totals, out=..., where=totals != 0) for safe normalization."
+  ],
+  "constraints": "* Labels are integers from 0 through K - 1\n* y_true and y_pred have equal lengths\n* Use NumPy only",
+  "difficulty": "Hard",
+  "starterCode": "import numpy as np\n\ndef confusion_matrix_norm(y_true: list, y_pred: list, num_classes: int | None = None, normalize: str = \"none\") -> np.ndarray:\n    \"\"\"\n    Returns the confusion matrix as a NumPy array.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-09T14:33:45.145Z",
+  "updatedAt": "2026-08-23T10:06:15.807Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef confusion_matrix_norm(y_true: list, y_pred: list, num_classes: int | None = None, normalize: str = \"none\") -> np.ndarray:\n    yt = np.array(y_true, dtype=int)\n    yp = np.array(y_pred, dtype=int)\n    K = (max(yt.max(), yp.max()) + 1) if num_classes is None else num_classes\n    cm = np.zeros((K, K), dtype=float)\n    for t, p in zip(yt, yp):\n        if 0 <= t < K and 0 <= p < K:\n            cm[t, p] += 1\n    if normalize == \"true\":\n        row_sums = cm.sum(axis=1, keepdims=True)\n        cm = np.divide(cm, row_sums, out=np.zeros_like(cm), where=row_sums != 0)\n    elif normalize == \"pred\":\n        col_sums = cm.sum(axis=0, keepdims=True)\n        cm = np.divide(cm, col_sums, out=np.zeros_like(cm), where=col_sums != 0)\n    elif normalize == \"all\":\n        total = cm.sum()\n        if total > 0:\n            cm /= total\n    if normalize == \"none\":\n        return cm.astype(int)\n    return np.round(cm, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "ConfusionMatrixNormViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Basic 3-sample (Ex1)",
+      "inputs": {
+        "y_pred": [
+          0,
+          1,
+          0
+        ],
+        "y_true": [
+          0,
+          1,
+          1
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Row normalized (Ex2)",
+      "inputs": {
+        "y_pred": [
+          0,
+          1,
+          0
+        ],
+        "y_true": [
+          0,
+          1,
+          1
+        ],
+        "normalize": "true",
+        "num_classes": null
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1,
+          0
+        ],
+        [
+          0.5,
+          0.5
+        ]
+      ]
+    },
+    {
+      "id": "confusion-matrix-norm-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "y_pred": [
+          0,
+          2,
+          0
+        ],
+        "y_true": [
+          0,
+          2,
+          2
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "y_pred": [
+          0,
+          0,
+          0
+        ],
+        "y_true": [
+          0,
+          0,
+          0
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "y_pred": [
+          0,
+          -1,
+          0
+        ],
+        "y_true": [
+          0,
+          -1,
+          -1
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "y_pred": [
+          0,
+          3,
+          0
+        ],
+        "y_true": [
+          0,
+          3,
+          3
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "y_pred": [
+          1.0,
+          2.0,
+          1.0
+        ],
+        "y_true": [
+          1.0,
+          2.0,
+          2.0
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "y_pred": [
+          -2.0,
+          -1.0,
+          -2.0
+        ],
+        "y_true": [
+          -2.0,
+          -1.0,
+          -1.0
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "y_pred": [
+          0,
+          1,
+          0
+        ],
+        "y_true": [
+          1,
+          1,
+          0
+        ],
+        "normalize": "enon",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          1.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "y_pred": [
+          0,
+          -1,
+          0
+        ],
+        "y_true": [
+          0,
+          -1,
+          -1
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "y_pred": [
+          0,
+          10,
+          0
+        ],
+        "y_true": [
+          0,
+          10,
+          10
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "y_pred": [
+          0,
+          0,
+          0
+        ],
+        "y_true": [
+          0,
+          0,
+          0
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "y_pred": [
+          5.0,
+          6.0,
+          5.0
+        ],
+        "y_true": [
+          5.0,
+          6.0,
+          6.0
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "y_pred": [
+          0,
+          2,
+          0
+        ],
+        "y_true": [
+          0,
+          2,
+          2
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "y_pred": [
+          0,
+          -2,
+          0
+        ],
+        "y_true": [
+          0,
+          -2,
+          -2
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "y_pred": [
+          0,
+          0,
+          0
+        ],
+        "y_true": [
+          0,
+          0,
+          0
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "y_pred": [
+          -1.0,
+          0.0,
+          -1.0
+        ],
+        "y_true": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "y_pred": [
+          0,
+          4,
+          0
+        ],
+        "y_true": [
+          0,
+          4,
+          4
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "y_pred": [
+          0,
+          1,
+          0
+        ],
+        "y_true": [
+          0,
+          1,
+          1
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "confusion-matrix-norm-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "y_pred": [
+          0,
+          5,
+          0
+        ],
+        "y_true": [
+          0,
+          5,
+          5
+        ],
+        "normalize": "none",
+        "num_classes": null
+      },
+      "expectedOutput": [
+        [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "confusion_matrix_norm",
+    "parameters": [
+      {
+        "name": "y_true",
+        "type": "array",
+        "example": "[0, 1, 1]",
+        "description": "True class labels"
+      },
+      {
+        "name": "y_pred",
+        "type": "array",
+        "example": "[0, 1, 0]",
+        "description": "Predicted class labels"
+      },
+      {
+        "name": "num_classes",
+        "type": "any",
+        "example": "None",
+        "description": "Optional number of classes"
+      },
+      {
+        "name": "normalize",
+        "type": "string",
+        "example": "\"none\"",
+        "description": "Normalization mode"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "classification-metrics",
+    "metrics-f1-micro",
+    "cohens-kappa",
+    "log-loss-per-sample",
+    "r2-score"
+  ],
+  "tags": [
+    "Metrics & Evaluation"
+  ],
+  "prevId": "mean-average-precision",
+  "nextId": "gini-impurity",
+  "slug": "confusion-matrix-norm",
+  "cleanTitle": "Compute Confusion Matrix with Normalization",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/confusion-matrix-norm",
+  "localUrl": "http://localhost:3000/problems/confusion-matrix-norm",
+  "studyPlan": null
+}

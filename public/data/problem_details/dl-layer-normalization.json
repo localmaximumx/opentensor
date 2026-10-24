@@ -1,0 +1,735 @@
+{
+  "catalogId": "python:dl-layer-normalization",
+  "id": "dl-layer-normalization",
+  "sourceId": "dl-layer-normalization",
+  "slug": "dl-layer-normalization",
+  "source": "python",
+  "category": "numpy",
+  "title": "Layer Normalization",
+  "difficulty": "Medium",
+  "tags": [
+    "Neural Networks",
+    "Transformers"
+  ],
+  "isFree": false,
+  "planId": "cracking-dl",
+  "planTitle": "Cracking Deep Learning",
+  "sectionId": "cracking-dl-transformers",
+  "sortOrder": 440,
+  "seoDescription": "Implement Layer Normalization (Ba et al, 2016), the standard normalization technique in Transformers.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Normalize hidden activations independently per example across the feature channel dimension with affine scale and shift parameters.\n\nUnlike Batch Normalization, LayerNorm computes statistics along the feature dimension, making it invariant to batch size and ideal for sequential models.\n\n### Mathematical Formulation\n$$\n\\hat{x}_{i, j} = \\frac{x_{i, j} - \\mu_i}{\\sqrt{\\sigma_i^2 + \\varepsilon}}, \\quad y_{i, j} = \\gamma \\hat{x}_{i, j} + \\beta\n$$\n\n### Step-by-Step Implementation\n1. Compute sample mean and variance across feature dimension for each token independently\n2. Standardize feature coordinates with numerical epsilon protection\n3. Scale and translate with affine parameters gamma and beta\n\n### Returns\nNested list representing layer-normalized activations.",
+  "theory": "## Understanding the Theory: Layer Normalization\n\n### Core Intuition: Why Do We Need This?\nLinear algebra is the foundational mathematical language of machine learning. Data samples, image pixels, and word embeddings are all represented as multidimensional vectors and matrices. **Layer Normalization** transforms coordinate systems, extracts principal axes of variation, or decomposes complex transformations into simpler geometric building blocks.\n\nUnlike Batch Normalization, LayerNorm computes statistics along the feature dimension, making it invariant to batch size and ideal for sequential models. In this problem, the goal is to: normalize hidden activations independently per example across the feature channel dimension with affine scale and shift parameters.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\hat{x}_{i, j} = \\frac{x_{i, j} - \\mu_i}{\\sqrt{\\sigma_i^2 + \\varepsilon}}, \\quad y_{i, j} = \\gamma \\hat{x}_{i, j} + \\beta\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute sample mean and variance across feature dimension for each token independently\n2. **Phase 2**: Standardize feature coordinates with numerical epsilon protection\n3. **Phase 3**: Scale and translate with affine parameters gamma and beta\n\n### Practical Machine Learning Applications & Nuances\n* **Feature Compression & Projections**: Operations like low-rank approximations and orthogonal projections compress high-dimensional feature spaces while preserving maximum variance.\n* **Numerical Stability**: When inverting matrices or solving linear systems, ill-conditioned matrices (matrices with very small determinants or high condition numbers) require regularization to prevent numerical instability.\n* **Vectorized Execution**: Expressing computations as matrix multiplications allows GPUs and CPUs to leverage hardware tensor cores for maximum throughput.",
+  "examples": [
+    "Input: x = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], gamma = 1.0, beta = 0.0, eps = 1e-05\n\nOutput: [[-1.2247, 0.0, 1.2247], [-1.2247, 0.0, 1.2247]]\n\nExplanation: Evaluated dl_layer_normalization under standard test conditions."
+  ],
+  "requirements": "* Function must be named `dl_layer_normalization`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `dl_layer_normalization`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef dl_layer_normalization(x: list, gamma: float = 1.0, beta: float = 0.0, eps: float = 1e-5) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Layer Normalization** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef dl_layer_normalization(x: list, gamma: float = 1.0, beta: float = 0.0, eps: float = 1e-5) -> list:\n    arr = np.array(x, dtype=np.float64)\n    m = np.mean(arr, axis=-1, keepdims=True); v = np.var(arr, axis=-1, keepdims=True)\n    return np.round(float(gamma) * ((arr - m) / np.sqrt(v + float(eps))) + float(beta), 4).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "2 samples 3 features",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0,
+            3.0
+          ],
+          [
+            4.0,
+            5.0,
+            6.0
+          ]
+        ],
+        "gamma": 1.0,
+        "beta": 0.0,
+        "eps": 1e-05
+      },
+      "expectedOutput": [
+        [
+          -1.2247,
+          0.0,
+          1.2247
+        ],
+        [
+          -1.2247,
+          0.0,
+          1.2247
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "dl-layer-normalization-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "x": [
+          [
+            2.0,
+            4.0,
+            6.0
+          ],
+          [
+            8.0,
+            10.0,
+            12.0
+          ]
+        ],
+        "gamma": 2.0,
+        "beta": 0.0,
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        [
+          -2.4495,
+          0.0,
+          2.4495
+        ],
+        [
+          -2.4495,
+          0.0,
+          2.4495
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "dl-layer-normalization-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          [
+            0.5,
+            1.0,
+            1.5
+          ],
+          [
+            2.0,
+            2.5,
+            3.0
+          ]
+        ],
+        "gamma": 0.5,
+        "beta": 0.0,
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        [
+          -0.6124,
+          0.0,
+          0.6124
+        ],
+        [
+          -0.6124,
+          0.0,
+          0.6124
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            -2.0,
+            -3.0
+          ],
+          [
+            -4.0,
+            -5.0,
+            -6.0
+          ]
+        ],
+        "gamma": -1.0,
+        "beta": -0.0,
+        "eps": -0.0
+      },
+      "expectedOutput": [
+        [
+          -1.2247,
+          -0.0,
+          1.2247
+        ],
+        [
+          -1.2247,
+          -0.0,
+          1.2247
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            3.0,
+            6.0,
+            9.0
+          ],
+          [
+            12.0,
+            15.0,
+            18.0
+          ]
+        ],
+        "gamma": 3.0,
+        "beta": 0.0,
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        [
+          -3.6742,
+          0.0,
+          3.6742
+        ],
+        [
+          -3.6742,
+          0.0,
+          3.6742
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            2.0,
+            3.0,
+            4.0
+          ],
+          [
+            5.0,
+            6.0,
+            7.0
+          ]
+        ],
+        "gamma": 2.0,
+        "beta": 1.0,
+        "eps": 1.00001
+      },
+      "expectedOutput": [
+        [
+          -0.5492,
+          1.0,
+          2.5492
+        ],
+        [
+          -0.5492,
+          1.0,
+          2.5492
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            0.0,
+            1.0
+          ],
+          [
+            2.0,
+            3.0,
+            4.0
+          ]
+        ],
+        "gamma": -1.0,
+        "beta": -2.0,
+        "eps": -1.99999
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            3.0,
+            2.0,
+            1.0
+          ],
+          [
+            6.0,
+            5.0,
+            4.0
+          ]
+        ],
+        "gamma": 1.0,
+        "beta": 0.0,
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        [
+          1.2247,
+          0.0,
+          -1.2247
+        ],
+        [
+          1.2247,
+          0.0,
+          -1.2247
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            -2.0,
+            -3.0
+          ],
+          [
+            -4.0,
+            -5.0,
+            -6.0
+          ]
+        ],
+        "gamma": -1.0,
+        "beta": -0.0,
+        "eps": -1e-05
+      },
+      "expectedOutput": [
+        [
+          -1.2248,
+          -0.0,
+          1.2248
+        ],
+        [
+          -1.2248,
+          -0.0,
+          1.2248
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            10.0,
+            20.0,
+            30.0
+          ],
+          [
+            40.0,
+            50.0,
+            60.0
+          ]
+        ],
+        "gamma": 10.0,
+        "beta": 0.0,
+        "eps": 0.0001
+      },
+      "expectedOutput": [
+        [
+          -12.2474,
+          0.0,
+          12.2474
+        ],
+        [
+          -12.2474,
+          0.0,
+          12.2474
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            0.1,
+            0.2,
+            0.3
+          ],
+          [
+            0.4,
+            0.5,
+            0.6
+          ]
+        ],
+        "gamma": 0.1,
+        "beta": 0.0,
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        [
+          -0.1225,
+          -0.0,
+          0.1225
+        ],
+        [
+          -0.1225,
+          0.0,
+          0.1225
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            6.0,
+            7.0,
+            8.0
+          ],
+          [
+            9.0,
+            10.0,
+            11.0
+          ]
+        ],
+        "gamma": 6.0,
+        "beta": 5.0,
+        "eps": 5.00001
+      },
+      "expectedOutput": [
+        [
+          2.4795,
+          5.0,
+          7.5205
+        ],
+        [
+          2.4795,
+          5.0,
+          7.5205
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            1.5,
+            3.0,
+            4.5
+          ],
+          [
+            6.0,
+            7.5,
+            9.0
+          ]
+        ],
+        "gamma": 1.5,
+        "beta": 0.0,
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        [
+          -1.8371,
+          0.0,
+          1.8371
+        ],
+        [
+          -1.8371,
+          0.0,
+          1.8371
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            -2.0,
+            -4.0,
+            -6.0
+          ],
+          [
+            -8.0,
+            -10.0,
+            -12.0
+          ]
+        ],
+        "gamma": -2.0,
+        "beta": -0.0,
+        "eps": -0.0
+      },
+      "expectedOutput": [
+        [
+          -2.4495,
+          -0.0,
+          2.4495
+        ],
+        [
+          -2.4495,
+          -0.0,
+          2.4495
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            0.25,
+            0.5,
+            0.75
+          ],
+          [
+            1.0,
+            1.25,
+            1.5
+          ]
+        ],
+        "gamma": 0.25,
+        "beta": 0.0,
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        [
+          -0.3062,
+          0.0,
+          0.3062
+        ],
+        [
+          -0.3062,
+          0.0,
+          0.3062
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            0.0,
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0,
+            5.0
+          ]
+        ],
+        "gamma": 0.0,
+        "beta": -1.0,
+        "eps": -0.99999
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            4.0,
+            8.0,
+            12.0
+          ],
+          [
+            16.0,
+            20.0,
+            24.0
+          ]
+        ],
+        "gamma": 4.0,
+        "beta": 0.0,
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        [
+          -4.899,
+          0.0,
+          4.899
+        ],
+        [
+          -4.899,
+          0.0,
+          4.899
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            0.75,
+            1.5,
+            2.25
+          ],
+          [
+            3.0,
+            3.75,
+            4.5
+          ]
+        ],
+        "gamma": 0.75,
+        "beta": 0.0,
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        [
+          -0.9186,
+          0.0,
+          0.9186
+        ],
+        [
+          -0.9186,
+          0.0,
+          0.9186
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            5.0,
+            10.0,
+            15.0
+          ],
+          [
+            20.0,
+            25.0,
+            30.0
+          ]
+        ],
+        "gamma": 5.0,
+        "beta": 0.0,
+        "eps": 0.0001
+      },
+      "expectedOutput": [
+        [
+          -6.1237,
+          0.0,
+          6.1237
+        ],
+        [
+          -6.1237,
+          0.0,
+          6.1237
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-layer-normalization-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            11.0,
+            12.0,
+            13.0
+          ],
+          [
+            14.0,
+            15.0,
+            16.0
+          ]
+        ],
+        "gamma": 11.0,
+        "beta": 10.0,
+        "eps": 10.00001
+      },
+      "expectedOutput": [
+        [
+          6.632,
+          10.0,
+          13.368
+        ],
+        [
+          6.632,
+          10.0,
+          13.368
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "dl_layer_normalization",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

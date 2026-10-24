@@ -1,0 +1,794 @@
+{
+  "catalogId": "sql:sql-having-clause",
+  "id": "sql-having-clause",
+  "sourceId": "sql-having-clause",
+  "slug": "sql-having-clause",
+  "source": "sql",
+  "category": "sql",
+  "title": "HAVING Clause",
+  "difficulty": "Medium",
+  "tags": [
+    "Data Processing"
+  ],
+  "isFree": false,
+  "planId": "sql-basics",
+  "planTitle": "SQL Sheet",
+  "sectionId": "sql-basics-aggregation",
+  "sortOrder": 537,
+  "seoDescription": "Use SQL GROUP BY and HAVING to find customers with at least two orders and summarize their total spending.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Simulate relational GROUP BY aggregation and HAVING clause filtering on grouped department salaries.\n\nUnlike WHERE filters applied row-by-row before grouping, HAVING predicates evaluate on collapsed summary tuples produced by the aggregation stage.\n\n### Query Logic & Formulation\n$$\n\\sigma_{\\text{avg\\_salary} \\ge \\tau}(\\gamma_{\\text{dept}, \\text{AVG}(\\text{salary}), \\text{COUNT}(*)}(\\text{Employees}))\n$$\n\n### Relational Execution Steps\n1. Partition records by grouping attribute department\n2. Evaluate group aggregations: mean salary and row headcount\n3. Filter groups where mean salary satisfies minimum threshold and sort departments lexicographically\n\n### Expected Query Output\nList of dictionaries containing department, avg_salary (rounded to 2 decimal places), and headcount.",
+  "theory": "## Understanding the Theory: HAVING Clause\n\n### Core Intuition: Why Do We Need This?\nRelational databases structure data into normalized tables with strict schemas and foreign-key relationships. SQL allows data engineers and analysts to write declarative queries describing what data is needed, while the database query engine optimizes the underlying execution plan. **HAVING Clause** combines, aggregates, or transforms records across tables.\n\nUnlike WHERE filters applied row-by-row before grouping, HAVING predicates evaluate on collapsed summary tuples produced by the aggregation stage. In this problem, the goal is to: simulate relational group by aggregation and having clause filtering on grouped department salaries.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\sigma_{\\text{avg\\_salary} \\ge \\tau}(\\gamma_{\\text{dept}, \\text{AVG}(\\text{salary}), \\text{COUNT}(*)}(\\text{Employees}))\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Partition records by grouping attribute department\n2. **Phase 2**: Evaluate group aggregations: mean salary and row headcount\n3. **Phase 3**: Filter groups where mean salary satisfies minimum threshold and sort departments lexicographically\n\n### Practical Machine Learning Applications & Nuances\n* **Join Mechanics**: Inner joins filter for matching records across tables, while outer joins preserve all rows from one table even when no matches exist.\n* **Window Functions**: Functions like `ROW_NUMBER()` and `RANK()` allow computing partitioned running totals and top-K ranks without requiring self-joins.\n* **Index Optimization**: Proper indexing on join keys and filter conditions ensures queries run in milliseconds rather than doing full table scans.",
+  "examples": [
+    "Input: employees = [{\"name\": \"Alice\", \"department\": \"Engineering\", \"salary\": 120000.0}, {\"name\": \"Bob\", \"department\": \"Engineering\", \"salary\": 100000.0}, {\"name\": \"Charlie\", \"department\": \"HR\", \"salary\": 60000.0}, {\"name\": \"Dave\", \"department\": \"HR\", \"salary\": 70000.0}], min_avg_salary = 80000.0\n\nOutput: [{\"department\": \"Engineering\", \"avg_salary\": 110000.0, \"headcount\": 2}]\n\nExplanation: Evaluated sql_having_clause under standard test conditions."
+  ],
+  "requirements": "* Function must be named `sql_having_clause`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `sql_having_clause`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def sql_having_clause(employees: list, min_avg_salary: float) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **HAVING Clause** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef sql_having_clause(employees: list, min_avg_salary: float) -> list:\n    groups = {}\n    for e in employees: groups.setdefault(e['department'], []).append(e['salary'])\n    res = []\n    for d in sorted(groups.keys()):\n        avg_s = sum(groups[d]) / len(groups[d])\n        if avg_s >= min_avg_salary:\n            res.append({'department': d, 'avg_salary': round(avg_s, 2), 'headcount': len(groups[d])})\n    return res\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Salary filter 80000",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "sql-having-clause-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-having-clause-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "employees": [
+          {
+            "name": "Alice",
+            "department": "Engineering",
+            "salary": 120000.0
+          },
+          {
+            "name": "Bob",
+            "department": "Engineering",
+            "salary": 100000.0
+          },
+          {
+            "name": "Charlie",
+            "department": "HR",
+            "salary": 60000.0
+          },
+          {
+            "name": "Dave",
+            "department": "HR",
+            "salary": 70000.0
+          }
+        ],
+        "min_avg_salary": 80000.0
+      },
+      "expectedOutput": [
+        {
+          "department": "Engineering",
+          "avg_salary": 110000.0,
+          "headcount": 2
+        }
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "sql_having_clause",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sql-multiple-joins",
+    "sql-subqueries",
+    "sql-distinct-values",
+    "sql-row-number",
+    "sql-inner-join"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "sql",
+    "placeholderType": "sql_dummy_select (SELECT * FROM main_table)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

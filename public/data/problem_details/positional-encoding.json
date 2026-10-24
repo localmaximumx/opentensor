@@ -1,0 +1,939 @@
+{
+  "id": "positional-encoding",
+  "title": "Implement Positional Encoding (sin/cos)",
+  "description": "Implement sinusoidal positional encodings as described in \"Attention Is All You Need\" to inject sequence order into token embeddings.\n\nGiven a sequence length and model dimension, compute the positional encoding matrix using the sin/cos formulation.\n\n### Mathematical Definition\n\nFor position pos and dimension index i:\n\n$$\nPE(pos, 2i) = \\sin\\!\\left(\\frac{pos}{base^{\\,2i/d_{model}}}\\right)\n$$\n\n$$\nPE(pos, 2i+1) = \\cos\\!\\left(\\frac{pos}{base^{\\,2i/d_{model}}}\\right)\n$$\n\nEven-indexed columns use sine, odd-indexed columns use cosine, and the frequency decreases with dimension index.",
+  "seoDescription": "Generate sinusoidal Transformer positional encodings across sequence positions and embedding dimensions.",
+  "examples": [
+    "Input: seq_len = 3, d_model = 4\n\nOutput: [[0.0000, 1.0000, 0.0000, 1.0000], [0.8415, 0.5403, 0.0100, 0.9999], [0.9093, -0.4161, 0.0200, 0.9998]]\n\nExplanation: Columns alternate sine and cosine values. For the second frequency, the divisor is 100, producing the smaller angles 0.01 and 0.02.",
+    "Input: seq_len = 5, d_model = 7, base = 10000.0\n\nOutput: NumPy array of shape (5, 7)"
+  ],
+  "requirements": "* <span style=\"font-size: 14px;\">Fully vectorized (no Python loops over positions or dimensions)</span>\n* <span style=\"font-size: 14px;\">Support any seq_len ≥ 1 and d_model ≥ 1</span>\n* <span style=\"font-size: 14px;\">For odd d_model, the last column should be the sin column</span>\n* <span style=\"font-size: 14px;\">Return dtype=float for stable downstream use</span>",
+  "theory": "## Understanding the Theory: Implement Positional Encoding (sin/cos)\n\n### Core Intuition: Why Do We Need This?\nLinear algebra is the foundational mathematical language of artificial intelligence. Image pixels, word embeddings, and hidden representations are all structured as multi-dimensional vectors and matrices. **Implement Positional Encoding (sin/cos)** allows machine learning practitioners to project representations into informative subspaces, rotate coordinate frames, or decompose complex transformations into simpler geometric building blocks.\n\nIn this problem, the objective is to implement **Implement Positional Encoding (sin/cos)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nPE(pos, 2i) = \\sin\\!\\left(\\frac{pos}{base^{\\,2i/d_{model}}}\\right)\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Dimensionality & Subspaces**: Orthogonal projections and low-rank factorizations compress massive feature vectors while preserving maximum variance.\n* **Condition Numbers & Inversion**: Inverting ill-conditioned matrices (matrices with near-zero determinants) causes numerical explosion; regularization (e.g. Ridge / Tikhonov) stabilizes these systems.\n* **Tensor Core Acceleration**: Modern hardware accelerators (GPUs and TPUs) are specialized matrix multiplication engines; formulating operations linearly maximizes throughput.",
+  "hints": [
+    "Build positions with shape (seq_len, 1) and frequencies with shape (1, ceil(d_model / 2)) for broadcasting.",
+    "Fill even columns with sine values and odd columns with the corresponding cosine values."
+  ],
+  "constraints": "* <span style=\"font-size: 14px;\">Sequence lengths up to 10,000</span>\n* <span style=\"font-size: 14px;\">Model dimensions up to 2,048</span>\n* <span style=\"font-size: 14px;\">Use NumPy only</span>\n* <span style=\"font-size: 14px;\">Time limit: 300 ms</span>",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef positional_encoding(seq_len: int, d_model: int, base: float = 10000.0) -> np.ndarray:\n    \"\"\"\n    Returns a NumPy array of shape (seq_len, d_model).\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-10-21T18:37:16.733Z",
+  "updatedAt": "2026-03-05T20:29:45.657Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport math\nimport numpy as np\n\ndef positional_encoding(seq_len: int, d_model: int, base: float = 10000.0) -> np.ndarray:\n    pe = np.zeros((seq_len, d_model), dtype=float)\n    pos = np.arange(seq_len)[:, np.newaxis]\n    i_idx = np.arange(0, d_model, 2)\n    div = np.exp(i_idx * (-math.log(base) / d_model))\n    pe[:, 0::2] = np.sin(pos * div)\n    cos_cols = d_model // 2\n    pe[:, 1::2] = np.cos(pos * div[:cos_cols])\n    return np.round(pe, 4)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "PositionalEncodingProblemViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Small even d_model",
+      "inputs": {
+        "base": 10000,
+        "d_model": 4,
+        "seq_len": 3
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.01,
+          0.9999
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.02,
+          0.9998
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Odd d_model (Ex2)",
+      "inputs": {
+        "base": 10000,
+        "d_model": 7,
+        "seq_len": 5
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.0719,
+          0.9974,
+          0.0052,
+          1.0,
+          0.0004
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.1434,
+          0.9897,
+          0.0104,
+          0.9999,
+          0.0007
+        ],
+        [
+          0.1411,
+          -0.99,
+          0.2142,
+          0.9768,
+          0.0155,
+          0.9999,
+          0.0011
+        ],
+        [
+          -0.7568,
+          -0.6536,
+          0.2839,
+          0.9588,
+          0.0207,
+          0.9998,
+          0.0015
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "base": 10000,
+        "d_model": 4,
+        "seq_len": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.01,
+          0.9999
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.02,
+          0.9998
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "base": 10000,
+        "d_model": 7,
+        "seq_len": 5
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.0719,
+          0.9974,
+          0.0052,
+          1.0,
+          0.0004
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.1434,
+          0.9897,
+          0.0104,
+          0.9999,
+          0.0007
+        ],
+        [
+          0.1411,
+          -0.99,
+          0.2142,
+          0.9768,
+          0.0155,
+          0.9999,
+          0.0011
+        ],
+        [
+          -0.7568,
+          -0.6536,
+          0.2839,
+          0.9588,
+          0.0207,
+          0.9998,
+          0.0015
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "base": 10000,
+        "d_model": 4,
+        "seq_len": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.01,
+          0.9999
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.02,
+          0.9998
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "base": 10000,
+        "d_model": 7,
+        "seq_len": 5
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.0719,
+          0.9974,
+          0.0052,
+          1.0,
+          0.0004
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.1434,
+          0.9897,
+          0.0104,
+          0.9999,
+          0.0007
+        ],
+        [
+          0.1411,
+          -0.99,
+          0.2142,
+          0.9768,
+          0.0155,
+          0.9999,
+          0.0011
+        ],
+        [
+          -0.7568,
+          -0.6536,
+          0.2839,
+          0.9588,
+          0.0207,
+          0.9998,
+          0.0015
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "base": 10000,
+        "d_model": 4,
+        "seq_len": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.01,
+          0.9999
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.02,
+          0.9998
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "base": 10000,
+        "d_model": 7,
+        "seq_len": 5
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.0719,
+          0.9974,
+          0.0052,
+          1.0,
+          0.0004
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.1434,
+          0.9897,
+          0.0104,
+          0.9999,
+          0.0007
+        ],
+        [
+          0.1411,
+          -0.99,
+          0.2142,
+          0.9768,
+          0.0155,
+          0.9999,
+          0.0011
+        ],
+        [
+          -0.7568,
+          -0.6536,
+          0.2839,
+          0.9588,
+          0.0207,
+          0.9998,
+          0.0015
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "base": 10000,
+        "d_model": 4,
+        "seq_len": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.01,
+          0.9999
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.02,
+          0.9998
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "base": 10000,
+        "d_model": 7,
+        "seq_len": 5
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.0719,
+          0.9974,
+          0.0052,
+          1.0,
+          0.0004
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.1434,
+          0.9897,
+          0.0104,
+          0.9999,
+          0.0007
+        ],
+        [
+          0.1411,
+          -0.99,
+          0.2142,
+          0.9768,
+          0.0155,
+          0.9999,
+          0.0011
+        ],
+        [
+          -0.7568,
+          -0.6536,
+          0.2839,
+          0.9588,
+          0.0207,
+          0.9998,
+          0.0015
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "base": 10000,
+        "d_model": 4,
+        "seq_len": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.01,
+          0.9999
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.02,
+          0.9998
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "base": 10000,
+        "d_model": 7,
+        "seq_len": 5
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.0719,
+          0.9974,
+          0.0052,
+          1.0,
+          0.0004
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.1434,
+          0.9897,
+          0.0104,
+          0.9999,
+          0.0007
+        ],
+        [
+          0.1411,
+          -0.99,
+          0.2142,
+          0.9768,
+          0.0155,
+          0.9999,
+          0.0011
+        ],
+        [
+          -0.7568,
+          -0.6536,
+          0.2839,
+          0.9588,
+          0.0207,
+          0.9998,
+          0.0015
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "base": 10000,
+        "d_model": 4,
+        "seq_len": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.01,
+          0.9999
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.02,
+          0.9998
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "base": 10000,
+        "d_model": 7,
+        "seq_len": 5
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.0719,
+          0.9974,
+          0.0052,
+          1.0,
+          0.0004
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.1434,
+          0.9897,
+          0.0104,
+          0.9999,
+          0.0007
+        ],
+        [
+          0.1411,
+          -0.99,
+          0.2142,
+          0.9768,
+          0.0155,
+          0.9999,
+          0.0011
+        ],
+        [
+          -0.7568,
+          -0.6536,
+          0.2839,
+          0.9588,
+          0.0207,
+          0.9998,
+          0.0015
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "base": 10000,
+        "d_model": 4,
+        "seq_len": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.01,
+          0.9999
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.02,
+          0.9998
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "base": 10000,
+        "d_model": 7,
+        "seq_len": 5
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.0719,
+          0.9974,
+          0.0052,
+          1.0,
+          0.0004
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.1434,
+          0.9897,
+          0.0104,
+          0.9999,
+          0.0007
+        ],
+        [
+          0.1411,
+          -0.99,
+          0.2142,
+          0.9768,
+          0.0155,
+          0.9999,
+          0.0011
+        ],
+        [
+          -0.7568,
+          -0.6536,
+          0.2839,
+          0.9588,
+          0.0207,
+          0.9998,
+          0.0015
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "base": 10000,
+        "d_model": 4,
+        "seq_len": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.01,
+          0.9999
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.02,
+          0.9998
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "base": 10000,
+        "d_model": 7,
+        "seq_len": 5
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.0719,
+          0.9974,
+          0.0052,
+          1.0,
+          0.0004
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.1434,
+          0.9897,
+          0.0104,
+          0.9999,
+          0.0007
+        ],
+        [
+          0.1411,
+          -0.99,
+          0.2142,
+          0.9768,
+          0.0155,
+          0.9999,
+          0.0011
+        ],
+        [
+          -0.7568,
+          -0.6536,
+          0.2839,
+          0.9588,
+          0.0207,
+          0.9998,
+          0.0015
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "base": 10000,
+        "d_model": 4,
+        "seq_len": 3
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.01,
+          0.9999
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.02,
+          0.9998
+        ]
+      ]
+    },
+    {
+      "id": "positional-encoding-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "base": 10000,
+        "d_model": 7,
+        "seq_len": 5
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.8415,
+          0.5403,
+          0.0719,
+          0.9974,
+          0.0052,
+          1.0,
+          0.0004
+        ],
+        [
+          0.9093,
+          -0.4161,
+          0.1434,
+          0.9897,
+          0.0104,
+          0.9999,
+          0.0007
+        ],
+        [
+          0.1411,
+          -0.99,
+          0.2142,
+          0.9768,
+          0.0155,
+          0.9999,
+          0.0011
+        ],
+        [
+          -0.7568,
+          -0.6536,
+          0.2839,
+          0.9588,
+          0.0207,
+          0.9998,
+          0.0015
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "positional_encoding",
+    "parameters": [
+      {
+        "name": "seq_len",
+        "type": "number",
+        "example": "3",
+        "description": "Length of the input sequence"
+      },
+      {
+        "name": "d_model",
+        "type": "number",
+        "example": "4",
+        "description": "Dimension of the model (embedding size)"
+      },
+      {
+        "name": "base",
+        "type": "number",
+        "example": "10000.0",
+        "description": "Base for frequency computation (default 10000.0)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "causal-masking",
+    "sigmoid-numpy",
+    "dot-product",
+    "softmax-function",
+    "linear-layer-forward"
+  ],
+  "tags": [
+    "Linear Algebra",
+    "Transformers"
+  ],
+  "prevId": "matrix-transpose",
+  "nextId": "gradient-descent-quadratic",
+  "slug": "positional-encoding",
+  "cleanTitle": "Implement Positional Encoding (sin/cos)",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/positional-encoding",
+  "localUrl": "http://localhost:3000/problems/positional-encoding",
+  "studyPlan": null
+}

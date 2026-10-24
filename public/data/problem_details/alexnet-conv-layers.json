@@ -1,0 +1,1820 @@
+{
+  "id": "alexnet-conv-layers",
+  "title": "AlexNet Convolution Layer",
+  "description": "Implement the cross-correlation used by an AlexNet-style convolution layer for an NHWC image batch. For image $X$, kernel $K$, bias $b$, stride $s$, and zero-padding $p$, each output value is\n\n$$\nY_{n,i,j,o}=b_o+\\sum_{u=0}^{K_h-1}\\sum_{v=0}^{K_w-1}\\sum_{c=0}^{C-1}X^{(p)}_{n,is+u,js+v,c}K_{u,v,c,o}.\n$$\n\nHere, $n$ selects a batch item, $(i,j)$ selects an output location, $c$ is an input channel, $o$ is an output channel, and $X^{(p)}$ is the zero-padded image. Return the convolution result as a float64 NumPy array with shape $(B,H_{out},W_{out},C_{out})$.",
+  "seoDescription": "Implement an AlexNet convolutional layer with learned filters, bias, stride, padding, and multi-channel outputs.",
+  "examples": [
+    "Input: image = [[[[1],[2],[3]],[[4],[5],[6]],[[7],[8],[9]]]], kernel = [[[[1]],[[0]]],[[[0]],[[-1]]]], bias = [0], stride = 1, padding = 0\n\nOutput: [[[[-4],[-4]],[[-4],[-4]]]]\n\nExplanation: Each kernel window is multiplied elementwise with the image patch, summed, and shifted by the output-channel bias.",
+    "Input: image = [[[[1,2],[3,4]],[[5,6],[7,8]]]], kernel = [[[[2],[-1]]]], bias = [0.5], stride = 1, padding = 0\n\nOutput: [[[[0.5],[2.5]],[[4.5],[6.5]]]]",
+    "Input: image = [[[[1],[2]],[[3],[4]]]], kernel = [[[[1]],[[1]]],[[[1]],[[1]]]], bias = [0], stride = 2, padding = 1\n\nOutput: [[[[1],[2]],[[3],[4]]]]"
+  ],
+  "requirements": "- Compute every output value from the supplied image, kernel, bias, stride, and padding.\n- Use NHWC image layout and $(K_h,K_w,C_{in},C_{out})$ kernel layout.\n- Apply zero-padding equally to the height and width dimensions.\n- Return a new float64 NumPy array.",
+  "theory": "# <span style=\"font-size: 20px;\">AlexNet Convolution Layers</span>\n\n<span style=\"font-size: 14px;\">A **convolutional layer** applies learnable filters to an input tensor, producing feature maps that detect local spatial patterns (edges, textures, shapes). Krizhevsky et al. (2012) used five convolutional layers as the backbone of AlexNet, the model that won ImageNet LSVRC-2012 and reignited modern deep learning.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What a Convolution Layer Does</span>\n\n<span style=\"font-size: 14px;\">A convolutional layer slides a small filter (**kernel**) across an input tensor. At every position, the filter computes a dot product with the input patch it covers, producing a single scalar. Repeating this across all valid positions generates a 2D **feature map** (or **activation map**).</span>\n\n* <span style=\"font-size: 14px;\">**Multiple filters:** Each filter detects one type of pattern. With $F$ filters, the output has $F$ channels.</span>\n* <span style=\"font-size: 14px;\">**Multi-channel input:** Each filter spans all input channels. A filter applied to $C_{in}$ input channels has shape $k \\times k \\times C_{in}$.</span>\n* <span style=\"font-size: 14px;\">**Parameters:** The layer has $F$ filters plus $F$ bias terms (one per filter).</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Output Dimension Formula</span>\n\n<span style=\"font-size: 14px;\">For each spatial axis:</span>\n\n$$\nH_{out} = \\lfloor \\frac{H_{in} + 2p - k}{s} \\rfloor + 1\n$$\n\n* <span style=\"font-size: 14px;\">$H_{in}$: input spatial dimension</span>\n* <span style=\"font-size: 14px;\">$k$: kernel size</span>\n* <span style=\"font-size: 14px;\">$s$: stride (pixels the kernel moves between applications)</span>\n* <span style=\"font-size: 14px;\">$p$: padding (zero-pixels added to each side before convolution)</span>\n\n<span style=\"font-size: 14px;\">After padding, effective input size is $H_{in} + 2p$. The kernel's furthest valid start position is $H_{in} + 2p - k$. Dividing by stride gives the number of steps; adding 1 accounts for the initial position. The floor discards any leftover pixels that don't fit a complete kernel window.</span>\n\n<span style=\"font-size: 14px;\">Full output tensor shape:</span>\n\n$$\n(B, H_{out}, W_{out}, F)\n$$\n\n<span style=\"font-size: 14px;\">where $B$ is the batch size. The width formula is identical with $W_{in}$ substituted for $H_{in}$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What Each Parameter Controls</span>\n\n### <span style=\"font-size: 14px;\">Kernel Size</span>\n\n<span style=\"font-size: 14px;\">Kernel size $k$ defines the local neighborhood each filter sees. Larger kernels have a larger **receptive field** but more parameters ($k^2 \\times C_{in}$ per filter). AlexNet uses $11 \\times 11$ in Conv1 (to capture large-scale edges and color gradients from raw pixels) and progressively smaller kernels ($5 \\times 5$, then $3 \\times 3$) in deeper layers where each position already represents a large image region.</span>\n\n### <span style=\"font-size: 14px;\">Stride</span>\n\n<span style=\"font-size: 14px;\">Stride $s$ controls how far the kernel moves between applications. Stride 1 produces maximum output size; stride 4 reduces output size by roughly 4x per spatial dimension. Unlike pooling, strided convolution downsamples while learning features. AlexNet's stride 4 in Conv1 aggressively reduces $224 \\times 224$ to $55 \\times 55$ in one layer -- a pragmatic choice for the GPUs available in 2012.</span>\n\n### <span style=\"font-size: 14px;\">Padding</span>\n\n<span style=\"font-size: 14px;\">Padding adds zero-rows and zero-columns around the input border. Without it, each layer shrinks spatial dimensions by $k - 1$ pixels (at stride 1).</span>\n\n* <span style=\"font-size: 14px;\">**Valid padding** ($p = 0$): no padding, output smaller than input.</span>\n* <span style=\"font-size: 14px;\">**Same padding**: $p$ chosen so output size equals $\\lceil H_{in} / s \\rceil$, preserving dimensions at stride 1.</span>\n\n<span style=\"font-size: 14px;\">AlexNet uses specific per-layer values: padding 2 for Conv1 and Conv2, padding 1 for Conv3-5.</span>\n\n### <span style=\"font-size: 14px;\">Number of Filters</span>\n\n<span style=\"font-size: 14px;\">The number of filters $F$ determines feature diversity. More filters = more capacity, more parameters. AlexNet uses 96 -> 256 -> 384 -> 384 -> 256 filters across Conv1-5. This pattern of increasing channels while decreasing spatial size is a hallmark of CNN architectures: as resolution drops, the network compensates with more feature channels.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">AlexNet's Five Convolutional Layers</span>\n\n<span style=\"font-size: 14px;\">AlexNet has five convolutional layers followed by three fully connected layers. The complete convolutional stack:</span>\n\n* <span style=\"font-size: 14px;\">**Conv1**: 96 filters, kernel $11 \\times 11$, stride 4, padding 2. Input $(224, 224, 3)$, output $(55, 55, 96)$. Followed by ReLU, LRN, max pooling ($3 \\times 3$, stride 2) -> $(27, 27, 96)$.</span>\n* <span style=\"font-size: 14px;\">**Conv2**: 256 filters, kernel $5 \\times 5$, stride 1, padding 2. Input $(27, 27, 96)$, output $(27, 27, 256)$. Followed by ReLU, LRN, max pooling ($3 \\times 3$, stride 2) -> $(13, 13, 256)$.</span>\n* <span style=\"font-size: 14px;\">**Conv3**: 384 filters, kernel $3 \\times 3$, stride 1, padding 1. Input $(13, 13, 256)$, output $(13, 13, 384)$. ReLU only (no LRN, no pooling).</span>\n* <span style=\"font-size: 14px;\">**Conv4**: 384 filters, kernel $3 \\times 3$, stride 1, padding 1. Input $(13, 13, 384)$, output $(13, 13, 384)$. ReLU only.</span>\n* <span style=\"font-size: 14px;\">**Conv5**: 256 filters, kernel $3 \\times 3$, stride 1, padding 1. Input $(13, 13, 384)$, output $(13, 13, 256)$. ReLU + max pooling ($3 \\times 3$, stride 2) -> $(6, 6, 256)$.</span>\n\n<span style=\"font-size: 14px;\">After Conv5 pooling, the output is flattened to $6 \\times 6 \\times 256 = 9{,}216$ elements feeding the fully connected layers. The conv layers contain most of the computation but a minority of the parameters; the FC layers contain the majority of parameters.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Paper's Design Decisions</span>\n\n### <span style=\"font-size: 14px;\">Why $11 \\times 11$ Kernels in the First Layer</span>\n\n<span style=\"font-size: 14px;\">Conv1 operates on raw RGB pixels. An $11 \\times 11$ kernel covers 121 pixels per channel -- large enough to detect oriented edges, color blobs, and texture gradients. Smaller kernels would have too narrow a view at this stage. Combined with stride 4, adjacent output positions have overlapping receptive fields ($11 - 4 = 7$ pixel overlap), downsampling from $224 \\times 224$ to $55 \\times 55$ in one layer.</span>\n\n### <span style=\"font-size: 14px;\">Why Smaller Kernels in Deeper Layers</span>\n\n<span style=\"font-size: 14px;\">By Conv3-5, each spatial position's **effective receptive field** already covers a large image region (each pixel summarizes many original pixels from prior layers). A $3 \\times 3$ kernel at this depth is sufficient to combine high-level features.</span>\n\n### <span style=\"font-size: 14px;\">GPU Memory Constraints in 2012</span>\n\n<span style=\"font-size: 14px;\">AlexNet was split across two GTX 580 GPUs (3 GB each). Each GPU handled half the filters in most layers. Conv3 is an exception: it receives all 256 channels from both GPUs, while Conv4 and Conv5 connect only within the same GPU. This hardware-specific optimization influenced the filter counts (96, 256, 384, 384, 256) but is no longer relevant with modern GPUs.</span>\n\n### <span style=\"font-size: 14px;\">The Role of LRN and Pooling Between Layers</span>\n\n<span style=\"font-size: 14px;\">**Local Response Normalization (LRN)** after Conv1 and Conv2 normalizes neuron responses by dividing by summed squared responses of neighbors across adjacent feature maps. The paper reports LRN reduces top-1 error by 1.4% and top-5 by 1.2%. Later architectures (VGGNet, ResNet) found LRN unnecessary and replaced it with Batch Normalization.</span>\n\n<span style=\"font-size: 14px;\">**Max pooling** ($3 \\times 3$, stride 2) after Conv1, Conv2, and Conv5 uses **overlapping pooling** (pool 3, stride 2). Krizhevsky et al. report this reduces top-1 error by 0.4% and top-5 by 0.3% vs. non-overlapping pooling.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Parameter Count</span>\n\n<span style=\"font-size: 14px;\">Parameters per convolutional layer:</span>\n\n$$\n\\text{params} = F \\times (k^2 \\times C_{in} + 1)\n$$\n\n<span style=\"font-size: 14px;\">The $+1$ accounts for one bias per filter. For AlexNet:</span>\n\n* <span style=\"font-size: 14px;\">**Conv1**: $96 \\times (11^2 \\times 3 + 1) = 96 \\times 364 = 34{,}944$</span>\n* <span style=\"font-size: 14px;\">**Conv2**: $256 \\times (5^2 \\times 96 + 1) = 256 \\times 2{,}401 = 614{,}656$</span>\n* <span style=\"font-size: 14px;\">**Conv3**: $384 \\times (3^2 \\times 256 + 1) = 384 \\times 2{,}305 = 885{,}120$</span>\n* <span style=\"font-size: 14px;\">**Conv4**: $384 \\times (3^2 \\times 384 + 1) = 384 \\times 3{,}457 = 1{,}327{,}488$</span>\n* <span style=\"font-size: 14px;\">**Conv5**: $256 \\times (3^2 \\times 384 + 1) = 256 \\times 3{,}457 = 884{,}992$</span>\n\n<span style=\"font-size: 14px;\">Total conv parameters: ~$3.7$ million. By comparison, the first FC layer alone has $9{,}216 \\times 4{,}096 = 37{,}748{,}736$ parameters (roughly 10x all conv layers combined). This illustrates that conv layers are parameter-efficient due to weight sharing across spatial positions.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Computational Cost (FLOPs)</span>\n\n<span style=\"font-size: 14px;\">FLOPs per convolutional layer:</span>\n\n$$\n\\text{FLOPs} \\approx 2 \\times H_{out} \\times W_{out} \\times F \\times k^2 \\times C_{in}\n$$\n\n<span style=\"font-size: 14px;\">The factor of 2 accounts for multiply-accumulate operations. For Conv1:</span>\n\n$$\n\\text{FLOPs}_{\\text{Conv1}} \\approx 2 \\times 55 \\times 55 \\times 96 \\times 11^2 \\times 3 \\approx 211 \\text{ million}\n$$\n\n<span style=\"font-size: 14px;\">Conv layers dominate computation (~90% of total FLOPs) while FC layers dominate parameter count. This asymmetry is characteristic of CNNs.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example: Conv1 Shape Computation</span>\n\n<span style=\"font-size: 14px;\">Input: batch of 2 RGB images, each $224 \\times 224$. Tensor shape: $(2, 224, 224, 3)$. Conv1: $k = 11$, $s = 4$, $p = 2$, $F = 96$.</span>\n\n<span style=\"font-size: 14px;\">1. **After padding**: $224 + 2 \\times 2 = 228$ per axis.</span>\n\n<span style=\"font-size: 14px;\">2. **Valid kernel placements**: Span available: $228 - 11 = 217$. Steps: $\\lfloor 217 / 4 \\rfloor = 54$. Plus starting position: $54 + 1 = 55$.</span>\n\n<span style=\"font-size: 14px;\">3. **Formula verification**: $H_{out} = \\lfloor \\frac{224 + 4 - 11}{4} \\rfloor + 1 = \\lfloor \\frac{217}{4} \\rfloor + 1 = 54 + 1 = 55$.</span>\n\n<span style=\"font-size: 14px;\">4. **Width**: Same (square input). $W_{out} = 55$.</span>\n\n<span style=\"font-size: 14px;\">5. **Output channels**: $C_{out} = 96$.</span>\n\n<span style=\"font-size: 14px;\">6. **Final output shape**: $(2, 55, 55, 96)$.</span>\n\n<span style=\"font-size: 14px;\">7. **Parameters**: $96 \\times (11 \\times 11 \\times 3 + 1) = 96 \\times 364 = 34{,}944$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example: Tracing Through All Five Layers</span>\n\n<span style=\"font-size: 14px;\">Starting from $(1, 224, 224, 3)$:</span>\n\n### <span style=\"font-size: 14px;\">Conv1</span>\n\n<span style=\"font-size: 14px;\">$k = 11$, $s = 4$, $p = 2$, $F = 96$.</span>\n\n$$\nH_{out} = \\lfloor \\frac{224 + 4 - 11}{4} \\rfloor + 1 = 55\n$$\n\n<span style=\"font-size: 14px;\">Output: $(1, 55, 55, 96)$. After ReLU, LRN, max pooling ($k_p = 3$, $s_p = 2$):</span>\n\n$$\nH_{pool} = \\lfloor \\frac{55 - 3}{2} \\rfloor + 1 = 27\n$$\n\n<span style=\"font-size: 14px;\">After pooling: $(1, 27, 27, 96)$.</span>\n\n### <span style=\"font-size: 14px;\">Conv2</span>\n\n<span style=\"font-size: 14px;\">$k = 5$, $s = 1$, $p = 2$, $F = 256$.</span>\n\n$$\nH_{out} = \\lfloor \\frac{27 + 4 - 5}{1} \\rfloor + 1 = 27\n$$\n\n<span style=\"font-size: 14px;\">Output: $(1, 27, 27, 256)$. After ReLU, LRN, max pooling ($k_p = 3$, $s_p = 2$):</span>\n\n$$\nH_{pool} = \\lfloor \\frac{27 - 3}{2} \\rfloor + 1 = 13\n$$\n\n<span style=\"font-size: 14px;\">After pooling: $(1, 13, 13, 256)$.</span>\n\n### <span style=\"font-size: 14px;\">Conv3</span>\n\n<span style=\"font-size: 14px;\">$k = 3$, $s = 1$, $p = 1$, $F = 384$.</span>\n\n$$\nH_{out} = \\lfloor \\frac{13 + 2 - 3}{1} \\rfloor + 1 = 13\n$$\n\n<span style=\"font-size: 14px;\">Output: $(1, 13, 13, 384)$. ReLU only.</span>\n\n### <span style=\"font-size: 14px;\">Conv4</span>\n\n<span style=\"font-size: 14px;\">$k = 3$, $s = 1$, $p = 1$, $F = 384$.</span>\n\n$$\nH_{out} = \\lfloor \\frac{13 + 2 - 3}{1} \\rfloor + 1 = 13\n$$\n\n<span style=\"font-size: 14px;\">Output: $(1, 13, 13, 384)$. ReLU only.</span>\n\n### <span style=\"font-size: 14px;\">Conv5</span>\n\n<span style=\"font-size: 14px;\">$k = 3$, $s = 1$, $p = 1$, $F = 256$.</span>\n\n$$\nH_{out} = \\lfloor \\frac{13 + 2 - 3}{1} \\rfloor + 1 = 13\n$$\n\n<span style=\"font-size: 14px;\">Output: $(1, 13, 13, 256)$. After ReLU, max pooling ($k_p = 3$, $s_p = 2$):</span>\n\n$$\nH_{pool} = \\lfloor \\frac{13 - 3}{2} \\rfloor + 1 = 6\n$$\n\n<span style=\"font-size: 14px;\">After pooling: $(1, 6, 6, 256)$. Flattened to $(1, 9216)$ before FC layers.</span>\n\n<span style=\"font-size: 14px;\">Spatial progression: $224 \\to 55 \\to 27 \\to 27 \\to 13 \\to 13 \\to 13 \\to 13 \\to 6$. Aggressive downsampling happens in Conv1 (stride 4) and the three pooling stages. Conv3 and Conv4 use same-padding to preserve spatial size.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">From AlexNet to Modern Convolutions</span>\n\n### <span style=\"font-size: 14px;\">VGGNet: Only $3 \\times 3$ Kernels</span>\n\n<span style=\"font-size: 14px;\">Simonyan and Zisserman (2014) showed that stacking $3 \\times 3$ layers matches large-kernel receptive fields with fewer parameters and more non-linearity. Two $3 \\times 3$ layers = $5 \\times 5$ receptive field with $2 \\times 9 = 18$ weights vs. $25$. Three $3 \\times 3$ layers = $11 \\times 11$ field with $27$ weights vs. $121$.</span>\n\n### <span style=\"font-size: 14px;\">ResNet: Residual Connections</span>\n\n<span style=\"font-size: 14px;\">He et al. (2015) introduced skip connections ($\\text{output} = F(x) + x$), enabling training of 50-152 layer networks by addressing vanishing gradients. ResNet uses $1 \\times 1$ convolutions for channel adjustment and a $7 \\times 7$ first-layer kernel at stride 2 followed by $3 \\times 3$ max pool.</span>\n\n### <span style=\"font-size: 14px;\">Depthwise Separable Convolutions</span>\n\n<span style=\"font-size: 14px;\">MobileNet (Howard et al., 2017) decomposed standard convolution into depthwise ($k \\times k \\times 1$ per channel) and pointwise ($1 \\times 1 \\times C_{in}$) convolutions. For AlexNet's Conv3: standard = $384 \\times 3^2 \\times 256 = 884{,}736$ MACs per output position; depthwise separable = $3^2 \\times 256 + 256 \\times 384 = 100{,}608$ (8.8x reduction).</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n* <span style=\"font-size: 14px;\">**Off-by-one in the output formula.** Forgetting the floor or the $+1$ in $\\lfloor(H_{in} + 2p - k)/s\\rfloor + 1$ produces incorrect shapes that crash subsequent layers with dimension mismatch errors.</span>\n* <span style=\"font-size: 14px;\">**Forgetting padding is added to both sides.** The formula uses $2p$, not $p$. Padding 2 means 2 pixels on each side (4 extra per axis). Using $p$ instead of $2p$ produces an output that is too small.</span>\n* <span style=\"font-size: 14px;\">**Confusing filter count with parameter count.** 96 filters does not mean 96 parameters. Each filter has $k^2 \\times C_{in} + 1$ parameters. Conv1 has 96 filters but $34{,}944$ parameters.</span>\n* <span style=\"font-size: 14px;\">**Ignoring pooling between conv layers.** Conv1 outputs $(55, 55, 96)$ but Conv2 receives $(27, 27, 96)$ due to max pooling. Skipping the pooling step gives wrong input shapes for the next layer.</span>\n* <span style=\"font-size: 14px;\">**Assuming same-padding always preserves size.** Same-padding preserves size only at stride 1. With stride $s > 1$, output is $\\lceil H_{in} / s \\rceil$, which is smaller. No padding preserves $224 \\times 224$ at stride 4.</span>\n* <span style=\"font-size: 14px;\">**Confusing stride with dilation.** Stride = how far the kernel moves. Dilation = spacing between kernel elements. AlexNet uses no dilation, but modern architectures (DeepLab) do. A dilated $3 \\times 3$ kernel with rate 2 has effective size $2(3-1)+1 = 5$, changing the formula to use $k_{\\text{eff}}$.</span>\n* <span style=\"font-size: 14px;\">**Applying width formula with height values on non-square inputs.** For AlexNet's square $224 \\times 224$ input, $H_{out} = W_{out}$. For non-square inputs, each axis must be computed independently.</span>\n\n---",
+  "hints": [
+    "Use np.pad only on the height and width axes.",
+    "np.tensordot can contract a patch over its height, width, and input-channel axes.",
+    "The output sizes are floor((size + 2 * padding - kernel_size) / stride) + 1."
+  ],
+  "constraints": "- image has shape $(B,H,W,C_{in})$.\n- kernel has shape $(K_h,K_w,C_{in},C_{out})$.\n- bias has shape $(C_{out},)$.\n- stride is a positive integer and padding is a nonnegative integer.\n- $H+2p\\ge K_h$ and $W+2p\\ge K_w$.",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef alexnet_conv1(image: np.ndarray, kernel: np.ndarray, bias: np.ndarray,\n                   stride: int, padding: int) -> np.ndarray:\n    \"\"\"\n    Returns the float64 NHWC convolution output.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-23T18:46:10.136Z",
+  "updatedAt": "2026-04-04T12:04:49.443Z",
+  "topicId": "alexnet-conv-layers",
+  "paperSnippet": "\"The first convolutional layer filters the 224Ã224Ã3 input image with 96 kernels of size 11Ã11Ã3 with a stride of 4 pixels.\"",
+  "visualizationComponent": "AlexNetConvViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **AlexNet Convolution Layer** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef alexnet_conv1(image: np.ndarray, kernel: np.ndarray, bias: np.ndarray,\n                   stride: int = 1, padding: int = 0) -> np.ndarray:\n    img = np.asarray(image, dtype=float)\n    k = np.asarray(kernel, dtype=float)\n    b = np.asarray(bias, dtype=float)\n    stride = int(stride)\n    padding = int(padding)\n    \n    N, H, W, C_in = img.shape\n    K_h, K_w, _, C_out = k.shape\n    \n    if padding > 0:\n        padded = np.pad(img, ((0, 0), (padding, padding), (padding, padding), (0, 0)), mode='constant')\n    else:\n        padded = img\n        \n    out_h = (padded.shape[1] - K_h) // stride + 1\n    out_w = (padded.shape[2] - K_w) // stride + 1\n    \n    out = np.zeros((N, out_h, out_w, C_out), dtype=float)\n    for n in range(N):\n        for oh in range(out_h):\n            for ow in range(out_w):\n                ih = oh * stride\n                iw = ow * stride\n                patch = padded[n, ih:ih+K_h, iw:iw+K_w, :]\n                for oc in range(C_out):\n                    out[n, oh, ow, oc] = np.sum(patch * k[:, :, :, oc]) + b[oc]\n    return np.round(out, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Single-channel valid convolution",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ]
+            ],
+            [
+              [
+                4
+              ],
+              [
+                5
+              ],
+              [
+                6
+              ]
+            ],
+            [
+              [
+                7
+              ],
+              [
+                8
+              ],
+              [
+                9
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                1
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -1
+              ]
+            ]
+          ]
+        ],
+        "stride": 1,
+        "padding": 0
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            [
+              -4.0
+            ],
+            [
+              -4.0
+            ]
+          ],
+          [
+            [
+              -4.0
+            ],
+            [
+              -4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "One-by-one two-channel convolution",
+      "inputs": {
+        "bias": [
+          0.5
+        ],
+        "image": [
+          [
+            [
+              [
+                1,
+                2
+              ],
+              [
+                3,
+                4
+              ]
+            ],
+            [
+              [
+                5,
+                6
+              ],
+              [
+                7,
+                8
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                2
+              ],
+              [
+                -1
+              ]
+            ]
+          ]
+        ],
+        "stride": 1,
+        "padding": 0
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            [
+              0.5
+            ],
+            [
+              2.5
+            ]
+          ],
+          [
+            [
+              4.5
+            ],
+            [
+              6.5
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "test-3",
+      "name": "Padded strided convolution",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ]
+            ],
+            [
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                1
+              ]
+            ],
+            [
+              [
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                1
+              ]
+            ],
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "stride": 2,
+        "padding": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.0
+            ],
+            [
+              2.0
+            ]
+          ],
+          [
+            [
+              3.0
+            ],
+            [
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "alexnet-conv-layers-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                2
+              ],
+              [
+                4
+              ],
+              [
+                6
+              ]
+            ],
+            [
+              [
+                8
+              ],
+              [
+                10
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                14
+              ],
+              [
+                16
+              ],
+              [
+                18
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                2
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -2
+              ]
+            ]
+          ]
+        ],
+        "stride": 2,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              -16.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                0
+              ],
+              [
+                1
+              ],
+              [
+                2
+              ]
+            ],
+            [
+              [
+                2
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ]
+            ],
+            [
+              [
+                4
+              ],
+              [
+                4
+              ],
+              [
+                4
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "stride": 0,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              -4.0
+            ],
+            [
+              -4.0
+            ]
+          ],
+          [
+            [
+              -4.0
+            ],
+            [
+              -4.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                -1
+              ],
+              [
+                -2
+              ],
+              [
+                -3
+              ]
+            ],
+            [
+              [
+                -4
+              ],
+              [
+                -5
+              ],
+              [
+                -6
+              ]
+            ],
+            [
+              [
+                -7
+              ],
+              [
+                -8
+              ],
+              [
+                -9
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                -1
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "stride": -1,
+        "padding": 0
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                3
+              ],
+              [
+                6
+              ],
+              [
+                9
+              ]
+            ],
+            [
+              [
+                12
+              ],
+              [
+                15
+              ],
+              [
+                18
+              ]
+            ],
+            [
+              [
+                21
+              ],
+              [
+                24
+              ],
+              [
+                27
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                3
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -3
+              ]
+            ]
+          ]
+        ],
+        "stride": 3,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              -36.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "bias": [
+          1.0
+        ],
+        "image": [
+          [
+            [
+              [
+                2.0
+              ],
+              [
+                3.0
+              ],
+              [
+                4.0
+              ]
+            ],
+            [
+              [
+                5.0
+              ],
+              [
+                6.0
+              ],
+              [
+                7.0
+              ]
+            ],
+            [
+              [
+                8.0
+              ],
+              [
+                9.0
+              ],
+              [
+                10.0
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                2.0
+              ]
+            ],
+            [
+              [
+                1.0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                1.0
+              ]
+            ],
+            [
+              [
+                0.0
+              ]
+            ]
+          ]
+        ],
+        "stride": 2.0,
+        "padding": 1.0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              1.0
+            ],
+            [
+              4.0
+            ]
+          ],
+          [
+            [
+              6.0
+            ],
+            [
+              29.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "bias": [
+          -2.0
+        ],
+        "image": [
+          [
+            [
+              [
+                -1.0
+              ],
+              [
+                0.0
+              ],
+              [
+                1.0
+              ]
+            ],
+            [
+              [
+                2.0
+              ],
+              [
+                3.0
+              ],
+              [
+                4.0
+              ]
+            ],
+            [
+              [
+                5.0
+              ],
+              [
+                6.0
+              ],
+              [
+                7.0
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                -1.0
+              ]
+            ],
+            [
+              [
+                -2.0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                -2.0
+              ]
+            ],
+            [
+              [
+                -3.0
+              ]
+            ]
+          ]
+        ],
+        "stride": -1.0,
+        "padding": -2.0
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ]
+            ],
+            [
+              [
+                4
+              ],
+              [
+                5
+              ],
+              [
+                6
+              ]
+            ],
+            [
+              [
+                7
+              ],
+              [
+                8
+              ],
+              [
+                9
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                1
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -1
+              ]
+            ]
+          ]
+        ],
+        "stride": 1,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              -4.0
+            ],
+            [
+              -4.0
+            ]
+          ],
+          [
+            [
+              -4.0
+            ],
+            [
+              -4.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                -1
+              ],
+              [
+                -2
+              ],
+              [
+                -3
+              ]
+            ],
+            [
+              [
+                -4
+              ],
+              [
+                -5
+              ],
+              [
+                -6
+              ]
+            ],
+            [
+              [
+                -7
+              ],
+              [
+                -8
+              ],
+              [
+                -9
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                -1
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "stride": -1,
+        "padding": 0
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                10
+              ],
+              [
+                20
+              ],
+              [
+                30
+              ]
+            ],
+            [
+              [
+                40
+              ],
+              [
+                50
+              ],
+              [
+                60
+              ]
+            ],
+            [
+              [
+                70
+              ],
+              [
+                80
+              ],
+              [
+                90
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                10
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -10
+              ]
+            ]
+          ]
+        ],
+        "stride": 10,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              -400.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                0
+              ],
+              [
+                0
+              ],
+              [
+                0
+              ]
+            ],
+            [
+              [
+                0
+              ],
+              [
+                0
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                1
+              ],
+              [
+                1
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "stride": 0,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              -4.0
+            ],
+            [
+              -4.0
+            ]
+          ],
+          [
+            [
+              -4.0
+            ],
+            [
+              -4.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "bias": [
+          5.0
+        ],
+        "image": [
+          [
+            [
+              [
+                6.0
+              ],
+              [
+                7.0
+              ],
+              [
+                8.0
+              ]
+            ],
+            [
+              [
+                9.0
+              ],
+              [
+                10.0
+              ],
+              [
+                11.0
+              ]
+            ],
+            [
+              [
+                12.0
+              ],
+              [
+                13.0
+              ],
+              [
+                14.0
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                6.0
+              ]
+            ],
+            [
+              [
+                5.0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                5.0
+              ]
+            ],
+            [
+              [
+                4.0
+              ]
+            ]
+          ]
+        ],
+        "stride": 6.0,
+        "padding": 5.0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              5.0
+            ],
+            [
+              5.0
+            ]
+          ],
+          [
+            [
+              5.0
+            ],
+            [
+              241.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                6
+              ],
+              [
+                8
+              ],
+              [
+                9
+              ]
+            ],
+            [
+              [
+                10
+              ],
+              [
+                12
+              ],
+              [
+                14
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                2
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -2
+              ]
+            ]
+          ]
+        ],
+        "stride": 2,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              -12.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                -2
+              ],
+              [
+                -4
+              ],
+              [
+                -6
+              ]
+            ],
+            [
+              [
+                -8
+              ],
+              [
+                -10
+              ],
+              [
+                -12
+              ]
+            ],
+            [
+              [
+                -14
+              ],
+              [
+                -16
+              ],
+              [
+                -18
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                -2
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "stride": -2,
+        "padding": 0
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                0
+              ],
+              [
+                0
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                1
+              ],
+              [
+                1
+              ],
+              [
+                2
+              ]
+            ],
+            [
+              [
+                2
+              ],
+              [
+                2
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "stride": 0,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              -4.0
+            ],
+            [
+              -4.0
+            ]
+          ],
+          [
+            [
+              -4.0
+            ],
+            [
+              -4.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "bias": [
+          -1.0
+        ],
+        "image": [
+          [
+            [
+              [
+                0.0
+              ],
+              [
+                1.0
+              ],
+              [
+                2.0
+              ]
+            ],
+            [
+              [
+                3.0
+              ],
+              [
+                4.0
+              ],
+              [
+                5.0
+              ]
+            ],
+            [
+              [
+                6.0
+              ],
+              [
+                7.0
+              ],
+              [
+                8.0
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                0.0
+              ]
+            ],
+            [
+              [
+                -1.0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                -1.0
+              ]
+            ],
+            [
+              [
+                -2.0
+              ]
+            ]
+          ]
+        ],
+        "stride": 0.0,
+        "padding": -1.0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              -4.0
+            ],
+            [
+              -4.0
+            ]
+          ],
+          [
+            [
+              -4.0
+            ],
+            [
+              -4.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                4
+              ],
+              [
+                8
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                16
+              ],
+              [
+                20
+              ],
+              [
+                24
+              ]
+            ],
+            [
+              [
+                28
+              ],
+              [
+                32
+              ],
+              [
+                36
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                4
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -4
+              ]
+            ]
+          ]
+        ],
+        "stride": 4,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              -64.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-conv-layers-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "bias": [
+          0
+        ],
+        "image": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                2
+              ]
+            ],
+            [
+              [
+                3
+              ],
+              [
+                4
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ]
+            ]
+          ]
+        ],
+        "kernel": [
+          [
+            [
+              [
+                1
+              ]
+            ],
+            [
+              [
+                0
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0
+              ]
+            ],
+            [
+              [
+                -1
+              ]
+            ]
+          ]
+        ],
+        "stride": 1,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              -3.0
+            ],
+            [
+              -2.0
+            ]
+          ],
+          [
+            [
+              -3.0
+            ],
+            [
+              -3.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "alexnet_conv1",
+    "parameters": [
+      {
+        "name": "image",
+        "type": "array",
+        "example": "[[[[1],[2],[3]],[[4],[5],[6]],[[7],[8],[9]]]]",
+        "description": "NHWC input batch"
+      },
+      {
+        "name": "kernel",
+        "type": "array",
+        "example": "[[[[1]],[[0]]],[[[0]],[[-1]]]]",
+        "description": "Convolution kernel"
+      },
+      {
+        "name": "bias",
+        "type": "array",
+        "example": "[0]",
+        "description": "Output-channel bias"
+      },
+      {
+        "name": "stride",
+        "type": "number",
+        "example": "1",
+        "description": "Spatial stride"
+      },
+      {
+        "name": "padding",
+        "type": "number",
+        "example": "0",
+        "description": "Zero-padding size"
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "alexnet-conv-layers",
+    "name": "Convolutional Layers",
+    "description": "Large 11Ã11 and 5Ã5 kernels in early layers",
+    "color": "#3b82f6"
+  },
+  "paper": {
+    "id": "alexnet",
+    "title": "ImageNet Classification with Deep Convolutional Neural Networks",
+    "authors": "Krizhevsky, Sutskever & Hinton, 2012",
+    "year": 2012,
+    "paperUrl": "https://papers.nips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf",
+    "visualizationComponent": "AlexNetArchViz"
+  },
+  "navigation": {
+    "index": 1,
+    "total": 6,
+    "prev": null,
+    "next": "alexnet-relu"
+  },
+  "cleanTitle": ""
+}

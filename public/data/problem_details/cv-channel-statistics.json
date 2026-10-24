@@ -1,0 +1,875 @@
+{
+  "catalogId": "python:cv-channel-statistics",
+  "id": "cv-channel-statistics",
+  "sourceId": "cv-channel-statistics",
+  "slug": "cv-channel-statistics",
+  "source": "python",
+  "category": "numpy",
+  "title": "Per-Channel Mean and Std",
+  "difficulty": "Easy",
+  "tags": [
+    "Computer Vision",
+    "Probability and Statistics"
+  ],
+  "isFree": false,
+  "planId": "cracking-cv",
+  "planTitle": "Cracking CV",
+  "sectionId": "cracking-cv-image-basics-and-ops",
+  "sortOrder": 586,
+  "seoDescription": "Compute population means and standard deviations for every channel across a batch of images in NHWC layout.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Compute mean and standard deviation across batch, height, and width dimensions per color channel for 4D image tensors.\n\nNormalizing RGB channels by dataset statistics (e.g. ImageNet mean [0.485, 0.456, 0.406] and std [0.229, 0.224, 0.225]) centers initial activations.\n\n### Mathematical Formulation\n$$\n\\mu_c = \\frac{1}{BHW} \\sum_{b, h, w} X_{b, c, h, w}, \\quad \\sigma_c = \\sqrt{\\frac{1}{BHW} \\sum_{b, h, w} (X_{b, c, h, w} - \\mu_c)^2}\n$$\n\n### Step-by-Step Implementation\n1. Reduce 4D image tensor across axes (0, 2, 3) to compute per-channel mean\n2. Compute per-channel population standard deviation\n3. Format dictionary with 'channel_means' and 'channel_stds' rounded to 4 decimal places\n\n### Returns\nDictionary with 'channel_means' and 'channel_stds' lists.",
+  "theory": "## Understanding the Theory: Per-Channel Mean and Std\n\n### Core Intuition: Why Do We Need This?\nImages have unique spatial properties: neighboring pixels are strongly correlated, and visual patterns (like edges, corners, or textures) appear anywhere in an image. Computer vision algorithms use spatial inductive biases like translation equivariance and local receptive fields to process image grids efficiently. **Per-Channel Mean and Std** operates directly on spatial coordinates or bounding box geometries.\n\nNormalizing RGB channels by dataset statistics (e.g. ImageNet mean [0.485, 0.456, 0.406] and std [0.229, 0.224, 0.225]) centers initial activations. In this problem, the goal is to: compute mean and standard deviation across batch, height, and width dimensions per color channel for 4d image tensors.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\mu_c = \\frac{1}{BHW} \\sum_{b, h, w} X_{b, c, h, w}, \\quad \\sigma_c = \\sqrt{\\frac{1}{BHW} \\sum_{b, h, w} (X_{b, c, h, w} - \\mu_c)^2}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Reduce 4D image tensor across axes (0, 2, 3) to compute per-channel mean\n2. **Phase 2**: Compute per-channel population standard deviation\n3. **Phase 3**: Format dictionary with 'channel_means' and 'channel_stds' rounded to 4 decimal places\n\n### Practical Machine Learning Applications & Nuances\n* **Spatial Locality**: Sliding spatial filters across multi-channel feature maps aggregates contextual clues across local neighborhoods.\n* **Object Detection Pipelines**: Bounding box metrics (such as IoU and Non-Maximum Suppression) reconcile duplicate candidate detections into clean, final predictions.\n* **Data Augmentation**: Geometric transformations expose models to diverse spatial viewpoints, significantly improving generalization to unseen test images.",
+  "examples": [
+    "Input: images = [[[[1.0, 2.0], [3.0, 4.0]], [[10.0, 20.0], [30.0, 40.0]]]]\n\nOutput: {\"channel_means\": [2.5, 25.0], \"channel_stds\": [1.118, 11.1803]}\n\nExplanation: Evaluated cv_channel_statistics under standard test conditions."
+  ],
+  "requirements": "* Function must be named `cv_channel_statistics`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `cv_channel_statistics`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef cv_channel_statistics(images: list) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Per-Channel Mean and Std** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cv_channel_statistics(images: list) -> dict:\n    arr = np.array(images, dtype=float)\n    return {'channel_means': np.round(np.mean(arr, axis=(0, 2, 3)), 4).tolist(), 'channel_stds': np.round(np.std(arr, axis=(0, 2, 3)), 4).tolist()}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "1 image 2 channels 2x2",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                1.0,
+                2.0
+              ],
+              [
+                3.0,
+                4.0
+              ]
+            ],
+            [
+              [
+                10.0,
+                20.0
+              ],
+              [
+                30.0,
+                40.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          2.5,
+          25.0
+        ],
+        "channel_stds": [
+          1.118,
+          11.1803
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cv-channel-statistics-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                2.0,
+                4.0
+              ],
+              [
+                6.0,
+                8.0
+              ]
+            ],
+            [
+              [
+                20.0,
+                40.0
+              ],
+              [
+                60.0,
+                80.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          5.0,
+          50.0
+        ],
+        "channel_stds": [
+          2.2361,
+          22.3607
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cv-channel-statistics-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                0.5,
+                1.0
+              ],
+              [
+                1.5,
+                2.0
+              ]
+            ],
+            [
+              [
+                5.0,
+                10.0
+              ],
+              [
+                15.0,
+                20.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          1.25,
+          12.5
+        ],
+        "channel_stds": [
+          0.559,
+          5.5902
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                -1.0,
+                -2.0
+              ],
+              [
+                -3.0,
+                -4.0
+              ]
+            ],
+            [
+              [
+                -10.0,
+                -20.0
+              ],
+              [
+                -30.0,
+                -40.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          -2.5,
+          -25.0
+        ],
+        "channel_stds": [
+          1.118,
+          11.1803
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                3.0,
+                6.0
+              ],
+              [
+                9.0,
+                12.0
+              ]
+            ],
+            [
+              [
+                30.0,
+                60.0
+              ],
+              [
+                90.0,
+                120.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          7.5,
+          75.0
+        ],
+        "channel_stds": [
+          3.3541,
+          33.541
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                2.0,
+                3.0
+              ],
+              [
+                4.0,
+                5.0
+              ]
+            ],
+            [
+              [
+                11.0,
+                21.0
+              ],
+              [
+                31.0,
+                41.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          3.5,
+          26.0
+        ],
+        "channel_stds": [
+          1.118,
+          11.1803
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                -1.0,
+                0.0
+              ],
+              [
+                1.0,
+                2.0
+              ]
+            ],
+            [
+              [
+                8.0,
+                18.0
+              ],
+              [
+                28.0,
+                38.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          0.5,
+          23.0
+        ],
+        "channel_stds": [
+          1.118,
+          11.1803
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                2.0,
+                1.0
+              ],
+              [
+                4.0,
+                3.0
+              ]
+            ],
+            [
+              [
+                20.0,
+                10.0
+              ],
+              [
+                40.0,
+                30.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          2.5,
+          25.0
+        ],
+        "channel_stds": [
+          1.118,
+          11.1803
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                -1.0,
+                -2.0
+              ],
+              [
+                -3.0,
+                -4.0
+              ]
+            ],
+            [
+              [
+                -10.0,
+                -20.0
+              ],
+              [
+                -30.0,
+                -40.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          -2.5,
+          -25.0
+        ],
+        "channel_stds": [
+          1.118,
+          11.1803
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                10.0,
+                20.0
+              ],
+              [
+                30.0,
+                40.0
+              ]
+            ],
+            [
+              [
+                100.0,
+                200.0
+              ],
+              [
+                300.0,
+                400.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          25.0,
+          250.0
+        ],
+        "channel_stds": [
+          11.1803,
+          111.8034
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                0.1,
+                0.2
+              ],
+              [
+                0.3,
+                0.4
+              ]
+            ],
+            [
+              [
+                1.0,
+                2.0
+              ],
+              [
+                3.0,
+                4.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          0.25,
+          2.5
+        ],
+        "channel_stds": [
+          0.1118,
+          1.118
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                6.0,
+                7.0
+              ],
+              [
+                8.0,
+                9.0
+              ]
+            ],
+            [
+              [
+                15.0,
+                25.0
+              ],
+              [
+                35.0,
+                45.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          7.5,
+          30.0
+        ],
+        "channel_stds": [
+          1.118,
+          11.1803
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                1.5,
+                3.0
+              ],
+              [
+                4.5,
+                6.0
+              ]
+            ],
+            [
+              [
+                15.0,
+                30.0
+              ],
+              [
+                45.0,
+                60.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          3.75,
+          37.5
+        ],
+        "channel_stds": [
+          1.6771,
+          16.7705
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                -2.0,
+                -4.0
+              ],
+              [
+                -6.0,
+                -8.0
+              ]
+            ],
+            [
+              [
+                -20.0,
+                -40.0
+              ],
+              [
+                -60.0,
+                -80.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          -5.0,
+          -50.0
+        ],
+        "channel_stds": [
+          2.2361,
+          22.3607
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                0.25,
+                0.5
+              ],
+              [
+                0.75,
+                1.0
+              ]
+            ],
+            [
+              [
+                2.5,
+                5.0
+              ],
+              [
+                7.5,
+                10.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          0.625,
+          6.25
+        ],
+        "channel_stds": [
+          0.2795,
+          2.7951
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                0.0,
+                1.0
+              ],
+              [
+                2.0,
+                3.0
+              ]
+            ],
+            [
+              [
+                9.0,
+                19.0
+              ],
+              [
+                29.0,
+                39.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          1.5,
+          24.0
+        ],
+        "channel_stds": [
+          1.118,
+          11.1803
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                4.0,
+                8.0
+              ],
+              [
+                12.0,
+                16.0
+              ]
+            ],
+            [
+              [
+                40.0,
+                80.0
+              ],
+              [
+                120.0,
+                160.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          10.0,
+          100.0
+        ],
+        "channel_stds": [
+          4.4721,
+          44.7214
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                0.75,
+                1.5
+              ],
+              [
+                2.25,
+                3.0
+              ]
+            ],
+            [
+              [
+                7.5,
+                15.0
+              ],
+              [
+                22.5,
+                30.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          1.875,
+          18.75
+        ],
+        "channel_stds": [
+          0.8385,
+          8.3853
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                5.0,
+                10.0
+              ],
+              [
+                15.0,
+                20.0
+              ]
+            ],
+            [
+              [
+                50.0,
+                100.0
+              ],
+              [
+                150.0,
+                200.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          12.5,
+          125.0
+        ],
+        "channel_stds": [
+          5.5902,
+          55.9017
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-channel-statistics-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                11.0,
+                12.0
+              ],
+              [
+                13.0,
+                14.0
+              ]
+            ],
+            [
+              [
+                20.0,
+                30.0
+              ],
+              [
+                40.0,
+                50.0
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "channel_means": [
+          12.5,
+          35.0
+        ],
+        "channel_stds": [
+          1.118,
+          11.1803
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cv_channel_statistics",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

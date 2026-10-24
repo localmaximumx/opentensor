@@ -1,0 +1,376 @@
+{
+  "catalogId": "python:inference-model-memory-gpu-count",
+  "id": "inference-model-memory-gpu-count",
+  "sourceId": "inference-model-memory-gpu-count",
+  "slug": "inference-model-memory-gpu-count",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Estimate Model Memory and Minimum GPU Count",
+  "difficulty": "Easy",
+  "tags": [
+    "Inference",
+    "GPU Programming",
+    "Distributed Computing"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-distributed",
+  "sortOrder": 686,
+  "seoDescription": "Estimate model-serving memory from weights, key-value cache, activations, overhead, and per-GPU usable capacity.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Calculate model parameter storage in gigabytes and determine minimum GPU count required under given VRAM capacity.\n\nAccurately estimating memory boundaries ensures models fit comfortably within high-bandwidth memory (HBM) without out-of-memory crashes.\n\n### Mathematical Formulation\n$$\nM_{\\text{weights}} = P \\times b, \\quad M_{\\text{total}} = M_{\\text{weights}} + M_{\\text{KV}}, \\quad N_{\\text{GPU}} = \\left\\lceil \\frac{M_{\\text{total}}}{\\text{VRAM}} \\right\\rceil\n$$\n\n### Step-by-Step Implementation\n1. Multiply parameter count in billions by byte precision (e.g. 2 for FP16, 1 for INT8)\n2. Add dynamic KV cache allocation to determine total inference memory\n3. Divide total memory by GPU VRAM capacity and take ceiling to determine minimum GPU count\n\n### Returns\nDictionary with 'weight_memory_gb', 'total_memory_gb', and 'min_gpus'.",
+  "theory": "## Understanding the Theory: Estimate Model Memory and Minimum GPU Count\n\n### Core Intuition: Why Do We Need This?\nRunning large AI models in production requires massive computing power. During text generation, memory bandwidth (fetching weights and past key-value caches from VRAM) is often the primary bottleneck rather than raw arithmetic compute. **Estimate Model Memory and Minimum GPU Count** optimizes hardware efficiency, memory consumption, or request serving throughput.\n\nAccurately estimating memory boundaries ensures models fit comfortably within high-bandwidth memory (HBM) without out-of-memory crashes. In this problem, the goal is to: calculate model parameter storage in gigabytes and determine minimum gpu count required under given vram capacity.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nM_{\\text{weights}} = P \\times b, \\quad M_{\\text{total}} = M_{\\text{weights}} + M_{\\text{KV}}, \\quad N_{\\text{GPU}} = \\left\\lceil \\frac{M_{\\text{total}}}{\\text{VRAM}} \\right\\rceil\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Multiply parameter count in billions by byte precision (e.g. 2 for FP16, 1 for INT8)\n2. **Phase 2**: Add dynamic KV cache allocation to determine total inference memory\n3. **Phase 3**: Divide total memory by GPU VRAM capacity and take ceiling to determine minimum GPU count\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth Bottleneck**: Quantizing weights to INT8 or INT4 cuts memory traffic in half or quarters, dramatically increasing token generation speeds.\n* **Serving Systems**: Dynamic batching and PagedAttention maximize GPU utilization by grouping requests arriving at different times.\n* **Latency vs. Throughput**: In production serving, systems engineers balance Time-To-First-Token (TTFT) against overall tokens-per-second throughput.",
+  "examples": [
+    "Input: param_count_billions = 70.0, bytes_per_param = 2, kv_cache_gb = 20.0, gpu_vram_gb = 80.0\n\nOutput: {\"weight_memory_gb\": 140.0, \"total_memory_gb\": 160.0, \"min_gpus\": 2}\n\nExplanation: Evaluated inference_model_memory_gpu_count under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_model_memory_gpu_count`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_model_memory_gpu_count`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import math\n\ndef inference_model_memory_gpu_count(param_count_billions: float, bytes_per_param: int = 2, kv_cache_gb: float = 0.0, gpu_vram_gb: float = 80.0) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Estimate Model Memory and Minimum GPU Count** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport math\n\ndef inference_model_memory_gpu_count(param_count_billions: float, bytes_per_param: int = 2, kv_cache_gb: float = 0.0, gpu_vram_gb: float = 80.0) -> dict:\n    w_mem = param_count_billions * bytes_per_param\n    tot = w_mem + kv_cache_gb\n    return {'weight_memory_gb': round(float(w_mem), 2), 'total_memory_gb': round(float(tot), 2), 'min_gpus': max(1, int(math.ceil(tot / gpu_vram_gb)))}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "70B model FP16 on 80GB A100s",
+      "inputs": {
+        "param_count_billions": 70.0,
+        "bytes_per_param": 2,
+        "kv_cache_gb": 20.0,
+        "gpu_vram_gb": 80.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 140.0,
+        "total_memory_gb": 160.0,
+        "min_gpus": 2
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "param_count_billions": 140.0,
+        "bytes_per_param": 4,
+        "kv_cache_gb": 40.0,
+        "gpu_vram_gb": 160.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 560.0,
+        "total_memory_gb": 600.0,
+        "min_gpus": 4
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "param_count_billions": 35.0,
+        "bytes_per_param": 1,
+        "kv_cache_gb": 10.0,
+        "gpu_vram_gb": 40.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 35.0,
+        "total_memory_gb": 45.0,
+        "min_gpus": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "param_count_billions": 70.0,
+        "bytes_per_param": 3,
+        "kv_cache_gb": 20.0,
+        "gpu_vram_gb": 81.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 210.0,
+        "total_memory_gb": 230.0,
+        "min_gpus": 3
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "param_count_billions": 105.0,
+        "bytes_per_param": 3,
+        "kv_cache_gb": 30.0,
+        "gpu_vram_gb": 120.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 315.0,
+        "total_memory_gb": 345.0,
+        "min_gpus": 3
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "param_count_billions": 210.0,
+        "bytes_per_param": 6,
+        "kv_cache_gb": 60.0,
+        "gpu_vram_gb": 240.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 1260.0,
+        "total_memory_gb": 1320.0,
+        "min_gpus": 6
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "param_count_billions": 17.5,
+        "bytes_per_param": 0,
+        "kv_cache_gb": 5.0,
+        "gpu_vram_gb": 20.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 0.0,
+        "total_memory_gb": 5.0,
+        "min_gpus": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "param_count_billions": 140.0,
+        "bytes_per_param": 4,
+        "kv_cache_gb": 40.0,
+        "gpu_vram_gb": 82.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 560.0,
+        "total_memory_gb": 600.0,
+        "min_gpus": 8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "param_count_billions": 280.0,
+        "bytes_per_param": 8,
+        "kv_cache_gb": 80.0,
+        "gpu_vram_gb": 320.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 2240.0,
+        "total_memory_gb": 2320.0,
+        "min_gpus": 8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "param_count_billions": 70.0,
+        "bytes_per_param": 2,
+        "kv_cache_gb": 20.0,
+        "gpu_vram_gb": 80.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 140.0,
+        "total_memory_gb": 160.0,
+        "min_gpus": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "param_count_billions": 52.5,
+        "bytes_per_param": 2,
+        "kv_cache_gb": 15.0,
+        "gpu_vram_gb": 60.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 105.0,
+        "total_memory_gb": 120.0,
+        "min_gpus": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "param_count_billions": 350.0,
+        "bytes_per_param": 10,
+        "kv_cache_gb": 100.0,
+        "gpu_vram_gb": 400.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 3500.0,
+        "total_memory_gb": 3600.0,
+        "min_gpus": 9
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "param_count_billions": 210.0,
+        "bytes_per_param": 5,
+        "kv_cache_gb": 60.0,
+        "gpu_vram_gb": 83.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 1050.0,
+        "total_memory_gb": 1110.0,
+        "min_gpus": 14
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "param_count_billions": 56.0,
+        "bytes_per_param": 2,
+        "kv_cache_gb": 16.0,
+        "gpu_vram_gb": 64.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 112.0,
+        "total_memory_gb": 128.0,
+        "min_gpus": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "param_count_billions": 420.0,
+        "bytes_per_param": 12,
+        "kv_cache_gb": 120.0,
+        "gpu_vram_gb": 480.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 5040.0,
+        "total_memory_gb": 5160.0,
+        "min_gpus": 11
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "param_count_billions": 280.0,
+        "bytes_per_param": 6,
+        "kv_cache_gb": 80.0,
+        "gpu_vram_gb": 84.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 1680.0,
+        "total_memory_gb": 1760.0,
+        "min_gpus": 21
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "param_count_billions": 84.0,
+        "bytes_per_param": 2,
+        "kv_cache_gb": 24.0,
+        "gpu_vram_gb": 96.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 168.0,
+        "total_memory_gb": 192.0,
+        "min_gpus": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "param_count_billions": 28.0,
+        "bytes_per_param": 1,
+        "kv_cache_gb": 8.0,
+        "gpu_vram_gb": 32.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 28.0,
+        "total_memory_gb": 36.0,
+        "min_gpus": 2
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "param_count_billions": 560.0,
+        "bytes_per_param": 16,
+        "kv_cache_gb": 160.0,
+        "gpu_vram_gb": 640.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 8960.0,
+        "total_memory_gb": 9120.0,
+        "min_gpus": 15
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-model-memory-gpu-count-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "param_count_billions": 350.0,
+        "bytes_per_param": 7,
+        "kv_cache_gb": 100.0,
+        "gpu_vram_gb": 85.0
+      },
+      "expectedOutput": {
+        "weight_memory_gb": 2450.0,
+        "total_memory_gb": 2550.0,
+        "min_gpus": 30
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_model_memory_gpu_count",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

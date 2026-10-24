@@ -1,0 +1,469 @@
+{
+  "id": "alexnet-relu",
+  "title": "ReLU Activation Function",
+  "description": "Implement the rectified linear unit used throughout AlexNet.\n\n$$\n\\operatorname{ReLU}(x)=\\max(0,x).\n$$\n\nApply the function elementwise and return a float64 NumPy array with the same shape as x.",
+  "seoDescription": "Implement AlexNet's elementwise ReLU activation, preserving positive values while setting negative values to zero.",
+  "examples": [
+    "Input: x = [-2,-0.5,0,3]\n\nOutput: [0,0,0,3]\n\nExplanation: Negative values become zero while nonnegative values are unchanged.",
+    "Input: x = [[-1,2],[3,-4]]\n\nOutput: [[0,2],[3,0]]",
+    "Input: x = [0,1,5]\n\nOutput: [0,1,5]"
+  ],
+  "requirements": "- Replace every negative element with zero.\n- Keep zero and positive elements unchanged.\n- Return a new float64 NumPy array with the same shape as x.",
+  "theory": "# <span style=\"font-size: 20px;\">ReLU Activation Function</span>\n\n<span style=\"font-size: 14px;\">The Rectified Linear Unit (ReLU) is defined as $f(x) = \\max(0, x)$. In the 2012 paper \"ImageNet Classification with Deep Convolutional Neural Networks,\" Krizhevsky, Sutskever, and Hinton showed that replacing sigmoid/tanh with ReLU allowed AlexNet to train several times faster while achieving record-breaking performance on ILSVRC-2012.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is / What It Does</span>\n\n<span style=\"font-size: 14px;\">An **activation function** injects non-linearity into a neural network. Without it, stacked linear layers collapse into a single linear model regardless of depth.</span>\n\n<span style=\"font-size: 14px;\">ReLU does this with extreme simplicity:</span>\n\n* <span style=\"font-size: 14px;\">**Positive inputs** pass through unchanged</span>\n* <span style=\"font-size: 14px;\">**Negative inputs** are set to zero</span>\n* <span style=\"font-size: 14px;\">**No learned parameters** and no expensive computations (no exponentials, no divisions)</span>\n* <span style=\"font-size: 14px;\">**Element-wise** operation with no interaction between elements</span>\n\n<span style=\"font-size: 14px;\">Each neuron operates linearly, but the network creates a **piecewise linear approximation** of complex functions. A deep ReLU network can produce an exponential number of linear regions.</span>\n\n<span style=\"font-size: 14px;\">In AlexNet, ReLU is applied after every convolutional and fully connected layer, independently to all scalar values in each feature map.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n### <span style=\"font-size: 14px;\">ReLU Definition</span>\n\n$$\nf(x) = \\max(0, x) = \\begin{cases} x & \\text{if } x > 0 \\\\ 0 & \\text{if } x \\leq 0 \\end{cases}\n$$\n\n### <span style=\"font-size: 14px;\">ReLU Derivative (Gradient)</span>\n\n$$\nf'(x) = \\begin{cases} 1 & \\text{if } x > 0 \\\\ 0 & \\text{if } x < 0 \\end{cases}\n$$\n\n<span style=\"font-size: 14px;\">$f'(0)$ is technically undefined. In practice, implementations assign $f'(0) = 0$ with no measurable effect on training.</span>\n\n### <span style=\"font-size: 14px;\">Sigmoid Function (for comparison)</span>\n\n$$\n\\sigma(x) = \\frac{1}{1 + e^{-x}}\n$$\n\n<span style=\"font-size: 14px;\">Derivative: $\\sigma'(x) = \\sigma(x)(1 - \\sigma(x))$, max $0.25$ at $x = 0$. Gradient always attenuated by at least 4x per layer, compounding through depth.</span>\n\n### <span style=\"font-size: 14px;\">Tanh Function (for comparison)</span>\n\n$$\n\\tanh(x) = \\frac{e^x - e^{-x}}{e^x + e^{-x}}\n$$\n\n<span style=\"font-size: 14px;\">Derivative: $\\tanh'(x) = 1 - \\tanh^2(x)$, max $1.0$ at $x = 0$, but $< 1$ for all $x \\neq 0$ and decays rapidly for $|x| > 2$. Both sigmoid and tanh are **saturating nonlinearities**. ReLU is **non-saturating** for positive inputs: gradient is always exactly 1.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Mechanics / How It Works</span>\n\n### <span style=\"font-size: 14px;\">Element-wise Operation</span>\n\n<span style=\"font-size: 14px;\">Given input tensor $\\mathbf{Z}$, output $\\mathbf{A}$ has the same shape with $a_{ij} = \\max(0, z_{ij})$. No interactions between elements, no parameters, no state.</span>\n\n### <span style=\"font-size: 14px;\">Behavior on Positive Values</span>\n\n<span style=\"font-size: 14px;\">When $z > 0$, ReLU acts as identity: $f(z) = z$, gradient exactly 1. The upstream gradient passes through unmodified during backpropagation. This is the key property: gradient signal travels backward through many layers without attenuation, as long as neurons are active.</span>\n\n### <span style=\"font-size: 14px;\">Behavior on Negative Values</span>\n\n<span style=\"font-size: 14px;\">When $z \\leq 0$, ReLU outputs zero and gradient is zero. This creates **dynamic sparsity**: for any given input, only a subset of neurons are active. Krizhevsky et al. noted this sparsity is computationally beneficial, as the network effectively uses a different sparse sub-network for each input.</span>\n\n### <span style=\"font-size: 14px;\">Gradient Flow During Backpropagation</span>\n\n$$\n\\frac{\\partial L}{\\partial z} = \\frac{\\partial L}{\\partial a} \\cdot f'(z) = \\begin{cases} \\frac{\\partial L}{\\partial a} & \\text{if } z > 0 \\\\ 0 & \\text{if } z \\leq 0 \\end{cases}\n$$\n\n<span style=\"font-size: 14px;\">ReLU during backpropagation acts as a **binary mask**: gradients pass where neurons were active, blocked where inactive. No attenuation for active neurons. With sigmoid, every layer multiplies by $\\leq 0.25$; after 10 layers: $0.25^{10} \\approx 9.5 \\times 10^{-7}$. With ReLU, active paths have multiplicative factors of exactly 1.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context / Design Decisions</span>\n\n### <span style=\"font-size: 14px;\">Why Krizhevsky et al. Chose ReLU</span>\n\n<span style=\"font-size: 14px;\">In Section 3.1 (\"ReLU Nonlinearity\"), the authors state: \"Deep convolutional neural networks with ReLUs train several times faster than their equivalents with tanh units.\" Their experiment: a four-layer CNN on CIFAR-10 with ReLU reached 25% training error **six times faster** than tanh (**Figure 1**). They clarify: \"This is not a regularization effect, because ReLUs do not saturate.\"</span>\n\n### <span style=\"font-size: 14px;\">Enabling the Depth of AlexNet</span>\n\n<span style=\"font-size: 14px;\">AlexNet has 5 convolutional + 3 fully connected layers (8 learned layers, ~60M parameters). The paper credits ReLU as a key enabler: without fast ReLU training, they could not have trained this architecture on ImageNet (1.2M images, 1,000 classes) in practical time on two GTX 580 GPUs.</span>\n\n<span style=\"font-size: 14px;\">The authors cite prior work by Jarrett et al. (2009) and Nair and Hinton (2010), but AlexNet was the first to validate ReLU at scale on a large, challenging dataset, making it the de facto standard.</span>\n\n### <span style=\"font-size: 14px;\">The Broader Architectural Impact</span>\n\n<span style=\"font-size: 14px;\">ReLU interacted with other AlexNet design choices. Its sparsity complemented dropout (both encourage distributed representations). Its unbounded positive output made local response normalization (LRN) useful for preventing dominant activations among neighboring neurons.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Vanishing Gradient Problem</span>\n\n### <span style=\"font-size: 14px;\">Why Sigmoid and Tanh Suffer</span>\n\n<span style=\"font-size: 14px;\">In a deep network with $L$ layers, the gradient of the loss w.r.t. weights in layer $l$ involves a product through all subsequent layers:</span>\n\n$$\n\\frac{\\partial L}{\\partial \\mathbf{W}^{(l)}} = \\frac{\\partial L}{\\partial \\mathbf{a}^{(L)}} \\cdot \\prod_{k=l+1}^{L} \\text{diag}(\\sigma'(\\mathbf{z}^{(k)})) \\cdot \\mathbf{W}^{(k)} \\cdot \\frac{\\partial \\mathbf{a}^{(l)}}{\\partial \\mathbf{W}^{(l)}}\n$$\n\n<span style=\"font-size: 14px;\">For **sigmoid**, $\\sigma'(x) \\leq 0.25$. After 8 layers: $0.25^8 \\approx 1.5 \\times 10^{-5}$, so early-layer gradients are five orders of magnitude smaller than at the output.</span>\n\n<span style=\"font-size: 14px;\">For **tanh**, $\\tanh'(0) = 1$ but drops rapidly: $\\tanh'(1) \\approx 0.42$, $\\tanh'(2) \\approx 0.07$, $\\tanh'(3) \\approx 0.01$. Unless all pre-activations cluster near zero (unrealistic), gradients still vanish exponentially.</span>\n\n### <span style=\"font-size: 14px;\">How ReLU Solves This</span>\n\n<span style=\"font-size: 14px;\">For active neurons ($z > 0$), $f'(z) = 1$. The product along any path of active neurons:</span>\n\n$$\n\\prod_{k=l+1}^{L} f'(z^{(k)}) = 1^{L-l} = 1\n$$\n\n<span style=\"font-size: 14px;\">Zero attenuation from the activation function -- a qualitative change from sigmoid/tanh. Inactive neurons ($z \\leq 0$) have zero gradient (the \"dying ReLU\" problem, see Pitfalls), but in a healthy network sufficient neurons remain active for gradient flow through alternative paths.</span>\n\n### <span style=\"font-size: 14px;\">The Mathematical Argument</span>\n\n<span style=\"font-size: 14px;\">Under typical conditions, $\\mathbb{E}[|\\sigma'(z)|] \\approx 0.2$ for sigmoid. For ReLU with ~50% active neurons, $\\mathbb{E}[f'(z)] \\approx 0.5$. Over 8 layers: $0.5^8 / 0.2^8 = 3.9 \\times 10^{-3} / 2.56 \\times 10^{-6} \\approx 1500\\times$ more gradient reaching early layers. Moreover, ReLU gradients that pass through arrive at full strength (factor of 1), unlike sigmoid's always-diminished gradients.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n### <span style=\"font-size: 14px;\">Setup</span>\n\n<span style=\"font-size: 14px;\">Pre-activation values from a single layer:</span>\n\n$$\n\\mathbf{z} = [-2.0, \\; -0.5, \\; 0.0, \\; 0.3, \\; 1.5, \\; -1.0, \\; 2.7, \\; 0.1]\n$$\n\n### <span style=\"font-size: 14px;\">Step 1: Forward Pass (Computing ReLU Output)</span>\n\n<span style=\"font-size: 14px;\">Apply $f(x) = \\max(0, x)$ element-wise:</span>\n\n* <span style=\"font-size: 14px;\">$f(-2.0) = 0.0$, $f(-0.5) = 0.0$, $f(0.0) = 0.0$ (negative/zero, zeroed out)</span>\n* <span style=\"font-size: 14px;\">$f(0.3) = 0.3$, $f(1.5) = 1.5$, $f(2.7) = 2.7$, $f(0.1) = 0.1$ (positive, pass through)</span>\n* <span style=\"font-size: 14px;\">$f(-1.0) = 0.0$ (negative, zeroed out)</span>\n\n<span style=\"font-size: 14px;\">**ReLU output:**</span>\n\n$$\n\\mathbf{a} = [0.0, \\; 0.0, \\; 0.0, \\; 0.3, \\; 1.5, \\; 0.0, \\; 2.7, \\; 0.1]\n$$\n\n<span style=\"font-size: 14px;\">4 out of 8 values (50%) are zeroed out -- typical and desirable sparsity.</span>\n\n### <span style=\"font-size: 14px;\">Step 2: Backward Pass (Computing ReLU Gradient)</span>\n\n<span style=\"font-size: 14px;\">Upstream gradient:</span>\n\n$$\n\\frac{\\partial L}{\\partial \\mathbf{a}} = [0.4, \\; -0.2, \\; 0.1, \\; -0.6, \\; 0.8, \\; 0.3, \\; -0.5, \\; 0.9]\n$$\n\n<span style=\"font-size: 14px;\">Apply binary mask (pass gradient where $z > 0$, block where $z \\leq 0$):</span>\n\n* <span style=\"font-size: 14px;\">$z_1=-2.0 \\leq 0 \\rightarrow 0.0$; $z_2=-0.5 \\leq 0 \\rightarrow 0.0$; $z_3=0.0 \\leq 0 \\rightarrow 0.0$; $z_6=-1.0 \\leq 0 \\rightarrow 0.0$</span>\n* <span style=\"font-size: 14px;\">$z_4=0.3 > 0 \\rightarrow -0.6$; $z_5=1.5 > 0 \\rightarrow 0.8$; $z_7=2.7 > 0 \\rightarrow -0.5$; $z_8=0.1 > 0 \\rightarrow 0.9$</span>\n\n<span style=\"font-size: 14px;\">**Gradient passed to previous layer:**</span>\n\n$$\n\\frac{\\partial L}{\\partial \\mathbf{z}} = [0.0, \\; 0.0, \\; 0.0, \\; -0.6, \\; 0.8, \\; 0.0, \\; -0.5, \\; 0.9]\n$$\n\n<span style=\"font-size: 14px;\">Every active neuron passes its gradient at **full magnitude** -- no attenuation.</span>\n\n### <span style=\"font-size: 14px;\">Step 3: Comparison with Sigmoid</span>\n\n<span style=\"font-size: 14px;\">Sigmoid gradient factors $\\sigma'(z) = \\sigma(z)(1-\\sigma(z))$ for the same inputs:</span>\n\n* <span style=\"font-size: 14px;\">$z=-2.0$: $0.105$; $z=-0.5$: $0.235$; $z=0.0$: $0.250$; $z=0.3$: $0.245$</span>\n* <span style=\"font-size: 14px;\">$z=1.5$: $0.149$; $z=-1.0$: $0.197$; $z=2.7$: $0.059$; $z=0.1$: $0.249$</span>\n\n<span style=\"font-size: 14px;\">Even the best case ($z=0$) attenuates to 25%. At $z=2.7$, gradient is reduced to 5.9%. These attenuations compound catastrophically over multiple layers.</span>\n\n### <span style=\"font-size: 14px;\">Step 4: Comparison with Tanh</span>\n\n<span style=\"font-size: 14px;\">Tanh gradient factors $1 - \\tanh^2(z)$:</span>\n\n* <span style=\"font-size: 14px;\">$z=-2.0$: $0.071$; $z=-0.5$: $0.786$; $z=0.0$: $1.000$; $z=0.3$: $0.915$</span>\n* <span style=\"font-size: 14px;\">$z=1.5$: $0.181$; $z=-1.0$: $0.420$; $z=2.7$: $0.020$; $z=0.1$: $0.990$</span>\n\n<span style=\"font-size: 14px;\">Tanh reaches 1.0 at $z=0$ but drops to 0.020 at $z=2.7$. ReLU gives exactly 1.0 for all positive inputs regardless of magnitude: $f'(100) = f'(0.001) = 1$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Variants and Modern Context</span>\n\n### <span style=\"font-size: 14px;\">Leaky ReLU</span>\n\n$$\nf(x) = \\begin{cases} x & \\text{if } x > 0 \\\\ \\alpha x & \\text{if } x \\leq 0 \\end{cases}\n$$\n\n<span style=\"font-size: 14px;\">Typically $\\alpha = 0.01$. Ensures every neuron always has a non-zero gradient, preventing complete \"death.\" Proposed by Maas et al. (2013), popular in GANs.</span>\n\n### <span style=\"font-size: 14px;\">Parametric ReLU (PReLU)</span>\n\n$$\nf(x) = \\begin{cases} x & \\text{if } x > 0 \\\\ \\alpha_i x & \\text{if } x \\leq 0 \\end{cases}\n$$\n\n<span style=\"font-size: 14px;\">He et al. (2015) made $\\alpha_i$ a learnable per-channel parameter. Combined with He/Kaiming initialization (which accounts for ReLU's variance properties), PReLU achieved superhuman ImageNet performance. Learned $\\alpha$ values typically converge to small positive numbers.</span>\n\n### <span style=\"font-size: 14px;\">Exponential Linear Unit (ELU)</span>\n\n$$\nf(x) = \\begin{cases} x & \\text{if } x > 0 \\\\ \\alpha(e^x - 1) & \\text{if } x \\leq 0 \\end{cases}\n$$\n\n<span style=\"font-size: 14px;\">Clevert et al. (2016), typically $\\alpha = 1.0$. Produces negative outputs (pushing mean closer to zero), saturates to $-\\alpha$ for large negatives. More expensive than ReLU due to exponential computation; practical benefits often marginal.</span>\n\n### <span style=\"font-size: 14px;\">GELU (Gaussian Error Linear Unit)</span>\n\n$$\nf(x) = x \\cdot \\Phi(x) = x \\cdot \\frac{1}{2}\\left[1 + \\text{erf}\\left(\\frac{x}{\\sqrt{2}}\\right)\\right]\n$$\n\n<span style=\"font-size: 14px;\">Hendrycks and Gimpel (2016). A smooth, probabilistic version of ReLU: scales each input by the probability a standard normal variable would be less than that input. Used in BERT, GPT-2, GPT-3, and most modern transformers.</span>\n\n### <span style=\"font-size: 14px;\">Swish / SiLU (Sigmoid Linear Unit)</span>\n\n$$\nf(x) = x \\cdot \\sigma(x) = \\frac{x}{1 + e^{-x}}\n$$\n\n<span style=\"font-size: 14px;\">Ramachandran et al. (2017), Google Brain. Smooth, non-monotonic, unbounded above. Consistently outperformed ReLU across architectures. Used in EfficientNet. Closely related to GELU in practice.</span>\n\n### <span style=\"font-size: 14px;\">Why ReLU Remains Dominant</span>\n\n* <span style=\"font-size: 14px;\">**Simplicity:** trivial to implement, no hyperparameters</span>\n* <span style=\"font-size: 14px;\">**Efficiency:** single comparison per element vs. exponentials/error functions</span>\n* <span style=\"font-size: 14px;\">**Well-understood initialization:** He initialization is specifically designed and validated for ReLU</span>\n* <span style=\"font-size: 14px;\">**Robustness:** rarely fails catastrophically, strong performance across tasks and architectures</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n### <span style=\"font-size: 14px;\">The Dying ReLU Problem</span>\n\n<span style=\"font-size: 14px;\">A neuron \"dies\" when its weights evolve such that $z = \\mathbf{w}^T \\mathbf{x} + b < 0$ for all training inputs. Output and gradient are permanently zero -- the neuron never recovers. Most likely with high learning rates or negative bias initialization. Mitigation: zero/small-positive bias init, moderate learning rates, or use Leaky ReLU/PReLU/ELU.</span>\n\n### <span style=\"font-size: 14px;\">Non-Zero-Centered Outputs</span>\n\n<span style=\"font-size: 14px;\">ReLU outputs are always $\\geq 0$, so all inputs to the next layer are positive. This forces all weight gradients for that neuron to share the same sign, constraining optimization to zig-zag paths in weight space. Batch normalization largely mitigates this by re-centering activations.</span>\n\n### <span style=\"font-size: 14px;\">Non-Differentiability at Zero</span>\n\n<span style=\"font-size: 14px;\">ReLU has a kink at $x = 0$. In practice this is a non-issue: the probability of exactly $0.0$ in floating-point is negligible, and most implementations set $f'(0) = 0$. ReLU networks converge under standard conditions despite this.</span>\n\n### <span style=\"font-size: 14px;\">Unbounded Activations</span>\n\n<span style=\"font-size: 14px;\">Unlike sigmoid (0 to 1) or tanh (-1 to 1), ReLU has no upper bound. Activations can grow large, risking numerical overflow and unstable gradients. Batch normalization, layer normalization, and weight decay are important companions. In AlexNet, LRN served this role.</span>\n\n### <span style=\"font-size: 14px;\">Effect on Batch Statistics</span>\n\n<span style=\"font-size: 14px;\">ReLU zeros ~50% of inputs, shifting mean upward and reducing variance. He initialization compensates by scaling weights by $\\sqrt{2/n}$ instead of $\\sqrt{1/n}$. If batch norm is applied before ReLU, the normalized distribution is truncated to a half-normal (mean $\\approx 0.4$, variance $\\approx 0.68$). The ordering of batch norm and ReLU remains a subject of practical consideration.</span>\n\n### <span style=\"font-size: 14px;\">Sensitivity to Weight Initialization</span>\n\n<span style=\"font-size: 14px;\">ReLU behavior depends on the sign of pre-activations, making initialization critical. He initialization (variance $2/n$) keeps activation variance constant across layers. Xavier/Glorot initialization (variance $1/n$), designed for sigmoid/tanh, causes variance to shrink by 2x at each ReLU layer, leading to vanishing activations in deep networks. Wrong initialization can cause complete training failure.</span>\n\n---",
+  "hints": [
+    "np.maximum can compare the whole array with zero elementwise."
+  ],
+  "constraints": "- x is a nonempty float64 NumPy array of any rank.\n- Every input value is finite.",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef relu(x: np.ndarray) -> np.ndarray:\n    \"\"\"\n    Returns the elementwise float64 ReLU output.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-23T18:46:10.214Z",
+  "updatedAt": "2026-04-04T12:04:50.118Z",
+  "topicId": "alexnet-relu",
+  "paperSnippet": "\"Deep convolutional neural networks with ReLUs train several times faster than their equivalents with tanh units.\"",
+  "visualizationComponent": "ReLUViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **ReLU Activation Function** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef relu(x: np.ndarray) -> np.ndarray:\n    return np.maximum(0.0, np.asarray(x, dtype=float))\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Mixed signs",
+      "inputs": {
+        "x": [
+          -2,
+          -0.5,
+          0,
+          3
+        ]
+      },
+      "output": [
+        0,
+        0,
+        0,
+        3
+      ],
+      "isPublic": true,
+      "explanation": "Negative values become zero while nonnegative values are unchanged.",
+      "expectedOutput": [
+        0,
+        0,
+        0,
+        3
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Matrix input",
+      "inputs": {
+        "x": [
+          [
+            -1,
+            2
+          ],
+          [
+            3,
+            -4
+          ]
+        ]
+      },
+      "output": [
+        [
+          0,
+          2
+        ],
+        [
+          3,
+          0
+        ]
+      ],
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0,
+          2
+        ],
+        [
+          3,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "test-3",
+      "name": "All nonnegative",
+      "inputs": {
+        "x": [
+          0,
+          1,
+          5
+        ]
+      },
+      "output": [
+        0,
+        1,
+        5
+      ],
+      "isPublic": false,
+      "expectedOutput": [
+        0,
+        1,
+        5
+      ]
+    },
+    {
+      "id": "alexnet-relu-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          -4,
+          -1.0,
+          0,
+          6
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        6.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          -1,
+          -0.25,
+          0,
+          2
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          2,
+          0.5,
+          0,
+          -3
+        ]
+      },
+      "expectedOutput": [
+        2.0,
+        0.5,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          -6,
+          -1.5,
+          0,
+          9
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        9.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          -1.0,
+          0.5,
+          1.0,
+          4.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.5,
+        1.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          -4.0,
+          -2.5,
+          -2.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          3,
+          0,
+          -0.5,
+          -2
+        ]
+      },
+      "expectedOutput": [
+        3.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          2,
+          0.5,
+          0,
+          -3
+        ]
+      },
+      "expectedOutput": [
+        2.0,
+        0.5,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          -20,
+          -5.0,
+          0,
+          30
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        30.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          0,
+          -0.05,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          3.0,
+          4.5,
+          5.0,
+          8.0
+        ]
+      },
+      "expectedOutput": [
+        3.0,
+        4.5,
+        5.0,
+        8.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          -3,
+          -0.75,
+          0,
+          4
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          4,
+          1.0,
+          0,
+          -6
+        ]
+      },
+      "expectedOutput": [
+        4.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          0,
+          -0.125,
+          0,
+          1
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          -3.0,
+          -1.5,
+          -1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          -8,
+          -2.0,
+          0,
+          12
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        12.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-relu-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          -2,
+          -0.375,
+          0,
+          2
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        2.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "relu",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": "[-2,-0.5,0,3]",
+        "description": "Input array"
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "alexnet-relu",
+    "name": "ReLU Activation",
+    "description": "6Ã faster training than tanh",
+    "color": "#10b981"
+  },
+  "paper": {
+    "id": "alexnet",
+    "title": "ImageNet Classification with Deep Convolutional Neural Networks",
+    "authors": "Krizhevsky, Sutskever & Hinton, 2012",
+    "year": 2012,
+    "paperUrl": "https://papers.nips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf",
+    "visualizationComponent": "AlexNetArchViz"
+  },
+  "navigation": {
+    "index": 2,
+    "total": 6,
+    "prev": "alexnet-conv-layers",
+    "next": "alexnet-dropout"
+  },
+  "cleanTitle": ""
+}

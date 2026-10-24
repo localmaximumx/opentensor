@@ -1,0 +1,1077 @@
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import Editor from '@monaco-editor/react';
+import confetti from 'canvas-confetti';
+import { 
+  Play, 
+  Send, 
+  RotateCcw, 
+  Copy, 
+  Check, 
+  ChevronLeft, 
+  ChevronRight, 
+  BookOpen, 
+  FileText, 
+  Lightbulb, 
+  CheckCircle2, 
+  AlertCircle,
+  Terminal,
+  ListChecks,
+  Tag,
+  Star,
+  PanelLeft,
+  ShieldCheck
+} from 'lucide-react';
+import { 
+  getProblemDetail, 
+  getProblemCatalog, 
+  getResearchPapers, 
+  getAssessmentForProblem,
+  getSavedCode, 
+  saveCode, 
+  markProblemSolved, 
+  unmarkProblemSolved,
+  getSolvedProblems 
+} from '../services/dataService';
+import { 
+  getCurrentUser, 
+  getUserSavedCode, 
+  saveUserCode, 
+  getUserSolvedProblems, 
+  recordUserSubmission, 
+  markUserProblemSolved,
+  unmarkUserProblemSolved,
+  UserAccount 
+} from '../services/authService';
+import { runPythonCode, runPythonSubmission, ExecutionReport } from '../services/pyodideRunner';
+import { ProblemDetail, Difficulty, ProblemSummary, ResearchPaper } from '../types';
+import { MathView } from '../components/MathView';
+import { SolutionViewer } from '../components/SolutionViewer';
+import { ProblemDrawer } from '../components/ProblemDrawer';
+import { AuthModal } from '../components/AuthModal';
+
+export const ProblemSolverPage: React.FC = () => {
+  const { paperId, slug } = useParams<{ paperId?: string; slug?: string }>();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(getCurrentUser());
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authPromptMessage, setAuthPromptMessage] = useState<string | undefined>(undefined);
+
+  const [problem, setProblem] = useState<ProblemDetail | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<'description' | 'theory' | 'solution' | 'notes'>('description');
+  
+  // Editor state
+  const [code, setCode] = useState<string>('');
+  const [copied, setCopied] = useState<boolean>(false);
+
+  // Testcase & execution state
+  const [activeCaseIdx, setActiveCaseIdx] = useState<number>(0);
+  const [resultCaseIdx, setResultCaseIdx] = useState<number>(0);
+  const [bottomTab, setBottomTab] = useState<'testcase' | 'result'>('testcase');
+  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [isSubmission, setIsSubmission] = useState<boolean>(false);
+  const [execReport, setExecReport] = useState<ExecutionReport | null>(null);
+  const [isSolved, setIsSolved] = useState<boolean>(false);
+  const [solutionCopied, setSolutionCopied] = useState<boolean>(false);
+  const [solutionApplied, setSolutionApplied] = useState<boolean>(false);
+
+  // Prev / Next navigation & Drawer State
+  const [prevSlug, setPrevSlug] = useState<string | null>(null);
+  const [nextSlug, setNextSlug] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+  const [currentPaper, setCurrentPaper] = useState<ResearchPaper | null>(null);
+  const [currentAssessment, setCurrentAssessment] = useState<any | null>(null);
+  const [catalogProblems, setCatalogProblems] = useState<ProblemSummary[]>([]);
+  const [solvedSet, setSolvedSet] = useState<Set<string>>(new Set());
+  const [currentIndex, setCurrentIndex] = useState<number>(-1);
+  const [totalItems, setTotalItems] = useState<number>(0);
+
+  // Splitter resizable panel state
+  const [leftWidthPct, setLeftWidthPct] = useState<number>(() => {
+    const saved = localStorage.getItem('tensortonic_left_panel_width');
+    return saved ? Math.max(25, Math.min(75, parseFloat(saved))) : 50;
+  });
+  const [bottomHeightPx, setBottomHeightPx] = useState<number>(() => {
+    const saved = localStorage.getItem('tensortonic_bottom_panel_height');
+    return saved ? Math.max(120, Math.min(600, parseFloat(saved))) : 260;
+  });
+  const [isDraggingH, setIsDraggingH] = useState<boolean>(false); // Vertical splitter (left vs right)
+  const [isDraggingV, setIsDraggingV] = useState<boolean>(false); // Horizontal splitter (editor vs testcase)
+
+  // Vertical splitter (resizing left vs right panels horizontally)
+  const handleMouseDownH = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingH(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isDraggingH) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      const pct = (e.clientX / window.innerWidth) * 100;
+      const clamped = Math.max(20, Math.min(80, pct));
+      setLeftWidthPct(clamped);
+      localStorage.setItem('tensortonic_left_panel_width', clamped.toString());
+    };
+    const handleMouseUp = () => {
+      setIsDraggingH(false);
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingH]);
+
+  // Horizontal splitter (resizing editor vs bottom testcase panel vertically)
+  const handleMouseDownV = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingV(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isDraggingV) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      const h = window.innerHeight - e.clientY;
+      const clamped = Math.max(100, Math.min(window.innerHeight - 180, h));
+      setBottomHeightPx(clamped);
+      localStorage.setItem('tensortonic_bottom_panel_height', clamped.toString());
+    };
+    const handleMouseUp = () => {
+      setIsDraggingV(false);
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingV]);
+
+  useEffect(() => {
+    if (!slug) return;
+    async function load() {
+      setLoading(true);
+      const data = await getProblemDetail(slug!);
+      setProblem(data);
+
+      if (data) {
+        const initialCode = data.starterCode || 'def solution():\n    pass\n';
+        const u = getCurrentUser();
+        setCode(u ? getUserSavedCode(slug!, initialCode, u.id) : getSavedCode(slug!, initialCode));
+      }
+
+      // Check solved status
+      const u = getCurrentUser();
+      const solved = u ? getUserSolvedProblems(u.id) : getSolvedProblems();
+      setSolvedSet(solved);
+      setIsSolved(solved.has(slug!));
+
+      // Load catalog for drawer navigation
+      const catalog = await getProblemCatalog();
+      setCatalogProblems(catalog.problems);
+
+      // Check if this problem belongs to an assessment (either ?assessment= in URL or problem in assessment)
+      const urlAssessmentId = searchParams.get('assessment');
+      const assessContext = await getAssessmentForProblem(slug!, urlAssessmentId);
+
+      if (assessContext) {
+        setCurrentAssessment(assessContext.assessment);
+        setCurrentPaper(null);
+        setTotalItems(assessContext.flatProblems.length);
+        setCurrentIndex(assessContext.currentIndex);
+        const aId = assessContext.assessment.id;
+        setPrevSlug(
+          assessContext.currentIndex > 0
+            ? `/interview/solve/${assessContext.flatProblems[assessContext.currentIndex - 1].slug}?assessment=${aId}`
+            : null
+        );
+        setNextSlug(
+          assessContext.currentIndex < assessContext.flatProblems.length - 1
+            ? `/interview/solve/${assessContext.flatProblems[assessContext.currentIndex + 1].slug}?assessment=${aId}`
+            : null
+        );
+      } else if (paperId) {
+        setCurrentAssessment(null);
+        const papers = await getResearchPapers();
+        const normId = paperId.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const foundPaper = papers.find(p => p.id === paperId || p.id.toLowerCase().replace(/[^a-z0-9]/g, '') === normId);
+        setCurrentPaper(foundPaper || null);
+        if (foundPaper && foundPaper.topics) {
+          setTotalItems(foundPaper.topics.length);
+          const tIdx = foundPaper.topics.findIndex(t => t.problemId === slug || t.id === slug);
+          setCurrentIndex(tIdx);
+          if (tIdx !== -1) {
+            setPrevSlug(tIdx > 0 ? `/research/${paperId}/${foundPaper.topics[tIdx - 1].problemId || foundPaper.topics[tIdx - 1].id}` : null);
+            setNextSlug(tIdx < foundPaper.topics.length - 1 ? `/research/${paperId}/${foundPaper.topics[tIdx + 1].problemId || foundPaper.topics[tIdx + 1].id}` : null);
+          }
+        }
+      } else {
+        setCurrentAssessment(null);
+        setCurrentPaper(null);
+        setTotalItems(catalog.problems.length);
+        const idx = catalog.problems.findIndex(p => p.slug === slug);
+        setCurrentIndex(idx);
+        if (idx !== -1) {
+          setPrevSlug(idx > 0 ? `/problems/${catalog.problems[idx - 1].slug}` : null);
+          setNextSlug(idx < catalog.problems.length - 1 ? `/problems/${catalog.problems[idx + 1].slug}` : null);
+        }
+      }
+
+      setLoading(false);
+      setExecReport(null);
+    }
+    load();
+  }, [paperId, slug, searchParams]);
+
+  // Listen to profile / account changes across app
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const u = getCurrentUser();
+      setCurrentUser(u);
+      const solved = u ? getUserSolvedProblems(u.id) : getSolvedProblems();
+      setSolvedSet(solved);
+      if (slug) {
+        setIsSolved(solved.has(slug));
+        if (problem?.starterCode) {
+          setCode(u ? getUserSavedCode(slug, problem.starterCode, u.id) : getSavedCode(slug, problem.starterCode));
+        }
+      }
+    };
+    window.addEventListener('tensortonic_auth_change', handleAuthChange);
+    return () => window.removeEventListener('tensortonic_auth_change', handleAuthChange);
+  }, [slug, problem]);
+
+  // Handle Code Change
+  const handleEditorChange = (value: string | undefined) => {
+    const newCode = value || '';
+    setCode(newCode);
+    if (slug) {
+      if (currentUser) {
+        saveUserCode(slug, newCode, currentUser.id);
+      } else {
+        saveCode(slug, newCode);
+      }
+    }
+  };
+
+  const handleResetCode = () => {
+    if (problem?.starterCode && slug) {
+      setCode(problem.starterCode);
+      if (currentUser) {
+        saveUserCode(slug, problem.starterCode, currentUser.id);
+      } else {
+        saveCode(slug, problem.starterCode);
+      }
+    }
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const extractSolutionCode = (solutionText: string | undefined | null): string => {
+    if (!solutionText) return '';
+    const blocks = [...solutionText.matchAll(/```(?:python|py)?\s*([\s\S]*?)```/g)]
+      .map(m => m[1].trim())
+      .filter(b => b.length > 0);
+    if (blocks.length > 0) {
+      return blocks.reduce((prev, curr) => (curr.length > prev.length ? curr : prev));
+    }
+    return solutionText.trim();
+  };
+
+  const handleApplySolution = () => {
+    if (!problem?.solution) return;
+    const refCode = extractSolutionCode(problem.solution);
+    if (refCode && slug) {
+      setCode(refCode);
+      if (currentUser) {
+        saveUserCode(slug, refCode, currentUser.id);
+      } else {
+        saveCode(slug, refCode);
+      }
+      setSolutionApplied(true);
+      setTimeout(() => setSolutionApplied(false), 2000);
+    }
+  };
+
+  const handleCopySolution = () => {
+    if (!problem?.solution) return;
+    const refCode = extractSolutionCode(problem.solution);
+    if (refCode) {
+      navigator.clipboard.writeText(refCode);
+      setSolutionCopied(true);
+      setTimeout(() => setSolutionCopied(false), 2000);
+    }
+  };
+
+  // Determine function name from starter code or metadata
+  const getFunctionName = (): string => {
+    if (problem?.functionMetadata?.name) return problem.functionMetadata.name;
+    const match = code.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
+    if (match) return match[1];
+    return slug?.replace(/[^a-zA-Z0-9_]/g, '_') || 'solution';
+  };
+
+  // Public sample test cases: strictly 1 or 2 test cases for "Run" and the "Testcase" bottom tab
+  const publicTestCases = useMemo(() => {
+    if (!problem?.testCases || problem.testCases.length === 0) {
+      return [{ id: 'case-1', name: 'Case 1', inputs: { x: [0, 2, -2] }, expectedOutput: [0.5, 0.880797, 0.119203], isPublic: true }];
+    }
+    const pub = problem.testCases.filter(tc => tc.isPublic !== false);
+    if (pub.length > 0) return pub.slice(0, 2);
+    return problem.testCases.slice(0, 2);
+  }, [problem]);
+
+  // Run only the 1 or 2 sample test cases
+  const handleRun = async () => {
+    if (!problem || isRunning) return;
+    setIsRunning(true);
+    setIsSubmission(false);
+    setBottomTab('result');
+
+    const report = await runPythonCode(code, getFunctionName(), publicTestCases);
+    setExecReport(report);
+    const firstFail = report.results.findIndex(r => !r.passed);
+    setResultCaseIdx(firstFail !== -1 ? firstFail : 0);
+    setIsRunning(false);
+  };
+
+  // Submit against comprehensive suite (20 or more test cases)
+  const handleSubmit = async () => {
+    if (!problem || isRunning) return;
+    setIsRunning(true);
+    setIsSubmission(true);
+    setBottomTab('result');
+
+    const baseTestCases = problem.testCases && problem.testCases.length > 0
+      ? problem.testCases
+      : publicTestCases;
+
+    const report = await runPythonSubmission(code, getFunctionName(), baseTestCases, problem.solution, 20);
+    setExecReport(report);
+
+    const firstFail = report.results.findIndex(r => !r.passed);
+    setResultCaseIdx(firstFail !== -1 ? firstFail : 0);
+    setIsRunning(false);
+
+    if (report.success && slug) {
+      if (currentUser) {
+        recordUserSubmission(slug, true, report.totalTimeMs, report.results.length, report.results.length, currentUser.id);
+      } else {
+        markProblemSolved(slug);
+      }
+      setIsSolved(true);
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.8 },
+        colors: ['#93C572', '#10B981', '#34D399', '#6EE7B7']
+      });
+    }
+  };
+
+  const getDifficultyBadge = (diff: Difficulty) => {
+    switch (diff) {
+      case 'Easy':
+        return (
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-80" />
+            Easy
+          </span>
+        );
+      case 'Medium':
+        return (
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium border-amber-500/20 bg-amber-500/10 text-amber-400">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-80" />
+            Medium
+          </span>
+        );
+      case 'Hard':
+        return (
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium border-rose-500/20 bg-rose-500/10 text-rose-400">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-80" />
+            Hard
+          </span>
+        );
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-[#93C572] border-t-transparent rounded-full animate-spin" />
+          <div className="text-sm text-muted-foreground font-mono">Loading problem specification...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!problem) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] bg-background gap-4">
+        <h2 className="text-xl font-bold">Problem not found</h2>
+        <Link 
+          to={paperId ? `/research?paper=${paperId}` : "/problems"} 
+          className="px-4 py-2 rounded-lg bg-[#93C572] text-black font-semibold text-sm hover:opacity-90 transition-opacity"
+        >
+          {paperId ? "Return to Paper Curriculum" : "Return to Problems Catalog"}
+        </Link>
+      </div>
+    );
+  }
+
+  const testCases = problem.testCases || [{ id: 'case-1', name: 'Case 1', inputs: { x: [0, 2, -2] } }];
+
+  return (
+    <>
+      {/* Problem Quick-Navigation Sidebar Drawer */}
+      <ProblemDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        currentSlug={slug}
+        problems={catalogProblems}
+        solvedSet={solvedSet}
+        paperId={paperId}
+        currentPaper={currentPaper}
+        currentAssessment={currentAssessment}
+      />
+
+      <div className="h-[calc(100vh-64px)] flex flex-col md:flex-row overflow-hidden bg-background relative">
+        {(isDraggingH || isDraggingV) && (
+          <div
+            className={`fixed inset-0 z-50 select-none ${
+              isDraggingH ? 'cursor-col-resize' : 'cursor-row-resize'
+            }`}
+            style={{ pointerEvents: 'auto' }}
+          />
+        )}
+        
+        {/* LEFT PANEL: Problem Info, Theory, Solution */}
+        <div
+          className="w-full md:w-auto h-full flex flex-col border-r border-border bg-card flex-shrink-0 overflow-hidden"
+          style={{ width: typeof window !== 'undefined' && window.innerWidth >= 768 ? `${leftWidthPct}%` : undefined }}
+        >
+          
+          {/* Navigation / Tab bar */}
+          <nav className="flex items-center justify-between px-3 md:px-4 h-12 border-b border-border text-sm bg-secondary/30 flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 h-full">
+              {/* Browse Problems Sidebar Button (Handles Assessment, Research paper, and Problems catalog) */}
+              <button
+                onClick={() => setIsDrawerOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/80 bg-background/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors text-xs font-medium shadow-xs"
+                title={
+                  currentAssessment
+                    ? `Assessment: ${currentAssessment.name}`
+                    : paperId
+                    ? (currentPaper?.title || "Paper Syllabus")
+                    : "Browse problems catalog"
+                }
+              >
+                {currentAssessment ? (
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#93C572]" />
+                ) : (
+                  <PanelLeft className="w-3.5 h-3.5 text-[#93C572]" />
+                )}
+                <span className="hidden sm:inline font-semibold truncate max-w-[170px]">
+                  {currentAssessment ? currentAssessment.name : paperId ? (currentPaper?.title || 'Paper') : 'Problems'}
+                </span>
+                {currentIndex !== -1 && (
+                  <span className="text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded border border-border/40">
+                    #{currentIndex + 1}/{totalItems || (paperId || currentAssessment ? '' : catalogProblems.length || 790)}
+                  </span>
+                )}
+              </button>
+
+              <div className="h-4 w-px bg-border/60" />
+
+              <button
+                onClick={() => setActiveTab('description')}
+                className={`h-full border-b-2 font-medium transition-colors flex items-center gap-1.5 ${
+                  activeTab === 'description'
+                    ? 'border-[#93C572] text-foreground font-semibold'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Description
+              </button>
+              <button
+                onClick={() => setActiveTab('theory')}
+                className={`h-full border-b-2 font-medium transition-colors flex items-center gap-1.5 ${
+                  activeTab === 'theory'
+                    ? 'border-[#93C572] text-foreground font-semibold'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                Theory
+              </button>
+              <button
+                onClick={() => setActiveTab('solution')}
+                className={`h-full border-b-2 font-medium transition-colors flex items-center gap-1.5 ${
+                  activeTab === 'solution'
+                    ? 'border-[#93C572] text-foreground font-semibold'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Lightbulb className="w-3.5 h-3.5" />
+                Solution
+              </button>
+            </div>
+
+          {/* Prev / Next controls */}
+          <div className="flex items-center gap-1">
+            {prevSlug ? (
+              <Link
+                to={prevSlug.startsWith('/') ? prevSlug : `/problems/${prevSlug}`}
+                className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                title="Previous problem"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Link>
+            ) : (
+              <span className="p-1 text-muted-foreground/30"><ChevronLeft className="w-4 h-4" /></span>
+            )}
+
+            {nextSlug ? (
+              <Link
+                to={nextSlug.startsWith('/') ? nextSlug : `/problems/${nextSlug}`}
+                className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                title="Next problem"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            ) : (
+              <span className="p-1 text-muted-foreground/30"><ChevronRight className="w-4 h-4" /></span>
+            )}
+          </div>
+        </nav>
+
+        {/* Tab Content */}
+        <div className="flex-1 overflow-y-auto p-6 problem-scrollbar">
+          {activeTab === 'description' && (
+            <div className="space-y-6">
+              
+              {/* Header: Title, Tags, Difficulty */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h1 className="text-xl md:text-2xl font-bold text-foreground">
+                    {problem.title.replace(/^#\s*/, '').replace(/<[^>]+>/g, '')}
+                  </h1>
+                  <div className="mt-2.5 flex flex-wrap gap-1.5 items-center">
+                    {(problem.tags || []).map(t => (
+                      <span key={t} className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-secondary/50 px-2.5 py-0.5 text-xs text-muted-foreground">
+                        <Tag className="w-3 h-3 text-muted-foreground" />
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {getDifficultyBadge(problem.difficulty || 'Medium')}
+                  {isSolved && (
+                    <button
+                      onClick={() => {
+                        if (slug) {
+                          unmarkProblemSolved(slug);
+                          unmarkUserProblemSolved(slug, currentUser?.id);
+                          setIsSolved(false);
+                          setSolvedSet((prev) => {
+                            const next = new Set(prev);
+                            next.delete(slug);
+                            return next;
+                          });
+                        }
+                      }}
+                      title="Click to mark as unsolved"
+                      className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-red-400 bg-emerald-500/10 hover:bg-red-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 hover:border-red-500/30 font-medium transition-colors cursor-pointer group"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 group-hover:hidden" />
+                      <span className="group-hover:hidden">Solved</span>
+                      <span className="hidden group-hover:inline">Unmark</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-b border-border/60" />
+
+              {/* Problem Description & Math */}
+              <div>
+                <MathView
+                  content={(problem.description || '')
+                    .replace(/^#+\s+[^\n]+\n*/, '')
+                    .replace(/^###\s+Overview\s*\n+/i, '')}
+                  allowPureCode={false}
+                />
+              </div>
+
+              {/* Examples */}
+              {problem.examples && problem.examples.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-foreground text-sm mb-3">Examples</h3>
+                  <div className="space-y-3">
+                    {problem.examples.map((ex, i) => {
+                      let formattedEx = '';
+                      if (typeof ex === 'string') {
+                        formattedEx = ex;
+                      } else if (ex && typeof ex === 'object') {
+                        const parts: string[] = [];
+                        if (ex.input !== undefined) parts.push(`Input: ${typeof ex.input === 'object' ? JSON.stringify(ex.input) : ex.input}`);
+                        if (ex.output !== undefined) parts.push(`Output: ${typeof ex.output === 'object' ? JSON.stringify(ex.output) : ex.output}`);
+                        if (ex.explanation) parts.push(`Explanation: ${ex.explanation}`);
+                        formattedEx = parts.length > 0 ? parts.join('\n') : JSON.stringify(ex, null, 2);
+                      } else {
+                        formattedEx = String(ex);
+                      }
+                      return (
+                        <div key={i} className="bg-muted/40 border border-border/80 rounded-lg p-3 font-mono text-xs">
+                          <pre className="whitespace-pre-wrap text-muted-foreground">{formattedEx}</pre>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Requirements */}
+              {problem.requirements && (
+                <div>
+                  <h3 className="font-semibold text-foreground text-sm mb-2">Requirements</h3>
+                  <MathView content={problem.requirements} />
+                </div>
+              )}
+
+              {/* Constraints */}
+              {problem.constraints && (
+                <div>
+                  <h3 className="font-semibold text-foreground text-sm mb-2">Constraints</h3>
+                  <MathView content={problem.constraints} />
+                </div>
+              )}
+
+              {/* Hints */}
+              {problem.hints && problem.hints.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <h3 className="font-semibold text-foreground text-sm mb-2">Hints</h3>
+                  {problem.hints.map((hint, i) => (
+                    <details key={i} className="group border border-border/70 rounded-lg p-3 bg-secondary/20">
+                      <summary className="cursor-pointer text-xs font-semibold text-foreground hover:text-[#93C572] transition-colors select-none">
+                        Hint {i + 1}
+                      </summary>
+                      <div className="mt-2 text-xs text-muted-foreground leading-relaxed pl-2 border-l-2 border-[#93C572]">
+                        {typeof hint === 'string' ? hint : JSON.stringify(hint)}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              )}
+
+            </div>
+          )}
+
+          {activeTab === 'theory' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-border/60">
+                <BookOpen className="w-4 h-4 text-[#93C572]" />
+                <h2 className="text-base font-bold text-foreground">Theory & Mathematical Derivation</h2>
+              </div>
+              {problem.theory ? (
+                <MathView content={problem.theory} allowPureCode={false} />
+              ) : (
+                <p className="text-sm text-muted-foreground">Theory notes are available in the course curriculum.</p>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'solution' && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/60">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                    <Lightbulb className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-foreground">Reference Solution & Walkthrough</h2>
+                    <p className="text-[11px] text-muted-foreground">Optimal vectorized Python & NumPy implementation</p>
+                  </div>
+                </div>
+              </div>
+
+              {problem.solution ? (
+                <SolutionViewer
+                  solution={problem.solution}
+                  onApplySolution={handleApplySolution}
+                />
+              ) : (
+                <div className="p-4 rounded-xl border border-border/80 bg-muted/20">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Solution walkthrough is being formulated for this problem.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* VERTICAL SPLITTER: Left Panel (Problems/Theory/Notes) vs Right Panel (Editor/TestCases) */}
+      <div
+        onMouseDown={handleMouseDownH}
+        className={`hidden md:flex w-1.5 hover:w-2 cursor-col-resize bg-border/60 hover:bg-[#93C572] transition-colors items-center justify-center select-none z-20 group relative flex-shrink-0 ${
+          isDraggingH ? 'bg-[#93C572] w-2' : ''
+        }`}
+        title="Drag to resize problem description and code editor panels"
+      >
+        <div className="w-0.5 h-8 bg-muted-foreground/40 group-hover:bg-black rounded-full" />
+      </div>
+
+      {/* RIGHT PANEL: Code Editor & Test Cases */}
+      <div
+        className="w-full md:w-auto flex-1 h-full flex flex-col bg-[#1e1e1e] overflow-hidden min-w-0"
+        style={{ width: typeof window !== 'undefined' && window.innerWidth >= 768 ? `${100 - leftWidthPct}%` : undefined }}
+      >
+        
+        {/* Editor Toolbar */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border/80 bg-card flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleResetCode}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent transition-colors"
+              title="Reset to starter code"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Reset
+            </button>
+            <button
+              onClick={handleCopyCode}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent transition-colors"
+              title="Copy code"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+
+            {/* Profile / Guest Status Badge */}
+            {currentUser ? (
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#93C572]/10 border border-[#93C572]/20 text-[11px] text-[#93C572] font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#93C572]" />
+                <span className="truncate max-w-[120px]">{currentUser.username}</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setAuthPromptMessage('Create a profile or sign in with username and password to save your solutions and track solved problems.');
+                  setIsAuthModalOpen(true);
+                }}
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 text-[11px] text-amber-300 font-medium transition-colors"
+                title="Click to sign in or create an account"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                <span>Guest · Sign In</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Run Button */}
+            <button
+              onClick={handleRun}
+              disabled={isRunning}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border border-input bg-card hover:bg-accent text-foreground transition-colors disabled:opacity-50"
+            >
+              <Play className="w-3.5 h-3.5 text-[#93C572] fill-current" />
+              Run
+            </button>
+
+            {/* Submit Button */}
+            <button
+              onClick={handleSubmit}
+              disabled={isRunning}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold bg-[#93C572] hover:bg-[#A4D287] text-black transition-colors shadow-sm disabled:opacity-50"
+            >
+              <Send className="w-3.5 h-3.5" />
+              Submit
+            </button>
+          </div>
+        </div>
+
+        {/* Monaco Editor (Flex Grow) */}
+        <div className="flex-1 min-h-[120px] overflow-hidden">
+          <Editor
+            height="100%"
+            language="python"
+            theme="vs-dark"
+            value={code}
+            onChange={handleEditorChange}
+            options={{
+              fontSize: 13,
+              fontFamily: "'JetBrains Mono', Consolas, monospace",
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+              lineNumbers: 'on',
+              roundedSelection: true,
+              automaticLayout: true,
+              padding: { top: 12, bottom: 12 }
+            }}
+          />
+        </div>
+
+        {/* HORIZONTAL SPLITTER: Code Editor vs Test Cases */}
+        <div
+          onMouseDown={handleMouseDownV}
+          className={`h-1.5 hover:h-2 cursor-row-resize bg-border/60 hover:bg-[#93C572] transition-colors flex items-center justify-center select-none z-20 group relative flex-shrink-0 ${
+            isDraggingV ? 'bg-[#93C572] h-2' : ''
+          }`}
+          title="Drag to resize code editor and test case panels"
+        >
+          <div className="h-0.5 w-8 bg-muted-foreground/40 group-hover:bg-black rounded-full" />
+        </div>
+
+        {/* BOTTOM PANEL: Test Cases & Test Result */}
+        <div
+          className="flex flex-col border-t border-border bg-card flex-shrink-0 overflow-hidden"
+          style={{ height: `${bottomHeightPx}px` }}
+        >
+          
+          {/* Bottom Tabs */}
+          <div className="flex items-center gap-4 px-4 h-10 border-b border-border/80 bg-secondary/20 flex-shrink-0 text-xs">
+            <button
+              onClick={() => setBottomTab('testcase')}
+              className={`flex items-center gap-1.5 h-full border-b-2 font-medium transition-colors ${
+                bottomTab === 'testcase'
+                  ? 'border-[#93C572] text-foreground font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <ListChecks className="w-3.5 h-3.5" />
+              Testcase
+            </button>
+            <button
+              onClick={() => setBottomTab('result')}
+              className={`flex items-center gap-1.5 h-full border-b-2 font-medium transition-colors ${
+                bottomTab === 'result'
+                  ? 'border-[#93C572] text-foreground font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Terminal className="w-3.5 h-3.5" />
+              Test Result
+              {execReport && (
+                <span className={`w-2 h-2 rounded-full ${execReport.success ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+              )}
+            </button>
+          </div>
+
+          {/* Bottom Panel Content */}
+          <div className="flex-1 p-4 overflow-y-auto problem-scrollbar font-mono text-xs">
+            {bottomTab === 'testcase' && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  {publicTestCases.map((tc, idx) => (
+                    <button
+                      key={tc.id || idx}
+                      onClick={() => setActiveCaseIdx(idx)}
+                      className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                        activeCaseIdx === idx
+                          ? 'bg-secondary text-foreground font-semibold border border-border'
+                          : 'text-muted-foreground hover:bg-secondary/40'
+                      }`}
+                    >
+                      Case {idx + 1}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Active Test Case Inputs */}
+                <div className="space-y-2 mt-2">
+                  {Object.entries((publicTestCases[activeCaseIdx] || publicTestCases[0])?.inputs || {}).map(([key, val]) => (
+                    <div key={key}>
+                      <span className="text-muted-foreground">{key} =</span>
+                      <div className="mt-1 p-2 rounded bg-muted/50 border border-border text-foreground">
+                        {JSON.stringify(val)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {bottomTab === 'result' && (
+              <div>
+                {isRunning ? (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="w-4 h-4 border-2 border-[#93C572] border-t-transparent rounded-full animate-spin" />
+                    <span>
+                      {isSubmission 
+                        ? 'Evaluating against 20+ comprehensive test cases in Python WebAssembly engine...' 
+                        : 'Executing sample test cases in WebAssembly Python engine...'}
+                    </span>
+                  </div>
+                ) : !execReport ? (
+                  <div className="text-muted-foreground">Click "Run" for sample checks or "Submit" to evaluate over 20+ test cases.</div>
+                ) : execReport.stderr ? (
+                  <div className="space-y-2 text-rose-400">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4" />
+                      Runtime Error
+                    </div>
+                    <pre className="whitespace-pre-wrap bg-rose-950/20 p-3 rounded border border-rose-800/40 text-[11px]">
+                      {execReport.stderr}
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                      <div className="flex items-center gap-2">
+                        {execReport.success ? (
+                          <>
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                            <span className="font-bold text-sm text-emerald-400">
+                              {isSubmission
+                                ? `Accepted (${execReport.results.length}/${execReport.results.length} test cases passed)`
+                                : `Sample Test Cases Passed (${execReport.results.length}/${execReport.results.length})`}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="w-4 h-4 text-rose-400" />
+                            <span className="font-bold text-sm text-rose-400">
+                              {isSubmission
+                                ? `Wrong Answer (${execReport.results.filter(r => r.passed).length}/${execReport.results.length} test cases passed)`
+                                : `Sample Test Failed`}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <div className="text-muted-foreground text-[11px] flex items-center gap-2">
+                        {isSubmission && (
+                          <span className="px-2 py-0.5 rounded bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30 font-semibold font-mono">
+                            {execReport.results.length} Test Cases Evaluated
+                          </span>
+                        )}
+                        <span>Runtime: {execReport.totalTimeMs.toFixed(1)} ms</span>
+                      </div>
+                    </div>
+
+                    {/* Test Case Selector Pills */}
+                    <div className="flex flex-wrap items-center gap-1.5 max-h-24 overflow-y-auto custom-scrollbar p-0.5">
+                      {execReport.results.map((res, idx) => (
+                        <button
+                          key={res.id || idx}
+                          onClick={() => setResultCaseIdx(idx)}
+                          className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono transition-colors border ${
+                            resultCaseIdx === idx
+                              ? res.passed
+                                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-bold'
+                                : 'bg-rose-500/15 border-rose-500/40 text-rose-300 font-bold'
+                              : res.passed
+                              ? 'bg-secondary/40 border-border/50 text-muted-foreground hover:text-foreground'
+                              : 'bg-rose-950/20 border-rose-800/40 text-rose-400 hover:text-rose-300'
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${res.passed ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                          <span>Case {idx + 1}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Active Test Case Result Details */}
+                    {execReport.results[resultCaseIdx] && (() => {
+                      const activeRes = execReport.results[resultCaseIdx];
+                      return (
+                        <div className="space-y-3">
+                          {/* Inputs */}
+                          <div>
+                            <div className="text-[11px] text-muted-foreground mb-1 font-semibold">Inputs:</div>
+                            <div className="p-2.5 rounded-lg bg-muted/40 border border-border space-y-1">
+                              {Object.entries(activeRes.inputs || {}).map(([k, v]) => (
+                                <div key={k} className="text-xs">
+                                  <span className="text-muted-foreground font-semibold">{k} = </span>
+                                  <span className="text-foreground">{JSON.stringify(v)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Output vs Expected */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <div className="text-[11px] text-muted-foreground mb-1 font-semibold flex items-center justify-between">
+                                <span>Your Output:</span>
+                                <span className={activeRes.passed ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
+                                  {activeRes.passed ? 'Passed' : 'Failed'}
+                                </span>
+                              </div>
+                              <div className={`p-2.5 rounded-lg font-mono text-xs border ${
+                                activeRes.passed ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300' : 'bg-rose-950/20 border-rose-800/40 text-rose-300'
+                              }`}>
+                                {activeRes.actualOutput !== undefined && activeRes.actualOutput !== null
+                                  ? JSON.stringify(activeRes.actualOutput)
+                                  : <span className="italic opacity-70">None</span>
+                                }
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="text-[11px] text-muted-foreground mb-1 font-semibold">
+                                Expected Output:
+                              </div>
+                              <div className="p-2.5 rounded-lg bg-muted/40 border border-border font-mono text-xs text-foreground">
+                                {activeRes.expectedOutput !== undefined
+                                  ? JSON.stringify(activeRes.expectedOutput)
+                                  : <span className="text-muted-foreground italic">N/A</span>
+                                }
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Error / Failure Message */}
+                          {activeRes.error && (
+                            <div className="p-2.5 rounded-lg bg-rose-950/20 border border-rose-800/40 text-rose-400 text-xs">
+                              <span className="font-semibold">Reason: </span>
+                              {activeRes.error}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {execReport.stdout && (
+                      <div>
+                        <div className="text-muted-foreground mb-1">Standard Output:</div>
+                        <pre className="p-2 rounded bg-muted/30 border border-border whitespace-pre-wrap text-[11px]">
+                          {execReport.stdout}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    {/* Authentication & Profile Modal */}
+    <AuthModal
+      isOpen={isAuthModalOpen}
+      onClose={() => setIsAuthModalOpen(false)}
+      promptMessage={authPromptMessage}
+    />
+  </>
+  );
+};

@@ -1,0 +1,463 @@
+{
+  "id": "iou-bounding-box",
+  "title": "Intersection over Union (IoU)",
+  "description": "Compute Intersection over Union for two axis-aligned boxes. Each box is given as $[x_1,y_1,x_2,y_2]$, where the first point is the top-left corner and the second is the bottom-right corner.\n\n$$\nA_{\\mathrm{intersection}}=\\max(0,x_R-x_L)\\max(0,y_B-y_T)\n$$\n\n$$\nA_{\\mathrm{union}}=A_A+A_B-A_{\\mathrm{intersection}}\n$$\n\n$$\n\\operatorname{IoU}=\\frac{A_{\\mathrm{intersection}}}{A_{\\mathrm{union}}}\n$$\n\nHere, $x_L$ and $y_T$ are the largest starting coordinates, while $x_R$ and $y_B$ are the smallest ending coordinates. Return zero when the union is zero. Otherwise return IoU as a Python float.",
+  "seoDescription": "Compute intersection over union for two axis-aligned bounding boxes from overlap and combined area.",
+  "examples": [
+    "Input: box_a = [0, 0, 4, 4], box_b = [2, 2, 6, 6]\n\nOutput: 0.142857\n\nExplanation: The intersection area is 4 and the union area is 28.",
+    "Input: box_a = [0, 0, 2, 2], box_b = [3, 3, 5, 5]\n\nOutput: 0"
+  ],
+  "requirements": "* Compute the overlapping width and height without allowing negative values\n* Compute both box areas and their union\n* Return zero for a zero-area union\n* Return IoU as a float",
+  "theory": "## Understanding the Theory: Intersection over Union (IoU)\n\n### Core Intuition: Why Do We Need This?\nImages possess rich spatial structure: nearby pixels are correlated, and visual patterns (edges, textures, object parts) are translation invariant. Computer vision models apply local receptive fields and weight sharing to process high-resolution visual inputs with minimal parameter overhead. **Intersection over Union (IoU)** extracts localized visual features, pools spatial maps, or reconciles geometric bounding boxes.\n\nIn this problem, the objective is to implement **Intersection over Union (IoU)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nA_{\\mathrm{intersection}}=\\max(0,x_R-x_L)\\max(0,y_B-y_T)\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Receptive Field Growth**: Stacking convolutional layers with strides or pooling progressively expands the effective field of view, enabling deep layers to capture global semantic context.\n* **Boundary Padding & Strides**: Padding controls spatial dimension retention, while strides downsample feature resolutions efficiently without extra parameters.\n* **Vectorized im2col**: High-performance vision libraries transform sliding window convolutions into matrix multiplications (`GEMM`) via im2col operations.",
+  "hints": [
+    "Use maximum starting coordinates and minimum ending coordinates for the intersection.",
+    "Compute union with area_a + area_b - intersection."
+  ],
+  "constraints": "* Each box contains four numeric coordinates\n* The ending coordinate is not smaller than the corresponding starting coordinate",
+  "difficulty": "Easy",
+  "starterCode": "def iou(box_a: list, box_b: list) -> float:\n    \"\"\"\n    Returns IoU as a float.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T11:00:21.880Z",
+  "updatedAt": "2026-08-23T18:55:49.113Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\ndef iou(box_a: list, box_b: list) -> float:\n    xa = max(box_a[0], box_b[0])\n    ya = max(box_a[1], box_b[1])\n    xb = min(box_a[2], box_b[2])\n    yb = min(box_a[3], box_b[3])\n    inter = max(0.0, xb - xa) * max(0.0, yb - ya)\n    area_a = (box_a[2] - box_a[0]) * (box_a[3] - box_a[1])\n    area_b = (box_b[2] - box_b[0]) * (box_b[3] - box_b[1])\n    union = area_a + area_b - inter\n    return float(round(inter / union if union > 0 else 0.0, 6))\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "IoUBoundingBoxViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Partial overlap",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          4,
+          4
+        ],
+        "box_b": [
+          2,
+          2,
+          6,
+          6
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 0.142857
+    },
+    {
+      "id": "test-2",
+      "name": "No overlap",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          2,
+          2
+        ],
+        "box_b": [
+          3,
+          3,
+          5,
+          5
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 0
+    },
+    {
+      "id": "iou-bounding-box-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          8,
+          8
+        ],
+        "box_b": [
+          4,
+          4,
+          12,
+          12
+        ]
+      },
+      "expectedOutput": 0.142857,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          2,
+          2
+        ],
+        "box_b": [
+          1,
+          1,
+          3,
+          3
+        ]
+      },
+      "expectedOutput": 0.142857,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "box_a": [
+          1,
+          1,
+          5,
+          5
+        ],
+        "box_b": [
+          3,
+          3,
+          7,
+          7
+        ]
+      },
+      "expectedOutput": 0.142857,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          6,
+          6
+        ],
+        "box_b": [
+          3,
+          3,
+          9,
+          9
+        ]
+      },
+      "expectedOutput": 0.142857,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          12,
+          12
+        ],
+        "box_b": [
+          6,
+          6,
+          18,
+          18
+        ]
+      },
+      "expectedOutput": 0.142857,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "box_b": [
+          0,
+          0,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": 0.25,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "box_a": [
+          2,
+          2,
+          6,
+          6
+        ],
+        "box_b": [
+          4,
+          4,
+          8,
+          8
+        ]
+      },
+      "expectedOutput": 0.142857,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "box_b": [
+          8,
+          8,
+          24,
+          24
+        ]
+      },
+      "expectedOutput": 0.142857,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "box_a": [
+          4,
+          4,
+          0,
+          0
+        ],
+        "box_b": [
+          6,
+          6,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          3,
+          3
+        ],
+        "box_b": [
+          2,
+          2,
+          4,
+          4
+        ]
+      },
+      "expectedOutput": 0.083333,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          20,
+          20
+        ],
+        "box_b": [
+          10,
+          10,
+          30,
+          30
+        ]
+      },
+      "expectedOutput": 0.142857,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "box_a": [
+          3,
+          3,
+          7,
+          7
+        ],
+        "box_b": [
+          5,
+          5,
+          9,
+          9
+        ]
+      },
+      "expectedOutput": 0.142857,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          3,
+          3
+        ],
+        "box_b": [
+          2,
+          2,
+          5,
+          5
+        ]
+      },
+      "expectedOutput": 0.058824,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          24,
+          24
+        ],
+        "box_b": [
+          12,
+          12,
+          36,
+          36
+        ]
+      },
+      "expectedOutput": 0.142857,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "box_a": [
+          4,
+          4,
+          8,
+          8
+        ],
+        "box_b": [
+          6,
+          6,
+          10,
+          10
+        ]
+      },
+      "expectedOutput": 0.142857,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          5,
+          5
+        ],
+        "box_b": [
+          2,
+          2,
+          7,
+          7
+        ]
+      },
+      "expectedOutput": 0.219512,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          2,
+          2
+        ],
+        "box_b": [
+          1,
+          1,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": 0.25,
+      "isPublic": false
+    },
+    {
+      "id": "iou-bounding-box-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "box_a": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "box_b": [
+          16,
+          16,
+          48,
+          48
+        ]
+      },
+      "expectedOutput": 0.142857,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "iou",
+    "parameters": [
+      {
+        "name": "box_a",
+        "type": "array",
+        "example": "[0, 0, 4, 4]",
+        "description": "First box [x1, y1, x2, y2]"
+      },
+      {
+        "name": "box_b",
+        "type": "array",
+        "example": "[2, 2, 6, 6]",
+        "description": "Second box [x1, y1, x2, y2]"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "metrics-f1-micro",
+    "auc",
+    "non-maximum-suppression",
+    "anchor-box-generation",
+    "roi-pooling"
+  ],
+  "tags": [
+    "Metrics & Evaluation",
+    "Computer Vision"
+  ],
+  "prevId": "isotonic-calibration",
+  "nextId": "non-maximum-suppression",
+  "slug": "iou-bounding-box",
+  "cleanTitle": "Intersection over Union (IoU)",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/iou-bounding-box",
+  "localUrl": "http://localhost:3000/problems/iou-bounding-box",
+  "studyPlan": null
+}

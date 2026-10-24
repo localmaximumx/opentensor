@@ -1,0 +1,696 @@
+{
+  "catalogId": "python:cv-box-encode-decode",
+  "id": "cv-box-encode-decode",
+  "sourceId": "cv-box-encode-decode",
+  "slug": "cv-box-encode-decode",
+  "source": "python",
+  "category": "numpy",
+  "title": "Box Encode and Decode",
+  "difficulty": "Medium",
+  "tags": [
+    "Object Detection",
+    "Computer Vision",
+    "Data Processing"
+  ],
+  "isFree": false,
+  "planId": "cracking-cv",
+  "planTitle": "Cracking CV",
+  "sectionId": "cracking-cv-detection-primitives",
+  "sortOrder": 45,
+  "seoDescription": "Implement Faster-RCNN style box regression target encoding and decoding, using two arrays of axis-aligned boxes in xyxy format.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Implement Faster R-CNN style bounding box regression target encoding and decoding.\n\nPredicting log-space scale factors and normalized center displacements ensures scale invariance in object detection.\n\n### Mathematical Formulation\n$$\nt_x = \\frac{x - x_a}{w_a}, \\quad t_y = \\frac{y - y_a}{h_a}, \\quad t_w = \\log\\left(\\frac{w}{w_a}\\right), \\quad t_h = \\log\\left(\\frac{h}{h_a}\\right)\n$$\n\n### Step-by-Step Implementation\n1. Compute center coordinates and dimensions of anchor boxes and target boxes\n2. If mode is 'encode', compute relative offsets (dx, dy, dw, dh)\n3. If mode is 'decode', invert offsets back to [x1, y1, x2, y2] bounding boxes\n\n### Returns\nList of 4-element box coordinates or deltas.",
+  "theory": "## Understanding the Theory: Box Encode and Decode\n\n### Core Intuition: Why Do We Need This?\nImages have unique spatial properties: neighboring pixels are strongly correlated, and visual patterns (like edges, corners, or textures) appear anywhere in an image. Computer vision algorithms use spatial inductive biases like translation equivariance and local receptive fields to process image grids efficiently. **Box Encode and Decode** operates directly on spatial coordinates or bounding box geometries.\n\nPredicting log-space scale factors and normalized center displacements ensures scale invariance in object detection. In this problem, the goal is to: implement faster r-cnn style bounding box regression target encoding and decoding.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nt_x = \\frac{x - x_a}{w_a}, \\quad t_y = \\frac{y - y_a}{h_a}, \\quad t_w = \\log\\left(\\frac{w}{w_a}\\right), \\quad t_h = \\log\\left(\\frac{h}{h_a}\\right)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute center coordinates and dimensions of anchor boxes and target boxes\n2. **Phase 2**: If mode is 'encode', compute relative offsets (dx, dy, dw, dh)\n3. **Phase 3**: If mode is 'decode', invert offsets back to [x1, y1, x2, y2] bounding boxes\n\n### Practical Machine Learning Applications & Nuances\n* **Spatial Locality**: Sliding spatial filters across multi-channel feature maps aggregates contextual clues across local neighborhoods.\n* **Object Detection Pipelines**: Bounding box metrics (such as IoU and Non-Maximum Suppression) reconcile duplicate candidate detections into clean, final predictions.\n* **Data Augmentation**: Geometric transformations expose models to diverse spatial viewpoints, significantly improving generalization to unseen test images.",
+  "examples": [
+    "Input: boxes = [[10.0, 10.0, 30.0, 30.0]], anchors = [[12.0, 12.0, 28.0, 28.0]], mode = \"encode\"\n\nOutput: [[0.0, 0.0, 0.223144, 0.223144]]\n\nExplanation: Evaluated cv_box_encode_decode under standard test conditions."
+  ],
+  "requirements": "* Function must be named `cv_box_encode_decode`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `cv_box_encode_decode`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef cv_box_encode_decode(boxes: list, anchors: list, mode: str = 'encode') -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Box Encode and Decode** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cv_box_encode_decode(boxes: list, anchors: list, mode: str = 'encode') -> list:\n    b = np.array(boxes, dtype=np.float64)\n    a = np.array(anchors, dtype=np.float64)\n    w_a = a[:, 2] - a[:, 0]\n    h_a = a[:, 3] - a[:, 1]\n    ctr_xa = a[:, 0] + 0.5 * w_a\n    ctr_ya = a[:, 1] + 0.5 * h_a\n    if mode == 'encode':\n        w_b = b[:, 2] - b[:, 0]\n        h_b = b[:, 3] - b[:, 1]\n        dx = (b[:, 0] + 0.5 * w_b - ctr_xa) / w_a\n        dy = (b[:, 1] + 0.5 * h_b - ctr_ya) / h_a\n        dw = np.log(w_b / w_a)\n        dh = np.log(h_b / h_a)\n        return np.round(np.stack([dx, dy, dw, dh], axis=1), 6).tolist()\n    else:\n        pred_w = w_a * np.exp(b[:, 2])\n        pred_h = h_a * np.exp(b[:, 3])\n        pred_x = b[:, 0] * w_a + ctr_xa\n        pred_y = b[:, 1] * h_a + ctr_ya\n        return np.round(np.stack([pred_x - 0.5*pred_w, pred_y - 0.5*pred_h, pred_x + 0.5*pred_w, pred_y + 0.5*pred_h], axis=1), 6).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Encode box offset",
+      "inputs": {
+        "boxes": [
+          [
+            10.0,
+            10.0,
+            30.0,
+            30.0
+          ]
+        ],
+        "anchors": [
+          [
+            12.0,
+            12.0,
+            28.0,
+            28.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cv-box-encode-decode-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "boxes": [
+          [
+            20.0,
+            20.0,
+            60.0,
+            60.0
+          ]
+        ],
+        "anchors": [
+          [
+            24.0,
+            24.0,
+            56.0,
+            56.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cv-box-encode-decode-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "boxes": [
+          [
+            5.0,
+            5.0,
+            15.0,
+            15.0
+          ]
+        ],
+        "anchors": [
+          [
+            6.0,
+            6.0,
+            14.0,
+            14.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "boxes": [
+          [
+            -10.0,
+            -10.0,
+            -30.0,
+            -30.0
+          ]
+        ],
+        "anchors": [
+          [
+            -12.0,
+            -12.0,
+            -28.0,
+            -28.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          -0.0,
+          -0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "boxes": [
+          [
+            30.0,
+            30.0,
+            90.0,
+            90.0
+          ]
+        ],
+        "anchors": [
+          [
+            36.0,
+            36.0,
+            84.0,
+            84.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "boxes": [
+          [
+            11.0,
+            11.0,
+            31.0,
+            31.0
+          ]
+        ],
+        "anchors": [
+          [
+            13.0,
+            13.0,
+            29.0,
+            29.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "boxes": [
+          [
+            8.0,
+            8.0,
+            28.0,
+            28.0
+          ]
+        ],
+        "anchors": [
+          [
+            10.0,
+            10.0,
+            26.0,
+            26.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "boxes": [
+          [
+            30.0,
+            30.0,
+            10.0,
+            10.0
+          ]
+        ],
+        "anchors": [
+          [
+            28.0,
+            28.0,
+            12.0,
+            12.0
+          ]
+        ],
+        "mode": "edocne"
+      },
+      "expectedOutput": [
+        [
+          175751.726358,
+          175751.726358,
+          -176671.726358,
+          -176671.726358
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "boxes": [
+          [
+            -10.0,
+            -10.0,
+            -30.0,
+            -30.0
+          ]
+        ],
+        "anchors": [
+          [
+            -12.0,
+            -12.0,
+            -28.0,
+            -28.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          -0.0,
+          -0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "boxes": [
+          [
+            100.0,
+            100.0,
+            300.0,
+            300.0
+          ]
+        ],
+        "anchors": [
+          [
+            120.0,
+            120.0,
+            280.0,
+            280.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "boxes": [
+          [
+            1.0,
+            1.0,
+            3.0,
+            3.0
+          ]
+        ],
+        "anchors": [
+          [
+            1.2,
+            1.2,
+            2.8,
+            2.8
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "boxes": [
+          [
+            15.0,
+            15.0,
+            35.0,
+            35.0
+          ]
+        ],
+        "anchors": [
+          [
+            17.0,
+            17.0,
+            33.0,
+            33.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "boxes": [
+          [
+            15.0,
+            15.0,
+            45.0,
+            45.0
+          ]
+        ],
+        "anchors": [
+          [
+            18.0,
+            18.0,
+            42.0,
+            42.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "boxes": [
+          [
+            -20.0,
+            -20.0,
+            -60.0,
+            -60.0
+          ]
+        ],
+        "anchors": [
+          [
+            -24.0,
+            -24.0,
+            -56.0,
+            -56.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          -0.0,
+          -0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "boxes": [
+          [
+            2.5,
+            2.5,
+            7.5,
+            7.5
+          ]
+        ],
+        "anchors": [
+          [
+            3.0,
+            3.0,
+            7.0,
+            7.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "boxes": [
+          [
+            9.0,
+            9.0,
+            29.0,
+            29.0
+          ]
+        ],
+        "anchors": [
+          [
+            11.0,
+            11.0,
+            27.0,
+            27.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "boxes": [
+          [
+            40.0,
+            40.0,
+            120.0,
+            120.0
+          ]
+        ],
+        "anchors": [
+          [
+            48.0,
+            48.0,
+            112.0,
+            112.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "boxes": [
+          [
+            7.5,
+            7.5,
+            22.5,
+            22.5
+          ]
+        ],
+        "anchors": [
+          [
+            9.0,
+            9.0,
+            21.0,
+            21.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "boxes": [
+          [
+            50.0,
+            50.0,
+            150.0,
+            150.0
+          ]
+        ],
+        "anchors": [
+          [
+            60.0,
+            60.0,
+            140.0,
+            140.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-box-encode-decode-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "boxes": [
+          [
+            20.0,
+            20.0,
+            40.0,
+            40.0
+          ]
+        ],
+        "anchors": [
+          [
+            22.0,
+            22.0,
+            38.0,
+            38.0
+          ]
+        ],
+        "mode": "encode"
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.223144,
+          0.223144
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cv_box_encode_decode",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

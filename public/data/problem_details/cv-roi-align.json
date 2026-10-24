@@ -1,0 +1,1869 @@
+{
+  "catalogId": "python:cv-roi-align",
+  "id": "cv-roi-align",
+  "sourceId": "cv-roi-align",
+  "slug": "cv-roi-align",
+  "source": "python",
+  "category": "python",
+  "title": "ROI Align",
+  "difficulty": "Hard",
+  "tags": [
+    "Object Detection",
+    "Computer Vision"
+  ],
+  "isFree": false,
+  "planId": "cracking-cv",
+  "planTitle": "Cracking CV",
+  "sectionId": "cracking-cv-detection-primitives",
+  "sortOrder": 80,
+  "seoDescription": "Implement aligned ROI pooling with bilinear sampling over feature-map coordinates and fixed-size output bins.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Implement continuous Region of Interest (RoI) Align using 4 bilinear sampling points per bin to avoid quantization artifacts.\n\nRoIAlign preserves exact spatial locations, crucial for pixel-accurate instance segmentation masks in Mask R-CNN.\n\n### Mathematical Formulation\n$$\n\\operatorname{RoIAlign}(x, y) = \\frac{1}{4}\\sum_{k=1}^4 \\operatorname{BilinearInterp}\\left(F, x_k, y_k\\right)\n$$\n\n### Step-by-Step Implementation\n1. Divide continuous bounding box into pooled_h x pooled_w regular bins\n2. Compute 4 sub-pixel sampling points within each bin\n3. Evaluate bilinear interpolation and average the sampled values\n\n### Returns\nNested list of shape (N_rois, C, pooled_h, pooled_w).",
+  "theory": "## Understanding the Theory: ROI Align\n\n### Core Intuition: Why Do We Need This?\nImages have unique spatial properties: neighboring pixels are strongly correlated, and visual patterns (like edges, corners, or textures) appear anywhere in an image. Computer vision algorithms use spatial inductive biases like translation equivariance and local receptive fields to process image grids efficiently. **ROI Align** operates directly on spatial coordinates or bounding box geometries.\n\nRoIAlign preserves exact spatial locations, crucial for pixel-accurate instance segmentation masks in Mask R-CNN. In this problem, the goal is to: implement continuous region of interest (roi) align using 4 bilinear sampling points per bin to avoid quantization artifacts.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\operatorname{RoIAlign}(x, y) = \\frac{1}{4}\\sum_{k=1}^4 \\operatorname{BilinearInterp}\\left(F, x_k, y_k\\right)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Divide continuous bounding box into pooled_h x pooled_w regular bins\n2. **Phase 2**: Compute 4 sub-pixel sampling points within each bin\n3. **Phase 3**: Evaluate bilinear interpolation and average the sampled values\n\n### Practical Machine Learning Applications & Nuances\n* **Spatial Locality**: Sliding spatial filters across multi-channel feature maps aggregates contextual clues across local neighborhoods.\n* **Object Detection Pipelines**: Bounding box metrics (such as IoU and Non-Maximum Suppression) reconcile duplicate candidate detections into clean, final predictions.\n* **Data Augmentation**: Geometric transformations expose models to diverse spatial viewpoints, significantly improving generalization to unseen test images.",
+  "examples": [
+    "Input: feature_map = [[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0], [9.0, 10.0, 11.0, 12.0], [13.0, 14.0, 15.0, 16.0]], rois = [[0.5, 0.5, 2.5, 2.5]], pooled_h = 2, pooled_w = 2\n\nOutput: [[[[6.0, 7.0], [10.0, 11.0]]]]\n\nExplanation: Evaluated cv_roi_align under standard test conditions."
+  ],
+  "requirements": "* Function must be named `cv_roi_align`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `cv_roi_align`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef cv_roi_align(feature_map: list, rois: list, pooled_h: int = 2, pooled_w: int = 2) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **ROI Align** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cv_roi_align(feature_map: list, rois: list, pooled_h: int = 2, pooled_w: int = 2) -> list:\n    fm = np.array(feature_map, dtype=np.float64)\n    if fm.ndim == 2:\n        fm = fm[np.newaxis, :, :]\n    C, H, W = fm.shape\n    out = []\n    for x1, y1, x2, y2 in rois:\n        bh, bw = max(y2 - y1, 1.0) / pooled_h, max(x2 - x1, 1.0) / pooled_w\n        grid = np.zeros((C, pooled_h, pooled_w), dtype=np.float64)\n        for ph in range(pooled_h):\n            for pw in range(pooled_w):\n                s = np.zeros(C, dtype=np.float64)\n                for iy in [0.25, 0.75]:\n                    for ix in [0.25, 0.75]:\n                        sy, sx = np.clip(y1 + (ph + iy)*bh, 0, H-1), np.clip(x1 + (pw + ix)*bw, 0, W-1)\n                        yl, xl = int(np.floor(sy)), int(np.floor(sx))\n                        yh, xh = min(yl+1, H-1), min(xl+1, W-1)\n                        ly, lx = sy - yl, sx - xl\n                        val = (1-lx)*(1-ly)*fm[:, yl, xl] + lx*(1-ly)*fm[:, yl, xh] + (1-lx)*ly*fm[:, yh, xl] + lx*ly*fm[:, yh, xh]\n                        s += val\n                grid[:, ph, pw] = s / 4.0\n        out.append(np.round(grid, 6).tolist())\n    return out\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Single 4x4 feature map",
+      "inputs": {
+        "feature_map": [
+          [
+            1.0,
+            2.0,
+            3.0,
+            4.0
+          ],
+          [
+            5.0,
+            6.0,
+            7.0,
+            8.0
+          ],
+          [
+            9.0,
+            10.0,
+            11.0,
+            12.0
+          ],
+          [
+            13.0,
+            14.0,
+            15.0,
+            16.0
+          ]
+        ],
+        "rois": [
+          [
+            0.5,
+            0.5,
+            2.5,
+            2.5
+          ]
+        ],
+        "pooled_h": 2,
+        "pooled_w": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              7.0
+            ],
+            [
+              10.0,
+              11.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cv-roi-align-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "feature_map": [
+          [
+            2.0,
+            4.0,
+            6.0,
+            8.0
+          ],
+          [
+            10.0,
+            12.0,
+            14.0,
+            16.0
+          ],
+          [
+            18.0,
+            20.0,
+            22.0,
+            24.0
+          ],
+          [
+            26.0,
+            28.0,
+            30.0,
+            32.0
+          ]
+        ],
+        "rois": [
+          [
+            1.0,
+            1.0,
+            5.0,
+            5.0
+          ]
+        ],
+        "pooled_h": 4,
+        "pooled_w": 4
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              17.0,
+              19.0,
+              20.0,
+              20.0
+            ],
+            [
+              25.0,
+              27.0,
+              28.0,
+              28.0
+            ],
+            [
+              29.0,
+              31.0,
+              32.0,
+              32.0
+            ],
+            [
+              29.0,
+              31.0,
+              32.0,
+              32.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cv-roi-align-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "feature_map": [
+          [
+            0.5,
+            1.0,
+            1.5,
+            2.0
+          ],
+          [
+            2.5,
+            3.0,
+            3.5,
+            4.0
+          ],
+          [
+            4.5,
+            5.0,
+            5.5,
+            6.0
+          ],
+          [
+            6.5,
+            7.0,
+            7.5,
+            8.0
+          ]
+        ],
+        "rois": [
+          [
+            0.25,
+            0.25,
+            1.25,
+            1.25
+          ]
+        ],
+        "pooled_h": 1,
+        "pooled_w": 1
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              2.375
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "feature_map": [
+          [
+            -1.0,
+            -2.0,
+            -3.0,
+            -4.0
+          ],
+          [
+            -5.0,
+            -6.0,
+            -7.0,
+            -8.0
+          ],
+          [
+            -9.0,
+            -10.0,
+            -11.0,
+            -12.0
+          ],
+          [
+            -13.0,
+            -14.0,
+            -15.0,
+            -16.0
+          ]
+        ],
+        "rois": [
+          [
+            -0.5,
+            -0.5,
+            -2.5,
+            -2.5
+          ]
+        ],
+        "pooled_h": -2,
+        "pooled_w": -2
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              7.0
+            ],
+            [
+              10.0,
+              11.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "feature_map": [
+          [
+            3.0,
+            6.0,
+            9.0,
+            12.0
+          ],
+          [
+            15.0,
+            18.0,
+            21.0,
+            24.0
+          ],
+          [
+            27.0,
+            30.0,
+            33.0,
+            36.0
+          ],
+          [
+            39.0,
+            42.0,
+            45.0,
+            48.0
+          ]
+        ],
+        "rois": [
+          [
+            1.5,
+            1.5,
+            7.5,
+            7.5
+          ]
+        ],
+        "pooled_h": 6,
+        "pooled_w": 6
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              33.0,
+              35.625,
+              36.0,
+              36.0,
+              36.0,
+              36.0
+            ],
+            [
+              43.5,
+              46.125,
+              46.5,
+              46.5,
+              46.5,
+              46.5
+            ],
+            [
+              45.0,
+              47.625,
+              48.0,
+              48.0,
+              48.0,
+              48.0
+            ],
+            [
+              45.0,
+              47.625,
+              48.0,
+              48.0,
+              48.0,
+              48.0
+            ],
+            [
+              45.0,
+              47.625,
+              48.0,
+              48.0,
+              48.0,
+              48.0
+            ],
+            [
+              45.0,
+              47.625,
+              48.0,
+              48.0,
+              48.0,
+              48.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "feature_map": [
+          [
+            2.0,
+            3.0,
+            4.0,
+            5.0
+          ],
+          [
+            6.0,
+            7.0,
+            8.0,
+            9.0
+          ],
+          [
+            10.0,
+            11.0,
+            12.0,
+            13.0
+          ],
+          [
+            14.0,
+            15.0,
+            16.0,
+            17.0
+          ]
+        ],
+        "rois": [
+          [
+            1.5,
+            1.5,
+            3.5,
+            3.5
+          ]
+        ],
+        "pooled_h": 3.0,
+        "pooled_w": 3.0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              7.0
+            ],
+            [
+              10.0,
+              11.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "feature_map": [
+          [
+            -1.0,
+            0.0,
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0,
+            5.0,
+            6.0
+          ],
+          [
+            7.0,
+            8.0,
+            9.0,
+            10.0
+          ],
+          [
+            11.0,
+            12.0,
+            13.0,
+            14.0
+          ]
+        ],
+        "rois": [
+          [
+            -1.5,
+            -1.5,
+            0.5,
+            0.5
+          ]
+        ],
+        "pooled_h": 0.0,
+        "pooled_w": 0.0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              7.0
+            ],
+            [
+              10.0,
+              11.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "feature_map": [
+          [
+            4.0,
+            3.0,
+            2.0,
+            1.0
+          ],
+          [
+            8.0,
+            7.0,
+            6.0,
+            5.0
+          ],
+          [
+            12.0,
+            11.0,
+            10.0,
+            9.0
+          ],
+          [
+            16.0,
+            15.0,
+            14.0,
+            13.0
+          ]
+        ],
+        "rois": [
+          [
+            2.5,
+            2.5,
+            0.5,
+            0.5
+          ]
+        ],
+        "pooled_h": 2,
+        "pooled_w": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              12.25,
+              12.0
+            ],
+            [
+              13.25,
+              13.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "feature_map": [
+          [
+            -1.0,
+            -2.0,
+            -3.0,
+            -4.0
+          ],
+          [
+            -5.0,
+            -6.0,
+            -7.0,
+            -8.0
+          ],
+          [
+            -9.0,
+            -10.0,
+            -11.0,
+            -12.0
+          ],
+          [
+            -13.0,
+            -14.0,
+            -15.0,
+            -16.0
+          ]
+        ],
+        "rois": [
+          [
+            -0.5,
+            -0.5,
+            -2.5,
+            -2.5
+          ]
+        ],
+        "pooled_h": -2,
+        "pooled_w": -2
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              7.0
+            ],
+            [
+              10.0,
+              11.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "feature_map": [
+          [
+            10.0,
+            20.0,
+            30.0,
+            40.0
+          ],
+          [
+            50.0,
+            60.0,
+            70.0,
+            80.0
+          ],
+          [
+            90.0,
+            100.0,
+            110.0,
+            120.0
+          ],
+          [
+            130.0,
+            140.0,
+            150.0,
+            160.0
+          ]
+        ],
+        "rois": [
+          [
+            5.0,
+            5.0,
+            25.0,
+            25.0
+          ]
+        ],
+        "pooled_h": 20,
+        "pooled_w": 20
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ],
+            [
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0,
+              160.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "feature_map": [
+          [
+            0.1,
+            0.2,
+            0.3,
+            0.4
+          ],
+          [
+            0.5,
+            0.6,
+            0.7,
+            0.8
+          ],
+          [
+            0.9,
+            1.0,
+            1.1,
+            1.2
+          ],
+          [
+            1.3,
+            1.4,
+            1.5,
+            1.6
+          ]
+        ],
+        "rois": [
+          [
+            0.05,
+            0.05,
+            0.25,
+            0.25
+          ]
+        ],
+        "pooled_h": 0,
+        "pooled_w": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              7.0
+            ],
+            [
+              10.0,
+              11.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "feature_map": [
+          [
+            6.0,
+            7.0,
+            8.0,
+            9.0
+          ],
+          [
+            10.0,
+            11.0,
+            12.0,
+            13.0
+          ],
+          [
+            14.0,
+            15.0,
+            16.0,
+            17.0
+          ],
+          [
+            18.0,
+            19.0,
+            20.0,
+            21.0
+          ]
+        ],
+        "rois": [
+          [
+            5.5,
+            5.5,
+            7.5,
+            7.5
+          ]
+        ],
+        "pooled_h": 7.0,
+        "pooled_w": 7.0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              7.0
+            ],
+            [
+              10.0,
+              11.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "feature_map": [
+          [
+            1.5,
+            3.0,
+            4.5,
+            6.0
+          ],
+          [
+            7.5,
+            9.0,
+            10.5,
+            12.0
+          ],
+          [
+            13.5,
+            15.0,
+            16.5,
+            18.0
+          ],
+          [
+            19.5,
+            21.0,
+            22.5,
+            24.0
+          ]
+        ],
+        "rois": [
+          [
+            0.75,
+            0.75,
+            3.75,
+            3.75
+          ]
+        ],
+        "pooled_h": 3,
+        "pooled_w": 3
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              10.875,
+              12.375,
+              13.5
+            ],
+            [
+              16.875,
+              18.375,
+              19.5
+            ],
+            [
+              21.375,
+              22.875,
+              24.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "feature_map": [
+          [
+            -2.0,
+            -4.0,
+            -6.0,
+            -8.0
+          ],
+          [
+            -10.0,
+            -12.0,
+            -14.0,
+            -16.0
+          ],
+          [
+            -18.0,
+            -20.0,
+            -22.0,
+            -24.0
+          ],
+          [
+            -26.0,
+            -28.0,
+            -30.0,
+            -32.0
+          ]
+        ],
+        "rois": [
+          [
+            -1.0,
+            -1.0,
+            -5.0,
+            -5.0
+          ]
+        ],
+        "pooled_h": -4,
+        "pooled_w": -4
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              7.0
+            ],
+            [
+              10.0,
+              11.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "feature_map": [
+          [
+            0.25,
+            0.5,
+            0.75,
+            1.0
+          ],
+          [
+            1.25,
+            1.5,
+            1.75,
+            2.0
+          ],
+          [
+            2.25,
+            2.5,
+            2.75,
+            3.0
+          ],
+          [
+            3.25,
+            3.5,
+            3.75,
+            4.0
+          ]
+        ],
+        "rois": [
+          [
+            0.125,
+            0.125,
+            0.625,
+            0.625
+          ]
+        ],
+        "pooled_h": 0,
+        "pooled_w": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              7.0
+            ],
+            [
+              10.0,
+              11.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "feature_map": [
+          [
+            0.0,
+            1.0,
+            2.0,
+            3.0
+          ],
+          [
+            4.0,
+            5.0,
+            6.0,
+            7.0
+          ],
+          [
+            8.0,
+            9.0,
+            10.0,
+            11.0
+          ],
+          [
+            12.0,
+            13.0,
+            14.0,
+            15.0
+          ]
+        ],
+        "rois": [
+          [
+            -0.5,
+            -0.5,
+            1.5,
+            1.5
+          ]
+        ],
+        "pooled_h": 1.0,
+        "pooled_w": 1.0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              7.0
+            ],
+            [
+              10.0,
+              11.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "feature_map": [
+          [
+            4.0,
+            8.0,
+            12.0,
+            16.0
+          ],
+          [
+            20.0,
+            24.0,
+            28.0,
+            32.0
+          ],
+          [
+            36.0,
+            40.0,
+            44.0,
+            48.0
+          ],
+          [
+            52.0,
+            56.0,
+            60.0,
+            64.0
+          ]
+        ],
+        "rois": [
+          [
+            2.0,
+            2.0,
+            10.0,
+            10.0
+          ]
+        ],
+        "pooled_h": 8,
+        "pooled_w": 8
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              54.0,
+              56.0,
+              56.0,
+              56.0,
+              56.0,
+              56.0,
+              56.0,
+              56.0
+            ],
+            [
+              62.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0
+            ],
+            [
+              62.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0
+            ],
+            [
+              62.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0
+            ],
+            [
+              62.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0
+            ],
+            [
+              62.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0
+            ],
+            [
+              62.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0
+            ],
+            [
+              62.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0,
+              64.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "feature_map": [
+          [
+            0.75,
+            1.5,
+            2.25,
+            3.0
+          ],
+          [
+            3.75,
+            4.5,
+            5.25,
+            6.0
+          ],
+          [
+            6.75,
+            7.5,
+            8.25,
+            9.0
+          ],
+          [
+            9.75,
+            10.5,
+            11.25,
+            12.0
+          ]
+        ],
+        "rois": [
+          [
+            0.375,
+            0.375,
+            1.875,
+            1.875
+          ]
+        ],
+        "pooled_h": 2,
+        "pooled_w": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              3.5625,
+              4.125
+            ],
+            [
+              5.8125,
+              6.375
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "feature_map": [
+          [
+            5.0,
+            10.0,
+            15.0,
+            20.0
+          ],
+          [
+            25.0,
+            30.0,
+            35.0,
+            40.0
+          ],
+          [
+            45.0,
+            50.0,
+            55.0,
+            60.0
+          ],
+          [
+            65.0,
+            70.0,
+            75.0,
+            80.0
+          ]
+        ],
+        "rois": [
+          [
+            2.5,
+            2.5,
+            12.5,
+            12.5
+          ]
+        ],
+        "pooled_h": 10,
+        "pooled_w": 10
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              76.875,
+              77.5,
+              77.5,
+              77.5,
+              77.5,
+              77.5,
+              77.5,
+              77.5,
+              77.5,
+              77.5
+            ],
+            [
+              79.375,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0
+            ],
+            [
+              79.375,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0
+            ],
+            [
+              79.375,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0
+            ],
+            [
+              79.375,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0
+            ],
+            [
+              79.375,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0
+            ],
+            [
+              79.375,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0
+            ],
+            [
+              79.375,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0
+            ],
+            [
+              79.375,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0
+            ],
+            [
+              79.375,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0,
+              80.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-roi-align-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "feature_map": [
+          [
+            11.0,
+            12.0,
+            13.0,
+            14.0
+          ],
+          [
+            15.0,
+            16.0,
+            17.0,
+            18.0
+          ],
+          [
+            19.0,
+            20.0,
+            21.0,
+            22.0
+          ],
+          [
+            23.0,
+            24.0,
+            25.0,
+            26.0
+          ]
+        ],
+        "rois": [
+          [
+            10.5,
+            10.5,
+            12.5,
+            12.5
+          ]
+        ],
+        "pooled_h": 12.0,
+        "pooled_w": 12.0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              7.0
+            ],
+            [
+              10.0,
+              11.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cv_roi_align",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "gradient-descent-quadratic",
+    "anchor-box-generation",
+    "value-iteration-step",
+    "precision-recall-at-k",
+    "cs336-l01-train-byte-pair-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "python",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

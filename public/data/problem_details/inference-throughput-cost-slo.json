@@ -1,0 +1,616 @@
+{
+  "catalogId": "python:inference-throughput-cost-slo",
+  "id": "inference-throughput-cost-slo",
+  "sourceId": "inference-throughput-cost-slo",
+  "slug": "inference-throughput-cost-slo",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Optimize Throughput and Cost Under a Latency SLO",
+  "difficulty": "Medium",
+  "tags": [
+    "Inference",
+    "MLOps",
+    "Optimization"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-distributed",
+  "sortOrder": 738,
+  "seoDescription": "Select the cheapest configuration that meets both a required throughput and a maximum P95 latency SLO.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Select optimal batch size maximizing token throughput while strictly respecting maximum latency SLO constraint.\n\nBatching increases GPU compute utilization and throughput at the expense of queuing and processing latency. SLO tuning finds the Pareto frontier.\n\n### Mathematical Formulation\n$$\nB^* = \\arg\\max_{B} \\text{Throughput}(B) \\quad \\text{subject to} \\quad \\text{Latency}(B) \\le \\text{SLO}\n$$\n\n### Step-by-Step Implementation\n1. Filter candidate configurations satisfying latency <= max_latency_slo_ms\n2. Identify batch size delivering highest token throughput per second\n3. Return dictionary with optimal batch parameters\n\n### Returns\nDictionary with 'optimal_batch_size', 'latency_ms', and 'throughput'.",
+  "theory": "## Understanding the Theory: Optimize Throughput and Cost Under a Latency SLO\n\n### Core Intuition: Why Do We Need This?\nRunning large AI models in production requires massive computing power. During text generation, memory bandwidth (fetching weights and past key-value caches from VRAM) is often the primary bottleneck rather than raw arithmetic compute. **Optimize Throughput and Cost Under a Latency SLO** optimizes hardware efficiency, memory consumption, or request serving throughput.\n\nBatching increases GPU compute utilization and throughput at the expense of queuing and processing latency. SLO tuning finds the Pareto frontier. In this problem, the goal is to: select optimal batch size maximizing token throughput while strictly respecting maximum latency slo constraint.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nB^* = \\arg\\max_{B} \\text{Throughput}(B) \\quad \\text{subject to} \\quad \\text{Latency}(B) \\le \\text{SLO}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Filter candidate configurations satisfying latency <= max_latency_slo_ms\n2. **Phase 2**: Identify batch size delivering highest token throughput per second\n3. **Phase 3**: Return dictionary with optimal batch parameters\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth Bottleneck**: Quantizing weights to INT8 or INT4 cuts memory traffic in half or quarters, dramatically increasing token generation speeds.\n* **Serving Systems**: Dynamic batching and PagedAttention maximize GPU utilization by grouping requests arriving at different times.\n* **Latency vs. Throughput**: In production serving, systems engineers balance Time-To-First-Token (TTFT) against overall tokens-per-second throughput.",
+  "examples": [
+    "Input: batch_sizes = [1, 4, 16], latencies_ms = [20.0, 60.0, 150.0], throughputs_tok_per_sec = [50.0, 180.0, 400.0], max_latency_slo_ms = 100.0\n\nOutput: {\"optimal_batch_size\": 4, \"latency_ms\": 60.0, \"throughput\": 180.0}\n\nExplanation: Evaluated inference_throughput_cost_slo under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_throughput_cost_slo`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_throughput_cost_slo`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def inference_throughput_cost_slo(batch_sizes: list, latencies_ms: list, throughputs_tok_per_sec: list, max_latency_slo_ms: float = 100.0) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Optimize Throughput and Cost Under a Latency SLO** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef inference_throughput_cost_slo(batch_sizes: list, latencies_ms: list, throughputs_tok_per_sec: list, max_latency_slo_ms: float = 100.0) -> dict:\n    c = [(b, l, t) for b, l, t in zip(batch_sizes, latencies_ms, throughputs_tok_per_sec) if l <= max_latency_slo_ms]\n    if not c: return {'optimal_batch_size': None, 'throughput': 0.0, 'latency_ms': 0.0}\n    best = max(c, key=lambda x: x[2])\n    return {'optimal_batch_size': int(best[0]), 'latency_ms': round(float(best[1]), 2), 'throughput': round(float(best[2]), 2)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "3 batch configs SLO 100ms",
+      "inputs": {
+        "batch_sizes": [
+          1,
+          4,
+          16
+        ],
+        "latencies_ms": [
+          20.0,
+          60.0,
+          150.0
+        ],
+        "throughputs_tok_per_sec": [
+          50.0,
+          180.0,
+          400.0
+        ],
+        "max_latency_slo_ms": 100.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 4,
+        "latency_ms": 60.0,
+        "throughput": 180.0
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "batch_sizes": [
+          2,
+          8,
+          32
+        ],
+        "latencies_ms": [
+          40.0,
+          120.0,
+          300.0
+        ],
+        "throughputs_tok_per_sec": [
+          100.0,
+          360.0,
+          800.0
+        ],
+        "max_latency_slo_ms": 200.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 8,
+        "latency_ms": 120.0,
+        "throughput": 360.0
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "batch_sizes": [
+          1,
+          2,
+          8
+        ],
+        "latencies_ms": [
+          10.0,
+          30.0,
+          75.0
+        ],
+        "throughputs_tok_per_sec": [
+          25.0,
+          90.0,
+          200.0
+        ],
+        "max_latency_slo_ms": 50.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 2,
+        "latency_ms": 30.0,
+        "throughput": 90.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "batch_sizes": [
+          1,
+          4,
+          16
+        ],
+        "latencies_ms": [
+          20.0,
+          60.0,
+          150.0
+        ],
+        "throughputs_tok_per_sec": [
+          50.0,
+          180.0,
+          400.0
+        ],
+        "max_latency_slo_ms": 100.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 4,
+        "latency_ms": 60.0,
+        "throughput": 180.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "batch_sizes": [
+          2,
+          6,
+          24
+        ],
+        "latencies_ms": [
+          30.0,
+          90.0,
+          225.0
+        ],
+        "throughputs_tok_per_sec": [
+          75.0,
+          270.0,
+          600.0
+        ],
+        "max_latency_slo_ms": 150.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 6,
+        "latency_ms": 90.0,
+        "throughput": 270.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "batch_sizes": [
+          3,
+          12,
+          48
+        ],
+        "latencies_ms": [
+          60.0,
+          180.0,
+          450.0
+        ],
+        "throughputs_tok_per_sec": [
+          150.0,
+          540.0,
+          1200.0
+        ],
+        "max_latency_slo_ms": 300.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 12,
+        "latency_ms": 180.0,
+        "throughput": 540.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "batch_sizes": [
+          1,
+          1,
+          4
+        ],
+        "latencies_ms": [
+          5.0,
+          15.0,
+          37.5
+        ],
+        "throughputs_tok_per_sec": [
+          12.5,
+          45.0,
+          100.0
+        ],
+        "max_latency_slo_ms": 25.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 1,
+        "latency_ms": 15.0,
+        "throughput": 45.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "batch_sizes": [
+          2,
+          8,
+          32
+        ],
+        "latencies_ms": [
+          40.0,
+          120.0,
+          300.0
+        ],
+        "throughputs_tok_per_sec": [
+          100.0,
+          360.0,
+          800.0
+        ],
+        "max_latency_slo_ms": 200.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 8,
+        "latency_ms": 120.0,
+        "throughput": 360.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "batch_sizes": [
+          4,
+          16,
+          64
+        ],
+        "latencies_ms": [
+          80.0,
+          240.0,
+          600.0
+        ],
+        "throughputs_tok_per_sec": [
+          200.0,
+          720.0,
+          1600.0
+        ],
+        "max_latency_slo_ms": 400.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 16,
+        "latency_ms": 240.0,
+        "throughput": 720.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "batch_sizes": [
+          16,
+          4,
+          1
+        ],
+        "latencies_ms": [
+          150.0,
+          60.0,
+          20.0
+        ],
+        "throughputs_tok_per_sec": [
+          400.0,
+          180.0,
+          50.0
+        ],
+        "max_latency_slo_ms": 100.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 4,
+        "latency_ms": 60.0,
+        "throughput": 180.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "batch_sizes": [
+          1,
+          3,
+          12
+        ],
+        "latencies_ms": [
+          15.0,
+          45.0,
+          112.5
+        ],
+        "throughputs_tok_per_sec": [
+          37.5,
+          135.0,
+          300.0
+        ],
+        "max_latency_slo_ms": 75.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 3,
+        "latency_ms": 45.0,
+        "throughput": 135.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "batch_sizes": [
+          5,
+          20,
+          80
+        ],
+        "latencies_ms": [
+          100.0,
+          300.0,
+          750.0
+        ],
+        "throughputs_tok_per_sec": [
+          250.0,
+          900.0,
+          2000.0
+        ],
+        "max_latency_slo_ms": 500.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 20,
+        "latency_ms": 300.0,
+        "throughput": 900.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "batch_sizes": [
+          3,
+          12,
+          48
+        ],
+        "latencies_ms": [
+          60.0,
+          180.0,
+          450.0
+        ],
+        "throughputs_tok_per_sec": [
+          150.0,
+          540.0,
+          1200.0
+        ],
+        "max_latency_slo_ms": 300.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 12,
+        "latency_ms": 180.0,
+        "throughput": 540.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "batch_sizes": [
+          1,
+          3,
+          13
+        ],
+        "latencies_ms": [
+          16.0,
+          48.0,
+          120.0
+        ],
+        "throughputs_tok_per_sec": [
+          40.0,
+          144.0,
+          320.0
+        ],
+        "max_latency_slo_ms": 80.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 3,
+        "latency_ms": 48.0,
+        "throughput": 144.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "batch_sizes": [
+          6,
+          24,
+          96
+        ],
+        "latencies_ms": [
+          120.0,
+          360.0,
+          900.0
+        ],
+        "throughputs_tok_per_sec": [
+          300.0,
+          1080.0,
+          2400.0
+        ],
+        "max_latency_slo_ms": 600.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 24,
+        "latency_ms": 360.0,
+        "throughput": 1080.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "batch_sizes": [
+          4,
+          16,
+          64
+        ],
+        "latencies_ms": [
+          80.0,
+          240.0,
+          600.0
+        ],
+        "throughputs_tok_per_sec": [
+          200.0,
+          720.0,
+          1600.0
+        ],
+        "max_latency_slo_ms": 400.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 16,
+        "latency_ms": 240.0,
+        "throughput": 720.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "batch_sizes": [
+          1,
+          5,
+          19
+        ],
+        "latencies_ms": [
+          24.0,
+          72.0,
+          180.0
+        ],
+        "throughputs_tok_per_sec": [
+          60.0,
+          216.0,
+          480.0
+        ],
+        "max_latency_slo_ms": 120.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 5,
+        "latency_ms": 72.0,
+        "throughput": 216.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "batch_sizes": [
+          1,
+          2,
+          6
+        ],
+        "latencies_ms": [
+          8.0,
+          24.0,
+          60.0
+        ],
+        "throughputs_tok_per_sec": [
+          20.0,
+          72.0,
+          160.0
+        ],
+        "max_latency_slo_ms": 40.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 2,
+        "latency_ms": 24.0,
+        "throughput": 72.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "batch_sizes": [
+          8,
+          32,
+          128
+        ],
+        "latencies_ms": [
+          160.0,
+          480.0,
+          1200.0
+        ],
+        "throughputs_tok_per_sec": [
+          400.0,
+          1440.0,
+          3200.0
+        ],
+        "max_latency_slo_ms": 800.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 32,
+        "latency_ms": 480.0,
+        "throughput": 1440.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-throughput-cost-slo-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "batch_sizes": [
+          5,
+          20,
+          80
+        ],
+        "latencies_ms": [
+          100.0,
+          300.0,
+          750.0
+        ],
+        "throughputs_tok_per_sec": [
+          250.0,
+          900.0,
+          2000.0
+        ],
+        "max_latency_slo_ms": 500.0
+      },
+      "expectedOutput": {
+        "optimal_batch_size": 20,
+        "latency_ms": 300.0,
+        "throughput": 900.0
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_throughput_cost_slo",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

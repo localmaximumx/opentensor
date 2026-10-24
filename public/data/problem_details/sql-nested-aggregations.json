@@ -1,0 +1,634 @@
+{
+  "catalogId": "sql:sql-nested-aggregations",
+  "id": "sql-nested-aggregations",
+  "sourceId": "sql-nested-aggregations",
+  "slug": "sql-nested-aggregations",
+  "source": "sql",
+  "category": "sql",
+  "title": "Nested Aggregations",
+  "difficulty": "Hard",
+  "tags": [
+    "Data Processing"
+  ],
+  "isFree": false,
+  "planId": "sql-basics",
+  "planTitle": "SQL Sheet",
+  "sectionId": "sql-basics-aggregation",
+  "sortOrder": 490,
+  "seoDescription": "Use a SQL subquery or CTE to compute daily order totals, average daily revenue, and the busiest day.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Compute daily order revenue totals, mean daily revenue, and identify the peak revenue date using SQL subqueries.\n\nAggregating over an already-aggregated subquery table allows computing second-order statistics without procedural loops.\n\n### Query Logic & Formulation\n$$\n\\operatorname{AVG}(\\text{daily\\_total}) \\quad \\text{FROM} \\quad (\\operatorname{SUM}(\\text{revenue}) \\quad \\text{GROUP BY order\\_date})\n$$\n\n### Relational Execution Steps\n1. Aggregate transaction revenues by order_date using inner subquery\n2. Compute average daily revenue across the aggregated temporal rows\n3. Identify peak revenue day\n\n### Expected Query Output\nDictionary with 'daily_revenue', 'average_daily_revenue', and 'busiest_day'.",
+  "theory": "## Understanding the Theory: Nested Aggregations\n\n### Core Intuition: Why Do We Need This?\nRelational databases structure data into normalized tables with strict schemas and foreign-key relationships. SQL allows data engineers and analysts to write declarative queries describing what data is needed, while the database query engine optimizes the underlying execution plan. **Nested Aggregations** combines, aggregates, or transforms records across tables.\n\nAggregating over an already-aggregated subquery table allows computing second-order statistics without procedural loops. In this problem, the goal is to: compute daily order revenue totals, mean daily revenue, and identify the peak revenue date using sql subqueries.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\operatorname{AVG}(\\text{daily\\_total}) \\quad \\text{FROM} \\quad (\\operatorname{SUM}(\\text{revenue}) \\quad \\text{GROUP BY order\\_date})\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Aggregate transaction revenues by order_date using inner subquery\n2. **Phase 2**: Compute average daily revenue across the aggregated temporal rows\n3. **Phase 3**: Identify peak revenue day\n\n### Practical Machine Learning Applications & Nuances\n* **Join Mechanics**: Inner joins filter for matching records across tables, while outer joins preserve all rows from one table even when no matches exist.\n* **Window Functions**: Functions like `ROW_NUMBER()` and `RANK()` allow computing partitioned running totals and top-K ranks without requiring self-joins.\n* **Index Optimization**: Proper indexing on join keys and filter conditions ensures queries run in milliseconds rather than doing full table scans.",
+  "examples": [
+    "Input: orders = [{\"order_date\": \"2024-01-01\", \"revenue\": 100.0}, {\"order_date\": \"2024-01-01\", \"revenue\": 150.0}, {\"order_date\": \"2024-01-02\", \"revenue\": 200.0}]\n\nOutput: {\"daily_revenue\": {\"2024-01-01\": 250.0, \"2024-01-02\": 200.0}, \"average_daily_revenue\": 225.0, \"busiest_day\": \"2024-01-01\"}\n\nExplanation: Evaluated sql_nested_aggregations under standard test conditions."
+  ],
+  "requirements": "* Function must be named `sql_nested_aggregations`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `sql_nested_aggregations`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "-- SQL Nested Aggregations\nWITH daily_orders AS (\n    SELECT order_date, SUM(revenue) AS daily_rev\n    FROM orders\n    GROUP BY order_date\n)\nSELECT AVG(daily_rev) AS avg_daily_revenue\nFROM daily_orders;",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Nested Aggregations** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef sql_nested_aggregations(orders: list) -> dict:\n    d = {}\n    for o in orders: d[o['order_date']] = d.get(o['order_date'], 0.0) + float(o['revenue'])\n    return {'daily_revenue': {k: round(v, 2) for k, v in sorted(d.items())}, 'average_daily_revenue': round(sum(d.values())/len(d), 2), 'busiest_day': max(d, key=d.get)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "3 orders across 2 days",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": true
+    },
+    {
+      "id": "sql-nested-aggregations-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "sql-nested-aggregations-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2024-01-01",
+            "revenue": 100.0
+          },
+          {
+            "order_date": "2024-01-01",
+            "revenue": 150.0
+          },
+          {
+            "order_date": "2024-01-02",
+            "revenue": 200.0
+          }
+        ]
+      },
+      "expectedOutput": {
+        "daily_revenue": {
+          "2024-01-01": 250.0,
+          "2024-01-02": 200.0
+        },
+        "average_daily_revenue": 225.0,
+        "busiest_day": "2024-01-01"
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "sql_nested_aggregations",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sql-multiple-joins",
+    "sql-subqueries",
+    "sql-distinct-values",
+    "sql-row-number",
+    "sql-inner-join"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "sql",
+    "placeholderType": "sql_dummy_select (SELECT * FROM main_table)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

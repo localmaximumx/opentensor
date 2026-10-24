@@ -1,0 +1,434 @@
+{
+  "id": "swish",
+  "slug": "swish",
+  "title": "Swish (SiLU) Activation",
+  "cleanTitle": "Swish (SiLU) Activation",
+  "category": "cuda",
+  "difficulty": "Easy",
+  "tags": [
+    "Activation Functions",
+    "GPU Programming"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "cuda-basics",
+    "title": "CUDA Kernels",
+    "sectionId": "cuda-basics-kernels"
+  },
+  "seoDescription": "Implement fused Swish or SiLU activation in CUDA with one thread per element and device exponential math.",
+  "description": "Compute elementwise Swish / SiLU activation, multiplying input activations by their logistic sigmoid gate.\n\n**Mathematical Formulation:**\n\n$$\n\\text{Swish}(x) = x \\cdot \\sigma(x) = \\frac{x}{1 + e^{-x}}\n$$\n\n**Step-by-Step Implementation:**\n1. Compute logistic sigmoid 1 / (1 + exp(-x)) elementwise.\n2. Multiply input activations by the sigmoid gating factor.\n3. Return computed Swish activations rounded to 6 decimal places.\n\n**Returns:** List of activated values matching input shape.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Swish specification."
+  ],
+  "requirements": "* Must implement `swish` using CUDA.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Swish (SiLU) Activation\n\n### Core Intuition: Why Do We Need This?\nCompute elementwise Swish / SiLU activation, multiplying input activations by their logistic sigmoid gate. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\n\\text{Swish}(x) = x \\cdot \\sigma(x) = \\frac{x}{1 + e^{-x}}\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Compute logistic sigmoid 1 / (1 + exp(-x)) elementwise.\n3. **Phase 3: Iterative Execution & Reduction**: Multiply input activations by the sigmoid gating factor.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return computed Swish activations rounded to 6 decimal places.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard CUDA documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `torch.Tensor` specifications."
+  ],
+  "constraints": "* Category: CUDA\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, CUDA\n",
+  "starterCode": "import numpy as np\n\ndef swish(x: list) -> list:\n    \"\"\"\n    Compute elementwise Swish / SiLU activation, multiplying input activations by their logistic sigmoid gate.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nCompute elementwise Swish / SiLU activation, multiplying input activations by their logistic sigmoid gate.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef swish(x: list) -> list:\n    arr = np.array(x, dtype=float)\n    return np.round(arr / (1.0 + np.exp(-arr)), 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "swish-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0,
+          -1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.731059,
+        -0.268941,
+        1.761594
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "swish-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "x": [
+          [
+            -5.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -0.033464,
+          4.966536
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "swish-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0,
+          -1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.731059,
+        -0.268941,
+        1.761594
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            -5.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -0.033464,
+          4.966536
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0,
+          -1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.731059,
+        -0.268941,
+        1.761594
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            -5.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -0.033464,
+          4.966536
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0,
+          -1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.731059,
+        -0.268941,
+        1.761594
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            -5.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -0.033464,
+          4.966536
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0,
+          -1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.731059,
+        -0.268941,
+        1.761594
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            -5.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -0.033464,
+          4.966536
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0,
+          -1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.731059,
+        -0.268941,
+        1.761594
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            -5.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -0.033464,
+          4.966536
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0,
+          -1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.731059,
+        -0.268941,
+        1.761594
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            -5.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -0.033464,
+          4.966536
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0,
+          -1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.731059,
+        -0.268941,
+        1.761594
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            -5.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -0.033464,
+          4.966536
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0,
+          -1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.731059,
+        -0.268941,
+        1.761594
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            -5.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -0.033464,
+          4.966536
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0,
+          -1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.731059,
+        -0.268941,
+        1.761594
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "swish-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            -5.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -0.033464,
+          4.966536
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "swish",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "relu",
+    "outer-product",
+    "argmax",
+    "rms-norm",
+    "tiled-matmul"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/swish",
+  "localUrl": "http://localhost:3000/problems/swish"
+}

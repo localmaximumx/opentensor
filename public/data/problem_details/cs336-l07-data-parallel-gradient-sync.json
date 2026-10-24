@@ -1,0 +1,700 @@
+{
+  "id": "cs336-l07-data-parallel-gradient-sync",
+  "slug": "cs336-l07-data-parallel-gradient-sync",
+  "title": "Data-Parallel All-Reduce Gradient Sync",
+  "cleanTitle": "Data-Parallel All-Reduce Gradient Sync",
+  "category": "pytorch",
+  "difficulty": "Medium",
+  "tags": [
+    "Distributed Computing",
+    "Optimization"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "language-modeling-from-scratch",
+    "title": "Language Modeling from Scratch",
+    "sectionId": "cs336-l07"
+  },
+  "seoDescription": "Average rank-local gradients over the full data-parallel world and apply one identical out-of-place SGD update to every parameter replica.",
+  "description": "Average local gradients across data-parallel ranks via simulated All-Reduce and apply an identical parameter update across all replicas.\n\n**Mathematical Formulation:**\n\n$$\n\\bar{g} = \\frac{1}{W} \\sum_{r=0}^{W-1} g_r, \\quad \\theta \\leftarrow \\theta - \\alpha \\bar{g}\n$$\n\n**Step-by-Step Implementation:**\n1. Collect local gradients from each data-parallel rank.\n2. Average gradients across the entire distributed world size W.\n3. Apply stochastic gradient descent step with learning rate alpha.\n4. Return synchronized gradient and updated model parameters.\n\n**Returns:** Dictionary with keys 'mean_gradient' and 'updated_param'.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Synchronize Data-Parallel Gradients specification."
+  ],
+  "requirements": "* Must implement `cs336_l07_data_parallel_gradient_sync` using PYTORCH.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Data-Parallel All-Reduce Gradient Sync\n\n### Core Intuition: Why Do We Need This?\nAverage local gradients across data-parallel ranks via simulated All-Reduce and apply an identical parameter update across all replicas. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\n\\bar{g} = \\frac{1}{W} \\sum_{r=0}^{W-1} g_r, \\quad \\theta \\leftarrow \\theta - \\alpha \\bar{g}\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Collect local gradients from each data-parallel rank.\n3. **Phase 3: Iterative Execution & Reduction**: Average gradients across the entire distributed world size W.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return synchronized gradient and updated model parameters.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard PYTORCH documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `torch.Tensor` specifications."
+  ],
+  "constraints": "* Category: PYTORCH\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, PYTORCH\n",
+  "starterCode": "import numpy as np\n\ndef cs336_l07_data_parallel_gradient_sync(rank_grads: list, lr: float = 0.01, param: list = None) -> dict:\n    \"\"\"\n    Average local gradients across data-parallel ranks via simulated All-Reduce and apply an identical parameter update across all replicas.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nAverage local gradients across data-parallel ranks via simulated All-Reduce and apply an identical parameter update across all replicas.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cs336_l07_data_parallel_gradient_sync(rank_grads: list, lr: float = 0.01, param: list = None) -> dict:\n    mean_g = np.mean(np.array(rank_grads, dtype=float), axis=0)\n    p = np.array(param, dtype=float) if param is not None else np.zeros_like(mean_g)\n    return {'mean_gradient': np.round(mean_g, 6).tolist(), 'updated_param': np.round(p - lr * mean_g, 6).tolist()}\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "rank_grads": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "lr": 0.1,
+        "param": [
+          10.0,
+          10.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          2.0,
+          3.0
+        ],
+        "updated_param": [
+          9.8,
+          9.7
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "rank_grads": [
+          [
+            0.5
+          ],
+          [
+            1.5
+          ],
+          [
+            1.0
+          ]
+        ],
+        "lr": 0.05,
+        "param": [
+          2.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          1.0
+        ],
+        "updated_param": [
+          1.95
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "rank_grads": [
+          [
+            2.0,
+            4.0
+          ],
+          [
+            6.0,
+            8.0
+          ]
+        ],
+        "lr": 0.2,
+        "param": [
+          20.0,
+          20.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          4.0,
+          6.0
+        ],
+        "updated_param": [
+          19.2,
+          18.8
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "rank_grads": [
+          [
+            0.5,
+            1.0
+          ],
+          [
+            1.5,
+            2.0
+          ]
+        ],
+        "lr": 0.05,
+        "param": [
+          5.0,
+          5.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          1.0,
+          1.5
+        ],
+        "updated_param": [
+          4.95,
+          4.925
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "rank_grads": [
+          [
+            -1.0,
+            -2.0
+          ],
+          [
+            -3.0,
+            -4.0
+          ]
+        ],
+        "lr": -0.1,
+        "param": [
+          -10.0,
+          -10.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          -2.0,
+          -3.0
+        ],
+        "updated_param": [
+          -10.2,
+          -10.3
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "rank_grads": [
+          [
+            3.0,
+            6.0
+          ],
+          [
+            9.0,
+            12.0
+          ]
+        ],
+        "lr": 0.3,
+        "param": [
+          30.0,
+          30.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          6.0,
+          9.0
+        ],
+        "updated_param": [
+          28.2,
+          27.3
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "rank_grads": [
+          [
+            2.0,
+            3.0
+          ],
+          [
+            4.0,
+            5.0
+          ]
+        ],
+        "lr": 1.1,
+        "param": [
+          11.0,
+          11.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          3.0,
+          4.0
+        ],
+        "updated_param": [
+          7.7,
+          6.6
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "rank_grads": [
+          [
+            -1.0,
+            0.0
+          ],
+          [
+            1.0,
+            2.0
+          ]
+        ],
+        "lr": -1.9,
+        "param": [
+          8.0,
+          8.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          0.0,
+          1.0
+        ],
+        "updated_param": [
+          8.0,
+          9.9
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "rank_grads": [
+          [
+            2.0,
+            1.0
+          ],
+          [
+            4.0,
+            3.0
+          ]
+        ],
+        "lr": 0.1,
+        "param": [
+          10.0,
+          10.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          3.0,
+          2.0
+        ],
+        "updated_param": [
+          9.7,
+          9.8
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "rank_grads": [
+          [
+            -1.0,
+            -2.0
+          ],
+          [
+            -3.0,
+            -4.0
+          ]
+        ],
+        "lr": -0.1,
+        "param": [
+          -10.0,
+          -10.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          -2.0,
+          -3.0
+        ],
+        "updated_param": [
+          -10.2,
+          -10.3
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "rank_grads": [
+          [
+            10.0,
+            20.0
+          ],
+          [
+            30.0,
+            40.0
+          ]
+        ],
+        "lr": 1.0,
+        "param": [
+          100.0,
+          100.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          20.0,
+          30.0
+        ],
+        "updated_param": [
+          80.0,
+          70.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "rank_grads": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.3,
+            0.4
+          ]
+        ],
+        "lr": 0.01,
+        "param": [
+          1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          0.2,
+          0.3
+        ],
+        "updated_param": [
+          0.998,
+          0.997
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "rank_grads": [
+          [
+            6.0,
+            7.0
+          ],
+          [
+            8.0,
+            9.0
+          ]
+        ],
+        "lr": 5.1,
+        "param": [
+          15.0,
+          15.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          7.0,
+          8.0
+        ],
+        "updated_param": [
+          -20.7,
+          -25.8
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "rank_grads": [
+          [
+            1.5,
+            3.0
+          ],
+          [
+            4.5,
+            6.0
+          ]
+        ],
+        "lr": 0.15,
+        "param": [
+          15.0,
+          15.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          3.0,
+          4.5
+        ],
+        "updated_param": [
+          14.55,
+          14.325
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "rank_grads": [
+          [
+            -2.0,
+            -4.0
+          ],
+          [
+            -6.0,
+            -8.0
+          ]
+        ],
+        "lr": -0.2,
+        "param": [
+          -20.0,
+          -20.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          -4.0,
+          -6.0
+        ],
+        "updated_param": [
+          -20.8,
+          -21.2
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "rank_grads": [
+          [
+            0.25,
+            0.5
+          ],
+          [
+            0.75,
+            1.0
+          ]
+        ],
+        "lr": 0.025,
+        "param": [
+          2.5,
+          2.5
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          0.5,
+          0.75
+        ],
+        "updated_param": [
+          2.4875,
+          2.48125
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "rank_grads": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            2.0,
+            3.0
+          ]
+        ],
+        "lr": -0.9,
+        "param": [
+          9.0,
+          9.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          1.0,
+          2.0
+        ],
+        "updated_param": [
+          9.9,
+          10.8
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "rank_grads": [
+          [
+            4.0,
+            8.0
+          ],
+          [
+            12.0,
+            16.0
+          ]
+        ],
+        "lr": 0.4,
+        "param": [
+          40.0,
+          40.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          8.0,
+          12.0
+        ],
+        "updated_param": [
+          36.8,
+          35.2
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "rank_grads": [
+          [
+            0.75,
+            1.5
+          ],
+          [
+            2.25,
+            3.0
+          ]
+        ],
+        "lr": 0.075,
+        "param": [
+          7.5,
+          7.5
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          1.5,
+          2.25
+        ],
+        "updated_param": [
+          7.3875,
+          7.33125
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-data-parallel-gradient-sync-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "rank_grads": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            15.0,
+            20.0
+          ]
+        ],
+        "lr": 0.5,
+        "param": [
+          50.0,
+          50.0
+        ]
+      },
+      "expectedOutput": {
+        "mean_gradient": [
+          10.0,
+          15.0
+        ],
+        "updated_param": [
+          45.0,
+          42.5
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cs336_l07_data_parallel_gradient_sync",
+    "parameters": [
+      {
+        "name": "rank_grads",
+        "type": "any"
+      },
+      {
+        "name": "lr",
+        "type": "any"
+      },
+      {
+        "name": "param",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/cs336-l07-data-parallel-gradient-sync",
+  "localUrl": "http://localhost:3000/problems/cs336-l07-data-parallel-gradient-sync"
+}

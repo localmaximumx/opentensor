@@ -1,0 +1,1166 @@
+{
+  "catalogId": "python:cv-patchify",
+  "id": "cv-patchify",
+  "sourceId": "cv-patchify",
+  "slug": "cv-patchify",
+  "source": "python",
+  "category": "pytorch",
+  "title": "ViT Patchify",
+  "difficulty": "Easy",
+  "tags": [
+    "Computer Vision",
+    "Transformers"
+  ],
+  "isFree": false,
+  "planId": "cracking-cv",
+  "planTitle": "Cracking CV",
+  "sectionId": "cracking-cv-modern-cv-and-vit",
+  "sortOrder": 378,
+  "seoDescription": "Split image batches into row-major non-overlapping patches and flatten each patch in spatial-then-channel order.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Deconstruct batches of 2D images into row-major flattened spatial patch sequences.\n\nPatchification transforms continuous 2D visual structures into 1D token sequences compatible with standard sequence transformer attention.\n\n### Mathematical Formulation\n$$\n\\mathbf{X} \\in \\mathbb{R}^{B \\times C \\times H \\times W} \\implies \\mathbf{X}_p \\in \\mathbb{R}^{B \\times N \\times (P^2 \\cdot C)}, \\quad N = \\frac{H \\cdot W}{P^2}\n$$\n\n### Step-by-Step Implementation\n1. Partition each image into grid of non-overlapping P x P spatial patches\n2. Flatten patch coordinates in spatial-then-channel layout\n3. Return batched patch sequence representation\n\n### Returns\nNested list of shape (B, N_patches, P^2 * C).",
+  "theory": "## Understanding the Theory: ViT Patchify\n\n### Core Intuition: Why Do We Need This?\nImages have unique spatial properties: neighboring pixels are strongly correlated, and visual patterns (like edges, corners, or textures) appear anywhere in an image. Computer vision algorithms use spatial inductive biases like translation equivariance and local receptive fields to process image grids efficiently. **ViT Patchify** operates directly on spatial coordinates or bounding box geometries.\n\nPatchification transforms continuous 2D visual structures into 1D token sequences compatible with standard sequence transformer attention. In this problem, the goal is to: deconstruct batches of 2d images into row-major flattened spatial patch sequences.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\mathbf{X} \\in \\mathbb{R}^{B \\times C \\times H \\times W} \\implies \\mathbf{X}_p \\in \\mathbb{R}^{B \\times N \\times (P^2 \\cdot C)}, \\quad N = \\frac{H \\cdot W}{P^2}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Partition each image into grid of non-overlapping P x P spatial patches\n2. **Phase 2**: Flatten patch coordinates in spatial-then-channel layout\n3. **Phase 3**: Return batched patch sequence representation\n\n### Practical Machine Learning Applications & Nuances\n* **Spatial Locality**: Sliding spatial filters across multi-channel feature maps aggregates contextual clues across local neighborhoods.\n* **Object Detection Pipelines**: Bounding box metrics (such as IoU and Non-Maximum Suppression) reconcile duplicate candidate detections into clean, final predictions.\n* **Data Augmentation**: Geometric transformations expose models to diverse spatial viewpoints, significantly improving generalization to unseen test images.",
+  "examples": [
+    "Input: images = [[[[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0], [9.0, 10.0, 11.0, 12.0], [13.0, 14.0, 15.0, 16.0]]]], patch_size = 2\n\nOutput: [[[1.0, 2.0, 5.0, 6.0], [3.0, 4.0, 7.0, 8.0], [9.0, 10.0, 13.0, 14.0], [11.0, 12.0, 15.0, 16.0]]]\n\nExplanation: Evaluated cv_patchify under standard test conditions."
+  ],
+  "requirements": "* Function must be named `cv_patchify`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `cv_patchify`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef cv_patchify(images: list, patch_size: int = 2) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **ViT Patchify** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cv_patchify(images: list, patch_size: int = 2) -> list:\n    img = np.array(images, dtype=np.float64)\n    if img.ndim == 3: img = img[np.newaxis, :, :, :]\n    B, C, H, W = img.shape; p = int(patch_size); nh, nw = H // p, W // p\n    res = []\n    for b in range(B):\n        res.append([np.transpose(img[b, :, i*p:(i+1)*p, j*p:(j+1)*p], (1, 2, 0)).flatten().tolist() for i in range(nh) for j in range(nw)])\n    return np.round(res, 4).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Batch 1 1-channel 4x4 image patch 2",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                1.0,
+                2.0,
+                3.0,
+                4.0
+              ],
+              [
+                5.0,
+                6.0,
+                7.0,
+                8.0
+              ],
+              [
+                9.0,
+                10.0,
+                11.0,
+                12.0
+              ],
+              [
+                13.0,
+                14.0,
+                15.0,
+                16.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            1.0,
+            2.0,
+            5.0,
+            6.0
+          ],
+          [
+            3.0,
+            4.0,
+            7.0,
+            8.0
+          ],
+          [
+            9.0,
+            10.0,
+            13.0,
+            14.0
+          ],
+          [
+            11.0,
+            12.0,
+            15.0,
+            16.0
+          ]
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cv-patchify-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                2.0,
+                4.0,
+                6.0,
+                8.0
+              ],
+              [
+                10.0,
+                12.0,
+                14.0,
+                16.0
+              ],
+              [
+                18.0,
+                20.0,
+                22.0,
+                24.0
+              ],
+              [
+                26.0,
+                28.0,
+                30.0,
+                32.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 4
+      },
+      "expectedOutput": [
+        [
+          [
+            2.0,
+            4.0,
+            6.0,
+            8.0,
+            10.0,
+            12.0,
+            14.0,
+            16.0,
+            18.0,
+            20.0,
+            22.0,
+            24.0,
+            26.0,
+            28.0,
+            30.0,
+            32.0
+          ]
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cv-patchify-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                0.5,
+                1.0,
+                1.5,
+                2.0
+              ],
+              [
+                2.5,
+                3.0,
+                3.5,
+                4.0
+              ],
+              [
+                4.5,
+                5.0,
+                5.5,
+                6.0
+              ],
+              [
+                6.5,
+                7.0,
+                7.5,
+                8.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 1
+      },
+      "expectedOutput": [
+        [
+          [
+            0.5
+          ],
+          [
+            1.0
+          ],
+          [
+            1.5
+          ],
+          [
+            2.0
+          ],
+          [
+            2.5
+          ],
+          [
+            3.0
+          ],
+          [
+            3.5
+          ],
+          [
+            4.0
+          ],
+          [
+            4.5
+          ],
+          [
+            5.0
+          ],
+          [
+            5.5
+          ],
+          [
+            6.0
+          ],
+          [
+            6.5
+          ],
+          [
+            7.0
+          ],
+          [
+            7.5
+          ],
+          [
+            8.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                -1.0,
+                -2.0,
+                -3.0,
+                -4.0
+              ],
+              [
+                -5.0,
+                -6.0,
+                -7.0,
+                -8.0
+              ],
+              [
+                -9.0,
+                -10.0,
+                -11.0,
+                -12.0
+              ],
+              [
+                -13.0,
+                -14.0,
+                -15.0,
+                -16.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": -2
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                3.0,
+                6.0,
+                9.0,
+                12.0
+              ],
+              [
+                15.0,
+                18.0,
+                21.0,
+                24.0
+              ],
+              [
+                27.0,
+                30.0,
+                33.0,
+                36.0
+              ],
+              [
+                39.0,
+                42.0,
+                45.0,
+                48.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 6
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                2.0,
+                3.0,
+                4.0,
+                5.0
+              ],
+              [
+                6.0,
+                7.0,
+                8.0,
+                9.0
+              ],
+              [
+                10.0,
+                11.0,
+                12.0,
+                13.0
+              ],
+              [
+                14.0,
+                15.0,
+                16.0,
+                17.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 3.0
+      },
+      "expectedOutput": [
+        [
+          [
+            2.0,
+            3.0,
+            4.0,
+            6.0,
+            7.0,
+            8.0,
+            10.0,
+            11.0,
+            12.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                -1.0,
+                0.0,
+                1.0,
+                2.0
+              ],
+              [
+                3.0,
+                4.0,
+                5.0,
+                6.0
+              ],
+              [
+                7.0,
+                8.0,
+                9.0,
+                10.0
+              ],
+              [
+                11.0,
+                12.0,
+                13.0,
+                14.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 0.0
+      },
+      "expectedOutput": [
+        [
+          [
+            1.0,
+            2.0,
+            5.0,
+            6.0
+          ],
+          [
+            3.0,
+            4.0,
+            7.0,
+            8.0
+          ],
+          [
+            9.0,
+            10.0,
+            13.0,
+            14.0
+          ],
+          [
+            11.0,
+            12.0,
+            15.0,
+            16.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                4.0,
+                3.0,
+                2.0,
+                1.0
+              ],
+              [
+                8.0,
+                7.0,
+                6.0,
+                5.0
+              ],
+              [
+                12.0,
+                11.0,
+                10.0,
+                9.0
+              ],
+              [
+                16.0,
+                15.0,
+                14.0,
+                13.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            4.0,
+            3.0,
+            8.0,
+            7.0
+          ],
+          [
+            2.0,
+            1.0,
+            6.0,
+            5.0
+          ],
+          [
+            12.0,
+            11.0,
+            16.0,
+            15.0
+          ],
+          [
+            10.0,
+            9.0,
+            14.0,
+            13.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                -1.0,
+                -2.0,
+                -3.0,
+                -4.0
+              ],
+              [
+                -5.0,
+                -6.0,
+                -7.0,
+                -8.0
+              ],
+              [
+                -9.0,
+                -10.0,
+                -11.0,
+                -12.0
+              ],
+              [
+                -13.0,
+                -14.0,
+                -15.0,
+                -16.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": -2
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                10.0,
+                20.0,
+                30.0,
+                40.0
+              ],
+              [
+                50.0,
+                60.0,
+                70.0,
+                80.0
+              ],
+              [
+                90.0,
+                100.0,
+                110.0,
+                120.0
+              ],
+              [
+                130.0,
+                140.0,
+                150.0,
+                160.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 20
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                0.1,
+                0.2,
+                0.3,
+                0.4
+              ],
+              [
+                0.5,
+                0.6,
+                0.7,
+                0.8
+              ],
+              [
+                0.9,
+                1.0,
+                1.1,
+                1.2
+              ],
+              [
+                1.3,
+                1.4,
+                1.5,
+                1.6
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            1.0,
+            2.0,
+            5.0,
+            6.0
+          ],
+          [
+            3.0,
+            4.0,
+            7.0,
+            8.0
+          ],
+          [
+            9.0,
+            10.0,
+            13.0,
+            14.0
+          ],
+          [
+            11.0,
+            12.0,
+            15.0,
+            16.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                6.0,
+                7.0,
+                8.0,
+                9.0
+              ],
+              [
+                10.0,
+                11.0,
+                12.0,
+                13.0
+              ],
+              [
+                14.0,
+                15.0,
+                16.0,
+                17.0
+              ],
+              [
+                18.0,
+                19.0,
+                20.0,
+                21.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 7.0
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                1.5,
+                3.0,
+                4.5,
+                6.0
+              ],
+              [
+                7.5,
+                9.0,
+                10.5,
+                12.0
+              ],
+              [
+                13.5,
+                15.0,
+                16.5,
+                18.0
+              ],
+              [
+                19.5,
+                21.0,
+                22.5,
+                24.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 3
+      },
+      "expectedOutput": [
+        [
+          [
+            1.5,
+            3.0,
+            4.5,
+            7.5,
+            9.0,
+            10.5,
+            13.5,
+            15.0,
+            16.5
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                -2.0,
+                -4.0,
+                -6.0,
+                -8.0
+              ],
+              [
+                -10.0,
+                -12.0,
+                -14.0,
+                -16.0
+              ],
+              [
+                -18.0,
+                -20.0,
+                -22.0,
+                -24.0
+              ],
+              [
+                -26.0,
+                -28.0,
+                -30.0,
+                -32.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": -4
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                0.25,
+                0.5,
+                0.75,
+                1.0
+              ],
+              [
+                1.25,
+                1.5,
+                1.75,
+                2.0
+              ],
+              [
+                2.25,
+                2.5,
+                2.75,
+                3.0
+              ],
+              [
+                3.25,
+                3.5,
+                3.75,
+                4.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            1.0,
+            2.0,
+            5.0,
+            6.0
+          ],
+          [
+            3.0,
+            4.0,
+            7.0,
+            8.0
+          ],
+          [
+            9.0,
+            10.0,
+            13.0,
+            14.0
+          ],
+          [
+            11.0,
+            12.0,
+            15.0,
+            16.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                0.0,
+                1.0,
+                2.0,
+                3.0
+              ],
+              [
+                4.0,
+                5.0,
+                6.0,
+                7.0
+              ],
+              [
+                8.0,
+                9.0,
+                10.0,
+                11.0
+              ],
+              [
+                12.0,
+                13.0,
+                14.0,
+                15.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 1.0
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0
+          ],
+          [
+            1.0
+          ],
+          [
+            2.0
+          ],
+          [
+            3.0
+          ],
+          [
+            4.0
+          ],
+          [
+            5.0
+          ],
+          [
+            6.0
+          ],
+          [
+            7.0
+          ],
+          [
+            8.0
+          ],
+          [
+            9.0
+          ],
+          [
+            10.0
+          ],
+          [
+            11.0
+          ],
+          [
+            12.0
+          ],
+          [
+            13.0
+          ],
+          [
+            14.0
+          ],
+          [
+            15.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                4.0,
+                8.0,
+                12.0,
+                16.0
+              ],
+              [
+                20.0,
+                24.0,
+                28.0,
+                32.0
+              ],
+              [
+                36.0,
+                40.0,
+                44.0,
+                48.0
+              ],
+              [
+                52.0,
+                56.0,
+                60.0,
+                64.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 8
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                0.75,
+                1.5,
+                2.25,
+                3.0
+              ],
+              [
+                3.75,
+                4.5,
+                5.25,
+                6.0
+              ],
+              [
+                6.75,
+                7.5,
+                8.25,
+                9.0
+              ],
+              [
+                9.75,
+                10.5,
+                11.25,
+                12.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            0.75,
+            1.5,
+            3.75,
+            4.5
+          ],
+          [
+            2.25,
+            3.0,
+            5.25,
+            6.0
+          ],
+          [
+            6.75,
+            7.5,
+            9.75,
+            10.5
+          ],
+          [
+            8.25,
+            9.0,
+            11.25,
+            12.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                5.0,
+                10.0,
+                15.0,
+                20.0
+              ],
+              [
+                25.0,
+                30.0,
+                35.0,
+                40.0
+              ],
+              [
+                45.0,
+                50.0,
+                55.0,
+                60.0
+              ],
+              [
+                65.0,
+                70.0,
+                75.0,
+                80.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 10
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-patchify-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "images": [
+          [
+            [
+              [
+                11.0,
+                12.0,
+                13.0,
+                14.0
+              ],
+              [
+                15.0,
+                16.0,
+                17.0,
+                18.0
+              ],
+              [
+                19.0,
+                20.0,
+                21.0,
+                22.0
+              ],
+              [
+                23.0,
+                24.0,
+                25.0,
+                26.0
+              ]
+            ]
+          ]
+        ],
+        "patch_size": 12.0
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cv_patchify",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

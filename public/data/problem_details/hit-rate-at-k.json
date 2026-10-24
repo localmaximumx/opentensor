@@ -1,0 +1,803 @@
+{
+  "id": "hit-rate-at-k",
+  "title": "Hit Rate at K",
+  "description": "Hit rate at K measures the fraction of users whose first k recommendations contain at least one relevant item. A user contributes one hit regardless of how many relevant items appear.\n\n$$\n\\operatorname{HR@K} = \\frac{1}{|U|}\\sum_{u \\in U}\\mathbb{1}(R_u^{(K)} \\cap G_u \\ne \\varnothing)\n$$\n\nThe sum examines every user. For each user, the indicator contributes 1 when the first k recommendations share at least one item with that user's ground-truth relevant items; otherwise it contributes 0. Divide the total hits by the number of users. Return 0.0 when there are no users.",
+  "seoDescription": "Calculate recommendation hit rate at K by checking whether each user's relevant items appear in top-ranked results.",
+  "examples": [
+    "Input: recommendations = [[1, 2, 3], [4, 5, 6], [7, 8, 9]], ground_truth = [[1], [10], [7]], k = 3\n\nOutput: 0.6667\n\nExplanation: Users 0 and 2 have at least one relevant item in their first three recommendations.",
+    "Input: recommendations = [[10, 1, 2, 3], [10, 4, 5, 6]], ground_truth = [[1], [4]], k = 1\n\nOutput: 0.0000"
+  ],
+  "requirements": "* Inspect only the first k recommendations for each user.\n* Count at most one hit per user.\n* Divide the hit count by the number of users.\n* Return 0.0 when there are no users.",
+  "theory": "## Understanding the Theory: Hit Rate at K\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization challenge across highly non-convex loss surfaces filled with saddle points, ravines, and plateaus. Naive gradient descent often oscillates wildly in steep directions while crawling along flat regions. **Hit Rate at K** accelerates convergence, dampens oscillations, and stabilizes weight trajectories during training.\n\nIn this problem, the objective is to implement **Hit Rate at K** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\operatorname{HR@K} = \\frac{1}{|U|}\\sum_{u \\in U}\\mathbb{1}(R_u^{(K)} \\cap G_u \\ne \\varnothing)\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Momentum Accumulation**: Smoothing velocity vectors across successive mini-batches enables optimizers to escape shallow local minima and push through ill-conditioned ravines.\n* **Adaptive Scaling**: Tracking running second moments scales learning rates inversely with gradient variance, preventing rare features from vanishing and frequent features from exploding.\n* **Gradient Regularization**: Gradient clipping enforces hard norm bounds, preventing runaway parameter updates during training instability.",
+  "hints": [
+    "Convert each first-k slice and corresponding ground-truth list to sets.",
+    "A nonempty set intersection contributes one hit."
+  ],
+  "constraints": "* recommendations and ground_truth contain the same number of user lists.\n* k is positive.\n* Time limit: 300 ms.",
+  "difficulty": "Easy",
+  "starterCode": "def hit_rate_at_k(recommendations: list, ground_truth: list, k: int) -> float:\n    \"\"\"\n    Returns the fraction of users with a relevant item in their first k recommendations.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T22:50:42.552Z",
+  "updatedAt": "2026-08-23T21:27:32.305Z",
+  "solution": "### 💡 Intuition & Approach\nProportion of search or recommendation queries where at least one ground-truth item was surfaced in top $k$.\n\n### ⚡ Python Reference Implementation\n```python\ndef hit_rate_at_k(recommendations: list, ground_truth: list, k: int) -> float:\n    hits = 0\n    n = len(recommendations)\n    for recs, actual in zip(recommendations, ground_truth):\n        top_k = set(recs[:k])\n        if any(item in top_k for item in actual):\n            hits += 1\n    return round(hits / n, 4) if n > 0 else 0.0\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "HitRateAtKViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Basic",
+      "inputs": {
+        "k": 3,
+        "ground_truth": [
+          [
+            1
+          ],
+          [
+            10
+          ],
+          [
+            7
+          ]
+        ],
+        "recommendations": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4,
+            5,
+            6
+          ],
+          [
+            7,
+            8,
+            9
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 0.6667
+    },
+    {
+      "id": "test-2",
+      "name": "K matters",
+      "inputs": {
+        "k": 1,
+        "ground_truth": [
+          [
+            1
+          ],
+          [
+            4
+          ]
+        ],
+        "recommendations": [
+          [
+            10,
+            1,
+            2,
+            3
+          ],
+          [
+            10,
+            4,
+            5,
+            6
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 0.0
+    },
+    {
+      "id": "hit-rate-at-k-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "k": 6,
+        "ground_truth": [
+          [
+            2
+          ],
+          [
+            20
+          ],
+          [
+            14
+          ]
+        ],
+        "recommendations": [
+          [
+            2,
+            4,
+            6
+          ],
+          [
+            8,
+            10,
+            12
+          ],
+          [
+            14,
+            16,
+            18
+          ]
+        ]
+      },
+      "expectedOutput": 0.6667,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "k": 2,
+        "ground_truth": [
+          [
+            0
+          ],
+          [
+            5
+          ],
+          [
+            4
+          ]
+        ],
+        "recommendations": [
+          [
+            0,
+            1,
+            2
+          ],
+          [
+            2,
+            2,
+            3
+          ],
+          [
+            4,
+            4,
+            4
+          ]
+        ]
+      },
+      "expectedOutput": 0.6667,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "k": -3,
+        "ground_truth": [
+          [
+            -1
+          ],
+          [
+            -10
+          ],
+          [
+            -7
+          ]
+        ],
+        "recommendations": [
+          [
+            -1,
+            -2,
+            -3
+          ],
+          [
+            -4,
+            -5,
+            -6
+          ],
+          [
+            -7,
+            -8,
+            -9
+          ]
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "k": 9,
+        "ground_truth": [
+          [
+            3
+          ],
+          [
+            30
+          ],
+          [
+            21
+          ]
+        ],
+        "recommendations": [
+          [
+            3,
+            6,
+            9
+          ],
+          [
+            12,
+            15,
+            18
+          ],
+          [
+            21,
+            24,
+            27
+          ]
+        ]
+      },
+      "expectedOutput": 0.6667,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "k": 4.0,
+        "ground_truth": [
+          [
+            2.0
+          ],
+          [
+            11.0
+          ],
+          [
+            8.0
+          ]
+        ],
+        "recommendations": [
+          [
+            2.0,
+            3.0,
+            4.0
+          ],
+          [
+            5.0,
+            6.0,
+            7.0
+          ],
+          [
+            8.0,
+            9.0,
+            10.0
+          ]
+        ]
+      },
+      "expectedOutput": 0.6667,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "k": 1.0,
+        "ground_truth": [
+          [
+            -1.0
+          ],
+          [
+            8.0
+          ],
+          [
+            5.0
+          ]
+        ],
+        "recommendations": [
+          [
+            -1.0,
+            0.0,
+            1.0
+          ],
+          [
+            2.0,
+            3.0,
+            4.0
+          ],
+          [
+            5.0,
+            6.0,
+            7.0
+          ]
+        ]
+      },
+      "expectedOutput": 0.6667,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "k": 3,
+        "ground_truth": [
+          [
+            1
+          ],
+          [
+            10
+          ],
+          [
+            7
+          ]
+        ],
+        "recommendations": [
+          [
+            3,
+            2,
+            1
+          ],
+          [
+            6,
+            5,
+            4
+          ],
+          [
+            9,
+            8,
+            7
+          ]
+        ]
+      },
+      "expectedOutput": 0.6667,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "k": -3,
+        "ground_truth": [
+          [
+            -1
+          ],
+          [
+            -10
+          ],
+          [
+            -7
+          ]
+        ],
+        "recommendations": [
+          [
+            -1,
+            -2,
+            -3
+          ],
+          [
+            -4,
+            -5,
+            -6
+          ],
+          [
+            -7,
+            -8,
+            -9
+          ]
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "k": 30,
+        "ground_truth": [
+          [
+            10
+          ],
+          [
+            100
+          ],
+          [
+            70
+          ]
+        ],
+        "recommendations": [
+          [
+            10,
+            20,
+            30
+          ],
+          [
+            40,
+            50,
+            60
+          ],
+          [
+            70,
+            80,
+            90
+          ]
+        ]
+      },
+      "expectedOutput": 0.6667,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "k": 0,
+        "ground_truth": [
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ]
+        ],
+        "recommendations": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "k": 8.0,
+        "ground_truth": [
+          [
+            6.0
+          ],
+          [
+            15.0
+          ],
+          [
+            12.0
+          ]
+        ],
+        "recommendations": [
+          [
+            6.0,
+            7.0,
+            8.0
+          ],
+          [
+            9.0,
+            10.0,
+            11.0
+          ],
+          [
+            12.0,
+            13.0,
+            14.0
+          ]
+        ]
+      },
+      "expectedOutput": 0.6667,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "k": 4,
+        "ground_truth": [
+          [
+            2
+          ],
+          [
+            15
+          ],
+          [
+            10
+          ]
+        ],
+        "recommendations": [
+          [
+            2,
+            3,
+            4
+          ],
+          [
+            6,
+            8,
+            9
+          ],
+          [
+            10,
+            12,
+            14
+          ]
+        ]
+      },
+      "expectedOutput": 0.6667,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "k": -6,
+        "ground_truth": [
+          [
+            -2
+          ],
+          [
+            -20
+          ],
+          [
+            -14
+          ]
+        ],
+        "recommendations": [
+          [
+            -2,
+            -4,
+            -6
+          ],
+          [
+            -8,
+            -10,
+            -12
+          ],
+          [
+            -14,
+            -16,
+            -18
+          ]
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "k": 1,
+        "ground_truth": [
+          [
+            0
+          ],
+          [
+            2
+          ],
+          [
+            2
+          ]
+        ],
+        "recommendations": [
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            1,
+            2
+          ],
+          [
+            2,
+            2,
+            2
+          ]
+        ]
+      },
+      "expectedOutput": 0.6667,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "k": 2.0,
+        "ground_truth": [
+          [
+            0.0
+          ],
+          [
+            9.0
+          ],
+          [
+            6.0
+          ]
+        ],
+        "recommendations": [
+          [
+            0.0,
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0,
+            5.0
+          ],
+          [
+            6.0,
+            7.0,
+            8.0
+          ]
+        ]
+      },
+      "expectedOutput": 0.6667,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "k": 12,
+        "ground_truth": [
+          [
+            4
+          ],
+          [
+            40
+          ],
+          [
+            28
+          ]
+        ],
+        "recommendations": [
+          [
+            4,
+            8,
+            12
+          ],
+          [
+            16,
+            20,
+            24
+          ],
+          [
+            28,
+            32,
+            36
+          ]
+        ]
+      },
+      "expectedOutput": 0.6667,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "k": 2,
+        "ground_truth": [
+          [
+            1
+          ],
+          [
+            8
+          ],
+          [
+            5
+          ]
+        ],
+        "recommendations": [
+          [
+            1,
+            2,
+            2
+          ],
+          [
+            3,
+            4,
+            4
+          ],
+          [
+            5,
+            6,
+            7
+          ]
+        ]
+      },
+      "expectedOutput": 0.6667,
+      "isPublic": false
+    },
+    {
+      "id": "hit-rate-at-k-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "k": 15,
+        "ground_truth": [
+          [
+            5
+          ],
+          [
+            50
+          ],
+          [
+            35
+          ]
+        ],
+        "recommendations": [
+          [
+            5,
+            10,
+            15
+          ],
+          [
+            20,
+            25,
+            30
+          ],
+          [
+            35,
+            40,
+            45
+          ]
+        ]
+      },
+      "expectedOutput": 0.6667,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "hit_rate_at_k",
+    "parameters": [
+      {
+        "name": "recommendations",
+        "type": "array",
+        "example": "[[1, 2, 3], [4, 5, 6]]",
+        "description": "List of recommendation lists (one per user)"
+      },
+      {
+        "name": "ground_truth",
+        "type": "array",
+        "example": "[[1], [10]]",
+        "description": "List of relevant items (one list per user)"
+      },
+      {
+        "name": "k",
+        "type": "number",
+        "example": "3",
+        "description": "Cutoff for top-K"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "precision-recall-at-k",
+    "mean-average-precision",
+    "ndcg",
+    "top-k-recommendations",
+    "catalog-coverage"
+  ],
+  "tags": [
+    "Recommender Systems",
+    "Metrics & Evaluation"
+  ],
+  "prevId": "adjusted-cosine-similarity",
+  "nextId": "mean-rating-imputation",
+  "slug": "hit-rate-at-k",
+  "cleanTitle": "Hit Rate at K",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/hit-rate-at-k",
+  "localUrl": "http://localhost:3000/problems/hit-rate-at-k",
+  "studyPlan": null
+}

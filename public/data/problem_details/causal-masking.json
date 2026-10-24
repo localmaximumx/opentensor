@@ -1,0 +1,920 @@
+{
+  "id": "causal-masking",
+  "title": "Implement Causal Masking for Attention",
+  "description": "Apply an autoregressive mask to attention scores so position $i$ can attend only to positions $j \\leq i$. For every score entry, return\n\n$$\nM_{i,j} = \\begin{cases} S_{i,j} & j \\leq i \\\\ m & j > i \\end{cases}\n$$\n\nHere, $S$ is the input score tensor and $m$ is mask_value. The final two dimensions are square attention matrices, while any preceding dimensions represent batches or heads. Return a masked NumPy array with the same shape without modifying the input.",
+  "seoDescription": "Create a causal attention mask that blocks each token from attending to future positions in a sequence.",
+  "examples": [
+    "Input: scores = [[1, 2, 3], [4, 5, 6], [7, 8, 9]], mask_value = -1000000000.0\n\nOutput: [[1.0, -1000000000.0, -1000000000.0], [4.0, 5.0, -1000000000.0], [7.0, 8.0, 9.0]]\n\nExplanation: Entries above the main diagonal represent future positions and are replaced by mask_value.",
+    "Input: scores = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], mask_value = -1000000000.0\n\nOutput: [[1.0, -1000000000.0, -1000000000.0, -1000000000.0], [5.0, 6.0, -1000000000.0, -1000000000.0], [9.0, 10.0, 11.0, -1000000000.0], [13.0, 14.0, 15.0, 16.0]]"
+  ],
+  "requirements": "* Support score tensors with shape $(T,T)$ or $(\\ldots,T,T)$\n* Replace only entries above the main diagonal\n* Return a floating-point NumPy array with the same shape\n* Do not modify the input",
+  "theory": "## Understanding the Theory: Implement Causal Masking for Attention\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of variable-length sequences of discrete tokens with complex grammatical and long-range semantic dependencies. Modern Transformer architectures eliminate sequential recurrent bottlenecks by allowing every token to compute dynamic affinity scores with every other token. **Implement Causal Masking for Attention** is an essential sequence modeling operation in modern large language models.\n\nIn this problem, the objective is to implement **Implement Causal Masking for Attention** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nM_{i,j} = \\begin{cases} S_{i,j} & j \\leq i \\\\ m & j > i \\end{cases}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **All-to-All Self-Attention**: Dot-product attention computes contextualized representations dynamically, weighting relevant context tokens higher than uninformative tokens.\n* **Causal Masking**: In autoregressive decoder models (like GPT and LLaMA), upper-triangular masking ensures the model cannot look ahead at future tokens during generation.\n* **Positional Embeddings**: Because self-attention is permutation-invariant, positional encodings inject sequence order into the token representations.",
+  "hints": [
+    "np.triu(np.ones((T, T), dtype=bool), k=1) marks future positions.",
+    "A two-dimensional mask broadcasts across any leading batch and head dimensions."
+  ],
+  "constraints": "* The final two dimensions are equal\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef apply_causal_mask(scores: list, mask_value: float = -1e9) -> np.ndarray:\n    \"\"\"\n    Returns a causally masked NumPy array matching the shape of scores.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-10-21T18:37:14.213Z",
+  "updatedAt": "2026-03-05T17:03:41.429Z",
+  "solution": "### 💡 Intuition & Approach\nMasks future query-key attention scores with $-\\infty$ in autoregressive generative transformers.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef apply_causal_mask(scores: list, mask_value: float = -1e9) -> list:\n    arr = np.array(scores, dtype=float)\n    S = arr.shape[-1]\n    mask = np.triu(np.ones((S, S), dtype=bool), k=1)\n    arr[..., mask] = mask_value\n    return arr.tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "CausalMaskingViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "3x3 basic",
+      "inputs": {
+        "scores": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4,
+            5,
+            6
+          ],
+          [
+            7,
+            8,
+            9
+          ]
+        ],
+        "mask_value": -1000000000
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1.0,
+          -1000000000.0,
+          -1000000000.0
+        ],
+        [
+          4.0,
+          5.0,
+          -1000000000.0
+        ],
+        [
+          7.0,
+          8.0,
+          9.0
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "4x4 matrix",
+      "inputs": {
+        "scores": [
+          [
+            1,
+            2,
+            3,
+            4
+          ],
+          [
+            5,
+            6,
+            7,
+            8
+          ],
+          [
+            9,
+            10,
+            11,
+            12
+          ],
+          [
+            13,
+            14,
+            15,
+            16
+          ]
+        ],
+        "mask_value": -1000000000
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1.0,
+          -1000000000.0,
+          -1000000000.0,
+          -1000000000.0
+        ],
+        [
+          5.0,
+          6.0,
+          -1000000000.0,
+          -1000000000.0
+        ],
+        [
+          9.0,
+          10.0,
+          11.0,
+          -1000000000.0
+        ],
+        [
+          13.0,
+          14.0,
+          15.0,
+          16.0
+        ]
+      ]
+    },
+    {
+      "id": "causal-masking-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "scores": [
+          [
+            2,
+            4,
+            6
+          ],
+          [
+            8,
+            10,
+            12
+          ],
+          [
+            14,
+            16,
+            18
+          ]
+        ],
+        "mask_value": -2000000000
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          -2000000000.0,
+          -2000000000.0
+        ],
+        [
+          8.0,
+          10.0,
+          -2000000000.0
+        ],
+        [
+          14.0,
+          16.0,
+          18.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "scores": [
+          [
+            0,
+            1,
+            2
+          ],
+          [
+            2,
+            2,
+            3
+          ],
+          [
+            4,
+            4,
+            4
+          ]
+        ],
+        "mask_value": -500000000
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          -500000000.0,
+          -500000000.0
+        ],
+        [
+          2.0,
+          2.0,
+          -500000000.0
+        ],
+        [
+          4.0,
+          4.0,
+          4.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "scores": [
+          [
+            -1,
+            -2,
+            -3
+          ],
+          [
+            -4,
+            -5,
+            -6
+          ],
+          [
+            -7,
+            -8,
+            -9
+          ]
+        ],
+        "mask_value": 1000000000
+      },
+      "expectedOutput": [
+        [
+          -1.0,
+          1000000000.0,
+          1000000000.0
+        ],
+        [
+          -4.0,
+          -5.0,
+          1000000000.0
+        ],
+        [
+          -7.0,
+          -8.0,
+          -9.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "scores": [
+          [
+            3,
+            6,
+            9
+          ],
+          [
+            12,
+            15,
+            18
+          ],
+          [
+            21,
+            24,
+            27
+          ]
+        ],
+        "mask_value": -3000000000
+      },
+      "expectedOutput": [
+        [
+          3.0,
+          -3000000000.0,
+          -3000000000.0
+        ],
+        [
+          12.0,
+          15.0,
+          -3000000000.0
+        ],
+        [
+          21.0,
+          24.0,
+          27.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "scores": [
+          [
+            2.0,
+            3.0,
+            4.0
+          ],
+          [
+            5.0,
+            6.0,
+            7.0
+          ],
+          [
+            8.0,
+            9.0,
+            10.0
+          ]
+        ],
+        "mask_value": -999999999.0
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          -999999999.0,
+          -999999999.0
+        ],
+        [
+          5.0,
+          6.0,
+          -999999999.0
+        ],
+        [
+          8.0,
+          9.0,
+          10.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "scores": [
+          [
+            -1.0,
+            0.0,
+            1.0
+          ],
+          [
+            2.0,
+            3.0,
+            4.0
+          ],
+          [
+            5.0,
+            6.0,
+            7.0
+          ]
+        ],
+        "mask_value": -1000000002.0
+      },
+      "expectedOutput": [
+        [
+          -1.0,
+          -1000000002.0,
+          -1000000002.0
+        ],
+        [
+          2.0,
+          3.0,
+          -1000000002.0
+        ],
+        [
+          5.0,
+          6.0,
+          7.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "scores": [
+          [
+            3,
+            2,
+            1
+          ],
+          [
+            6,
+            5,
+            4
+          ],
+          [
+            9,
+            8,
+            7
+          ]
+        ],
+        "mask_value": -1000000000
+      },
+      "expectedOutput": [
+        [
+          3.0,
+          -1000000000.0,
+          -1000000000.0
+        ],
+        [
+          6.0,
+          5.0,
+          -1000000000.0
+        ],
+        [
+          9.0,
+          8.0,
+          7.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "scores": [
+          [
+            -1,
+            -2,
+            -3
+          ],
+          [
+            -4,
+            -5,
+            -6
+          ],
+          [
+            -7,
+            -8,
+            -9
+          ]
+        ],
+        "mask_value": 1000000000
+      },
+      "expectedOutput": [
+        [
+          -1.0,
+          1000000000.0,
+          1000000000.0
+        ],
+        [
+          -4.0,
+          -5.0,
+          1000000000.0
+        ],
+        [
+          -7.0,
+          -8.0,
+          -9.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "scores": [
+          [
+            10,
+            20,
+            30
+          ],
+          [
+            40,
+            50,
+            60
+          ],
+          [
+            70,
+            80,
+            90
+          ]
+        ],
+        "mask_value": -10000000000
+      },
+      "expectedOutput": [
+        [
+          10.0,
+          -10000000000.0,
+          -10000000000.0
+        ],
+        [
+          40.0,
+          50.0,
+          -10000000000.0
+        ],
+        [
+          70.0,
+          80.0,
+          90.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "scores": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "mask_value": -100000000
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          -100000000.0,
+          -100000000.0
+        ],
+        [
+          0.0,
+          0.0,
+          -100000000.0
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "scores": [
+          [
+            6.0,
+            7.0,
+            8.0
+          ],
+          [
+            9.0,
+            10.0,
+            11.0
+          ],
+          [
+            12.0,
+            13.0,
+            14.0
+          ]
+        ],
+        "mask_value": -999999995.0
+      },
+      "expectedOutput": [
+        [
+          6.0,
+          -999999995.0,
+          -999999995.0
+        ],
+        [
+          9.0,
+          10.0,
+          -999999995.0
+        ],
+        [
+          12.0,
+          13.0,
+          14.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "scores": [
+          [
+            2,
+            3,
+            4
+          ],
+          [
+            6,
+            8,
+            9
+          ],
+          [
+            10,
+            12,
+            14
+          ]
+        ],
+        "mask_value": -1500000000
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          -1500000000.0,
+          -1500000000.0
+        ],
+        [
+          6.0,
+          8.0,
+          -1500000000.0
+        ],
+        [
+          10.0,
+          12.0,
+          14.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "scores": [
+          [
+            -2,
+            -4,
+            -6
+          ],
+          [
+            -8,
+            -10,
+            -12
+          ],
+          [
+            -14,
+            -16,
+            -18
+          ]
+        ],
+        "mask_value": 2000000000
+      },
+      "expectedOutput": [
+        [
+          -2.0,
+          2000000000.0,
+          2000000000.0
+        ],
+        [
+          -8.0,
+          -10.0,
+          2000000000.0
+        ],
+        [
+          -14.0,
+          -16.0,
+          -18.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "scores": [
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            1,
+            2
+          ],
+          [
+            2,
+            2,
+            2
+          ]
+        ],
+        "mask_value": -250000000
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          -250000000.0,
+          -250000000.0
+        ],
+        [
+          1.0,
+          1.0,
+          -250000000.0
+        ],
+        [
+          2.0,
+          2.0,
+          2.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "scores": [
+          [
+            0.0,
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0,
+            5.0
+          ],
+          [
+            6.0,
+            7.0,
+            8.0
+          ]
+        ],
+        "mask_value": -1000000001.0
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          -1000000001.0,
+          -1000000001.0
+        ],
+        [
+          3.0,
+          4.0,
+          -1000000001.0
+        ],
+        [
+          6.0,
+          7.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "scores": [
+          [
+            4,
+            8,
+            12
+          ],
+          [
+            16,
+            20,
+            24
+          ],
+          [
+            28,
+            32,
+            36
+          ]
+        ],
+        "mask_value": -4000000000
+      },
+      "expectedOutput": [
+        [
+          4.0,
+          -4000000000.0,
+          -4000000000.0
+        ],
+        [
+          16.0,
+          20.0,
+          -4000000000.0
+        ],
+        [
+          28.0,
+          32.0,
+          36.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "scores": [
+          [
+            1,
+            2,
+            2
+          ],
+          [
+            3,
+            4,
+            4
+          ],
+          [
+            5,
+            6,
+            7
+          ]
+        ],
+        "mask_value": -750000000
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          -750000000.0,
+          -750000000.0
+        ],
+        [
+          3.0,
+          4.0,
+          -750000000.0
+        ],
+        [
+          5.0,
+          6.0,
+          7.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "causal-masking-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "scores": [
+          [
+            5,
+            10,
+            15
+          ],
+          [
+            20,
+            25,
+            30
+          ],
+          [
+            35,
+            40,
+            45
+          ]
+        ],
+        "mask_value": -5000000000
+      },
+      "expectedOutput": [
+        [
+          5.0,
+          -5000000000.0,
+          -5000000000.0
+        ],
+        [
+          20.0,
+          25.0,
+          -5000000000.0
+        ],
+        [
+          35.0,
+          40.0,
+          45.0
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "apply_causal_mask",
+    "parameters": [
+      {
+        "name": "scores",
+        "type": "array",
+        "example": "[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]",
+        "description": "Attention scores with shape (..., T, T)"
+      },
+      {
+        "name": "mask_value",
+        "type": "number",
+        "example": "-1e9",
+        "description": "Value to use for masking future positions (default: -1e9)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "positional-encoding",
+    "softmax-function",
+    "gelu",
+    "linear-layer-forward",
+    "dropout-training"
+  ],
+  "tags": [
+    "Transformers"
+  ],
+  "prevId": "gru-cell-forward",
+  "nextId": "global-avg-pooling",
+  "slug": "causal-masking",
+  "cleanTitle": "Implement Causal Masking for Attention",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/causal-masking",
+  "localUrl": "http://localhost:3000/problems/causal-masking",
+  "studyPlan": null
+}

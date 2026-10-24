@@ -1,0 +1,528 @@
+{
+  "id": "knn-distance",
+  "title": "KNN Distance + Neighbor Lookup",
+  "description": "For every test point, find the indices of its $k$ nearest training points using Euclidean distance:\n\n$$\nd(\\mathbf{x},\\mathbf{z})=\\sqrt{\\sum_{j=1}^{D}(x_j-z_j)^2}\n$$\n\nHere, $D$ is the feature count and $j$ indexes a feature. Sort neighbors from smallest to largest distance. If $k$ exceeds the training-set size, append $-1$ until every row has length $k$. One-dimensional inputs represent collections of scalar samples. Return an integer NumPy array of shape (n_test, k).",
+  "seoDescription": "Find the nearest neighbors of a query point by computing and ordering Euclidean distances to training samples.",
+  "examples": [
+    "Input: X_train = [1, 3, 5], X_test = [2], k = 2\n\nOutput: [[0, 1]]\n\nExplanation: Training values 1 and 3 are equally close to 2, and their indices remain in ascending order.",
+    "Input: X_train = [[0, 0], [1, 1], [2, 2]], X_test = [[0.5, 0.5]], k = 2\n\nOutput: [[0, 1]]"
+  ],
+  "requirements": "* Compute all test-to-training Euclidean distances\n* Sort neighbor indices from closest to farthest\n* Pad missing neighbors with -1 when k exceeds the training size\n* Return an integer NumPy array of shape (n_test, k)",
+  "theory": "## Understanding the Theory: KNN Distance + Neighbor Lookup\n\n### Core Intuition: Why Do We Need This?\nClassical machine learning algorithms provide robust, mathematically interpretable baselines for classification, regression, and unsupervised clustering. Understanding their geometric decision boundaries and optimization guarantees forms the foundation of modern data science. **KNN Distance + Neighbor Lookup** constructs predictive decision boundaries or uncovers latent cluster structures in tabular datasets.\n\nIn this problem, the objective is to implement **KNN Distance + Neighbor Lookup** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nd(\\mathbf{x},\\mathbf{z})=\\sqrt{\\sum_{j=1}^{D}(x_j-z_j)^2}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Bias-Variance Tradeoff**: Controlling model complexity (e.g. tree depth, K in KNN, regularization strength) balances training accuracy against generalization on unseen test data.\n* **Feature Scaling**: Distance-based algorithms (like KNN and K-Means) require standardizing features to zero mean and unit variance to prevent high-magnitude features from dominating.\n* **Computational Complexity**: While linear models scale linearly $\\\\mathcal{O}(N)$, pair-wise distance algorithms can scale quadratically $\\\\mathcal{O}(N^2)$ without approximate nearest neighbor indexing.",
+  "hints": [
+    "Reshape scalar datasets to (-1, 1) before broadcasting.",
+    "Use X_test[:, None, :] - X_train[None, :, :] to form all pairwise differences.",
+    "Concatenate an integer array filled with -1 when padding is required."
+  ],
+  "constraints": "* Training and test samples have the same feature width\n* k is a positive integer\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef knn_distance(X_train: list, X_test: list, k: int) -> np.ndarray:\n    \"\"\"\n    Returns a NumPy array with shape (n_test, k).\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-09T14:33:45.676Z",
+  "updatedAt": "2026-08-23T10:06:15.807Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef knn_distance(X_train: list, X_test: list, k: int) -> np.ndarray:\n    tr = np.array(X_train, dtype=float)\n    te = np.array(X_test, dtype=float)\n    if tr.ndim == 1: tr = tr[:, np.newaxis]\n    if te.ndim == 1: te = te[:, np.newaxis]\n    dists = np.linalg.norm(te[:, np.newaxis, :] - tr[np.newaxis, :, :], axis=2)\n    return np.argsort(dists, axis=1)[:, :k]\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "KNNViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Simple 1D",
+      "inputs": {
+        "k": 2,
+        "X_test": [
+          2
+        ],
+        "X_train": [
+          1,
+          3,
+          5
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "2D",
+      "inputs": {
+        "k": 2,
+        "X_test": [
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "X_train": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "knn-distance-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "k": 4,
+        "X_test": [
+          4
+        ],
+        "X_train": [
+          2,
+          6,
+          10
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "k": 1,
+        "X_test": [
+          1
+        ],
+        "X_train": [
+          1,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": [
+        [
+          0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "k": 2,
+        "X_test": [
+          3
+        ],
+        "X_train": [
+          1,
+          3,
+          5
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "k": 3,
+        "X_test": [
+          3
+        ],
+        "X_train": [
+          2,
+          4,
+          8
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "k": 6,
+        "X_test": [
+          6
+        ],
+        "X_train": [
+          3,
+          9,
+          15
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "k": 1,
+        "X_test": [
+          0
+        ],
+        "X_train": [
+          1,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": [
+        [
+          0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "k": 4,
+        "X_test": [
+          4
+        ],
+        "X_train": [
+          2,
+          6,
+          10
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "k": 8,
+        "X_test": [
+          8
+        ],
+        "X_train": [
+          4,
+          12,
+          20
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "k": 2,
+        "X_test": [
+          2
+        ],
+        "X_train": [
+          5,
+          3,
+          1
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          2
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "k": 2,
+        "X_test": [
+          2
+        ],
+        "X_train": [
+          1,
+          2,
+          4
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "k": 10,
+        "X_test": [
+          10
+        ],
+        "X_train": [
+          5,
+          15,
+          25
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "k": 6,
+        "X_test": [
+          5
+        ],
+        "X_train": [
+          3,
+          9,
+          15
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "k": 2,
+        "X_test": [
+          2
+        ],
+        "X_train": [
+          1,
+          2,
+          4
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "k": 12,
+        "X_test": [
+          12
+        ],
+        "X_train": [
+          6,
+          18,
+          30
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "k": 8,
+        "X_test": [
+          6
+        ],
+        "X_train": [
+          4,
+          12,
+          20
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "k": 2,
+        "X_test": [
+          2
+        ],
+        "X_train": [
+          1,
+          4,
+          6
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "k": 1,
+        "X_test": [
+          1
+        ],
+        "X_train": [
+          1,
+          1,
+          2
+        ]
+      },
+      "expectedOutput": [
+        [
+          0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "knn-distance-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "k": 16,
+        "X_test": [
+          16
+        ],
+        "X_train": [
+          8,
+          24,
+          40
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "knn_distance",
+    "parameters": [
+      {
+        "name": "X_train",
+        "type": "array",
+        "example": "[1, 3, 5]",
+        "description": "Training data"
+      },
+      {
+        "name": "X_test",
+        "type": "array",
+        "example": "[2]",
+        "description": "Test data"
+      },
+      {
+        "name": "k",
+        "type": "number",
+        "example": "2",
+        "description": "Number of nearest neighbors"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "euclidean-distance",
+    "manhattan-distance",
+    "cosine-similarity",
+    "k-means-assignment",
+    "k-means-centroid-update"
+  ],
+  "tags": [
+    "Classic ML"
+  ],
+  "prevId": "majority-classifier",
+  "nextId": "naive-bayes-bernoulli",
+  "slug": "knn-distance",
+  "cleanTitle": "KNN Distance + Neighbor Lookup",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/knn-distance",
+  "localUrl": "http://localhost:3000/problems/knn-distance",
+  "studyPlan": null
+}

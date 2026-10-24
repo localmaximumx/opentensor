@@ -1,0 +1,1054 @@
+{
+  "catalogId": "sql:sql-running-totals",
+  "id": "sql-running-totals",
+  "sourceId": "sql-running-totals",
+  "slug": "sql-running-totals",
+  "source": "sql",
+  "category": "sql",
+  "title": "Running Totals",
+  "difficulty": "Medium",
+  "tags": [
+    "Data Processing"
+  ],
+  "isFree": false,
+  "planId": "sql-basics",
+  "planTitle": "SQL Sheet",
+  "sectionId": "sql-basics-window-functions",
+  "sortOrder": 400,
+  "seoDescription": "Compute per-account running transaction totals with a partitioned SQL window ordered by date and transaction ID.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Compute running cumulative balances partitioned per account and ordered chronologically by transaction date and ID.\n\nThe default frame specification RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW computes monotonic running cumulative aggregates.\n\n### Query Logic & Formulation\n$$\n\\operatorname{SUM}(\\text{amount}) \\quad \\text{OVER}(\\operatorname{PARTITION BY} \\text{account\\_id} \\quad \\operatorname{ORDER BY} \\text{txn\\_date, txn\\_id})\n$$\n\n### Relational Execution Steps\n1. Partition transactions by account_id identifier\n2. Sort records within partition by txn_date and txn_id\n3. Accumulate cumulative running transaction total\n\n### Expected Query Output\nList of records containing running_total balances.",
+  "theory": "## Understanding the Theory: Running Totals\n\n### Core Intuition: Why Do We Need This?\nRelational databases structure data into normalized tables with strict schemas and foreign-key relationships. SQL allows data engineers and analysts to write declarative queries describing what data is needed, while the database query engine optimizes the underlying execution plan. **Running Totals** combines, aggregates, or transforms records across tables.\n\nThe default frame specification RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW computes monotonic running cumulative aggregates. In this problem, the goal is to: compute running cumulative balances partitioned per account and ordered chronologically by transaction date and id.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\operatorname{SUM}(\\text{amount}) \\quad \\text{OVER}(\\operatorname{PARTITION BY} \\text{account\\_id} \\quad \\operatorname{ORDER BY} \\text{txn\\_date, txn\\_id})\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Partition transactions by account_id identifier\n2. **Phase 2**: Sort records within partition by txn_date and txn_id\n3. **Phase 3**: Accumulate cumulative running transaction total\n\n### Practical Machine Learning Applications & Nuances\n* **Join Mechanics**: Inner joins filter for matching records across tables, while outer joins preserve all rows from one table even when no matches exist.\n* **Window Functions**: Functions like `ROW_NUMBER()` and `RANK()` allow computing partitioned running totals and top-K ranks without requiring self-joins.\n* **Index Optimization**: Proper indexing on join keys and filter conditions ensures queries run in milliseconds rather than doing full table scans.",
+  "examples": [
+    "Input: transactions = [{\"account_id\": \"ACC1\", \"txn_date\": \"2024-01-01\", \"txn_id\": 101, \"amount\": 100.0}, {\"account_id\": \"ACC1\", \"txn_date\": \"2024-01-02\", \"txn_id\": 102, \"amount\": 50.0}, {\"account_id\": \"ACC2\", \"txn_date\": \"2024-01-01\", \"txn_id\": 201, \"amount\": 200.0}]\n\nOutput: [{\"account_id\": \"ACC1\", \"txn_date\": \"2024-01-01\", \"txn_id\": 101, \"amount\": 100.0, \"running_total\": 100.0}, {\"account_id\": \"ACC1\", \"txn_date\": \"2024-01-02\", \"txn_id\": 102, \"amount\": 50.0, \"running_total\": 150.0}, {\"account_id\": \"ACC2\", \"txn_date\": \"2024-01-01\", \"txn_id\": 201, \"amount\": 200.0, \"running_total\": 200.0}]\n\nExplanation: Evaluated sql_running_totals under standard test conditions."
+  ],
+  "requirements": "* Function must be named `sql_running_totals`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `sql_running_totals`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "-- SQL Running Totals\nSELECT account_id, txn_date, txn_id, amount,\n       ROUND(SUM(amount) OVER (PARTITION BY account_id ORDER BY txn_date, txn_id), 2) AS running_total\nFROM transactions\nORDER BY account_id, txn_date, txn_id;",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Running Totals** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef sql_running_totals(transactions: list) -> list:\n    parts = {}\n    for t in transactions: parts.setdefault(t['account_id'], []).append(t)\n    res = []\n    for acc, txns in sorted(parts.items()):\n        cur = 0.0\n        for it in sorted(txns, key=lambda x: (x['txn_date'], x['txn_id'])):\n            cur += float(it['amount'])\n            res.append({'account_id': it['account_id'], 'txn_date': it['txn_date'], 'txn_id': it['txn_id'], 'amount': float(it['amount']), 'running_total': round(cur, 2)})\n    return res\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Two accounts with multiple transactions",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "sql-running-totals-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-running-totals-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "transactions": [
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-01",
+            "txn_id": 101,
+            "amount": 100.0
+          },
+          {
+            "account_id": "ACC1",
+            "txn_date": "2024-01-02",
+            "txn_id": 102,
+            "amount": 50.0
+          },
+          {
+            "account_id": "ACC2",
+            "txn_date": "2024-01-01",
+            "txn_id": 201,
+            "amount": 200.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-01",
+          "txn_id": 101,
+          "amount": 100.0,
+          "running_total": 100.0
+        },
+        {
+          "account_id": "ACC1",
+          "txn_date": "2024-01-02",
+          "txn_id": 102,
+          "amount": 50.0,
+          "running_total": 150.0
+        },
+        {
+          "account_id": "ACC2",
+          "txn_date": "2024-01-01",
+          "txn_id": 201,
+          "amount": 200.0,
+          "running_total": 200.0
+        }
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "sql_running_totals",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sql-multiple-joins",
+    "sql-subqueries",
+    "sql-distinct-values",
+    "sql-row-number",
+    "sql-inner-join"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "sql",
+    "placeholderType": "sql_dummy_select (SELECT * FROM main_table)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

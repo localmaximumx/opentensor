@@ -1,0 +1,1783 @@
+{
+  "id": "rnn-step-backward",
+  "title": "RNN Step Backward (Vanilla RNN)",
+  "description": "Implement the backward pass for one tanh RNN step. The cached forward computation is:\n\n$$\n\\mathbf{z}_t=W\\mathbf{x}_t+U\\mathbf{h}_{t-1}+\\mathbf{b}\n$$\n\n$$\n\\mathbf{h}_t=\\tanh(\\mathbf{z}_t)\n$$\n\nGiven upstream gradient $\\mathbf{d h}=\\partial L/\\partial\\mathbf{h}_t$, first compute:\n\n$$\n\\mathbf{d z}=\\mathbf{d h}\\odot(1-\\mathbf{h}_t^2)\n$$\n\nThe cache is [x_t, h_prev, h_t, W, U, b], with $W\\in\\mathbb{R}^{H\\times D}$ and $U\\in\\mathbb{R}^{H\\times H}$. Return dx_t, dh_prev, dW, dU, and db as NumPy arrays in a dictionary.",
+  "seoDescription": "Backpropagate through one vanilla RNN timestep to compute input, hidden-state, weight, and bias gradients.",
+  "examples": [
+    "Input: dh = [1, 1], cache = [[0.5, 0.3], [0.1, 0.2], [0.6, 0.4], [[0.1, 0.2], [0.3, 0.4]], [[0.5, 0.6], [0.7, 0.8]], [0, 0]]\n\nOutput: {\"dx_t\": [0.316, 0.464], \"dh_prev\": [0.908, 1.056], \"dW\": [[0.32, 0.192], [0.42, 0.252]], \"dU\": [[0.064, 0.128], [0.084, 0.168]], \"db\": [0.64, 0.84]}\n\nExplanation: The upstream gradient first passes through tanh, then branches into input, recurrent, weight, and bias gradients.",
+    "Input: dh = [0.5, -0.3], cache = [[1, -0.5, 0.2], [0.3, -0.1], [0.7, -0.4], [[0.2, 0.1, -0.3], [0.4, -0.2, 0.1]], [[0.3, -0.5], [0.6, 0.2]], [0.1, -0.1]]\n\nOutput: {\"dx_t\": [-0.0498, 0.0759, -0.1017], \"dh_prev\": [-0.0747, -0.1779], \"dW\": [[0.255, -0.1275, 0.051], [-0.252, 0.126, -0.0504]], \"dU\": [[0.0765, -0.0255], [-0.0756, 0.0252]], \"db\": [0.255, -0.252]}"
+  ],
+  "requirements": "* Differentiate the tanh activation using the cached hidden state\n* Compute input and previous-state gradients with transposed weight matrices\n* Compute both weight gradients as outer products\n* Return exactly dx_t, dh_prev, dW, dU, and db in a dictionary",
+  "theory": "## Understanding the Theory: RNN Step Backward (Vanilla RNN)\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of variable-length sequences of discrete tokens with complex grammatical and long-range semantic dependencies. Modern Transformer architectures eliminate sequential recurrent bottlenecks by allowing every token to compute dynamic affinity scores with every other token. **RNN Step Backward (Vanilla RNN)** is an essential sequence modeling operation in modern large language models.\n\nIn this problem, the objective is to implement **RNN Step Backward (Vanilla RNN)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\mathbf{z}_t=W\\mathbf{x}_t+U\\mathbf{h}_{t-1}+\\mathbf{b}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **All-to-All Self-Attention**: Dot-product attention computes contextualized representations dynamically, weighting relevant context tokens higher than uninformative tokens.\n* **Causal Masking**: In autoregressive decoder models (like GPT and LLaMA), upper-triangular masking ensures the model cannot look ahead at future tokens during generation.\n* **Positional Embeddings**: Because self-attention is permutation-invariant, positional encodings inject sequence order into the token representations.",
+  "hints": [
+    "Compute dz = dh * (1.0 - h_t ** 2) before any other gradient.",
+    "Use W.T @ dz, U.T @ dz, and np.outer for the remaining gradients."
+  ],
+  "constraints": "* The cache follows the documented six-item order\n* Do not use automatic differentiation\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef rnn_step_backward(dh: list, cache: list) -> dict:\n    \"\"\"\n    Returns a dictionary with dx_t, dh_prev, dW, dU, and db.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-15T16:17:01.276Z",
+  "updatedAt": "2026-08-23T10:37:25.159Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef rnn_step_backward(dh: list, cache: list) -> dict:\n    x_t, h_prev, h_t, Wx, Wh, b = cache\n    dh_arr = np.array(dh, dtype=float)\n    h_t_arr = np.array(h_t, dtype=float)\n    x_t_arr = np.array(x_t, dtype=float)\n    h_prev_arr = np.array(h_prev, dtype=float)\n    Wx_arr = np.array(Wx, dtype=float)\n    Wh_arr = np.array(Wh, dtype=float)\n    dtanh = dh_arr * (1.0 - h_t_arr ** 2)\n    dx_t = dtanh @ Wx_arr\n    dh_prev = dtanh @ Wh_arr\n    dW = np.outer(dtanh, x_t_arr)\n    dU = np.outer(dtanh, h_prev_arr)\n    db = dtanh\n    return {'dx_t': np.round(dx_t, 6).tolist(), 'dh_prev': np.round(dh_prev, 6).tolist(), 'dW': np.round(dW, 6).tolist(), 'dU': np.round(dU, 6).tolist(), 'db': np.round(db, 6).tolist()}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "RnnBackwardViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "H=2, D=2",
+      "inputs": {
+        "dh": [
+          1,
+          1
+        ],
+        "cache": [
+          [
+            0.5,
+            0.3
+          ],
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.6,
+            0.4
+          ],
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.6
+            ],
+            [
+              0.7,
+              0.8
+            ]
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "dx_t": [
+          0.316,
+          0.464
+        ],
+        "dh_prev": [
+          0.908,
+          1.056
+        ],
+        "dW": [
+          [
+            0.32,
+            0.192
+          ],
+          [
+            0.42,
+            0.252
+          ]
+        ],
+        "dU": [
+          [
+            0.064,
+            0.128
+          ],
+          [
+            0.084,
+            0.168
+          ]
+        ],
+        "db": [
+          0.64,
+          0.84
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "H=2, D=3",
+      "inputs": {
+        "dh": [
+          0.5,
+          -0.3
+        ],
+        "cache": [
+          [
+            1,
+            -0.5,
+            0.2
+          ],
+          [
+            0.3,
+            -0.1
+          ],
+          [
+            0.7,
+            -0.4
+          ],
+          [
+            [
+              0.2,
+              0.1,
+              -0.3
+            ],
+            [
+              0.4,
+              -0.2,
+              0.1
+            ]
+          ],
+          [
+            [
+              0.3,
+              -0.5
+            ],
+            [
+              0.6,
+              0.2
+            ]
+          ],
+          [
+            0.1,
+            -0.1
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "dx_t": [
+          -0.0498,
+          0.0759,
+          -0.1017
+        ],
+        "dh_prev": [
+          -0.0747,
+          -0.1779
+        ],
+        "dW": [
+          [
+            0.255,
+            -0.1275,
+            0.051
+          ],
+          [
+            -0.252,
+            0.126,
+            -0.0504
+          ]
+        ],
+        "dU": [
+          [
+            0.0765,
+            -0.0255
+          ],
+          [
+            -0.0756,
+            0.0252
+          ]
+        ],
+        "db": [
+          0.255,
+          -0.252
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "dh": [
+          1,
+          1
+        ],
+        "cache": [
+          [
+            0.5,
+            0.3
+          ],
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.6,
+            0.4
+          ],
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.6
+            ],
+            [
+              0.7,
+              0.8
+            ]
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          0.316,
+          0.464
+        ],
+        "dh_prev": [
+          0.908,
+          1.056
+        ],
+        "dW": [
+          [
+            0.32,
+            0.192
+          ],
+          [
+            0.42,
+            0.252
+          ]
+        ],
+        "dU": [
+          [
+            0.064,
+            0.128
+          ],
+          [
+            0.084,
+            0.168
+          ]
+        ],
+        "db": [
+          0.64,
+          0.84
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "dh": [
+          0.5,
+          -0.3
+        ],
+        "cache": [
+          [
+            1,
+            -0.5,
+            0.2
+          ],
+          [
+            0.3,
+            -0.1
+          ],
+          [
+            0.7,
+            -0.4
+          ],
+          [
+            [
+              0.2,
+              0.1,
+              -0.3
+            ],
+            [
+              0.4,
+              -0.2,
+              0.1
+            ]
+          ],
+          [
+            [
+              0.3,
+              -0.5
+            ],
+            [
+              0.6,
+              0.2
+            ]
+          ],
+          [
+            0.1,
+            -0.1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          -0.0498,
+          0.0759,
+          -0.1017
+        ],
+        "dh_prev": [
+          -0.0747,
+          -0.1779
+        ],
+        "dW": [
+          [
+            0.255,
+            -0.1275,
+            0.051
+          ],
+          [
+            -0.252,
+            0.126,
+            -0.0504
+          ]
+        ],
+        "dU": [
+          [
+            0.0765,
+            -0.0255
+          ],
+          [
+            -0.0756,
+            0.0252
+          ]
+        ],
+        "db": [
+          0.255,
+          -0.252
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "dh": [
+          1,
+          1
+        ],
+        "cache": [
+          [
+            0.5,
+            0.3
+          ],
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.6,
+            0.4
+          ],
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.6
+            ],
+            [
+              0.7,
+              0.8
+            ]
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          0.316,
+          0.464
+        ],
+        "dh_prev": [
+          0.908,
+          1.056
+        ],
+        "dW": [
+          [
+            0.32,
+            0.192
+          ],
+          [
+            0.42,
+            0.252
+          ]
+        ],
+        "dU": [
+          [
+            0.064,
+            0.128
+          ],
+          [
+            0.084,
+            0.168
+          ]
+        ],
+        "db": [
+          0.64,
+          0.84
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "dh": [
+          0.5,
+          -0.3
+        ],
+        "cache": [
+          [
+            1,
+            -0.5,
+            0.2
+          ],
+          [
+            0.3,
+            -0.1
+          ],
+          [
+            0.7,
+            -0.4
+          ],
+          [
+            [
+              0.2,
+              0.1,
+              -0.3
+            ],
+            [
+              0.4,
+              -0.2,
+              0.1
+            ]
+          ],
+          [
+            [
+              0.3,
+              -0.5
+            ],
+            [
+              0.6,
+              0.2
+            ]
+          ],
+          [
+            0.1,
+            -0.1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          -0.0498,
+          0.0759,
+          -0.1017
+        ],
+        "dh_prev": [
+          -0.0747,
+          -0.1779
+        ],
+        "dW": [
+          [
+            0.255,
+            -0.1275,
+            0.051
+          ],
+          [
+            -0.252,
+            0.126,
+            -0.0504
+          ]
+        ],
+        "dU": [
+          [
+            0.0765,
+            -0.0255
+          ],
+          [
+            -0.0756,
+            0.0252
+          ]
+        ],
+        "db": [
+          0.255,
+          -0.252
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "dh": [
+          1,
+          1
+        ],
+        "cache": [
+          [
+            0.5,
+            0.3
+          ],
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.6,
+            0.4
+          ],
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.6
+            ],
+            [
+              0.7,
+              0.8
+            ]
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          0.316,
+          0.464
+        ],
+        "dh_prev": [
+          0.908,
+          1.056
+        ],
+        "dW": [
+          [
+            0.32,
+            0.192
+          ],
+          [
+            0.42,
+            0.252
+          ]
+        ],
+        "dU": [
+          [
+            0.064,
+            0.128
+          ],
+          [
+            0.084,
+            0.168
+          ]
+        ],
+        "db": [
+          0.64,
+          0.84
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "dh": [
+          0.5,
+          -0.3
+        ],
+        "cache": [
+          [
+            1,
+            -0.5,
+            0.2
+          ],
+          [
+            0.3,
+            -0.1
+          ],
+          [
+            0.7,
+            -0.4
+          ],
+          [
+            [
+              0.2,
+              0.1,
+              -0.3
+            ],
+            [
+              0.4,
+              -0.2,
+              0.1
+            ]
+          ],
+          [
+            [
+              0.3,
+              -0.5
+            ],
+            [
+              0.6,
+              0.2
+            ]
+          ],
+          [
+            0.1,
+            -0.1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          -0.0498,
+          0.0759,
+          -0.1017
+        ],
+        "dh_prev": [
+          -0.0747,
+          -0.1779
+        ],
+        "dW": [
+          [
+            0.255,
+            -0.1275,
+            0.051
+          ],
+          [
+            -0.252,
+            0.126,
+            -0.0504
+          ]
+        ],
+        "dU": [
+          [
+            0.0765,
+            -0.0255
+          ],
+          [
+            -0.0756,
+            0.0252
+          ]
+        ],
+        "db": [
+          0.255,
+          -0.252
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "dh": [
+          1,
+          1
+        ],
+        "cache": [
+          [
+            0.5,
+            0.3
+          ],
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.6,
+            0.4
+          ],
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.6
+            ],
+            [
+              0.7,
+              0.8
+            ]
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          0.316,
+          0.464
+        ],
+        "dh_prev": [
+          0.908,
+          1.056
+        ],
+        "dW": [
+          [
+            0.32,
+            0.192
+          ],
+          [
+            0.42,
+            0.252
+          ]
+        ],
+        "dU": [
+          [
+            0.064,
+            0.128
+          ],
+          [
+            0.084,
+            0.168
+          ]
+        ],
+        "db": [
+          0.64,
+          0.84
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "dh": [
+          0.5,
+          -0.3
+        ],
+        "cache": [
+          [
+            1,
+            -0.5,
+            0.2
+          ],
+          [
+            0.3,
+            -0.1
+          ],
+          [
+            0.7,
+            -0.4
+          ],
+          [
+            [
+              0.2,
+              0.1,
+              -0.3
+            ],
+            [
+              0.4,
+              -0.2,
+              0.1
+            ]
+          ],
+          [
+            [
+              0.3,
+              -0.5
+            ],
+            [
+              0.6,
+              0.2
+            ]
+          ],
+          [
+            0.1,
+            -0.1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          -0.0498,
+          0.0759,
+          -0.1017
+        ],
+        "dh_prev": [
+          -0.0747,
+          -0.1779
+        ],
+        "dW": [
+          [
+            0.255,
+            -0.1275,
+            0.051
+          ],
+          [
+            -0.252,
+            0.126,
+            -0.0504
+          ]
+        ],
+        "dU": [
+          [
+            0.0765,
+            -0.0255
+          ],
+          [
+            -0.0756,
+            0.0252
+          ]
+        ],
+        "db": [
+          0.255,
+          -0.252
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "dh": [
+          1,
+          1
+        ],
+        "cache": [
+          [
+            0.5,
+            0.3
+          ],
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.6,
+            0.4
+          ],
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.6
+            ],
+            [
+              0.7,
+              0.8
+            ]
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          0.316,
+          0.464
+        ],
+        "dh_prev": [
+          0.908,
+          1.056
+        ],
+        "dW": [
+          [
+            0.32,
+            0.192
+          ],
+          [
+            0.42,
+            0.252
+          ]
+        ],
+        "dU": [
+          [
+            0.064,
+            0.128
+          ],
+          [
+            0.084,
+            0.168
+          ]
+        ],
+        "db": [
+          0.64,
+          0.84
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "dh": [
+          0.5,
+          -0.3
+        ],
+        "cache": [
+          [
+            1,
+            -0.5,
+            0.2
+          ],
+          [
+            0.3,
+            -0.1
+          ],
+          [
+            0.7,
+            -0.4
+          ],
+          [
+            [
+              0.2,
+              0.1,
+              -0.3
+            ],
+            [
+              0.4,
+              -0.2,
+              0.1
+            ]
+          ],
+          [
+            [
+              0.3,
+              -0.5
+            ],
+            [
+              0.6,
+              0.2
+            ]
+          ],
+          [
+            0.1,
+            -0.1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          -0.0498,
+          0.0759,
+          -0.1017
+        ],
+        "dh_prev": [
+          -0.0747,
+          -0.1779
+        ],
+        "dW": [
+          [
+            0.255,
+            -0.1275,
+            0.051
+          ],
+          [
+            -0.252,
+            0.126,
+            -0.0504
+          ]
+        ],
+        "dU": [
+          [
+            0.0765,
+            -0.0255
+          ],
+          [
+            -0.0756,
+            0.0252
+          ]
+        ],
+        "db": [
+          0.255,
+          -0.252
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "dh": [
+          1,
+          1
+        ],
+        "cache": [
+          [
+            0.5,
+            0.3
+          ],
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.6,
+            0.4
+          ],
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.6
+            ],
+            [
+              0.7,
+              0.8
+            ]
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          0.316,
+          0.464
+        ],
+        "dh_prev": [
+          0.908,
+          1.056
+        ],
+        "dW": [
+          [
+            0.32,
+            0.192
+          ],
+          [
+            0.42,
+            0.252
+          ]
+        ],
+        "dU": [
+          [
+            0.064,
+            0.128
+          ],
+          [
+            0.084,
+            0.168
+          ]
+        ],
+        "db": [
+          0.64,
+          0.84
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "dh": [
+          0.5,
+          -0.3
+        ],
+        "cache": [
+          [
+            1,
+            -0.5,
+            0.2
+          ],
+          [
+            0.3,
+            -0.1
+          ],
+          [
+            0.7,
+            -0.4
+          ],
+          [
+            [
+              0.2,
+              0.1,
+              -0.3
+            ],
+            [
+              0.4,
+              -0.2,
+              0.1
+            ]
+          ],
+          [
+            [
+              0.3,
+              -0.5
+            ],
+            [
+              0.6,
+              0.2
+            ]
+          ],
+          [
+            0.1,
+            -0.1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          -0.0498,
+          0.0759,
+          -0.1017
+        ],
+        "dh_prev": [
+          -0.0747,
+          -0.1779
+        ],
+        "dW": [
+          [
+            0.255,
+            -0.1275,
+            0.051
+          ],
+          [
+            -0.252,
+            0.126,
+            -0.0504
+          ]
+        ],
+        "dU": [
+          [
+            0.0765,
+            -0.0255
+          ],
+          [
+            -0.0756,
+            0.0252
+          ]
+        ],
+        "db": [
+          0.255,
+          -0.252
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "dh": [
+          1,
+          1
+        ],
+        "cache": [
+          [
+            0.5,
+            0.3
+          ],
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.6,
+            0.4
+          ],
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.6
+            ],
+            [
+              0.7,
+              0.8
+            ]
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          0.316,
+          0.464
+        ],
+        "dh_prev": [
+          0.908,
+          1.056
+        ],
+        "dW": [
+          [
+            0.32,
+            0.192
+          ],
+          [
+            0.42,
+            0.252
+          ]
+        ],
+        "dU": [
+          [
+            0.064,
+            0.128
+          ],
+          [
+            0.084,
+            0.168
+          ]
+        ],
+        "db": [
+          0.64,
+          0.84
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "dh": [
+          0.5,
+          -0.3
+        ],
+        "cache": [
+          [
+            1,
+            -0.5,
+            0.2
+          ],
+          [
+            0.3,
+            -0.1
+          ],
+          [
+            0.7,
+            -0.4
+          ],
+          [
+            [
+              0.2,
+              0.1,
+              -0.3
+            ],
+            [
+              0.4,
+              -0.2,
+              0.1
+            ]
+          ],
+          [
+            [
+              0.3,
+              -0.5
+            ],
+            [
+              0.6,
+              0.2
+            ]
+          ],
+          [
+            0.1,
+            -0.1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          -0.0498,
+          0.0759,
+          -0.1017
+        ],
+        "dh_prev": [
+          -0.0747,
+          -0.1779
+        ],
+        "dW": [
+          [
+            0.255,
+            -0.1275,
+            0.051
+          ],
+          [
+            -0.252,
+            0.126,
+            -0.0504
+          ]
+        ],
+        "dU": [
+          [
+            0.0765,
+            -0.0255
+          ],
+          [
+            -0.0756,
+            0.0252
+          ]
+        ],
+        "db": [
+          0.255,
+          -0.252
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "dh": [
+          1,
+          1
+        ],
+        "cache": [
+          [
+            0.5,
+            0.3
+          ],
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.6,
+            0.4
+          ],
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.6
+            ],
+            [
+              0.7,
+              0.8
+            ]
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          0.316,
+          0.464
+        ],
+        "dh_prev": [
+          0.908,
+          1.056
+        ],
+        "dW": [
+          [
+            0.32,
+            0.192
+          ],
+          [
+            0.42,
+            0.252
+          ]
+        ],
+        "dU": [
+          [
+            0.064,
+            0.128
+          ],
+          [
+            0.084,
+            0.168
+          ]
+        ],
+        "db": [
+          0.64,
+          0.84
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "dh": [
+          0.5,
+          -0.3
+        ],
+        "cache": [
+          [
+            1,
+            -0.5,
+            0.2
+          ],
+          [
+            0.3,
+            -0.1
+          ],
+          [
+            0.7,
+            -0.4
+          ],
+          [
+            [
+              0.2,
+              0.1,
+              -0.3
+            ],
+            [
+              0.4,
+              -0.2,
+              0.1
+            ]
+          ],
+          [
+            [
+              0.3,
+              -0.5
+            ],
+            [
+              0.6,
+              0.2
+            ]
+          ],
+          [
+            0.1,
+            -0.1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          -0.0498,
+          0.0759,
+          -0.1017
+        ],
+        "dh_prev": [
+          -0.0747,
+          -0.1779
+        ],
+        "dW": [
+          [
+            0.255,
+            -0.1275,
+            0.051
+          ],
+          [
+            -0.252,
+            0.126,
+            -0.0504
+          ]
+        ],
+        "dU": [
+          [
+            0.0765,
+            -0.0255
+          ],
+          [
+            -0.0756,
+            0.0252
+          ]
+        ],
+        "db": [
+          0.255,
+          -0.252
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "dh": [
+          1,
+          1
+        ],
+        "cache": [
+          [
+            0.5,
+            0.3
+          ],
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.6,
+            0.4
+          ],
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.6
+            ],
+            [
+              0.7,
+              0.8
+            ]
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          0.316,
+          0.464
+        ],
+        "dh_prev": [
+          0.908,
+          1.056
+        ],
+        "dW": [
+          [
+            0.32,
+            0.192
+          ],
+          [
+            0.42,
+            0.252
+          ]
+        ],
+        "dU": [
+          [
+            0.064,
+            0.128
+          ],
+          [
+            0.084,
+            0.168
+          ]
+        ],
+        "db": [
+          0.64,
+          0.84
+        ]
+      }
+    },
+    {
+      "id": "rnn-step-backward-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "dh": [
+          0.5,
+          -0.3
+        ],
+        "cache": [
+          [
+            1,
+            -0.5,
+            0.2
+          ],
+          [
+            0.3,
+            -0.1
+          ],
+          [
+            0.7,
+            -0.4
+          ],
+          [
+            [
+              0.2,
+              0.1,
+              -0.3
+            ],
+            [
+              0.4,
+              -0.2,
+              0.1
+            ]
+          ],
+          [
+            [
+              0.3,
+              -0.5
+            ],
+            [
+              0.6,
+              0.2
+            ]
+          ],
+          [
+            0.1,
+            -0.1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "dx_t": [
+          -0.0498,
+          0.0759,
+          -0.1017
+        ],
+        "dh_prev": [
+          -0.0747,
+          -0.1779
+        ],
+        "dW": [
+          [
+            0.255,
+            -0.1275,
+            0.051
+          ],
+          [
+            -0.252,
+            0.126,
+            -0.0504
+          ]
+        ],
+        "dU": [
+          [
+            0.0765,
+            -0.0255
+          ],
+          [
+            -0.0756,
+            0.0252
+          ]
+        ],
+        "db": [
+          0.255,
+          -0.252
+        ]
+      }
+    }
+  ],
+  "functionMetadata": {
+    "name": "rnn_step_backward",
+    "parameters": [
+      {
+        "name": "dh",
+        "type": "array",
+        "example": "[1.0, 1.0]",
+        "description": "Gradient of loss w.r.t. hidden state h_next (shape: H,)"
+      },
+      {
+        "name": "cache",
+        "type": "array",
+        "example": "[[0.5, 0.3], [0.1, 0.2], [0.6, 0.4], [[0.1, 0.2], [0.3, 0.4]], [[0.5, 0.6], [0.7, 0.8]], [0, 0]]",
+        "description": "Cache from forward pass: [x, h_prev, h_next, W, U, b]"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "rnn-step-forward",
+    "gru-cell-forward",
+    "tanh-activation",
+    "linear-layer-forward",
+    "gradient-clipping"
+  ],
+  "tags": [
+    "Neural Networks",
+    "NLP"
+  ],
+  "prevId": "mean-squared-error",
+  "nextId": "td-value-update",
+  "slug": "rnn-step-backward",
+  "cleanTitle": "RNN Step Backward (Vanilla RNN)",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/rnn-step-backward",
+  "localUrl": "http://localhost:3000/problems/rnn-step-backward",
+  "studyPlan": null
+}

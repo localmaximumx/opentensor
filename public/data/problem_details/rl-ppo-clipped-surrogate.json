@@ -1,0 +1,535 @@
+{
+  "catalogId": "python:rl-ppo-clipped-surrogate",
+  "id": "rl-ppo-clipped-surrogate",
+  "sourceId": "rl-ppo-clipped-surrogate",
+  "slug": "rl-ppo-clipped-surrogate",
+  "source": "python",
+  "category": "python",
+  "title": "PPO Clipped Surrogate Objective",
+  "difficulty": "Medium",
+  "tags": [
+    "Reinforcement Learning",
+    "Loss Functions"
+  ],
+  "isFree": false,
+  "planId": "cracking-rl",
+  "planTitle": "Cracking RL",
+  "sectionId": "cracking-rl-policy-gradient-and-ppo",
+  "sortOrder": 200,
+  "seoDescription": "Proximal Policy Optimization (PPO) optimizes a clipped surrogate objective that limits how far the new policy may drift from the data-collecting policy.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Calculate the Proximal Policy Optimization (PPO) clipped surrogate objective to constrain policy updates within a trust region.\n\nPPO prevents destructively large policy steps by clipping updates when the new policy strays too far from rollout data.\n\n### Mathematical Formulation\n$$\nL^{\\text{CLIP}}(\\theta) = \\hat{\\mathbb{E}}_t \\left[ \\min\\left( r_t(\\theta)\\hat{A}_t, \\, \\operatorname{clip}(r_t(\\theta), 1-\\epsilon, 1+\\epsilon)\\hat{A}_t \\right) \\right]\n$$\n\n### Step-by-Step Implementation\n1. Compute importance probability ratio r_t = exp(log_prob_new - log_prob_old)\n2. Calculate unclipped objective and clipped objective bounded by 1 +/- epsilon\n3. Take minimum of both terms and return negative mean for minimization\n\n### Returns\nScalar float representing PPO policy loss.",
+  "theory": "## Understanding the Theory: PPO Clipped Surrogate Objective\n\n### Core Intuition: Why Do We Need This?\nIn reinforcement learning, there is no supervisor providing correct answers. Instead, an agent learns by trial and error: taking actions, observing environment states, and receiving feedback rewards. The agent must continuously balance exploiting known high-reward actions with exploring new actions that might be even better. **PPO Clipped Surrogate Objective** implements a core decision-making or value-estimation algorithm.\n\nPPO prevents destructively large policy steps by clipping updates when the new policy strays too far from rollout data. In this problem, the goal is to: calculate the proximal policy optimization (ppo) clipped surrogate objective to constrain policy updates within a trust region.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nL^{\\text{CLIP}}(\\theta) = \\hat{\\mathbb{E}}_t \\left[ \\min\\left( r_t(\\theta)\\hat{A}_t, \\, \\operatorname{clip}(r_t(\\theta), 1-\\epsilon, 1+\\epsilon)\\hat{A}_t \\right) \\right]\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute importance probability ratio r_t = exp(log_prob_new - log_prob_old)\n2. **Phase 2**: Calculate unclipped objective and clipped objective bounded by 1 +/- epsilon\n3. **Phase 3**: Take minimum of both terms and return negative mean for minimization\n\n### Practical Machine Learning Applications & Nuances\n* **Bellman Equations**: The core idea of dynamic programming in RL is that the value of a state equals the immediate reward plus the discounted expected value of the next state.\n* **Sample Efficiency**: Replay buffers and temporal difference updates allow agents to learn stably from past experiences.\n* **Policy Optimization**: Whether using value-based methods (like Q-learning) or policy gradients (like PPO), algorithms converge toward the optimal behavioral policy.",
+  "examples": [
+    "Input: log_probs_new = [-0.6, -0.8, -0.3], log_probs_old = [-0.7, -0.7, -0.4], advantages = [1.5, -0.5, 2.0], epsilon = 0.2\n\nOutput: -1.13856\n\nExplanation: Evaluated rl_ppo_clipped_surrogate under standard test conditions."
+  ],
+  "requirements": "* Function must be named `rl_ppo_clipped_surrogate`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `rl_ppo_clipped_surrogate`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef rl_ppo_clipped_surrogate(log_probs_new: list, log_probs_old: list, advantages: list, epsilon: float = 0.2) -> float:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **PPO Clipped Surrogate Objective** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef rl_ppo_clipped_surrogate(log_probs_new: list, log_probs_old: list, advantages: list, epsilon: float = 0.2) -> float:\n    r = np.exp(np.array(log_probs_new, dtype=np.float64) - np.array(log_probs_old, dtype=np.float64))\n    A = np.array(advantages, dtype=np.float64)\n    eps = float(epsilon)\n    return round(float(-np.mean(np.minimum(r * A, np.clip(r, 1.0 - eps, 1.0 + eps) * A))), 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "3 transitions with positive advantages",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": true
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    },
+    {
+      "id": "rl-ppo-clipped-surrogate-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "log_probs_new": [
+          -0.6,
+          -0.8,
+          -0.3
+        ],
+        "log_probs_old": [
+          -0.7,
+          -0.7,
+          -0.4
+        ],
+        "advantages": [
+          1.5,
+          -0.5,
+          2.0
+        ],
+        "epsilon": 0.2
+      },
+      "expectedOutput": -1.13856,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "rl_ppo_clipped_surrogate",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "gradient-descent-quadratic",
+    "anchor-box-generation",
+    "value-iteration-step",
+    "precision-recall-at-k",
+    "cs336-l01-train-byte-pair-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "python",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

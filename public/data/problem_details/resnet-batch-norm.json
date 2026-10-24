@@ -1,0 +1,2326 @@
+{
+  "id": "resnet-batch-norm",
+  "title": "BatchNorm in ResNet",
+  "description": "Implement a matrix-based residual block that compares the post-activation ordering from the original ResNet with a pre-activation variant. Matrix multiplication stands in for convolution so the exercise focuses on normalization order and the residual path.\n\nFor each feature, batch normalization uses\n\n$$\n\\widehat{x} = \\frac{x - \\mu_B}{\\sqrt{\\sigma_B^2 + \\varepsilon}}\n$$\n\n$$\ny = \\gamma \\widehat{x} + \\beta\n$$\n\nHere, \\(\\mu_B\\) and \\(\\sigma_B^2\\) are the batch mean and population variance, \\(\\gamma\\) is the scale, \\(\\beta\\) is the shift, and \\(\\varepsilon=10^{-5}\\). In post mode, use linear, normalization, ReLU, linear, normalization, residual addition, then ReLU. In pre mode, use normalization, ReLU, linear, normalization, ReLU, linear, then residual addition. Return a dictionary containing output as rounded nested lists and mode as the supplied string.",
+  "seoDescription": "Implement ResNet batch normalization with channel statistics, learned scale and bias, and training or inference behavior.",
+  "examples": [
+    "Input: x = [[-0.5653, 0.3481, -0.2161], [0.3705, -0.2391, 0.693], [0.0626, 0.5744, -1.1751]], W1 = [[0.0916, -0.1557, -0.147], [0.2, 0.5028, 0.2508], [-0.0003, 0.652, 0.5367]], W2 = [[-0.2577, 0.8315, 0.2759], [-0.2897, -0.4244, -0.2054], [1.0803, -0.7788, 0.0674]], gamma1 = [1.0027, 1.3233, 0.704], beta1 = [0.0552, 0.1378, 0.0504], gamma2 = [0.9413, 0.5823, 1.6512], beta2 = [0.1957, 0.0577, 0.0163], mode = \"post\"\n\nOutput: {\"output\": [[0.0, 0.1843, 0.0], [1.6257, 0.0, 0.0], [0.0, 1.4297, 1.1527]], \"mode\": \"post\"}\n\nExplanation: Post-activation order: Conv -> BN -> ReLU -> Conv -> BN -> Add Skip -> ReLU. Batch normalization normalizes across the batch dimension using batch mean and variance, then applies learnable gamma (scale) and beta (shift).",
+    "Input: x = [[0.3017, -0.3008, -0.2935], [0.2416, 0.324, -0.3666], [0.2154, 0.3158, 0.0383]], W1 = [[0.1265, -0.3916, 0.5808], [1.0436, 0.6305, 0.0941], [-0.1571, -0.0329, 0.8322]], W2 = [[-0.44, 0.1317, -0.3285], [0.1949, -0.0915, -0.2772], [0.2316, 0.6021, -0.3556]], gamma1 = [0.2648, 1.3138, 1.8375], beta1 = [0.2128, 0.1408, -0.1618], gamma2 = [0.9366, 0.9082, 0.5768], beta2 = [0.0208, -0.0825, -0.0786], mode = \"pre\"\n\nOutput: {\"output\": [[0.3017, -0.3008, -0.2935], [-0.115, 0.4102, -0.894], [0.4069, 0.7354, -0.4184]], \"mode\": \"pre\"}",
+    "Input: x = [[0.0979, -0.9793, -0.0267, -0.2912], [0.6751, -0.5632, 0.4476, -1.5262], [-0.4027, 0.3876, -0.0889, 0.0597], [0.0463, -0.2985, -0.3164, 0.226]], W1 = [[0.3251, 0.9961, 0.1917, -0.6487], [0.6199, -0.2509, -0.6504, 0.4924], [-1.0969, -0.3445, -0.2625, -0.5728], [-0.9859, -0.4261, 0.636, 0.5007]], W2 = [[0.2065, -0.2423, -0.0363, 0.1718], [0.5084, 0.3609, -0.7219, -0.038], [-0.4183, 0.0357, -0.6081, 0.2697], [-0.4538, 0.7101, -0.6692, 0.2723]], gamma1 = [0.421, 1.3054, 1.4115, 0.2933], beta1 = [-0.0481, 0.0174, 0.1284, -0.0478], gamma2 = [0.7978, 1.234, 0.8163, 0.3063], beta2 = [-0.0125, -0.014, 0.1555, 0.1241], mode = \"post\"\n\nOutput: {\"output\": [[0.0, 0.0, 0.0, 0.1309], [1.9895, 1.5427, 0.0, 0.0], [0.0, 0.0, 1.3868, 0.0], [0.0, 0.0, 0.0, 0.6626]], \"mode\": \"post\"}"
+  ],
+  "requirements": "- Use NumPy float64 arrays for every numeric input.\n- Compute normalization independently for each feature across axis 0.\n- Follow the ordering selected by mode exactly.\n- Preserve the identity residual path.\n- Round each returned output value to four decimal places.",
+  "theory": "# <span style=\"font-size: 20px;\">Batch Normalization</span>\n\n<span style=\"font-size: 14px;\">**Batch Normalization** (BatchNorm) normalizes activations across the batch dimension for each channel, stabilizing and accelerating deep network training. Introduced by Ioffe and Szegedy (2015), it became a standard building block after He et al. adopted it in ResNet with the Conv->BN->ReLU ordering that is now ubiquitous in convolutional architectures.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">Batch Normalization is a layer inserted between a linear operation (convolution or fully connected) and its activation function. It normalizes the pre-activation values so that, across the current mini-batch, each feature channel has approximately zero mean and unit variance. After normalizing, it applies a learned affine transform that gives the network the ability to recover any distribution it finds useful.</span>\n\n<span style=\"font-size: 14px;\">The core idea: if the inputs to each layer keep shifting in distribution as earlier layers update their weights, training becomes unstable and slow. By re-centering and re-scaling activations at every layer, BatchNorm decouples layers from each other, allowing each one to learn more independently. The original paper calls this problem **internal covariate shift**.</span>\n\n<span style=\"font-size: 14px;\">In a convolutional network, BatchNorm operates per channel. For an input tensor of shape $(B, C, H, W)$, the normalization statistics (mean and variance) are computed over all $B \\times H \\times W$ values for each of the $C$ channels independently. This preserves the translation equivariance property of convolutions.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n### <span style=\"font-size: 14px;\">Batch Mean</span>\n\n<span style=\"font-size: 14px;\">For a given channel $c$, compute the mean over all elements in the batch and all spatial positions:</span>\n\n$$\n\\mu_B^{(c)} = \\frac{1}{B \\cdot H \\cdot W} \\sum_{b=1}^{B} \\sum_{h=1}^{H} \\sum_{w=1}^{W} x_{b,c,h,w}\n$$\n\n### <span style=\"font-size: 14px;\">Batch Variance</span>\n\n$$\n\\sigma_B^{2(c)} = \\frac{1}{B \\cdot H \\cdot W} \\sum_{b=1}^{B} \\sum_{h=1}^{H} \\sum_{w=1}^{W} (x_{b,c,h,w} - \\mu_B^{(c)})^2\n$$\n\n### <span style=\"font-size: 14px;\">Normalize</span>\n\n<span style=\"font-size: 14px;\">Subtract the batch mean and divide by the standard deviation plus a small constant $\\epsilon$ for numerical stability:</span>\n\n$$\n\\hat{x}_{b,c,h,w} = \\frac{x_{b,c,h,w} - \\mu_B^{(c)}}{\\sqrt{\\sigma_B^{2(c)} + \\epsilon}}\n$$\n\n<span style=\"font-size: 14px;\">A typical value for $\\epsilon$ is $10^{-5}$. It prevents division by zero when a channel has zero variance.</span>\n\n### <span style=\"font-size: 14px;\">Scale and Shift</span>\n\n<span style=\"font-size: 14px;\">The normalized value is transformed by learnable parameters $\\gamma^{(c)}$ and $\\beta^{(c)}$:</span>\n\n$$\ny_{b,c,h,w} = \\gamma^{(c)} \\hat{x}_{b,c,h,w} + \\beta^{(c)}\n$$\n\n<span style=\"font-size: 14px;\">Each channel has its own $\\gamma$ (scale) and $\\beta$ (shift), so for $C$ channels the layer adds $2C$ learnable parameters.</span>\n\n### <span style=\"font-size: 14px;\">Running Statistics (EMA)</span>\n\n<span style=\"font-size: 14px;\">During training, BatchNorm maintains **running estimates** of the mean and variance using an exponential moving average. After each training step:</span>\n\n$$\n\\hat{\\mu}_{\\text{running}}^{(c)} \\leftarrow (1 - m) \\cdot \\hat{\\mu}_{\\text{running}}^{(c)} + m \\cdot \\mu_B^{(c)}\n$$\n\n$$\n\\hat{\\sigma}_{\\text{running}}^{2(c)} \\leftarrow (1 - m) \\cdot \\hat{\\sigma}_{\\text{running}}^{2(c)} + m \\cdot \\sigma_B^{2(c)}\n$$\n\n<span style=\"font-size: 14px;\">Here $m$ is the **momentum** parameter (default 0.1 in PyTorch). The running statistics are accumulated purely for inference. Note: PyTorch's convention defines momentum so that a larger $m$ gives more weight to the current batch. Some frameworks use the opposite convention, so always check the documentation.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Training vs. Inference</span>\n\n### <span style=\"font-size: 14px;\">Training Mode</span>\n\n<span style=\"font-size: 14px;\">During training, BatchNorm uses the **current mini-batch statistics** ($\\mu_B$, $\\sigma_B^2$) to normalize activations. This is essential because the batch statistics provide a differentiable path for backpropagation. Simultaneously, the running mean and running variance are updated via EMA. These buffers are stored in the model's state dict but do not participate in gradient computation.</span>\n\n### <span style=\"font-size: 14px;\">Inference Mode</span>\n\n<span style=\"font-size: 14px;\">At inference time, there may be no batch at all (batch size = 1), or the batch may not represent the training distribution. BatchNorm switches to the **accumulated running statistics**:</span>\n\n$$\n\\hat{x} = \\frac{x - \\hat{\\mu}_{\\text{running}}}{\\sqrt{\\hat{\\sigma}_{\\text{running}}^2 + \\epsilon}}\n$$\n\n<span style=\"font-size: 14px;\">With running statistics and the learned $\\gamma$, $\\beta$, the entire BatchNorm layer reduces to a fixed affine transform at inference. This means it can be **fused** into the preceding convolution with no computational overhead, a common optimization in deployed models.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why Batch Normalize</span>\n\n### <span style=\"font-size: 14px;\">Internal Covariate Shift</span>\n\n<span style=\"font-size: 14px;\">Ioffe and Szegedy (2015) motivated BatchNorm as a solution to **internal covariate shift**: the continuous change in the distribution of a layer's inputs caused by updates to preceding layers. By fixing the first two moments of each layer's inputs, BatchNorm reduces this instability. Later research (Santurkar et al., 2018) argued that the benefit is better explained by **smoothing the loss landscape**, making gradient directions more reliable and allowing larger steps.</span>\n\n### <span style=\"font-size: 14px;\">Enables Higher Learning Rates</span>\n\n<span style=\"font-size: 14px;\">Without BatchNorm, large learning rates cause activations to explode or collapse in deep networks. By keeping activations bounded in a normalized range, BatchNorm allows learning rates that would otherwise diverge. Ioffe and Szegedy reported training BN-Inception with learning rates 10x-30x higher than the baseline while reaching the same accuracy faster.</span>\n\n### <span style=\"font-size: 14px;\">Regularization Effect</span>\n\n<span style=\"font-size: 14px;\">Because batch statistics are computed from a random mini-batch, the normalization introduces noise into activations. Each sample's normalized value depends on what other samples happen to be in the batch. This acts as a mild regularizer, similar in spirit to dropout. Networks trained with BatchNorm often need less dropout or can omit it entirely. The regularization strength decreases with larger batch sizes.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Learnable Parameters</span>\n\n<span style=\"font-size: 14px;\">After normalization, every channel's activations have zero mean and unit variance. If this were the final output, the network would lose representational power. The learnable parameters $\\gamma$ and $\\beta$ restore it.</span>\n\n<span style=\"font-size: 14px;\">If the network learns $\\gamma^{(c)} = \\sqrt{\\sigma_B^{2(c)} + \\epsilon}$ and $\\beta^{(c)} = \\mu_B^{(c)}$, the BatchNorm transformation becomes the identity: $y = x$. This means the network can **undo** normalization entirely if that is optimal. In practice, the network finds an intermediate setting where normalization helps but some deviation from strict zero-mean/unit-variance is beneficial.</span>\n\n<span style=\"font-size: 14px;\">For a conv layer with $C$ output channels, BatchNorm adds $2C$ parameters. This is tiny compared to the conv itself. A $3 \\times 3$ conv with 256 input and 256 output channels has $589{,}824$ parameters; its BatchNorm adds only $512$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Running Statistics</span>\n\n### <span style=\"font-size: 14px;\">The EMA Update Rule</span>\n\n<span style=\"font-size: 14px;\">With momentum $m = 0.1$ (PyTorch default), after each batch:</span>\n\n$$\n\\hat{\\mu}_{\\text{running}} \\leftarrow 0.9 \\cdot \\hat{\\mu}_{\\text{running}} + 0.1 \\cdot \\mu_B\n$$\n\n$$\n\\hat{\\sigma}_{\\text{running}}^2 \\leftarrow 0.9 \\cdot \\hat{\\sigma}_{\\text{running}}^2 + 0.1 \\cdot \\sigma_B^2\n$$\n\n<span style=\"font-size: 14px;\">The running mean is initialized to 0 and the running variance to 1. Over many training iterations, these converge to the global dataset statistics for each channel. Smaller $m$ means slower adaptation but smoother estimates; larger $m$ tracks recent batches more closely.</span>\n\n### <span style=\"font-size: 14px;\">Why Running Statistics Are Needed</span>\n\n<span style=\"font-size: 14px;\">At inference time, you may process a single image (batch size = 1). Computing a \"batch mean\" from one sample would just be the sample itself, making normalization meaningless -- the output would always be zero. Running statistics provide a stable, batch-size-independent estimate representing the training distribution. They also ensure **determinism**: two identical inputs always produce identical outputs regardless of batch composition.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">Batch Normalization was introduced by Ioffe and Szegedy in \"Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift\" (2015). They applied BatchNorm to Inception (GoogLeNet) and demonstrated that BN-Inception matched the original Inception's accuracy in 14x fewer training steps.</span>\n\n<span style=\"font-size: 14px;\">He et al. (2015) adopted BatchNorm as a core component of ResNet. In ResNet, every convolutional layer is followed immediately by BatchNorm before the ReLU activation: **Conv -> BN -> ReLU**. The paper states: \"We adopt batch normalization right after each convolution and before activation.\" This ordering ensures normalization operates on the raw convolution output before the non-linearity clips negative values.</span>\n\n<span style=\"font-size: 14px;\">The Conv -> BN -> ReLU pattern has a specific benefit in residual blocks. The shortcut connection adds the input $x$ to the residual branch $F(x)$. BatchNorm keeps the magnitude of the residual branch controlled. Without it, outputs could grow unboundedly as the network deepens to 50, 101, or 152 layers. ResNet's success -- winning ILSVRC 2015 with 3.57% top-5 error -- cemented BatchNorm as indispensable in convolutional architectures.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Consider a single channel ($c = 0$) with a mini-batch of $B = 3$ scalar values (e.g., after global average pooling). Use $\\epsilon = 0.00001$, $\\gamma = 1.5$, $\\beta = 0.5$. Current running mean $= 0.0$, running variance $= 1.0$, momentum $m = 0.1$.</span>\n\n$$\nx_1 = 2.0, \\quad x_2 = 4.0, \\quad x_3 = 6.0\n$$\n\n### <span style=\"font-size: 14px;\">Step 1: Batch Mean</span>\n\n$$\n\\mu_B = \\frac{2.0 + 4.0 + 6.0}{3} = \\frac{12.0}{3} = 4.0\n$$\n\n### <span style=\"font-size: 14px;\">Step 2: Batch Variance</span>\n\n$$\n\\sigma_B^2 = \\frac{(2.0 - 4.0)^2 + (4.0 - 4.0)^2 + (6.0 - 4.0)^2}{3} = \\frac{4.0 + 0.0 + 4.0}{3} = \\frac{8.0}{3} \\approx 2.6667\n$$\n\n### <span style=\"font-size: 14px;\">Step 3: Normalize</span>\n\n$$\n\\sqrt{\\sigma_B^2 + \\epsilon} = \\sqrt{2.6667 + 0.00001} \\approx 1.6330\n$$\n\n$$\n\\hat{x}_1 = \\frac{2.0 - 4.0}{1.6330} \\approx -1.2247, \\quad \\hat{x}_2 = \\frac{4.0 - 4.0}{1.6330} = 0.0, \\quad \\hat{x}_3 = \\frac{6.0 - 4.0}{1.6330} \\approx 1.2247\n$$\n\n### <span style=\"font-size: 14px;\">Step 4: Scale and Shift</span>\n\n$$\ny_1 = 1.5 \\times (-1.2247) + 0.5 = -1.8371 + 0.5 = -1.3371\n$$\n\n$$\ny_2 = 1.5 \\times 0.0 + 0.5 = 0.5\n$$\n\n$$\ny_3 = 1.5 \\times 1.2247 + 0.5 = 1.8371 + 0.5 = 2.3371\n$$\n\n### <span style=\"font-size: 14px;\">Step 5: Update Running Statistics</span>\n\n$$\n\\hat{\\mu}_{\\text{running}} \\leftarrow 0.9 \\times 0.0 + 0.1 \\times 4.0 = 0.4\n$$\n\n$$\n\\hat{\\sigma}_{\\text{running}}^2 \\leftarrow 0.9 \\times 1.0 + 0.1 \\times 2.6667 = 0.9 + 0.2667 = 1.1667\n$$\n\n<span style=\"font-size: 14px;\">After this batch, the running mean moved from 0.0 to 0.4 (toward the batch mean of 4.0) and the running variance from 1.0 to 1.1667 (toward 2.6667). Over thousands of batches, these converge to the true dataset statistics for this channel.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">BatchNorm vs. LayerNorm vs. RMSNorm</span>\n\n* <span style=\"font-size: 14px;\">**Batch Normalization (BN):** Normalizes across the batch and spatial dimensions, per channel. For tensor $(B, C, H, W)$, statistics are over $(B, H, W)$ for each $C$. Requires large batch sizes. Standard in CNNs (ResNet, EfficientNet).</span>\n* <span style=\"font-size: 14px;\">**Layer Normalization (LN):** Normalizes across feature dimensions, per sample. For tensor $(B, T, D)$ in a transformer, statistics are over $D$ for each $(B, T)$ position. No batch dependency, so it is the standard for transformers and RNNs. No running statistics needed.</span>\n* <span style=\"font-size: 14px;\">**RMSNorm:** Simplified LayerNorm that skips mean subtraction. Normalizes by the root mean square: $\\hat{x} = x / \\text{RMS}(x)$ where $\\text{RMS}(x) = \\sqrt{\\frac{1}{D}\\sum x_i^2}$. Saves 10-15% of normalization cost. Used in LLaMA, Gemma, and other recent LLMs.</span>\n\n<span style=\"font-size: 14px;\">**When to use which:** BatchNorm for convolutional architectures with batch sizes of 16+. LayerNorm for transformers and sequence models. RMSNorm as a drop-in replacement for LayerNorm when training efficiency matters. BatchNorm is rarely used in transformers because sequences in a batch differ in length and content, making batch statistics unreliable.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n* <span style=\"font-size: 14px;\">**Forgetting to switch between train and eval mode.** In PyTorch, `model.train()` makes BatchNorm use batch statistics and update running statistics. `model.eval()` switches to running statistics. Forgetting `model.eval()` at inference causes outputs to depend on batch composition. Forgetting `model.train()` during training means running statistics are never updated.</span>\n* <span style=\"font-size: 14px;\">**Batch size too small.** With batch sizes of 1-4, batch statistics become extremely noisy. For batch size = 1, the variance is zero and normalization collapses. Solutions: Group Normalization, Synchronized BatchNorm across GPUs, or LayerNorm.</span>\n* <span style=\"font-size: 14px;\">**Running statistics not updated.** If the model stays in eval mode during training, running statistics remain at initialization (mean = 0, variance = 1). Training may proceed using batch stats, but switching to eval at inference yields catastrophic accuracy drops.</span>\n* <span style=\"font-size: 14px;\">**Wrong normalization dimension.** BN normalizes over $(B, H, W)$ per channel. Normalizing over the channel dimension instead gives Instance Normalization. In PyTorch, `nn.BatchNorm2d(C)` handles this automatically, but manual implementations must sum over the correct axes.</span>\n* <span style=\"font-size: 14px;\">**Placing BN after ReLU instead of before.** The canonical ResNet order is Conv -> BN -> ReLU. BN after ReLU operates on non-negative values only, biasing the mean and distorting the variance. Both the BN paper and ResNet paper specify placing BN before the activation.</span>\n* <span style=\"font-size: 14px;\">**Including bias in the preceding convolution.** BatchNorm subtracts the mean and adds its own $\\beta$, so any conv bias is redundant -- it gets absorbed into $\\mu_B$ and cancelled. Using `bias=False` saves parameters. PyTorch's ResNet implementations follow this convention.</span>\n* <span style=\"font-size: 14px;\">**Freezing BatchNorm incorrectly during fine-tuning.** When fine-tuning on a small dataset, batch statistics may not represent the new domain. The safest approach: freeze the entire BN layer by setting `requires_grad=False` for $\\gamma$ and $\\beta$ and keeping the layer in eval mode.</span>\n\n---",
+  "hints": [
+    "Use x.mean(axis=0) and x.var(axis=0) for each normalization.",
+    "Store the residual before applying the main path.",
+    "Apply the final ReLU only in post mode."
+  ],
+  "constraints": "- x, W1, and W2 have compatible rank-2 shapes.\n- gamma1, beta1, gamma2, and beta2 match the feature width.\n- mode is either post or pre.\n- Valid inputs are guaranteed.",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef batch_norm_block(x, W1, W2, gamma1, beta1, gamma2, beta2, mode):\n    \"\"\"\n    Returns the normalized residual-block result and selected mode in a dictionary.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-03T18:25:37.122Z",
+  "updatedAt": "2026-02-21T17:14:49.964Z",
+  "topicId": "resnet-batch-norm",
+  "paperSnippet": "\"We adopt batch normalization (BN) right after each convolution and before activation. We do not use dropout given the experiments in this paper.\"",
+  "visualizationComponent": "ResNetBatchNormViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **BatchNorm in ResNet** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef batch_norm_block(x, W1, W2, gamma1, beta1, gamma2, beta2, mode):\n    \"\"\"\n    Returns the normalized residual-block result and selected mode in a dictionary.\n    \"\"\"\n    x_arr = np.asarray(x, dtype=float)\n    w1 = np.asarray(W1, dtype=float)\n    w2 = np.asarray(W2, dtype=float)\n    g1 = np.asarray(gamma1, dtype=float)\n    b1 = np.asarray(beta1, dtype=float)\n    g2 = np.asarray(gamma2, dtype=float)\n    b2 = np.asarray(beta2, dtype=float)\n    eps = 1e-5\n\n    def bn(feat, g, b):\n        mu = np.mean(feat, axis=0, keepdims=True)\n        var = np.var(feat, axis=0, keepdims=True)\n        normed = (feat - mu) / np.sqrt(var + eps)\n        return g * normed + b\n\n    if mode == 'post':\n        h1 = bn(x_arr @ w1, g1, b1)\n        h1_act = np.maximum(0.0, h1)\n        h2 = bn(h1_act @ w2, g2, b2)\n        out = np.maximum(0.0, h2 + x_arr)\n    else:\n        h1 = np.maximum(0.0, bn(x_arr, g1, b1)) @ w1\n        h2 = np.maximum(0.0, bn(h1, g2, b2)) @ w2\n        out = h2 + x_arr\n\n    return {\n        \"output\": np.round(out, 4).tolist(),\n        \"mode\": mode\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "public-1",
+      "name": "Post-activation 3x3",
+      "inputs": {
+        "x": [
+          [
+            -0.5653,
+            0.3481,
+            -0.2161
+          ],
+          [
+            0.3705,
+            -0.2391,
+            0.693
+          ],
+          [
+            0.0626,
+            0.5744,
+            -1.1751
+          ]
+        ],
+        "W1": [
+          [
+            0.0916,
+            -0.1557,
+            -0.147
+          ],
+          [
+            0.2,
+            0.5028,
+            0.2508
+          ],
+          [
+            -0.0003,
+            0.652,
+            0.5367
+          ]
+        ],
+        "W2": [
+          [
+            -0.2577,
+            0.8315,
+            0.2759
+          ],
+          [
+            -0.2897,
+            -0.4244,
+            -0.2054
+          ],
+          [
+            1.0803,
+            -0.7788,
+            0.0674
+          ]
+        ],
+        "mode": "post",
+        "beta1": [
+          0.0552,
+          0.1378,
+          0.0504
+        ],
+        "beta2": [
+          0.1957,
+          0.0577,
+          0.0163
+        ],
+        "gamma1": [
+          1.0027,
+          1.3233,
+          0.704
+        ],
+        "gamma2": [
+          0.9413,
+          0.5823,
+          1.6512
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "output": [
+          [
+            0.0,
+            0.1843,
+            0.0
+          ],
+          [
+            1.6257,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.4297,
+            1.1527
+          ]
+        ],
+        "mode": "post"
+      }
+    },
+    {
+      "id": "public-2",
+      "name": "Pre-activation 3x3",
+      "inputs": {
+        "x": [
+          [
+            0.3017,
+            -0.3008,
+            -0.2935
+          ],
+          [
+            0.2416,
+            0.324,
+            -0.3666
+          ],
+          [
+            0.2154,
+            0.3158,
+            0.0383
+          ]
+        ],
+        "W1": [
+          [
+            0.1265,
+            -0.3916,
+            0.5808
+          ],
+          [
+            1.0436,
+            0.6305,
+            0.0941
+          ],
+          [
+            -0.1571,
+            -0.0329,
+            0.8322
+          ]
+        ],
+        "W2": [
+          [
+            -0.44,
+            0.1317,
+            -0.3285
+          ],
+          [
+            0.1949,
+            -0.0915,
+            -0.2772
+          ],
+          [
+            0.2316,
+            0.6021,
+            -0.3556
+          ]
+        ],
+        "mode": "pre",
+        "beta1": [
+          0.2128,
+          0.1408,
+          -0.1618
+        ],
+        "beta2": [
+          0.0208,
+          -0.0825,
+          -0.0786
+        ],
+        "gamma1": [
+          0.2648,
+          1.3138,
+          1.8375
+        ],
+        "gamma2": [
+          0.9366,
+          0.9082,
+          0.5768
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "output": [
+          [
+            0.3017,
+            -0.3008,
+            -0.2935
+          ],
+          [
+            -0.115,
+            0.4102,
+            -0.894
+          ],
+          [
+            0.4069,
+            0.7354,
+            -0.4184
+          ]
+        ],
+        "mode": "pre"
+      }
+    },
+    {
+      "id": "public-3",
+      "name": "Post-activation 4x4",
+      "inputs": {
+        "x": [
+          [
+            0.0979,
+            -0.9793,
+            -0.0267,
+            -0.2912
+          ],
+          [
+            0.6751,
+            -0.5632,
+            0.4476,
+            -1.5262
+          ],
+          [
+            -0.4027,
+            0.3876,
+            -0.0889,
+            0.0597
+          ],
+          [
+            0.0463,
+            -0.2985,
+            -0.3164,
+            0.226
+          ]
+        ],
+        "W1": [
+          [
+            0.3251,
+            0.9961,
+            0.1917,
+            -0.6487
+          ],
+          [
+            0.6199,
+            -0.2509,
+            -0.6504,
+            0.4924
+          ],
+          [
+            -1.0969,
+            -0.3445,
+            -0.2625,
+            -0.5728
+          ],
+          [
+            -0.9859,
+            -0.4261,
+            0.636,
+            0.5007
+          ]
+        ],
+        "W2": [
+          [
+            0.2065,
+            -0.2423,
+            -0.0363,
+            0.1718
+          ],
+          [
+            0.5084,
+            0.3609,
+            -0.7219,
+            -0.038
+          ],
+          [
+            -0.4183,
+            0.0357,
+            -0.6081,
+            0.2697
+          ],
+          [
+            -0.4538,
+            0.7101,
+            -0.6692,
+            0.2723
+          ]
+        ],
+        "mode": "post",
+        "beta1": [
+          -0.0481,
+          0.0174,
+          0.1284,
+          -0.0478
+        ],
+        "beta2": [
+          -0.0125,
+          -0.014,
+          0.1555,
+          0.1241
+        ],
+        "gamma1": [
+          0.421,
+          1.3054,
+          1.4115,
+          0.2933
+        ],
+        "gamma2": [
+          0.7978,
+          1.234,
+          0.8163,
+          0.3063
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.1309
+          ],
+          [
+            1.9895,
+            1.5427,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.3868,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.6626
+          ]
+        ],
+        "mode": "post"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            -0.5653,
+            0.3481,
+            -0.2161
+          ],
+          [
+            0.3705,
+            -0.2391,
+            0.693
+          ],
+          [
+            0.0626,
+            0.5744,
+            -1.1751
+          ]
+        ],
+        "W1": [
+          [
+            0.0916,
+            -0.1557,
+            -0.147
+          ],
+          [
+            0.2,
+            0.5028,
+            0.2508
+          ],
+          [
+            -0.0003,
+            0.652,
+            0.5367
+          ]
+        ],
+        "W2": [
+          [
+            -0.2577,
+            0.8315,
+            0.2759
+          ],
+          [
+            -0.2897,
+            -0.4244,
+            -0.2054
+          ],
+          [
+            1.0803,
+            -0.7788,
+            0.0674
+          ]
+        ],
+        "mode": "post",
+        "beta1": [
+          0.0552,
+          0.1378,
+          0.0504
+        ],
+        "beta2": [
+          0.1957,
+          0.0577,
+          0.0163
+        ],
+        "gamma1": [
+          1.0027,
+          1.3233,
+          0.704
+        ],
+        "gamma2": [
+          0.9413,
+          0.5823,
+          1.6512
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.0,
+            0.1843,
+            0.0
+          ],
+          [
+            1.6257,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.4297,
+            1.1527
+          ]
+        ],
+        "mode": "post"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            0.3017,
+            -0.3008,
+            -0.2935
+          ],
+          [
+            0.2416,
+            0.324,
+            -0.3666
+          ],
+          [
+            0.2154,
+            0.3158,
+            0.0383
+          ]
+        ],
+        "W1": [
+          [
+            0.1265,
+            -0.3916,
+            0.5808
+          ],
+          [
+            1.0436,
+            0.6305,
+            0.0941
+          ],
+          [
+            -0.1571,
+            -0.0329,
+            0.8322
+          ]
+        ],
+        "W2": [
+          [
+            -0.44,
+            0.1317,
+            -0.3285
+          ],
+          [
+            0.1949,
+            -0.0915,
+            -0.2772
+          ],
+          [
+            0.2316,
+            0.6021,
+            -0.3556
+          ]
+        ],
+        "mode": "pre",
+        "beta1": [
+          0.2128,
+          0.1408,
+          -0.1618
+        ],
+        "beta2": [
+          0.0208,
+          -0.0825,
+          -0.0786
+        ],
+        "gamma1": [
+          0.2648,
+          1.3138,
+          1.8375
+        ],
+        "gamma2": [
+          0.9366,
+          0.9082,
+          0.5768
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.3017,
+            -0.3008,
+            -0.2935
+          ],
+          [
+            -0.115,
+            0.4102,
+            -0.894
+          ],
+          [
+            0.4069,
+            0.7354,
+            -0.4184
+          ]
+        ],
+        "mode": "pre"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            0.0979,
+            -0.9793,
+            -0.0267,
+            -0.2912
+          ],
+          [
+            0.6751,
+            -0.5632,
+            0.4476,
+            -1.5262
+          ],
+          [
+            -0.4027,
+            0.3876,
+            -0.0889,
+            0.0597
+          ],
+          [
+            0.0463,
+            -0.2985,
+            -0.3164,
+            0.226
+          ]
+        ],
+        "W1": [
+          [
+            0.3251,
+            0.9961,
+            0.1917,
+            -0.6487
+          ],
+          [
+            0.6199,
+            -0.2509,
+            -0.6504,
+            0.4924
+          ],
+          [
+            -1.0969,
+            -0.3445,
+            -0.2625,
+            -0.5728
+          ],
+          [
+            -0.9859,
+            -0.4261,
+            0.636,
+            0.5007
+          ]
+        ],
+        "W2": [
+          [
+            0.2065,
+            -0.2423,
+            -0.0363,
+            0.1718
+          ],
+          [
+            0.5084,
+            0.3609,
+            -0.7219,
+            -0.038
+          ],
+          [
+            -0.4183,
+            0.0357,
+            -0.6081,
+            0.2697
+          ],
+          [
+            -0.4538,
+            0.7101,
+            -0.6692,
+            0.2723
+          ]
+        ],
+        "mode": "post",
+        "beta1": [
+          -0.0481,
+          0.0174,
+          0.1284,
+          -0.0478
+        ],
+        "beta2": [
+          -0.0125,
+          -0.014,
+          0.1555,
+          0.1241
+        ],
+        "gamma1": [
+          0.421,
+          1.3054,
+          1.4115,
+          0.2933
+        ],
+        "gamma2": [
+          0.7978,
+          1.234,
+          0.8163,
+          0.3063
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.1309
+          ],
+          [
+            1.9895,
+            1.5427,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.3868,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.6626
+          ]
+        ],
+        "mode": "post"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            -0.5653,
+            0.3481,
+            -0.2161
+          ],
+          [
+            0.3705,
+            -0.2391,
+            0.693
+          ],
+          [
+            0.0626,
+            0.5744,
+            -1.1751
+          ]
+        ],
+        "W1": [
+          [
+            0.0916,
+            -0.1557,
+            -0.147
+          ],
+          [
+            0.2,
+            0.5028,
+            0.2508
+          ],
+          [
+            -0.0003,
+            0.652,
+            0.5367
+          ]
+        ],
+        "W2": [
+          [
+            -0.2577,
+            0.8315,
+            0.2759
+          ],
+          [
+            -0.2897,
+            -0.4244,
+            -0.2054
+          ],
+          [
+            1.0803,
+            -0.7788,
+            0.0674
+          ]
+        ],
+        "mode": "post",
+        "beta1": [
+          0.0552,
+          0.1378,
+          0.0504
+        ],
+        "beta2": [
+          0.1957,
+          0.0577,
+          0.0163
+        ],
+        "gamma1": [
+          1.0027,
+          1.3233,
+          0.704
+        ],
+        "gamma2": [
+          0.9413,
+          0.5823,
+          1.6512
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.0,
+            0.1843,
+            0.0
+          ],
+          [
+            1.6257,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.4297,
+            1.1527
+          ]
+        ],
+        "mode": "post"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            0.3017,
+            -0.3008,
+            -0.2935
+          ],
+          [
+            0.2416,
+            0.324,
+            -0.3666
+          ],
+          [
+            0.2154,
+            0.3158,
+            0.0383
+          ]
+        ],
+        "W1": [
+          [
+            0.1265,
+            -0.3916,
+            0.5808
+          ],
+          [
+            1.0436,
+            0.6305,
+            0.0941
+          ],
+          [
+            -0.1571,
+            -0.0329,
+            0.8322
+          ]
+        ],
+        "W2": [
+          [
+            -0.44,
+            0.1317,
+            -0.3285
+          ],
+          [
+            0.1949,
+            -0.0915,
+            -0.2772
+          ],
+          [
+            0.2316,
+            0.6021,
+            -0.3556
+          ]
+        ],
+        "mode": "pre",
+        "beta1": [
+          0.2128,
+          0.1408,
+          -0.1618
+        ],
+        "beta2": [
+          0.0208,
+          -0.0825,
+          -0.0786
+        ],
+        "gamma1": [
+          0.2648,
+          1.3138,
+          1.8375
+        ],
+        "gamma2": [
+          0.9366,
+          0.9082,
+          0.5768
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.3017,
+            -0.3008,
+            -0.2935
+          ],
+          [
+            -0.115,
+            0.4102,
+            -0.894
+          ],
+          [
+            0.4069,
+            0.7354,
+            -0.4184
+          ]
+        ],
+        "mode": "pre"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            0.0979,
+            -0.9793,
+            -0.0267,
+            -0.2912
+          ],
+          [
+            0.6751,
+            -0.5632,
+            0.4476,
+            -1.5262
+          ],
+          [
+            -0.4027,
+            0.3876,
+            -0.0889,
+            0.0597
+          ],
+          [
+            0.0463,
+            -0.2985,
+            -0.3164,
+            0.226
+          ]
+        ],
+        "W1": [
+          [
+            0.3251,
+            0.9961,
+            0.1917,
+            -0.6487
+          ],
+          [
+            0.6199,
+            -0.2509,
+            -0.6504,
+            0.4924
+          ],
+          [
+            -1.0969,
+            -0.3445,
+            -0.2625,
+            -0.5728
+          ],
+          [
+            -0.9859,
+            -0.4261,
+            0.636,
+            0.5007
+          ]
+        ],
+        "W2": [
+          [
+            0.2065,
+            -0.2423,
+            -0.0363,
+            0.1718
+          ],
+          [
+            0.5084,
+            0.3609,
+            -0.7219,
+            -0.038
+          ],
+          [
+            -0.4183,
+            0.0357,
+            -0.6081,
+            0.2697
+          ],
+          [
+            -0.4538,
+            0.7101,
+            -0.6692,
+            0.2723
+          ]
+        ],
+        "mode": "post",
+        "beta1": [
+          -0.0481,
+          0.0174,
+          0.1284,
+          -0.0478
+        ],
+        "beta2": [
+          -0.0125,
+          -0.014,
+          0.1555,
+          0.1241
+        ],
+        "gamma1": [
+          0.421,
+          1.3054,
+          1.4115,
+          0.2933
+        ],
+        "gamma2": [
+          0.7978,
+          1.234,
+          0.8163,
+          0.3063
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.1309
+          ],
+          [
+            1.9895,
+            1.5427,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.3868,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.6626
+          ]
+        ],
+        "mode": "post"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            -0.5653,
+            0.3481,
+            -0.2161
+          ],
+          [
+            0.3705,
+            -0.2391,
+            0.693
+          ],
+          [
+            0.0626,
+            0.5744,
+            -1.1751
+          ]
+        ],
+        "W1": [
+          [
+            0.0916,
+            -0.1557,
+            -0.147
+          ],
+          [
+            0.2,
+            0.5028,
+            0.2508
+          ],
+          [
+            -0.0003,
+            0.652,
+            0.5367
+          ]
+        ],
+        "W2": [
+          [
+            -0.2577,
+            0.8315,
+            0.2759
+          ],
+          [
+            -0.2897,
+            -0.4244,
+            -0.2054
+          ],
+          [
+            1.0803,
+            -0.7788,
+            0.0674
+          ]
+        ],
+        "mode": "post",
+        "beta1": [
+          0.0552,
+          0.1378,
+          0.0504
+        ],
+        "beta2": [
+          0.1957,
+          0.0577,
+          0.0163
+        ],
+        "gamma1": [
+          1.0027,
+          1.3233,
+          0.704
+        ],
+        "gamma2": [
+          0.9413,
+          0.5823,
+          1.6512
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.0,
+            0.1843,
+            0.0
+          ],
+          [
+            1.6257,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.4297,
+            1.1527
+          ]
+        ],
+        "mode": "post"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            0.3017,
+            -0.3008,
+            -0.2935
+          ],
+          [
+            0.2416,
+            0.324,
+            -0.3666
+          ],
+          [
+            0.2154,
+            0.3158,
+            0.0383
+          ]
+        ],
+        "W1": [
+          [
+            0.1265,
+            -0.3916,
+            0.5808
+          ],
+          [
+            1.0436,
+            0.6305,
+            0.0941
+          ],
+          [
+            -0.1571,
+            -0.0329,
+            0.8322
+          ]
+        ],
+        "W2": [
+          [
+            -0.44,
+            0.1317,
+            -0.3285
+          ],
+          [
+            0.1949,
+            -0.0915,
+            -0.2772
+          ],
+          [
+            0.2316,
+            0.6021,
+            -0.3556
+          ]
+        ],
+        "mode": "pre",
+        "beta1": [
+          0.2128,
+          0.1408,
+          -0.1618
+        ],
+        "beta2": [
+          0.0208,
+          -0.0825,
+          -0.0786
+        ],
+        "gamma1": [
+          0.2648,
+          1.3138,
+          1.8375
+        ],
+        "gamma2": [
+          0.9366,
+          0.9082,
+          0.5768
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.3017,
+            -0.3008,
+            -0.2935
+          ],
+          [
+            -0.115,
+            0.4102,
+            -0.894
+          ],
+          [
+            0.4069,
+            0.7354,
+            -0.4184
+          ]
+        ],
+        "mode": "pre"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            0.0979,
+            -0.9793,
+            -0.0267,
+            -0.2912
+          ],
+          [
+            0.6751,
+            -0.5632,
+            0.4476,
+            -1.5262
+          ],
+          [
+            -0.4027,
+            0.3876,
+            -0.0889,
+            0.0597
+          ],
+          [
+            0.0463,
+            -0.2985,
+            -0.3164,
+            0.226
+          ]
+        ],
+        "W1": [
+          [
+            0.3251,
+            0.9961,
+            0.1917,
+            -0.6487
+          ],
+          [
+            0.6199,
+            -0.2509,
+            -0.6504,
+            0.4924
+          ],
+          [
+            -1.0969,
+            -0.3445,
+            -0.2625,
+            -0.5728
+          ],
+          [
+            -0.9859,
+            -0.4261,
+            0.636,
+            0.5007
+          ]
+        ],
+        "W2": [
+          [
+            0.2065,
+            -0.2423,
+            -0.0363,
+            0.1718
+          ],
+          [
+            0.5084,
+            0.3609,
+            -0.7219,
+            -0.038
+          ],
+          [
+            -0.4183,
+            0.0357,
+            -0.6081,
+            0.2697
+          ],
+          [
+            -0.4538,
+            0.7101,
+            -0.6692,
+            0.2723
+          ]
+        ],
+        "mode": "post",
+        "beta1": [
+          -0.0481,
+          0.0174,
+          0.1284,
+          -0.0478
+        ],
+        "beta2": [
+          -0.0125,
+          -0.014,
+          0.1555,
+          0.1241
+        ],
+        "gamma1": [
+          0.421,
+          1.3054,
+          1.4115,
+          0.2933
+        ],
+        "gamma2": [
+          0.7978,
+          1.234,
+          0.8163,
+          0.3063
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.1309
+          ],
+          [
+            1.9895,
+            1.5427,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.3868,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.6626
+          ]
+        ],
+        "mode": "post"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            -0.5653,
+            0.3481,
+            -0.2161
+          ],
+          [
+            0.3705,
+            -0.2391,
+            0.693
+          ],
+          [
+            0.0626,
+            0.5744,
+            -1.1751
+          ]
+        ],
+        "W1": [
+          [
+            0.0916,
+            -0.1557,
+            -0.147
+          ],
+          [
+            0.2,
+            0.5028,
+            0.2508
+          ],
+          [
+            -0.0003,
+            0.652,
+            0.5367
+          ]
+        ],
+        "W2": [
+          [
+            -0.2577,
+            0.8315,
+            0.2759
+          ],
+          [
+            -0.2897,
+            -0.4244,
+            -0.2054
+          ],
+          [
+            1.0803,
+            -0.7788,
+            0.0674
+          ]
+        ],
+        "mode": "post",
+        "beta1": [
+          0.0552,
+          0.1378,
+          0.0504
+        ],
+        "beta2": [
+          0.1957,
+          0.0577,
+          0.0163
+        ],
+        "gamma1": [
+          1.0027,
+          1.3233,
+          0.704
+        ],
+        "gamma2": [
+          0.9413,
+          0.5823,
+          1.6512
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.0,
+            0.1843,
+            0.0
+          ],
+          [
+            1.6257,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.4297,
+            1.1527
+          ]
+        ],
+        "mode": "post"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            0.3017,
+            -0.3008,
+            -0.2935
+          ],
+          [
+            0.2416,
+            0.324,
+            -0.3666
+          ],
+          [
+            0.2154,
+            0.3158,
+            0.0383
+          ]
+        ],
+        "W1": [
+          [
+            0.1265,
+            -0.3916,
+            0.5808
+          ],
+          [
+            1.0436,
+            0.6305,
+            0.0941
+          ],
+          [
+            -0.1571,
+            -0.0329,
+            0.8322
+          ]
+        ],
+        "W2": [
+          [
+            -0.44,
+            0.1317,
+            -0.3285
+          ],
+          [
+            0.1949,
+            -0.0915,
+            -0.2772
+          ],
+          [
+            0.2316,
+            0.6021,
+            -0.3556
+          ]
+        ],
+        "mode": "pre",
+        "beta1": [
+          0.2128,
+          0.1408,
+          -0.1618
+        ],
+        "beta2": [
+          0.0208,
+          -0.0825,
+          -0.0786
+        ],
+        "gamma1": [
+          0.2648,
+          1.3138,
+          1.8375
+        ],
+        "gamma2": [
+          0.9366,
+          0.9082,
+          0.5768
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.3017,
+            -0.3008,
+            -0.2935
+          ],
+          [
+            -0.115,
+            0.4102,
+            -0.894
+          ],
+          [
+            0.4069,
+            0.7354,
+            -0.4184
+          ]
+        ],
+        "mode": "pre"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            0.0979,
+            -0.9793,
+            -0.0267,
+            -0.2912
+          ],
+          [
+            0.6751,
+            -0.5632,
+            0.4476,
+            -1.5262
+          ],
+          [
+            -0.4027,
+            0.3876,
+            -0.0889,
+            0.0597
+          ],
+          [
+            0.0463,
+            -0.2985,
+            -0.3164,
+            0.226
+          ]
+        ],
+        "W1": [
+          [
+            0.3251,
+            0.9961,
+            0.1917,
+            -0.6487
+          ],
+          [
+            0.6199,
+            -0.2509,
+            -0.6504,
+            0.4924
+          ],
+          [
+            -1.0969,
+            -0.3445,
+            -0.2625,
+            -0.5728
+          ],
+          [
+            -0.9859,
+            -0.4261,
+            0.636,
+            0.5007
+          ]
+        ],
+        "W2": [
+          [
+            0.2065,
+            -0.2423,
+            -0.0363,
+            0.1718
+          ],
+          [
+            0.5084,
+            0.3609,
+            -0.7219,
+            -0.038
+          ],
+          [
+            -0.4183,
+            0.0357,
+            -0.6081,
+            0.2697
+          ],
+          [
+            -0.4538,
+            0.7101,
+            -0.6692,
+            0.2723
+          ]
+        ],
+        "mode": "post",
+        "beta1": [
+          -0.0481,
+          0.0174,
+          0.1284,
+          -0.0478
+        ],
+        "beta2": [
+          -0.0125,
+          -0.014,
+          0.1555,
+          0.1241
+        ],
+        "gamma1": [
+          0.421,
+          1.3054,
+          1.4115,
+          0.2933
+        ],
+        "gamma2": [
+          0.7978,
+          1.234,
+          0.8163,
+          0.3063
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.1309
+          ],
+          [
+            1.9895,
+            1.5427,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.3868,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.6626
+          ]
+        ],
+        "mode": "post"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            -0.5653,
+            0.3481,
+            -0.2161
+          ],
+          [
+            0.3705,
+            -0.2391,
+            0.693
+          ],
+          [
+            0.0626,
+            0.5744,
+            -1.1751
+          ]
+        ],
+        "W1": [
+          [
+            0.0916,
+            -0.1557,
+            -0.147
+          ],
+          [
+            0.2,
+            0.5028,
+            0.2508
+          ],
+          [
+            -0.0003,
+            0.652,
+            0.5367
+          ]
+        ],
+        "W2": [
+          [
+            -0.2577,
+            0.8315,
+            0.2759
+          ],
+          [
+            -0.2897,
+            -0.4244,
+            -0.2054
+          ],
+          [
+            1.0803,
+            -0.7788,
+            0.0674
+          ]
+        ],
+        "mode": "post",
+        "beta1": [
+          0.0552,
+          0.1378,
+          0.0504
+        ],
+        "beta2": [
+          0.1957,
+          0.0577,
+          0.0163
+        ],
+        "gamma1": [
+          1.0027,
+          1.3233,
+          0.704
+        ],
+        "gamma2": [
+          0.9413,
+          0.5823,
+          1.6512
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.0,
+            0.1843,
+            0.0
+          ],
+          [
+            1.6257,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.4297,
+            1.1527
+          ]
+        ],
+        "mode": "post"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            0.3017,
+            -0.3008,
+            -0.2935
+          ],
+          [
+            0.2416,
+            0.324,
+            -0.3666
+          ],
+          [
+            0.2154,
+            0.3158,
+            0.0383
+          ]
+        ],
+        "W1": [
+          [
+            0.1265,
+            -0.3916,
+            0.5808
+          ],
+          [
+            1.0436,
+            0.6305,
+            0.0941
+          ],
+          [
+            -0.1571,
+            -0.0329,
+            0.8322
+          ]
+        ],
+        "W2": [
+          [
+            -0.44,
+            0.1317,
+            -0.3285
+          ],
+          [
+            0.1949,
+            -0.0915,
+            -0.2772
+          ],
+          [
+            0.2316,
+            0.6021,
+            -0.3556
+          ]
+        ],
+        "mode": "pre",
+        "beta1": [
+          0.2128,
+          0.1408,
+          -0.1618
+        ],
+        "beta2": [
+          0.0208,
+          -0.0825,
+          -0.0786
+        ],
+        "gamma1": [
+          0.2648,
+          1.3138,
+          1.8375
+        ],
+        "gamma2": [
+          0.9366,
+          0.9082,
+          0.5768
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.3017,
+            -0.3008,
+            -0.2935
+          ],
+          [
+            -0.115,
+            0.4102,
+            -0.894
+          ],
+          [
+            0.4069,
+            0.7354,
+            -0.4184
+          ]
+        ],
+        "mode": "pre"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            0.0979,
+            -0.9793,
+            -0.0267,
+            -0.2912
+          ],
+          [
+            0.6751,
+            -0.5632,
+            0.4476,
+            -1.5262
+          ],
+          [
+            -0.4027,
+            0.3876,
+            -0.0889,
+            0.0597
+          ],
+          [
+            0.0463,
+            -0.2985,
+            -0.3164,
+            0.226
+          ]
+        ],
+        "W1": [
+          [
+            0.3251,
+            0.9961,
+            0.1917,
+            -0.6487
+          ],
+          [
+            0.6199,
+            -0.2509,
+            -0.6504,
+            0.4924
+          ],
+          [
+            -1.0969,
+            -0.3445,
+            -0.2625,
+            -0.5728
+          ],
+          [
+            -0.9859,
+            -0.4261,
+            0.636,
+            0.5007
+          ]
+        ],
+        "W2": [
+          [
+            0.2065,
+            -0.2423,
+            -0.0363,
+            0.1718
+          ],
+          [
+            0.5084,
+            0.3609,
+            -0.7219,
+            -0.038
+          ],
+          [
+            -0.4183,
+            0.0357,
+            -0.6081,
+            0.2697
+          ],
+          [
+            -0.4538,
+            0.7101,
+            -0.6692,
+            0.2723
+          ]
+        ],
+        "mode": "post",
+        "beta1": [
+          -0.0481,
+          0.0174,
+          0.1284,
+          -0.0478
+        ],
+        "beta2": [
+          -0.0125,
+          -0.014,
+          0.1555,
+          0.1241
+        ],
+        "gamma1": [
+          0.421,
+          1.3054,
+          1.4115,
+          0.2933
+        ],
+        "gamma2": [
+          0.7978,
+          1.234,
+          0.8163,
+          0.3063
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.1309
+          ],
+          [
+            1.9895,
+            1.5427,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.3868,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.6626
+          ]
+        ],
+        "mode": "post"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            -0.5653,
+            0.3481,
+            -0.2161
+          ],
+          [
+            0.3705,
+            -0.2391,
+            0.693
+          ],
+          [
+            0.0626,
+            0.5744,
+            -1.1751
+          ]
+        ],
+        "W1": [
+          [
+            0.0916,
+            -0.1557,
+            -0.147
+          ],
+          [
+            0.2,
+            0.5028,
+            0.2508
+          ],
+          [
+            -0.0003,
+            0.652,
+            0.5367
+          ]
+        ],
+        "W2": [
+          [
+            -0.2577,
+            0.8315,
+            0.2759
+          ],
+          [
+            -0.2897,
+            -0.4244,
+            -0.2054
+          ],
+          [
+            1.0803,
+            -0.7788,
+            0.0674
+          ]
+        ],
+        "mode": "post",
+        "beta1": [
+          0.0552,
+          0.1378,
+          0.0504
+        ],
+        "beta2": [
+          0.1957,
+          0.0577,
+          0.0163
+        ],
+        "gamma1": [
+          1.0027,
+          1.3233,
+          0.704
+        ],
+        "gamma2": [
+          0.9413,
+          0.5823,
+          1.6512
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.0,
+            0.1843,
+            0.0
+          ],
+          [
+            1.6257,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.4297,
+            1.1527
+          ]
+        ],
+        "mode": "post"
+      }
+    },
+    {
+      "id": "resnet-batch-norm-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            0.3017,
+            -0.3008,
+            -0.2935
+          ],
+          [
+            0.2416,
+            0.324,
+            -0.3666
+          ],
+          [
+            0.2154,
+            0.3158,
+            0.0383
+          ]
+        ],
+        "W1": [
+          [
+            0.1265,
+            -0.3916,
+            0.5808
+          ],
+          [
+            1.0436,
+            0.6305,
+            0.0941
+          ],
+          [
+            -0.1571,
+            -0.0329,
+            0.8322
+          ]
+        ],
+        "W2": [
+          [
+            -0.44,
+            0.1317,
+            -0.3285
+          ],
+          [
+            0.1949,
+            -0.0915,
+            -0.2772
+          ],
+          [
+            0.2316,
+            0.6021,
+            -0.3556
+          ]
+        ],
+        "mode": "pre",
+        "beta1": [
+          0.2128,
+          0.1408,
+          -0.1618
+        ],
+        "beta2": [
+          0.0208,
+          -0.0825,
+          -0.0786
+        ],
+        "gamma1": [
+          0.2648,
+          1.3138,
+          1.8375
+        ],
+        "gamma2": [
+          0.9366,
+          0.9082,
+          0.5768
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            0.3017,
+            -0.3008,
+            -0.2935
+          ],
+          [
+            -0.115,
+            0.4102,
+            -0.894
+          ],
+          [
+            0.4069,
+            0.7354,
+            -0.4184
+          ]
+        ],
+        "mode": "pre"
+      }
+    }
+  ],
+  "functionMetadata": {
+    "name": "batch_norm_block",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": "[[0.5, -0.3, 0.1], [0.2, 0.8, -0.5], [-0.1, 0.4, 0.3]]",
+        "description": "Input array of shape (batch, channels)"
+      },
+      {
+        "name": "W1",
+        "type": "array",
+        "example": "[[0.1, -0.2, 0.3], [-0.1, 0.4, 0.2], [0.3, -0.1, 0.5]]",
+        "description": "First weight matrix (channels, channels)"
+      },
+      {
+        "name": "W2",
+        "type": "array",
+        "example": "[[0.2, 0.1, -0.3], [0.4, -0.2, 0.1], [-0.1, 0.3, 0.2]]",
+        "description": "Second weight matrix (channels, channels)"
+      },
+      {
+        "name": "gamma1",
+        "type": "array",
+        "example": "[1.0, 1.0, 1.0]",
+        "description": "BN1 scale parameter (channels,)"
+      },
+      {
+        "name": "beta1",
+        "type": "array",
+        "example": "[0.0, 0.0, 0.0]",
+        "description": "BN1 shift parameter (channels,)"
+      },
+      {
+        "name": "gamma2",
+        "type": "array",
+        "example": "[1.0, 1.0, 1.0]",
+        "description": "BN2 scale parameter (channels,)"
+      },
+      {
+        "name": "beta2",
+        "type": "array",
+        "example": "[0.0, 0.0, 0.0]",
+        "description": "BN2 shift parameter (channels,)"
+      },
+      {
+        "name": "mode",
+        "type": "string",
+        "example": "post",
+        "description": "Block type: post or pre"
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "resnet-batch-norm",
+    "name": "BatchNorm in ResNet",
+    "description": "Pre-activation vs post-activation ordering",
+    "color": "#06b6d4"
+  },
+  "paper": {
+    "id": "resnet",
+    "title": "Deep Residual Learning",
+    "authors": "He et al., 2015",
+    "year": 2015,
+    "paperUrl": "https://arxiv.org/abs/1512.03385",
+    "visualizationComponent": "ResNetArchViz"
+  },
+  "navigation": {
+    "index": 5,
+    "total": 6,
+    "prev": "resnet-skip-connection",
+    "next": "resnet-full-network"
+  },
+  "isLocked": false,
+  "cleanTitle": ""
+}

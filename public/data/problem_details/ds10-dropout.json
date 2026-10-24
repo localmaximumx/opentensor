@@ -1,0 +1,698 @@
+{
+  "id": "ds10-dropout",
+  "slug": "ds10-dropout",
+  "title": "Inverted Dropout Forward and Backward",
+  "cleanTitle": "Inverted Dropout Forward and Backward",
+  "type": "code",
+  "difficulty": "Easy",
+  "category": "Assessment",
+  "tags": [
+    "Assessment",
+    "CODE",
+    "Neural Net Internals Sprint"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Implement inverted dropout: during training, randomly mask activations and scale retained values by 1/(1−p); apply the corresponding mask/scale to gradients in the backward pass.",
+  "theory": "## Understanding the Theory: Inverted Dropout Forward and Backward\n\n### Core Intuition: Why Do We Need This?\n**Inverted Dropout Forward and Backward** represents a fundamental data modeling and statistical reasoning technique in **Neural Net Internals Sprint**. In enterprise machine learning, quantitative analytics, and decision science, algorithms must handle asynchronous logs, missing observations, skewed class distributions, and high-cardinality partitions. A mathematically rigorous implementation guarantees statistically unbiased estimates and idempotent transformations.\n\nUnderstanding the core mechanics enables engineers to diagnose convergence anomalies, optimize memory layouts, and construct maintainable ML pipelines from first principles.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\ny = \\frac{m \\odot x}{1 - p}, \\quad m_i \\sim \\text{Bernoulli}(1 - p), \\quad \\frac{\\partial \\mathcal{L}}{\\partial x} = \\frac{m \\odot \\frac{\\partial \\mathcal{L}}{\\partial y}}{1 - p}\n$$\n\nIn this formulation:\n* The input features and parameters are projected, normalized, or aggregated according to established algorithmic invariants.\n* Dimensional consistency is preserved across all tensor or matrix axes, ensuring mathematical validity.\n* Intermediate accumulators maintain numerical dynamic range to protect against floating-point anomalies.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Validate input array dimensions, check for empty sequences or invalid bounds, and convert inputs into contiguous buffers.\n2. **Phase 2: Core Algorithmic Transformation**: Execute the foundational mathematical logic using vectorized SIMD array operations or optimized iteration.\n3. **Phase 3: Aggregation & Normalization**: Compute required sums, projections, or ranking reductions while guarding against division by zero.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Format outputs into required data types and verify that returned numerical estimates adhere to expected precision thresholds.\n\n### Practical Machine Learning Applications & Nuances\n* **Statistical Unbiasedness & Degrees of Freedom**: Applying proper Bessel corrections and degrees of freedom safeguards sample statistics against systemic sample bias.\n* **Vectorized Array Operations**: Leveraging contiguous columnar execution avoids slow Python interpreter loop overhead when evaluating million-row datasets.\n* **Null Safety & Edge Case Handling**: Explicit handling of missing data, empty partitions, and single-value inputs prevents runtime exceptions in production batch pipelines.\n* **Algorithmic Complexity**: Operates with optimal asymptotic time and space complexity, ensuring minimal compute overhead.",
+  "examples": [
+    {
+      "inputArgs": [
+        [
+          1.0,
+          2.0
+        ],
+        [
+          1.0,
+          1.0
+        ],
+        0.5,
+        true,
+        [
+          1,
+          0
+        ]
+      ],
+      "output": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "explanation": "Illustrative small example for inverted dropout forward and backward."
+    }
+  ],
+  "requirements": [
+    "Implement the mathematical or algorithmic behavior described above.",
+    "Match the function signature and output structure in starterCode.",
+    "Handle boundary inputs and ties consistently with the supplied test cases."
+  ],
+  "hints": [
+    "For softmax, subtract the maximum logit before exponentiation.",
+    "For normalization backward passes, use the chain rule and the mean/variance derivatives."
+  ],
+  "constraints": [
+    "Inputs are small enough for a straightforward reference implementation.",
+    "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+    "Unless otherwise stated, dimensions must be consistent."
+  ],
+  "starterCode": "def solve(x, grad, p, training=True, mask=None):\n    pass",
+  "solution": "### 💡 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### ⚡ Implementation\n```python\ndef solve(x, grad, p, training=True, mask=None):\n    # Returns (forward_output, input_gradient); mask may be supplied for deterministic tests.\n    if not training or p == 0: return list(x), list(grad)\n    if not 0 <= p < 1: raise ValueError(\"p must be in [0,1)\")\n    if mask is None: raise ValueError(\"pass a mask for deterministic reference behavior\")\n    scale=1/(1-p)\n    return [v*m*scale for v,m in zip(x,mask)], [g*m*scale for g,m in zip(grad,mask)]\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
+  "testCases": [
+    {
+      "id": "case-1",
+      "name": "smoke test",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0
+        ],
+        "grad": [
+          1.0,
+          1.0
+        ],
+        "p": 0.5,
+        "training": true,
+        "mask": [
+          1,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-2",
+      "name": "Case 2",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0
+        ],
+        "grad": [
+          2.0,
+          2.0
+        ],
+        "p": 1.0,
+        "training": 2,
+        "mask": [
+          2,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          0.5,
+          1.0
+        ],
+        "grad": [
+          0.5,
+          0.5
+        ],
+        "p": 0.25,
+        "training": 0,
+        "mask": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.5,
+          1.0
+        ],
+        [
+          0.5,
+          0.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          -1.0,
+          -2.0
+        ],
+        "grad": [
+          -1.0,
+          -1.0
+        ],
+        "p": -0.5,
+        "training": -1,
+        "mask": [
+          -1,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          3.0,
+          6.0
+        ],
+        "grad": [
+          3.0,
+          3.0
+        ],
+        "p": 1.5,
+        "training": 3,
+        "mask": [
+          3,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          2.0,
+          3.0
+        ],
+        "grad": [
+          2.0,
+          2.0
+        ],
+        "p": 1.5,
+        "training": 2.0,
+        "mask": [
+          2.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          -1.0,
+          0.0
+        ],
+        "grad": [
+          -1.0,
+          -1.0
+        ],
+        "p": -1.5,
+        "training": -1.0,
+        "mask": [
+          -1.0,
+          -2.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          2.0,
+          1.0
+        ],
+        "grad": [
+          1.0,
+          1.0
+        ],
+        "p": 0.5,
+        "training": 1,
+        "mask": [
+          0,
+          1
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          2.0
+        ],
+        [
+          0.0,
+          2.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          -1.0,
+          -2.0
+        ],
+        "grad": [
+          -1.0,
+          -1.0
+        ],
+        "p": -0.5,
+        "training": -1,
+        "mask": [
+          -1,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          10.0,
+          20.0
+        ],
+        "grad": [
+          10.0,
+          10.0
+        ],
+        "p": 5.0,
+        "training": 10,
+        "mask": [
+          10,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          0.1,
+          0.2
+        ],
+        "grad": [
+          0.1,
+          0.1
+        ],
+        "p": 0.05,
+        "training": 0,
+        "mask": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.1,
+          0.2
+        ],
+        [
+          0.1,
+          0.1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          6.0,
+          7.0
+        ],
+        "grad": [
+          6.0,
+          6.0
+        ],
+        "p": 5.5,
+        "training": 6.0,
+        "mask": [
+          6.0,
+          5.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          1.5,
+          3.0
+        ],
+        "grad": [
+          1.5,
+          1.5
+        ],
+        "p": 0.75,
+        "training": 2,
+        "mask": [
+          2,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          0.0
+        ],
+        [
+          12.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          -2.0,
+          -4.0
+        ],
+        "grad": [
+          -2.0,
+          -2.0
+        ],
+        "p": -1.0,
+        "training": -2,
+        "mask": [
+          -2,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          0.25,
+          0.5
+        ],
+        "grad": [
+          0.25,
+          0.25
+        ],
+        "p": 0.125,
+        "training": 0,
+        "mask": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.25,
+          0.5
+        ],
+        [
+          0.25,
+          0.25
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0
+        ],
+        "grad": [
+          0.0,
+          0.0
+        ],
+        "p": -0.5,
+        "training": 0.0,
+        "mask": [
+          0.0,
+          -1.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          4.0,
+          8.0
+        ],
+        "grad": [
+          4.0,
+          4.0
+        ],
+        "p": 2.0,
+        "training": 4,
+        "mask": [
+          4,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          0.75,
+          1.5
+        ],
+        "grad": [
+          0.75,
+          0.75
+        ],
+        "p": 0.375,
+        "training": 1,
+        "mask": [
+          1,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          1.2000000000000002,
+          0.0
+        ],
+        [
+          1.2000000000000002,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          5.0,
+          10.0
+        ],
+        "grad": [
+          5.0,
+          5.0
+        ],
+        "p": 2.5,
+        "training": 5,
+        "mask": [
+          5,
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          11.0,
+          12.0
+        ],
+        "grad": [
+          11.0,
+          11.0
+        ],
+        "p": 10.5,
+        "training": 11.0,
+        "mask": [
+          11.0,
+          10.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          2.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "solve",
+    "signature": "def solve(x, grad, p, training=True, mask=None):",
+    "returnType": "varies by problem; see example output"
+  },
+  "assessmentNames": [
+    "Neural Net Internals Sprint"
+  ],
+  "source": "assessment",
+  "sourceId": "assessment",
+  "updatedAt": "2026-03-01T00:00:00.000Z"
+}

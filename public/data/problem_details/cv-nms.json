@@ -1,0 +1,799 @@
+{
+  "catalogId": "python:cv-nms",
+  "id": "cv-nms",
+  "sourceId": "cv-nms",
+  "slug": "cv-nms",
+  "source": "python",
+  "category": "python",
+  "title": "Non-Maximum Suppression",
+  "difficulty": "Medium",
+  "tags": [
+    "Object Detection",
+    "Computer Vision"
+  ],
+  "isFree": false,
+  "planId": "cracking-cv",
+  "planTitle": "Cracking CV",
+  "sectionId": "cracking-cv-detection-primitives",
+  "sortOrder": 779,
+  "seoDescription": "Implement greedy non-maximum suppression matching torchvision selection order and strict IoU threshold behavior.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Execute Non-Maximum Suppression algorithm purely utilizing Python primitives without external vector libraries.\n\nImplementing NMS without vector libraries clarifies the algorithmic step-by-step logic of coordinate intersection and greedy proposal pruning.\n\n### Mathematical Formulation\n$$\n\\text{NMS}(B, S, \\tau) \\to \\text{indices of non-redundant bounding boxes}\n$$\n\n### Step-by-Step Implementation\n1. Sort proposal bounding boxes in descending score order\n2. Iteratively retain best box and compute geometric intersection over union against remaining proposals\n3. Filter proposals exceeding overlap threshold tau\n\n### Returns\nList of integer indices representing kept boxes.",
+  "theory": "## Understanding the Theory: Non-Maximum Suppression\n\n### Core Intuition: Why Do We Need This?\nImages have unique spatial properties: neighboring pixels are strongly correlated, and visual patterns (like edges, corners, or textures) appear anywhere in an image. Computer vision algorithms use spatial inductive biases like translation equivariance and local receptive fields to process image grids efficiently. **Non-Maximum Suppression** operates directly on spatial coordinates or bounding box geometries.\n\nImplementing NMS without vector libraries clarifies the algorithmic step-by-step logic of coordinate intersection and greedy proposal pruning. In this problem, the goal is to: execute non-maximum suppression algorithm purely utilizing python primitives without external vector libraries.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\text{NMS}(B, S, \\tau) \\to \\text{indices of non-redundant bounding boxes}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Sort proposal bounding boxes in descending score order\n2. **Phase 2**: Iteratively retain best box and compute geometric intersection over union against remaining proposals\n3. **Phase 3**: Filter proposals exceeding overlap threshold tau\n\n### Practical Machine Learning Applications & Nuances\n* **Spatial Locality**: Sliding spatial filters across multi-channel feature maps aggregates contextual clues across local neighborhoods.\n* **Object Detection Pipelines**: Bounding box metrics (such as IoU and Non-Maximum Suppression) reconcile duplicate candidate detections into clean, final predictions.\n* **Data Augmentation**: Geometric transformations expose models to diverse spatial viewpoints, significantly improving generalization to unseen test images.",
+  "examples": [
+    "Input: boxes = [[0.0, 0.0, 2.0, 2.0], [0.1, 0.1, 2.1, 2.1], [5.0, 5.0, 7.0, 7.0]], scores = [0.9, 0.75, 0.85], threshold = 0.5\n\nOutput: [0, 2]\n\nExplanation: Evaluated cv_nms under standard test conditions."
+  ],
+  "requirements": "* Function must be named `cv_nms`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `cv_nms`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def cv_nms(boxes: list, scores: list, threshold: float = 0.5) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Non-Maximum Suppression** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef cv_nms(boxes: list, scores: list, threshold: float = 0.5) -> list:\n    if not boxes: return []\n    idx = sorted(range(len(boxes)), key=lambda i: scores[i], reverse=True)\n    kept = []\n    while idx:\n        cur = idx.pop(0); kept.append(cur)\n        cb = boxes[cur]; ca = max(0.0, cb[2]-cb[0])*max(0.0, cb[3]-cb[1])\n        rem = []\n        for o in idx:\n            ob = boxes[o]; oa = max(0.0, ob[2]-ob[0])*max(0.0, ob[3]-ob[1])\n            ia = max(0.0, min(cb[2], ob[2]) - max(cb[0], ob[0])) * max(0.0, min(cb[3], ob[3]) - max(cb[1], ob[1]))\n            u = ca + oa - ia\n            if (ia / u if u > 0 else 0.0) <= threshold: rem.append(o)\n        idx = rem\n    return kept\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "3 boxes pure python NMS",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            2.0,
+            2.0
+          ],
+          [
+            0.1,
+            0.1,
+            2.1,
+            2.1
+          ],
+          [
+            5.0,
+            5.0,
+            7.0,
+            7.0
+          ]
+        ],
+        "scores": [
+          0.9,
+          0.75,
+          0.85
+        ],
+        "threshold": 0.5
+      },
+      "expectedOutput": [
+        0,
+        2
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cv-nms-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            4.0,
+            4.0
+          ],
+          [
+            0.2,
+            0.2,
+            4.2,
+            4.2
+          ],
+          [
+            10.0,
+            10.0,
+            14.0,
+            14.0
+          ]
+        ],
+        "scores": [
+          1.8,
+          1.5,
+          1.7
+        ],
+        "threshold": 1.0
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cv-nms-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          [
+            0.05,
+            0.05,
+            1.05,
+            1.05
+          ],
+          [
+            2.5,
+            2.5,
+            3.5,
+            3.5
+          ]
+        ],
+        "scores": [
+          0.45,
+          0.375,
+          0.425
+        ],
+        "threshold": 0.25
+      },
+      "expectedOutput": [
+        0,
+        2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "boxes": [
+          [
+            -0.0,
+            -0.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.1,
+            -2.1,
+            -2.1
+          ],
+          [
+            -5.0,
+            -5.0,
+            -7.0,
+            -7.0
+          ]
+        ],
+        "scores": [
+          -0.9,
+          -0.75,
+          -0.85
+        ],
+        "threshold": -0.5
+      },
+      "expectedOutput": [
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            6.0,
+            6.0
+          ],
+          [
+            0.3,
+            0.3,
+            6.3,
+            6.3
+          ],
+          [
+            15.0,
+            15.0,
+            21.0,
+            21.0
+          ]
+        ],
+        "scores": [
+          2.7,
+          2.25,
+          2.55
+        ],
+        "threshold": 1.5
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "boxes": [
+          [
+            1.0,
+            1.0,
+            3.0,
+            3.0
+          ],
+          [
+            1.1,
+            1.1,
+            3.1,
+            3.1
+          ],
+          [
+            6.0,
+            6.0,
+            8.0,
+            8.0
+          ]
+        ],
+        "scores": [
+          1.9,
+          1.75,
+          1.85
+        ],
+        "threshold": 1.5
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "boxes": [
+          [
+            -2.0,
+            -2.0,
+            0.0,
+            0.0
+          ],
+          [
+            -1.9,
+            -1.9,
+            0.10000000000000009,
+            0.10000000000000009
+          ],
+          [
+            3.0,
+            3.0,
+            5.0,
+            5.0
+          ]
+        ],
+        "scores": [
+          -1.1,
+          -1.25,
+          -1.15
+        ],
+        "threshold": -1.5
+      },
+      "expectedOutput": [
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "boxes": [
+          [
+            2.0,
+            2.0,
+            0.0,
+            0.0
+          ],
+          [
+            2.1,
+            2.1,
+            0.1,
+            0.1
+          ],
+          [
+            7.0,
+            7.0,
+            5.0,
+            5.0
+          ]
+        ],
+        "scores": [
+          0.85,
+          0.75,
+          0.9
+        ],
+        "threshold": 0.5
+      },
+      "expectedOutput": [
+        2,
+        0,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "boxes": [
+          [
+            -0.0,
+            -0.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -0.1,
+            -0.1,
+            -2.1,
+            -2.1
+          ],
+          [
+            -5.0,
+            -5.0,
+            -7.0,
+            -7.0
+          ]
+        ],
+        "scores": [
+          -0.9,
+          -0.75,
+          -0.85
+        ],
+        "threshold": -0.5
+      },
+      "expectedOutput": [
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            20.0,
+            20.0
+          ],
+          [
+            1.0,
+            1.0,
+            21.0,
+            21.0
+          ],
+          [
+            50.0,
+            50.0,
+            70.0,
+            70.0
+          ]
+        ],
+        "scores": [
+          9.0,
+          7.5,
+          8.5
+        ],
+        "threshold": 5.0
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            0.2,
+            0.2
+          ],
+          [
+            0.01,
+            0.01,
+            0.21,
+            0.21
+          ],
+          [
+            0.5,
+            0.5,
+            0.7,
+            0.7
+          ]
+        ],
+        "scores": [
+          0.09,
+          0.075,
+          0.085
+        ],
+        "threshold": 0.05
+      },
+      "expectedOutput": [
+        0,
+        2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "boxes": [
+          [
+            5.0,
+            5.0,
+            7.0,
+            7.0
+          ],
+          [
+            5.1,
+            5.1,
+            7.1,
+            7.1
+          ],
+          [
+            10.0,
+            10.0,
+            12.0,
+            12.0
+          ]
+        ],
+        "scores": [
+          5.9,
+          5.75,
+          5.85
+        ],
+        "threshold": 5.5
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            3.0,
+            3.0
+          ],
+          [
+            0.15,
+            0.15,
+            3.15,
+            3.15
+          ],
+          [
+            7.5,
+            7.5,
+            10.5,
+            10.5
+          ]
+        ],
+        "scores": [
+          1.35,
+          1.125,
+          1.275
+        ],
+        "threshold": 0.75
+      },
+      "expectedOutput": [
+        0,
+        2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "boxes": [
+          [
+            -0.0,
+            -0.0,
+            -4.0,
+            -4.0
+          ],
+          [
+            -0.2,
+            -0.2,
+            -4.2,
+            -4.2
+          ],
+          [
+            -10.0,
+            -10.0,
+            -14.0,
+            -14.0
+          ]
+        ],
+        "scores": [
+          -1.8,
+          -1.5,
+          -1.7
+        ],
+        "threshold": -1.0
+      },
+      "expectedOutput": [
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            0.5,
+            0.5
+          ],
+          [
+            0.025,
+            0.025,
+            0.525,
+            0.525
+          ],
+          [
+            1.25,
+            1.25,
+            1.75,
+            1.75
+          ]
+        ],
+        "scores": [
+          0.225,
+          0.1875,
+          0.2125
+        ],
+        "threshold": 0.125
+      },
+      "expectedOutput": [
+        0,
+        2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "boxes": [
+          [
+            -1.0,
+            -1.0,
+            1.0,
+            1.0
+          ],
+          [
+            -0.9,
+            -0.9,
+            1.1,
+            1.1
+          ],
+          [
+            4.0,
+            4.0,
+            6.0,
+            6.0
+          ]
+        ],
+        "scores": [
+          -0.09999999999999998,
+          -0.25,
+          -0.15000000000000002
+        ],
+        "threshold": -0.5
+      },
+      "expectedOutput": [
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            8.0,
+            8.0
+          ],
+          [
+            0.4,
+            0.4,
+            8.4,
+            8.4
+          ],
+          [
+            20.0,
+            20.0,
+            28.0,
+            28.0
+          ]
+        ],
+        "scores": [
+          3.6,
+          3.0,
+          3.4
+        ],
+        "threshold": 2.0
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            1.5,
+            1.5
+          ],
+          [
+            0.075,
+            0.075,
+            1.575,
+            1.575
+          ],
+          [
+            3.75,
+            3.75,
+            5.25,
+            5.25
+          ]
+        ],
+        "scores": [
+          0.675,
+          0.5625,
+          0.6375
+        ],
+        "threshold": 0.375
+      },
+      "expectedOutput": [
+        0,
+        2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "boxes": [
+          [
+            0.0,
+            0.0,
+            10.0,
+            10.0
+          ],
+          [
+            0.5,
+            0.5,
+            10.5,
+            10.5
+          ],
+          [
+            25.0,
+            25.0,
+            35.0,
+            35.0
+          ]
+        ],
+        "scores": [
+          4.5,
+          3.75,
+          4.25
+        ],
+        "threshold": 2.5
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-nms-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "boxes": [
+          [
+            10.0,
+            10.0,
+            12.0,
+            12.0
+          ],
+          [
+            10.1,
+            10.1,
+            12.1,
+            12.1
+          ],
+          [
+            15.0,
+            15.0,
+            17.0,
+            17.0
+          ]
+        ],
+        "scores": [
+          10.9,
+          10.75,
+          10.85
+        ],
+        "threshold": 10.5
+      },
+      "expectedOutput": [
+        0,
+        2,
+        1
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cv_nms",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "gradient-descent-quadratic",
+    "anchor-box-generation",
+    "value-iteration-step",
+    "precision-recall-at-k",
+    "cs336-l01-train-byte-pair-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "python",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

@@ -1,0 +1,2586 @@
+{
+  "id": "k3-multi-teacher-opd",
+  "title": "Multi-Teacher On-Policy Distillation",
+  "description": "Multi-Teacher On-Policy Distillation selects one teacher for every batch item. Student logits have shape $(B,S,V)$ for batch size $B$, sequence length $S$, and vocabulary size $V$. Teacher logits have shape $(3,3,B,S,V)$: the first axis selects the domain and the second selects the reasoning-effort level. Domain and effort index tensors each have shape $(B)$, and sampled token identifiers have shape $(B,S)$.\n\nFor sampled token $y_{b,t}$, use the two index tensors to select the teacher logits for batch item $b$, compute student and selected-teacher log probabilities with log-softmax, and gather the probability of $y_{b,t}$. For positive clipping threshold $R_{\\max}$, compute\n\n$$\nr_{b,t}=\\operatorname{clip}\\left(\\operatorname{stopgrad}\\left[\\log\\pi_{\\mathrm{teacher}}^{(d_b,e_b)}(y_{b,t})-\\log\\pi_\\theta(y_{b,t})\\right],-R_{\\max},R_{\\max}\\right).\n$$\n\nThe reward must have no gradient connection to either policy. Return a dictionary with rewards and teacher_token_log_probs. Both tensors have shape $(B,S)$ and preserve the logits dtype and device.",
+  "seoDescription": "Implement Kimi K3 multi-teacher on-policy distillation by gathering teacher logits and returning token-level losses.",
+  "examples": [
+    "Input: student_logits = [[[0,0]]], teacher_logits = [[[[[0,-0.02]]],[[[-0.24,-0.14]]],[[[-0.48,-0.26]]]],[[[[0.15,0.28]]],[[[-0.09,0.16]]],[[[-0.33,0.04]]]],[[[[0.3,0.58]]],[[[0.06,0.46]]],[[[-0.18,0.34]]]]], domain_indices = [0], effort_indices = [0], sampled_tokens = [[0]], clip_threshold = 2\n\nOutput: {\"rewards\": tensor([[0.009950000833311101]]), \"teacher_token_log_probs\": tensor([[-0.6831971797266342]])}\n\nExplanation: The selected teacher gives token 0 a slightly higher log probability than the student, producing a small positive unclipped reward.",
+    "Input: student_logits.shape = (2, 2, 3), teacher_logits.shape = (3, 3, 2, 2, 3), domain_indices.shape = effort_indices.shape = (2,), sampled_tokens.shape = (2, 2), clip_threshold = 1.5\n\nOutput: {\"rewards\": tensor of shape (2, 2), \"teacher_token_log_probs\": tensor of shape (2, 2)}",
+    "Input: student_logits.shape = (1, 2, 2), teacher_logits.shape = (3, 3, 1, 2, 2), domain_indices.shape = effort_indices.shape = (1,), sampled_tokens.shape = (1, 2), clip_threshold = 0.75\n\nOutput: {\"rewards\": tensor of shape (1, 2), \"teacher_token_log_probs\": tensor of shape (1, 2)}"
+  ],
+  "requirements": "- Return a dictionary with exactly rewards and teacher_token_log_probs. Both tensors have shape (batch, sequence).\n- Reward values lie within the inclusive clipping interval.\n- The reward tensor has no gradient connection to either policy.\n- Preserve floating-point dtype and device.",
+  "theory": "# Multi-Teacher On-Policy Distillation\n\nMulti-Teacher On-Policy Distillation gives a student model a dense reward for tokens it sampled itself. For each batch item, the correct teacher is chosen by domain and reasoning-effort indices. The reward compares how much probability that teacher and the student assigned to the sampled token.\n\n## Why there are several teachers\n\nKimi K3 uses specialized policies for different domains and reasoning efforts, then consolidates their capabilities into one student. In this exercise, teacher logits have two selection axes: three domains and three effort levels. Together they represent nine possible teachers.\n\nEvery batch item selects exactly one of those nine teachers. Once selected, that teacher supplies logits for all sequence positions of that item. Domain and effort selection happens per batch item, not per token.\n\nThe function does not average teachers. Mixing their logits would create a distribution that belongs to none of the specialized policies.\n\n## Compare the sampled token only\n\nStudent and teacher tensors contain a score for every vocabulary item, but the rollout already tells us which token was sampled at each position. Convert logits to log probabilities with log-softmax, then gather the log probability at that sampled token identifier.\n\nFor a sampled token $y_{b,t}$, the unclipped log-ratio reward is\n\n$$\n\\log\\pi_{\\mathrm{teacher}}(y_{b,t})-\\log\\pi_\\theta(y_{b,t})\n$$\n\nThis value is positive when the selected teacher considered the sampled token more likely than the student did. It is negative when the student assigned more probability than the teacher.\n\nUse log-softmax rather than taking softmax and then logarithm. Log-softmax performs the same mathematics more stably when logits have large magnitudes.\n\n## Stop gradients through the reward\n\nThe reward is a training signal, not a differentiable path back into the teacher or student probabilities used to calculate it. Detach the log-probability difference before returning the reward.\n\nThe selected teacher log probabilities are returned separately and should preserve their ordinary values. The prompt only requires the reward tensor to have no gradient connection. Detaching the reward after subtraction is the clearest way to satisfy this.\n\n## Clip extreme comparisons\n\nVery large log-ratios can dominate learning. Clamp the detached difference to the inclusive interval from negative threshold to positive threshold:\n\n$$\nr_{b,t}=\\operatorname{clip}\\left(\\operatorname{stopgrad}[\\log\\pi_T-\\log\\pi_S],-R_{\\max},R_{\\max}\\right)\n$$\n\nClipping happens after computing the log-probability difference. Clipping logits or individual log probabilities would change which distribution is being compared.\n\n## A small probability example\n\nSuppose the selected teacher assigns probability $0.6$ to a sampled token, while the student assigns $0.2$. The log-ratio is\n\n$$\n\\log(0.6)-\\log(0.2)=\\log(3)\\approx1.099\n$$\n\nWith a clipping threshold of $1.0$, the returned reward is $1.0$. If teacher and student probabilities are equal, the reward is zero. If the teacher gives the token lower probability, the reward is negative.\n\nThe selected teacher log probability in this example is $\\log(0.6)$. It is returned alongside the clipped reward, not converted back into a probability.\n\n## Select teachers with paired batch indices\n\nThe domain index and effort index for batch item $b$ must be used together with that same batch index. This is paired advanced indexing, not a Cartesian selection of all domains, efforts, and batch items.\n\nAfter teacher selection, both the chosen teacher logits and student logits have one batch, sequence, and vocabulary axis. Gathering sampled token IDs along the vocabulary axis leaves a batch-by-sequence result.\n\n## Implementation order\n\n- Use each batch item's domain and effort indices to select one teacher logit sequence.\n- Apply log-softmax across vocabulary to student logits and selected teacher logits.\n- Gather each model's log probability for the supplied sampled token at every position.\n- Subtract student token log probability from teacher token log probability.\n- Detach this difference and clamp it to the requested interval.\n- Return clipped rewards followed by selected teacher token log probabilities.\n\n## Common mistakes to avoid\n\n- **Averaging all nine teachers.** Each batch item uses one selected teacher.\n- **Gathering before log-softmax.** A single logit is not a log probability because normalization needs the full vocabulary.\n- **Comparing the most likely token.** Compare the supplied sampled token, even when it is not an argmax.\n- **Leaving reward attached to the graph.** The log-ratio reward must be stopped from backpropagating.\n- **Clipping teacher and student values separately.** Clip only their final difference.\n",
+  "hints": [
+    "Use batch indices together with domain and effort indices to select one teacher tensor per item.",
+    "Apply log-softmax before gathering the sampled-token positions.",
+    "Detach the log-probability difference before clipping it to the reward interval."
+  ],
+  "constraints": "- Teacher logits have leading dimensions (3, 3, batch, sequence, vocabulary).\n- Domain and effort indices lie in [0, 2].\n- Sampled token indices are valid vocabulary positions.\n- Clipping threshold is positive.",
+  "difficulty": "Medium",
+  "starterCode": "import torch\n\ndef multi_teacher_opd_reward(student_logits: torch.Tensor, teacher_logits: torch.Tensor, domain_indices: torch.Tensor, effort_indices: torch.Tensor, sampled_tokens: torch.Tensor, clip_threshold: float) -> dict[str, torch.Tensor]:\n    \"\"\"\n    Returns a dictionary containing clipped rewards and selected teacher token log probabilities.\n    \"\"\"\n    pass",
+  "createdAt": "2026-07-29T07:43:16.647Z",
+  "updatedAt": "2026-09-03T19:22:49.691Z",
+  "topicId": "k3-multi-teacher-opd",
+  "paperSnippet": "\"nine experts\"",
+  "visualizationComponent": "K3MultiTeacherOPDViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Multi-Teacher On-Policy Distillation** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch\nimport torch.nn.functional as F\n\ndef multi_teacher_opd_reward(student_logits: torch.Tensor, teacher_logits: torch.Tensor, domain_indices: torch.Tensor, effort_indices: torch.Tensor, sampled_tokens: torch.Tensor, clip_threshold: float) -> dict[str, torch.Tensor]:\n    s_logits = student_logits if isinstance(student_logits, torch.Tensor) else torch.tensor(student_logits, dtype=torch.float64)\n    t_logits = teacher_logits if isinstance(teacher_logits, torch.Tensor) else torch.tensor(teacher_logits, dtype=torch.float64)\n    d_idx = [int(x) for x in domain_indices]\n    e_idx = [int(x) for x in effort_indices]\n    tokens = sampled_tokens if isinstance(sampled_tokens, torch.Tensor) else torch.tensor(sampled_tokens, dtype=torch.int64)\n    c_thresh = float(clip_threshold)\n    \n    B, S, V = s_logits.shape\n    rewards = torch.zeros((B, S), dtype=torch.float64)\n    t_probs = torch.zeros((B, S), dtype=torch.float64)\n    \n    for b in range(B):\n        d_val = d_idx[b]\n        e_val = e_idx[b]\n        t_b = t_logits[d_val, e_val, b]\n        s_b = s_logits[b]\n        \n        log_pi_t = F.log_softmax(t_b, dim=-1)\n        log_pi_s = F.log_softmax(s_b, dim=-1)\n        \n        tok_b = tokens[b].unsqueeze(-1)\n        pi_t_tok = log_pi_t.gather(-1, tok_b).squeeze(-1)\n        pi_s_tok = log_pi_s.gather(-1, tok_b).squeeze(-1)\n        \n        diff = pi_t_tok - pi_s_tok\n        reward = torch.clamp(diff.detach(), -c_thresh, c_thresh)\n        rewards[b] = reward\n        t_probs[b] = pi_t_tok\n        \n    return {\n        \"rewards\": torch.round(rewards * 1e6) / 1e6,\n        \"teacher_token_log_probs\": torch.round(t_probs * 1e6) / 1e6\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Teacher and student agreement",
+      "inputs": {
+        "clip_threshold": 2,
+        "domain_indices": [
+          0
+        ],
+        "effort_indices": [
+          0
+        ],
+        "sampled_tokens": [
+          [
+            0
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  0,
+                  -0.02
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.24,
+                  -0.14
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.48,
+                  -0.26
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.15,
+                  0.28
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.09,
+                  0.16
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.33,
+                  0.04
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.3,
+                  0.58
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.06,
+                  0.46
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.18,
+                  0.34
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "rewards": [
+          [
+            0.00995
+          ]
+        ],
+        "teacher_token_log_probs": [
+          [
+            -0.683197
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Mixed teacher selection",
+      "inputs": {
+        "clip_threshold": 1.5,
+        "domain_indices": [
+          0,
+          2
+        ],
+        "effort_indices": [
+          2,
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1,
+            2
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              0,
+              -1
+            ],
+            [
+              0.5,
+              -0.25,
+              0.75
+            ]
+          ],
+          [
+            [
+              -0.5,
+              1.5,
+              0.25
+            ],
+            [
+              1,
+              0.5,
+              -0.75
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  0.25,
+                  0.98,
+                  -0.54
+                ],
+                [
+                  1.3,
+                  -0.47,
+                  0.01
+                ]
+              ],
+              [
+                [
+                  1.6,
+                  -0.17,
+                  0.56
+                ],
+                [
+                  -0.6,
+                  0.38,
+                  1.11
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.11,
+                  0.74,
+                  -0.66
+                ],
+                [
+                  0.94,
+                  -0.71,
+                  -0.11
+                ]
+              ],
+              [
+                [
+                  1.24,
+                  -0.41,
+                  0.44
+                ],
+                [
+                  -0.96,
+                  0.14,
+                  0.99
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.47,
+                  0.5,
+                  -0.78
+                ],
+                [
+                  0.58,
+                  -0.95,
+                  -0.23
+                ]
+              ],
+              [
+                [
+                  0.88,
+                  -0.65,
+                  0.32
+                ],
+                [
+                  -1.32,
+                  -0.1,
+                  0.87
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.4,
+                  1.28,
+                  -0.09
+                ],
+                [
+                  1.45,
+                  -0.17,
+                  0.46
+                ]
+              ],
+              [
+                [
+                  1.75,
+                  0.13,
+                  1.01
+                ],
+                [
+                  -0.45,
+                  0.68,
+                  1.56
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.04,
+                  1.04,
+                  -0.21
+                ],
+                [
+                  1.09,
+                  -0.41,
+                  0.34
+                ]
+              ],
+              [
+                [
+                  1.39,
+                  -0.11,
+                  0.89
+                ],
+                [
+                  -0.81,
+                  0.44,
+                  1.44
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.32,
+                  0.8,
+                  -0.33
+                ],
+                [
+                  0.73,
+                  -0.65,
+                  0.22
+                ]
+              ],
+              [
+                [
+                  1.03,
+                  -0.35,
+                  0.77
+                ],
+                [
+                  -1.17,
+                  0.2,
+                  1.32
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.55,
+                  1.58,
+                  0.36
+                ],
+                [
+                  1.6,
+                  0.13,
+                  0.91
+                ]
+              ],
+              [
+                [
+                  1.9,
+                  0.43,
+                  1.46
+                ],
+                [
+                  -0.3,
+                  0.98,
+                  2.01
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.19,
+                  1.34,
+                  0.24
+                ],
+                [
+                  1.24,
+                  -0.11,
+                  0.79
+                ]
+              ],
+              [
+                [
+                  1.54,
+                  0.19,
+                  1.34
+                ],
+                [
+                  -0.66,
+                  0.74,
+                  1.89
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.17,
+                  1.1,
+                  0.12
+                ],
+                [
+                  0.88,
+                  -0.35,
+                  0.67
+                ]
+              ],
+              [
+                [
+                  1.18,
+                  -0.05,
+                  1.22
+                ],
+                [
+                  -1.02,
+                  0.5,
+                  1.77
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "rewards": [
+          [
+            0.902525,
+            -0.553734
+          ],
+          [
+            1.5,
+            -0.405908
+          ]
+        ],
+        "teacher_token_log_probs": [
+          [
+            -0.505081,
+            -1.317657
+          ],
+          [
+            -0.731392,
+            -1.482693
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-3",
+      "name": "Reward clipping",
+      "inputs": {
+        "clip_threshold": 0.75,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          2
+        ],
+        "sampled_tokens": [
+          [
+            1,
+            0
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              8,
+              -8
+            ],
+            [
+              -7,
+              7
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  -8,
+                  7.98
+                ],
+                [
+                  7.05,
+                  -6.97
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -8.24,
+                  7.86
+                ],
+                [
+                  6.81,
+                  -7.09
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -8.48,
+                  7.74
+                ],
+                [
+                  6.57,
+                  -7.21
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  -7.85,
+                  8.28
+                ],
+                [
+                  7.2,
+                  -6.67
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -8.09,
+                  8.16
+                ],
+                [
+                  6.96,
+                  -6.79
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -8.33,
+                  8.04
+                ],
+                [
+                  6.72,
+                  -6.91
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  -7.7,
+                  8.58
+                ],
+                [
+                  7.35,
+                  -6.37
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -7.94,
+                  8.46
+                ],
+                [
+                  7.11,
+                  -6.49
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -8.18,
+                  8.34
+                ],
+                [
+                  6.87,
+                  -6.61
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "rewards": [
+          [
+            0.75,
+            0.75
+          ]
+        ],
+        "teacher_token_log_probs": [
+          [
+            -0.0,
+            -1e-06
+          ]
+        ]
+      }
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "clip_threshold": 4,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  0,
+                  -0.04
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.48,
+                  -0.28
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.96,
+                  -0.52
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.3,
+                  0.56
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.18,
+                  0.32
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.66,
+                  0.08
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.6,
+                  1.16
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.12,
+                  0.92
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.36,
+                  0.68
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": [
+          [
+            0.00995
+          ]
+        ],
+        "teacher_token_log_probs": [
+          [
+            -0.683197
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "clip_threshold": 1,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  0,
+                  -0.01
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.12,
+                  -0.07
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.24,
+                  -0.13
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.075,
+                  0.14
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.045,
+                  0.08
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.165,
+                  0.02
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.15,
+                  0.29
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.03,
+                  0.23
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.09,
+                  0.17
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.0605]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.6326]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "clip_threshold": 3,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  1,
+                  0.98
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.76,
+                  0.86
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.52,
+                  0.74
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  1.15,
+                  1.28
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.91,
+                  1.16
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.67,
+                  1.04
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  1.3,
+                  1.58
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  1.06,
+                  1.46
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.82,
+                  1.34
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.1172]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.5759]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "clip_threshold": 3,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  0,
+                  -0.03
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.36,
+                  -0.21
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.72,
+                  -0.39
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.225,
+                  0.42
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.135,
+                  0.24
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.495,
+                  0.06
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.45,
+                  0.87
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.09,
+                  0.69
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.27,
+                  0.51
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.1700]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.5231]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "clip_threshold": 6,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  0,
+                  -0.06
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.72,
+                  -0.42
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -1.44,
+                  -0.78
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.45,
+                  0.84
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.27,
+                  0.48
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.99,
+                  0.12
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.9,
+                  1.74
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.18,
+                  1.38
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.54,
+                  1.02
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.3063]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.3869]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "clip_threshold": 0,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  0,
+                  -0.005
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.06,
+                  -0.035
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.12,
+                  -0.065
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.0375,
+                  0.07
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.0225,
+                  0.04
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.0825,
+                  0.01
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.075,
+                  0.145
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.015,
+                  0.115
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.045,
+                  0.085
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.6624]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "clip_threshold": 4,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  2,
+                  1.98
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  1.76,
+                  1.86
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  1.52,
+                  1.74
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  2.15,
+                  2.28
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  1.91,
+                  2.16
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  1.67,
+                  2.04
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  2.3,
+                  2.58
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  2.06,
+                  2.46
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  1.82,
+                  2.34
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.1172]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.5759]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "clip_threshold": 8,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  0,
+                  -0.08
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.96,
+                  -0.56
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -1.92,
+                  -1.04
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.6,
+                  1.12
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.36,
+                  0.64
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -1.32,
+                  0.16
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  1.2,
+                  2.32
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.24,
+                  1.84
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.72,
+                  1.36
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.3799]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.3133]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "clip_threshold": 2,
+        "domain_indices": [
+          0
+        ],
+        "effort_indices": [
+          0
+        ],
+        "sampled_tokens": [
+          [
+            0
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  -0.02,
+                  0
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.14,
+                  -0.24
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.26,
+                  -0.48
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.28,
+                  0.15
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.16,
+                  -0.09
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.04,
+                  -0.33
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.58,
+                  0.3
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.46,
+                  0.06
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.34,
+                  -0.18
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[-0.0100]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.7032]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "clip_threshold": 2,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  0,
+                  -0.015
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.18,
+                  -0.105
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.36,
+                  -0.195
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.1125,
+                  0.21
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.0675,
+                  0.12
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.2475,
+                  0.03
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.225,
+                  0.435
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.045,
+                  0.345
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.135,
+                  0.255
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.0894]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.6038]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "clip_threshold": 10,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  0,
+                  -0.1
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -1.2,
+                  -0.7
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -2.4,
+                  -1.3
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.75,
+                  1.4
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.45,
+                  0.8
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -1.65,
+                  0.2
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  1.5,
+                  2.9
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.3,
+                  2.3
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.9,
+                  1.7
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.4412]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.2519]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "clip_threshold": 5,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  3,
+                  2.98
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  2.76,
+                  2.86
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  2.52,
+                  2.74
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  3.15,
+                  3.28
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  2.91,
+                  3.16
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  2.67,
+                  3.04
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  3.3,
+                  3.58
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  3.06,
+                  3.46
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  2.82,
+                  3.34
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.1172]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.5759]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "clip_threshold": 2,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  0,
+                  -0.016
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.192,
+                  -0.112
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.384,
+                  -0.208
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.12,
+                  0.224
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.072,
+                  0.128
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.264,
+                  0.032
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.24,
+                  0.464
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.048,
+                  0.368
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.144,
+                  0.272
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.0950]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.5981]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "clip_threshold": 12,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  0,
+                  -0.12
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -1.44,
+                  -0.84
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -2.88,
+                  -1.56
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.9,
+                  1.68
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.54,
+                  0.96
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -1.98,
+                  0.24
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  1.8,
+                  3.48
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.36,
+                  2.76
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -1.08,
+                  2.04
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.4917]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.2014]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "clip_threshold": 6,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  4,
+                  3.98
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  3.76,
+                  3.86
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  3.52,
+                  3.74
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  4.15,
+                  4.28
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  3.91,
+                  4.16
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  3.67,
+                  4.04
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  4.3,
+                  4.58
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  4.06,
+                  4.46
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  3.82,
+                  4.34
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.1172]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.5759]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "clip_threshold": 2,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  0,
+                  -0.024
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.288,
+                  -0.168
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.576,
+                  -0.312
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.18,
+                  0.336
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.108,
+                  0.192
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.396,
+                  0.048
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.36,
+                  0.696
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.072,
+                  0.552
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.216,
+                  0.408
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.1388]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.5544]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-multi-teacher-opd-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "clip_threshold": 1,
+        "domain_indices": [
+          1
+        ],
+        "effort_indices": [
+          1
+        ],
+        "sampled_tokens": [
+          [
+            1
+          ]
+        ],
+        "student_logits": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "teacher_logits": [
+          [
+            [
+              [
+                [
+                  0,
+                  -0.008
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.096,
+                  -0.056
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.192,
+                  -0.104
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.06,
+                  0.112
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.036,
+                  0.064
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.132,
+                  0.016
+                ]
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                [
+                  0.12,
+                  0.232
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.024,
+                  0.184
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  -0.072,
+                  0.136
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "rewards": "tensor([[0.0488]], dtype=torch.float64)",
+        "teacher_token_log_probs": "tensor([[-0.6444]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "multi_teacher_opd_reward",
+    "runtime": "pytorch",
+    "parameters": [
+      {
+        "name": "student_logits",
+        "type": "array",
+        "example": "[[[0,0]]]",
+        "description": "Student vocabulary logits."
+      },
+      {
+        "name": "teacher_logits",
+        "type": "array",
+        "example": "[[[[[0,-0.02]]],[[[-0.24,-0.14]]],[[[-0.48,-0.26]]]],[[[[0.15,0.28]]],[[[-0.09,0.16]]],[[[-0.33,0.04]]]],[[[[0.3,0.58]]],[[[0.06,0.46]]],[[[-0.18,0.34]]]]]",
+        "description": "Domain-and-effort teacher logits."
+      },
+      {
+        "name": "domain_indices",
+        "type": "array",
+        "example": "[0]",
+        "description": "Teacher domain per batch item."
+      },
+      {
+        "name": "effort_indices",
+        "type": "array",
+        "example": "[0]",
+        "description": "Teacher effort per batch item."
+      },
+      {
+        "name": "sampled_tokens",
+        "type": "array",
+        "example": "[[0]]",
+        "description": "Sampled token identifiers."
+      },
+      {
+        "name": "clip_threshold",
+        "type": "number",
+        "example": "2",
+        "description": "Positive reward clipping threshold."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "k3-multi-teacher-opd",
+    "name": "Multi-Teacher OPD",
+    "description": "Compute clipped per-token rewards from the selected domain-and-effort teacher.",
+    "color": "#10b981"
+  },
+  "paper": {
+    "id": "kimik3",
+    "title": "Kimi K3",
+    "authors": "Kimi Team",
+    "year": 2026,
+    "paperUrl": "https://github.com/MoonshotAI/Kimi-K3/blob/main/k3_tech_report.pdf",
+    "visualizationComponent": "KimiK3ArchViz"
+  },
+  "navigation": {
+    "index": 10,
+    "total": 11,
+    "prev": "k3-per-head-muon",
+    "next": "k3-kda-context-parallel"
+  },
+  "cleanTitle": ""
+}

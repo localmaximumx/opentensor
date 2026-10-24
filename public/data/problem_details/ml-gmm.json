@@ -1,0 +1,956 @@
+{
+  "catalogId": "python:ml-gmm",
+  "id": "ml-gmm",
+  "sourceId": "ml-gmm",
+  "slug": "ml-gmm",
+  "source": "python",
+  "category": "numpy",
+  "title": "Gaussian Mixture Models (EM)",
+  "difficulty": "Hard",
+  "tags": [
+    "Clustering",
+    "Classic ML",
+    "Probability and Statistics"
+  ],
+  "isFree": false,
+  "planId": "cracking-ml",
+  "planTitle": "Cracking ML",
+  "sectionId": "cracking-ml-unsupervised-learning",
+  "sortOrder": 110,
+  "seoDescription": "Implement a diagonal-covariance Gaussian Mixture Model using EM updates for responsibilities, means, variances, and mixture weights.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Implement the Expectation-Maximization (EM) algorithm for a diagonal-covariance Gaussian Mixture Model.\n\nGMMs model multimodal continuous distributions as linear superpositions of multivariate Gaussians.\n\n### Mathematical Formulation\n$$\n\\gamma_{ik} = \\frac{\\pi_k \\mathcal{N}(x_i | \\mu_k, \\Sigma_k)}{\\sum_j \\pi_j \\mathcal{N}(x_i | \\mu_j, \\Sigma_j)}, \\quad \\mu_k = \\frac{\\sum_i \\gamma_{ik} x_i}{\\sum_i \\gamma_{ik}}\n$$\n\n### Step-by-Step Implementation\n1. Compute posterior responsibilities gamma_ik for each data point and cluster\n2. Update mixture weights, cluster means, and feature variances during the M-step\n3. Iterate until convergence or maximum iterations are reached\n\n### Returns\nDictionary with fitted 'means', 'variances', and 'weights'.",
+  "theory": "## Understanding the Theory: Gaussian Mixture Models (EM)\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and machine learning, robust algorithmic routines ensure calculations are both mathematically sound and computationally efficient. **Gaussian Mixture Models (EM)** implements a core computational building block.\n\nGMMs model multimodal continuous distributions as linear superpositions of multivariate Gaussians. In this problem, the goal is to: implement the expectation-maximization (em) algorithm for a diagonal-covariance gaussian mixture model.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\gamma_{ik} = \\frac{\\pi_k \\mathcal{N}(x_i | \\mu_k, \\Sigma_k)}{\\sum_j \\pi_j \\mathcal{N}(x_i | \\mu_j, \\Sigma_j)}, \\quad \\mu_k = \\frac{\\sum_i \\gamma_{ik} x_i}{\\sum_i \\gamma_{ik}}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute posterior responsibilities gamma_ik for each data point and cluster\n2. **Phase 2**: Update mixture weights, cluster means, and feature variances during the M-step\n3. **Phase 3**: Iterate until convergence or maximum iterations are reached\n\n### Practical Machine Learning Applications & Nuances\n* **Algorithmic Complexity**: Designing routines with optimal time and space complexity ensures they scale gracefully to large datasets.\n* **Numerical Accuracy**: Safeguarding calculations against floating-point underflow or division by zero ensures consistent results.\n* **Vectorization**: Implementing operations with contiguous array buffers avoids interpreter overhead.",
+  "examples": [
+    "Input: X = [[1.0], [1.2], [5.0], [5.2]], k = 2, max_iter = 5\n\nOutput: {\"means\": [[2.5668], [3.4624]], \"variances\": [[3.7257], [3.8786]], \"weights\": [0.4046, 0.5954]}\n\nExplanation: Evaluated ml_gmm under standard test conditions."
+  ],
+  "requirements": "* Function must be named `ml_gmm`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `ml_gmm`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef ml_gmm(X: list, k: int = 2, max_iter: int = 10) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Gaussian Mixture Models (EM)** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef ml_gmm(X: list, k: int = 2, max_iter: int = 10) -> dict:\n    x = np.array(X, dtype=np.float64)\n    N, D = x.shape\n    means, vars_, weights = x[:k].copy(), np.ones((k, D)), np.ones(k) / k\n    for _ in range(int(max_iter)):\n        lik = np.zeros((N, k))\n        for j in range(k):\n            v = np.maximum(vars_[j], 1e-6)\n            lik[:, j] = weights[j] * np.exp(-0.5*np.sum(((x - means[j])**2)/v, axis=1)) / (np.sqrt((2*np.pi)**D * np.prod(v)) + 1e-12)\n        gamma = lik / (np.sum(lik, axis=1, keepdims=True) + 1e-12)\n        Nk = np.sum(gamma, axis=0) + 1e-12\n        weights = Nk / N\n        for j in range(k):\n            means[j] = np.sum(gamma[:, j:j+1]*x, axis=0) / Nk[j]\n            vars_[j] = np.maximum(np.sum(gamma[:, j:j+1]*((x - means[j])**2), axis=0) / Nk[j], 1e-6)\n    return {'means': np.round(means, 4).tolist(), 'variances': np.round(vars_, 4).tolist(), 'weights': np.round(weights, 4).tolist()}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Simple 1D two-cluster data",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "ml-gmm-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "ml-gmm-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            1.0
+          ],
+          [
+            1.2
+          ],
+          [
+            5.0
+          ],
+          [
+            5.2
+          ]
+        ],
+        "k": 2,
+        "max_iter": 5
+      },
+      "expectedOutput": {
+        "means": [
+          [
+            2.5668
+          ],
+          [
+            3.4624
+          ]
+        ],
+        "variances": [
+          [
+            3.7257
+          ],
+          [
+            3.8786
+          ]
+        ],
+        "weights": [
+          0.4046,
+          0.5954
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "ml_gmm",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

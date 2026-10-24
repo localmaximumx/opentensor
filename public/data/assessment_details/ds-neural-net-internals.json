@@ -1,0 +1,989 @@
+{
+  "id": "ds-neural-net-internals",
+  "name": "Neural Net Internals Sprint",
+  "description": "Neural network internals from scratch.",
+  "durationMin": 60,
+  "categoryId": "data-science",
+  "isFree": false,
+  "sets": [
+    {
+      "id": "ds-neural-net-internals-set-1",
+      "name": "Set 1",
+      "sortOrder": 0,
+      "problems": [
+        {
+          "slug": "ds10-dropout",
+          "type": "code",
+          "title": "# <span style=\"font-size: 20px;\">Inverted Dropout Forward and Backward</span>",
+          "difficulty": "easy",
+          "challenge": {
+            "problemStatement": "Implement `Inverted Dropout Forward and Backward` for neural-network tensors represented as nested Python lists (except where NumPy is explicitly used). Return the forward result and/or gradients required by the function signature. Use stable numerical calculations where applicable.",
+            "theory": "Neural-network components combine tensor operations with derivatives. Keep forward and backward computations consistent and use numerically stable formulas.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "For softmax, subtract the maximum logit before exponentiation.",
+              "For normalization backward passes, use the chain rule and the mean/variance derivatives."
+            ],
+            "starterCode": "def solve(x, grad, p, training=True, mask=None):\n    pass",
+            "solution": "def solve(x, grad, p, training=True, mask=None):\n    # Returns (forward_output, input_gradient); mask may be supplied for deterministic tests.\n    if not training or p == 0: return list(x), list(grad)\n    if not 0 <= p < 1: raise ValueError(\"p must be in [0,1)\")\n    if mask is None: raise ValueError(\"pass a mask for deterministic reference behavior\")\n    scale=1/(1-p)\n    return [v*m*scale for v,m in zip(x,mask)], [g*m*scale for g,m in zip(grad,mask)]",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    1.0,
+                    2.0
+                  ],
+                  [
+                    1.0,
+                    1.0
+                  ],
+                  0.5,
+                  true,
+                  [
+                    1,
+                    0
+                  ]
+                ],
+                "expected": [
+                  [
+                    2.0,
+                    0.0
+                  ],
+                  [
+                    2.0,
+                    0.0
+                  ]
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    1.0,
+                    2.0
+                  ],
+                  [
+                    1.0,
+                    1.0
+                  ],
+                  0.5,
+                  true,
+                  [
+                    1,
+                    0
+                  ]
+                ],
+                "output": [
+                  [
+                    2.0,
+                    0.0
+                  ],
+                  [
+                    2.0,
+                    0.0
+                  ]
+                ],
+                "explanation": "Illustrative small example for inverted dropout forward and backward."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "ds10-layernorm",
+          "type": "code",
+          "title": "# <span style=\"font-size: 20px;\">LayerNorm Forward and Backward</span>",
+          "difficulty": "easy",
+          "challenge": {
+            "problemStatement": "Implement `LayerNorm Forward and Backward` for neural-network tensors represented as nested Python lists (except where NumPy is explicitly used). Return the forward result and/or gradients required by the function signature. Use stable numerical calculations where applicable.",
+            "theory": "Neural-network components combine tensor operations with derivatives. Keep forward and backward computations consistent and use numerically stable formulas.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "For softmax, subtract the maximum logit before exponentiation.",
+              "For normalization backward passes, use the chain rule and the mean/variance derivatives."
+            ],
+            "starterCode": "import math\ndef solve(x, grad, gamma=None, beta=None, eps=1e-5):\n    pass",
+            "solution": "import math\ndef solve(x, grad, gamma=None, beta=None, eps=1e-5):\n    n=len(x); gamma=gamma or [1.0]*n; beta=beta or [0.0]*n\n    mu=sum(x)/n; var=sum((v-mu)**2 for v in x)/n\n    inv=1/math.sqrt(var+eps); z=[(v-mu)*inv for v in x]\n    y=[z[i]*gamma[i]+beta[i] for i in range(n)]\n    # Gradient w.r.t. input, treating gamma as fixed.\n    g=[grad[i]*gamma[i] for i in range(n)]\n    dx=[inv*(g[i]-sum(g)/n-z[i]*sum(g[j]*z[j] for j in range(n))/n) for i in range(n)]\n    return y, dx",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    1.0,
+                    2.0,
+                    3.0
+                  ],
+                  [
+                    1.0,
+                    1.0,
+                    1.0
+                  ]
+                ],
+                "expected": [
+                  [
+                    -1.2247356859083902,
+                    0.0,
+                    1.2247356859083902
+                  ],
+                  [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    1.0,
+                    2.0,
+                    3.0
+                  ],
+                  [
+                    1.0,
+                    1.0,
+                    1.0
+                  ]
+                ],
+                "output": [
+                  [
+                    -1.2247356859083902,
+                    0.0,
+                    1.2247356859083902
+                  ],
+                  [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                ],
+                "explanation": "Illustrative small example for layernorm forward and backward."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        }
+      ],
+      "totalCount": 2,
+      "completed": false
+    },
+    {
+      "id": "ds-neural-net-internals-set-2",
+      "name": "Set 2",
+      "sortOrder": 1,
+      "problems": [
+        {
+          "slug": "ds10-softmax-ce-stable",
+          "type": "code",
+          "title": "# <span style=\"font-size: 20px;\">Stable Softmax Cross-Entropy</span>",
+          "difficulty": "easy",
+          "challenge": {
+            "problemStatement": "Implement `Stable Softmax Cross-Entropy` for neural-network tensors represented as nested Python lists (except where NumPy is explicitly used). Return the forward result and/or gradients required by the function signature. Use stable numerical calculations where applicable.",
+            "theory": "Neural-network components combine tensor operations with derivatives. Keep forward and backward computations consistent and use numerically stable formulas.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "For softmax, subtract the maximum logit before exponentiation.",
+              "For normalization backward passes, use the chain rule and the mean/variance derivatives."
+            ],
+            "starterCode": "import math\ndef solve(logits, target):\n    pass",
+            "solution": "import math\ndef solve(logits, target):\n    m=max(logits); ex=[math.exp(v-m) for v in logits]; s=sum(ex)\n    probs=[v/s for v in ex]\n    loss=math.log(s)+m-logits[target]\n    grad=probs[:]; grad[target]-=1\n    return loss, grad",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    2.0,
+                    1.0,
+                    0.0
+                  ],
+                  0
+                ],
+                "expected": [
+                  0.4076059644443806,
+                  [
+                    -0.3347590442251782,
+                    0.24472847105479764,
+                    0.09003057317038046
+                  ]
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    2.0,
+                    1.0,
+                    0.0
+                  ],
+                  0
+                ],
+                "output": [
+                  0.4076059644443806,
+                  [
+                    -0.3347590442251782,
+                    0.24472847105479764,
+                    0.09003057317038046
+                  ]
+                ],
+                "explanation": "Illustrative small example for stable softmax cross-entropy."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "ds10-activations-suite",
+          "type": "code",
+          "title": "# <span style=\"font-size: 20px;\">Activation Forward and Backward</span>",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `Activation Forward and Backward` for neural-network tensors represented as nested Python lists (except where NumPy is explicitly used). Return the forward result and/or gradients required by the function signature. Use stable numerical calculations where applicable.",
+            "theory": "Neural-network components combine tensor operations with derivatives. Keep forward and backward computations consistent and use numerically stable formulas.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "For softmax, subtract the maximum logit before exponentiation.",
+              "For normalization backward passes, use the chain rule and the mean/variance derivatives."
+            ],
+            "starterCode": "import math\ndef solve(name, x, grad):\n    pass",
+            "solution": "import math\ndef solve(name, x, grad):\n    if name==\"relu\": y=[max(0,v) for v in x]; dx=[g*(v>0) for v,g in zip(x,grad)]\n    elif name==\"sigmoid\":\n        y=[1/(1+math.exp(-v)) for v in x]; dx=[g*a*(1-a) for g,a in zip(grad,y)]\n    elif name==\"tanh\":\n        y=[math.tanh(v) for v in x]; dx=[g*(1-a*a) for g,a in zip(grad,y)]\n    elif name==\"gelu\":\n        c=math.sqrt(2/math.pi); y=[]; dx=[]\n        for v,g in zip(x,grad):\n            t=math.tanh(c*(v+0.044715*v**3)); a=0.5*v*(1+t)\n            d=0.5*(1+t)+0.5*v*(1-t*t)*c*(1+3*0.044715*v*v)\n            y.append(a); dx.append(g*d)\n    else: raise ValueError(\"unknown activation\")\n    return y,dx",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  "relu",
+                  [
+                    -1.0,
+                    0.0,
+                    2.0
+                  ],
+                  [
+                    1.0,
+                    1.0,
+                    1.0
+                  ]
+                ],
+                "expected": [
+                  [
+                    0,
+                    0,
+                    2.0
+                  ],
+                  [
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  "relu",
+                  [
+                    -1.0,
+                    0.0,
+                    2.0
+                  ],
+                  [
+                    1.0,
+                    1.0,
+                    1.0
+                  ]
+                ],
+                "output": [
+                  [
+                    0,
+                    0,
+                    2.0
+                  ],
+                  [
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                ],
+                "explanation": "Illustrative small example for activation forward and backward."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        }
+      ],
+      "totalCount": 2,
+      "completed": false
+    },
+    {
+      "id": "ds-neural-net-internals-set-3",
+      "name": "Set 3",
+      "sortOrder": 2,
+      "problems": [
+        {
+          "slug": "ds10-batchnorm",
+          "type": "code",
+          "title": "# <span style=\"font-size: 20px;\">BatchNorm Forward and Backward</span>",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `BatchNorm Forward and Backward` for neural-network tensors represented as nested Python lists (except where NumPy is explicitly used). Return the forward result and/or gradients required by the function signature. Use stable numerical calculations where applicable.",
+            "theory": "Neural-network components combine tensor operations with derivatives. Keep forward and backward computations consistent and use numerically stable formulas.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "For softmax, subtract the maximum logit before exponentiation.",
+              "For normalization backward passes, use the chain rule and the mean/variance derivatives."
+            ],
+            "starterCode": "import math\ndef solve(x, grad, gamma=None, beta=None, eps=1e-5):\n    pass",
+            "solution": "import math\ndef solve(x, grad, gamma=None, beta=None, eps=1e-5):\n    # x is batch x features; training batch statistics.\n    n=len(x); d=len(x[0]); gamma=gamma or [1.0]*d; beta=beta or [0.0]*d\n    mu=[sum(row[j] for row in x)/n for j in range(d)]\n    var=[sum((row[j]-mu[j])**2 for row in x)/n for j in range(d)]\n    inv=[1/math.sqrt(v+eps) for v in var]\n    z=[[(row[j]-mu[j])*inv[j] for j in range(d)] for row in x]\n    y=[[z[i][j]*gamma[j]+beta[j] for j in range(d)] for i in range(n)]\n    dx=[[0.0]*d for _ in range(n)]\n    for j in range(d):\n        g=[grad[i][j]*gamma[j] for i in range(n)]\n        sg=sum(g); sgz=sum(g[i]*z[i][j] for i in range(n))\n        for i in range(n): dx[i][j]=inv[j]*(g[i]-sg/n-z[i][j]*sgz/n)\n    return y,dx",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    [
+                      1.0,
+                      2.0
+                    ],
+                    [
+                      3.0,
+                      4.0
+                    ]
+                  ],
+                  [
+                    [
+                      1.0,
+                      1.0
+                    ],
+                    [
+                      1.0,
+                      1.0
+                    ]
+                  ]
+                ],
+                "expected": [
+                  [
+                    [
+                      -0.9999950000374997,
+                      -0.9999950000374997
+                    ],
+                    [
+                      0.9999950000374997,
+                      0.9999950000374997
+                    ]
+                  ],
+                  [
+                    [
+                      0.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      0.0
+                    ]
+                  ]
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    [
+                      1.0,
+                      2.0
+                    ],
+                    [
+                      3.0,
+                      4.0
+                    ]
+                  ],
+                  [
+                    [
+                      1.0,
+                      1.0
+                    ],
+                    [
+                      1.0,
+                      1.0
+                    ]
+                  ]
+                ],
+                "output": [
+                  [
+                    [
+                      -0.9999950000374997,
+                      -0.9999950000374997
+                    ],
+                    [
+                      0.9999950000374997,
+                      0.9999950000374997
+                    ]
+                  ],
+                  [
+                    [
+                      0.0,
+                      0.0
+                    ],
+                    [
+                      0.0,
+                      0.0
+                    ]
+                  ]
+                ],
+                "explanation": "Illustrative small example for batchnorm forward and backward."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "ds10-conv2d-pytorch",
+          "type": "code",
+          "title": "# <span style=\"font-size: 20px;\">Conv2d via Unfold and Matmul</span>",
+          "difficulty": "hard",
+          "challenge": {
+            "problemStatement": "Implement `Conv2d via Unfold and Matmul` for neural-network tensors represented as nested Python lists (except where NumPy is explicitly used). Return the forward result and/or gradients required by the function signature. Use stable numerical calculations where applicable.",
+            "theory": "Neural-network components combine tensor operations with derivatives. Keep forward and backward computations consistent and use numerically stable formulas.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "For softmax, subtract the maximum logit before exponentiation.",
+              "For normalization backward passes, use the chain rule and the mean/variance derivatives."
+            ],
+            "starterCode": "def solve(x, weight, bias=None, stride=1, padding=0):\n    pass",
+            "solution": "def solve(x, weight, bias=None, stride=1, padding=0):\n    # x: N,C,H,W; weight: O,C,KH,KW. Numpy-free nested loops.\n    N,C,H,W=len(x),len(x[0]),len(x[0][0]),len(x[0][0][0])\n    O,_,KH,KW=len(weight),len(weight[0]),len(weight[0][0]),len(weight[0][0][0])\n    xp=[[[[0.0]*(W+2*padding) for _ in range(H+2*padding)] for _ in range(C)] for _ in range(N)]\n    for n in range(N):\n      for c in range(C):\n       for i in range(H):\n        for j in range(W): xp[n][c][i+padding][j+padding]=x[n][c][i][j]\n    OH=(H+2*padding-KH)//stride+1; OW=(W+2*padding-KW)//stride+1\n    out=[[[[0.0]*OW for _ in range(OH)] for _ in range(O)] for _ in range(N)]\n    for n in range(N):\n     for o in range(O):\n      for i in range(OH):\n       for j in range(OW):\n        v=bias[o] if bias is not None else 0.0\n        for c in range(C):\n         for ki in range(KH):\n          for kj in range(KW): v+=xp[n][c][i*stride+ki][j*stride+kj]*weight[o][c][ki][kj]\n        out[n][o][i][j]=v\n    return out",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    [
+                      [
+                        [
+                          1,
+                          2
+                        ],
+                        [
+                          3,
+                          4
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    [
+                      [
+                        [
+                          1
+                        ]
+                      ]
+                    ]
+                  ],
+                  null,
+                  1,
+                  0
+                ],
+                "expected": [
+                  [
+                    [
+                      [
+                        1.0,
+                        2.0
+                      ],
+                      [
+                        3.0,
+                        4.0
+                      ]
+                    ]
+                  ]
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    [
+                      [
+                        [
+                          1,
+                          2
+                        ],
+                        [
+                          3,
+                          4
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    [
+                      [
+                        [
+                          1
+                        ]
+                      ]
+                    ]
+                  ],
+                  null,
+                  1,
+                  0
+                ],
+                "output": [
+                  [
+                    [
+                      [
+                        1.0,
+                        2.0
+                      ],
+                      [
+                        3.0,
+                        4.0
+                      ]
+                    ]
+                  ]
+                ],
+                "explanation": "Illustrative small example for conv2d via unfold and matmul."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        }
+      ],
+      "totalCount": 2,
+      "completed": false
+    },
+    {
+      "id": "ds-neural-net-internals-set-4",
+      "name": "Set 4",
+      "sortOrder": 3,
+      "problems": [
+        {
+          "slug": "ds10-nn-from-scratch",
+          "type": "code",
+          "title": "# <span style=\"font-size: 20px;\">MLP From Scratch In NumPy</span>",
+          "difficulty": "hard",
+          "challenge": {
+            "problemStatement": "Implement `MLP From Scratch In NumPy` for neural-network tensors represented as nested Python lists (except where NumPy is explicitly used). Return the forward result and/or gradients required by the function signature. Use stable numerical calculations where applicable.",
+            "theory": "Neural-network components combine tensor operations with derivatives. Keep forward and backward computations consistent and use numerically stable formulas.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "For softmax, subtract the maximum logit before exponentiation.",
+              "For normalization backward passes, use the chain rule and the mean/variance derivatives."
+            ],
+            "starterCode": "import math\ndef solve(X, y, W1, b1, W2, b2, lr=0.01):\n    pass",
+            "solution": "import math\ndef solve(X, y, W1, b1, W2, b2, lr=0.01):\n    # One full-batch gradient step for a 2-layer sigmoid MLP, binary labels.\n    def sig(z): return 1/(1+math.exp(-max(-60,min(60,z))))\n    n=len(X); h=len(W1[0]); d=len(X[0])\n    Z=[]; A=[]; P=[]\n    for row in X:\n      z=[b1[j]+sum(row[k]*W1[k][j] for k in range(d)) for j in range(h)]\n      a=[sig(v) for v in z]; p=sig(b2[0]+sum(a[j]*W2[j][0] for j in range(h)))\n      Z.append(z); A.append(a); P.append(p)\n    dz2=[(P[i]-y[i])/n for i in range(n)]\n    gW2=[[sum(A[i][j]*dz2[i] for i in range(n))] for j in range(h)]\n    gb2=sum(dz2)\n    dz1=[[dz2[i]*W2[j][0]*A[i][j]*(1-A[i][j]) for j in range(h)] for i in range(n)]\n    gW1=[[sum(X[i][k]*dz1[i][j] for i in range(n)) for j in range(h)] for k in range(d)]\n    gb1=[sum(dz1[i][j] for i in range(n)) for j in range(h)]\n    W1n=[[W1[k][j]-lr*gW1[k][j] for j in range(h)] for k in range(d)]\n    b1n=[b1[j]-lr*gb1[j] for j in range(h)]\n    W2n=[[W2[j][0]-lr*gW2[j][0]] for j in range(h)]\n    b2n=[b2[0]-lr*gb2]\n    return W1n,b1n,W2n,b2n",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    [
+                      0.0,
+                      1.0
+                    ],
+                    [
+                      1.0,
+                      0.0
+                    ]
+                  ],
+                  [
+                    0,
+                    1
+                  ],
+                  [
+                    [
+                      0.1,
+                      0.2
+                    ],
+                    [
+                      0.3,
+                      0.4
+                    ]
+                  ],
+                  [
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    [
+                      0.2
+                    ],
+                    [
+                      0.1
+                    ]
+                  ],
+                  [
+                    0.0
+                  ],
+                  0.01
+                ],
+                "expected": [
+                  [
+                    [
+                      0.10011473549042765,
+                      0.20005693998376328
+                    ],
+                    [
+                      0.29986711772588537,
+                      0.3999346997161729
+                    ]
+                  ],
+                  [
+                    -1.814678368696537e-05,
+                    -8.360300063843069e-06
+                  ],
+                  [
+                    [
+                      0.1996464161776024
+                    ],
+                    [
+                      0.09963769776977936
+                    ]
+                  ],
+                  [
+                    -0.00041744096560286436
+                  ]
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    [
+                      0.0,
+                      1.0
+                    ],
+                    [
+                      1.0,
+                      0.0
+                    ]
+                  ],
+                  [
+                    0,
+                    1
+                  ],
+                  [
+                    [
+                      0.1,
+                      0.2
+                    ],
+                    [
+                      0.3,
+                      0.4
+                    ]
+                  ],
+                  [
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    [
+                      0.2
+                    ],
+                    [
+                      0.1
+                    ]
+                  ],
+                  [
+                    0.0
+                  ],
+                  0.01
+                ],
+                "output": [
+                  [
+                    [
+                      0.10011473549042765,
+                      0.20005693998376328
+                    ],
+                    [
+                      0.29986711772588537,
+                      0.3999346997161729
+                    ]
+                  ],
+                  [
+                    -1.814678368696537e-05,
+                    -8.360300063843069e-06
+                  ],
+                  [
+                    [
+                      0.1996464161776024
+                    ],
+                    [
+                      0.09963769776977936
+                    ]
+                  ],
+                  [
+                    -0.00041744096560286436
+                  ]
+                ],
+                "explanation": "Illustrative small example for mlp from scratch in numpy."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        }
+      ],
+      "totalCount": 1,
+      "completed": false
+    }
+  ],
+  "currentSet": {
+    "id": "ds-neural-net-internals-set-1",
+    "name": "Set 1",
+    "sortOrder": 0,
+    "problems": [
+      {
+        "slug": "ds10-dropout",
+        "type": "code",
+        "title": "# <span style=\"font-size: 20px;\">Inverted Dropout Forward and Backward</span>",
+        "difficulty": "easy",
+        "challenge": {
+          "problemStatement": "Implement `Inverted Dropout Forward and Backward` for neural-network tensors represented as nested Python lists (except where NumPy is explicitly used). Return the forward result and/or gradients required by the function signature. Use stable numerical calculations where applicable.",
+          "theory": "Neural-network components combine tensor operations with derivatives. Keep forward and backward computations consistent and use numerically stable formulas.",
+          "requirements": [
+            "Implement a function named `solve` with the signature shown in the reference solution.",
+            "Return the value described by the function contract; do not print it.",
+            "Keep output deterministic for the same input."
+          ],
+          "constraints": [
+            "Inputs are small enough for a straightforward reference implementation.",
+            "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+            "Unless otherwise stated, dimensions must be consistent."
+          ],
+          "hints": [
+            "For softmax, subtract the maximum logit before exponentiation.",
+            "For normalization backward passes, use the chain rule and the mean/variance derivatives."
+          ],
+          "starterCode": "def solve(x, grad, p, training=True, mask=None):\n    pass",
+          "solution": "def solve(x, grad, p, training=True, mask=None):\n    # Returns (forward_output, input_gradient); mask may be supplied for deterministic tests.\n    if not training or p == 0: return list(x), list(grad)\n    if not 0 <= p < 1: raise ValueError(\"p must be in [0,1)\")\n    if mask is None: raise ValueError(\"pass a mask for deterministic reference behavior\")\n    scale=1/(1-p)\n    return [v*m*scale for v,m in zip(x,mask)], [g*m*scale for g,m in zip(grad,mask)]",
+          "testCases": [
+            {
+              "name": "smoke test",
+              "args": [
+                [
+                  1.0,
+                  2.0
+                ],
+                [
+                  1.0,
+                  1.0
+                ],
+                0.5,
+                true,
+                [
+                  1,
+                  0
+                ]
+              ],
+              "expected": [
+                [
+                  2.0,
+                  0.0
+                ],
+                [
+                  2.0,
+                  0.0
+                ]
+              ],
+              "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+            }
+          ],
+          "examples": [
+            {
+              "inputArgs": [
+                [
+                  1.0,
+                  2.0
+                ],
+                [
+                  1.0,
+                  1.0
+                ],
+                0.5,
+                true,
+                [
+                  1,
+                  0
+                ]
+              ],
+              "output": [
+                [
+                  2.0,
+                  0.0
+                ],
+                [
+                  2.0,
+                  0.0
+                ]
+              ],
+              "explanation": "Illustrative small example for inverted dropout forward and backward."
+            }
+          ],
+          "reconstructionStatus": "authored_reconstruction"
+        }
+      },
+      {
+        "slug": "ds10-layernorm",
+        "type": "code",
+        "title": "# <span style=\"font-size: 20px;\">LayerNorm Forward and Backward</span>",
+        "difficulty": "easy",
+        "challenge": {
+          "problemStatement": "Implement `LayerNorm Forward and Backward` for neural-network tensors represented as nested Python lists (except where NumPy is explicitly used). Return the forward result and/or gradients required by the function signature. Use stable numerical calculations where applicable.",
+          "theory": "Neural-network components combine tensor operations with derivatives. Keep forward and backward computations consistent and use numerically stable formulas.",
+          "requirements": [
+            "Implement a function named `solve` with the signature shown in the reference solution.",
+            "Return the value described by the function contract; do not print it.",
+            "Keep output deterministic for the same input."
+          ],
+          "constraints": [
+            "Inputs are small enough for a straightforward reference implementation.",
+            "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+            "Unless otherwise stated, dimensions must be consistent."
+          ],
+          "hints": [
+            "For softmax, subtract the maximum logit before exponentiation.",
+            "For normalization backward passes, use the chain rule and the mean/variance derivatives."
+          ],
+          "starterCode": "import math\ndef solve(x, grad, gamma=None, beta=None, eps=1e-5):\n    pass",
+          "solution": "import math\ndef solve(x, grad, gamma=None, beta=None, eps=1e-5):\n    n=len(x); gamma=gamma or [1.0]*n; beta=beta or [0.0]*n\n    mu=sum(x)/n; var=sum((v-mu)**2 for v in x)/n\n    inv=1/math.sqrt(var+eps); z=[(v-mu)*inv for v in x]\n    y=[z[i]*gamma[i]+beta[i] for i in range(n)]\n    # Gradient w.r.t. input, treating gamma as fixed.\n    g=[grad[i]*gamma[i] for i in range(n)]\n    dx=[inv*(g[i]-sum(g)/n-z[i]*sum(g[j]*z[j] for j in range(n))/n) for i in range(n)]\n    return y, dx",
+          "testCases": [
+            {
+              "name": "smoke test",
+              "args": [
+                [
+                  1.0,
+                  2.0,
+                  3.0
+                ],
+                [
+                  1.0,
+                  1.0,
+                  1.0
+                ]
+              ],
+              "expected": [
+                [
+                  -1.2247356859083902,
+                  0.0,
+                  1.2247356859083902
+                ],
+                [
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              ],
+              "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+            }
+          ],
+          "examples": [
+            {
+              "inputArgs": [
+                [
+                  1.0,
+                  2.0,
+                  3.0
+                ],
+                [
+                  1.0,
+                  1.0,
+                  1.0
+                ]
+              ],
+              "output": [
+                [
+                  -1.2247356859083902,
+                  0.0,
+                  1.2247356859083902
+                ],
+                [
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              ],
+              "explanation": "Illustrative small example for layernorm forward and backward."
+            }
+          ],
+          "reconstructionStatus": "authored_reconstruction"
+        }
+      }
+    ],
+    "totalCount": 2,
+    "completed": false
+  }
+}

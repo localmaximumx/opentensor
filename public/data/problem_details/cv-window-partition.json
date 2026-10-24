@@ -1,0 +1,1615 @@
+{
+  "catalogId": "python:cv-window-partition",
+  "id": "cv-window-partition",
+  "sourceId": "cv-window-partition",
+  "slug": "cv-window-partition",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Window Partition and Reverse",
+  "difficulty": "Medium",
+  "tags": [
+    "Computer Vision",
+    "Transformers"
+  ],
+  "isFree": false,
+  "planId": "cracking-cv",
+  "planTitle": "Cracking CV",
+  "sectionId": "cracking-cv-modern-cv-and-vit",
+  "sortOrder": 603,
+  "seoDescription": "Partition BHWC feature maps into row-major Swin Transformer windows and reconstruct the original tensor exactly.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Partition 4D image feature tensor (B, H, W, C) into non-overlapping spatial windows of size (M, M) and reverse back to original layout.\n\nBy confining self-attention within local M x M windows, Swin Transformer reduces attention complexity from quadratic O((HW)^2) to linear O(M^2 HW).\n\n### Mathematical Formulation\n$$\n\\mathbf{X}_{\\text{windows}} \\in \\mathbb{R}^{\\left(B \\frac{H}{M} \\frac{W}{M}\\right) \\times M \\times M \\times C}\n$$\n\n### Step-by-Step Implementation\n1. Reshape 4D tensor into 6D grid tensor (B, H/M, M, W/M, M, C)\n2. Permute axes to group window tokens contiguous in memory (B * num_windows, M, M, C)\n3. Verify invertible reconstruction back to original (B, H, W, C) dimensions\n\n### Returns\nDictionary with 'num_windows', 'window_shape', and boolean 'is_reconstructible'.",
+  "theory": "## Understanding the Theory: Window Partition and Reverse\n\n### Core Intuition: Why Do We Need This?\nImages have unique spatial properties: neighboring pixels are strongly correlated, and visual patterns (like edges, corners, or textures) appear anywhere in an image. Computer vision algorithms use spatial inductive biases like translation equivariance and local receptive fields to process image grids efficiently. **Window Partition and Reverse** operates directly on spatial coordinates or bounding box geometries.\n\nBy confining self-attention within local M x M windows, Swin Transformer reduces attention complexity from quadratic O((HW)^2) to linear O(M^2 HW). In this problem, the goal is to: partition 4d image feature tensor (b, h, w, c) into non-overlapping spatial windows of size (m, m) and reverse back to original layout.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\mathbf{X}_{\\text{windows}} \\in \\mathbb{R}^{\\left(B \\frac{H}{M} \\frac{W}{M}\\right) \\times M \\times M \\times C}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Reshape 4D tensor into 6D grid tensor (B, H/M, M, W/M, M, C)\n2. **Phase 2**: Permute axes to group window tokens contiguous in memory (B * num_windows, M, M, C)\n3. **Phase 3**: Verify invertible reconstruction back to original (B, H, W, C) dimensions\n\n### Practical Machine Learning Applications & Nuances\n* **Spatial Locality**: Sliding spatial filters across multi-channel feature maps aggregates contextual clues across local neighborhoods.\n* **Object Detection Pipelines**: Bounding box metrics (such as IoU and Non-Maximum Suppression) reconcile duplicate candidate detections into clean, final predictions.\n* **Data Augmentation**: Geometric transformations expose models to diverse spatial viewpoints, significantly improving generalization to unseen test images.",
+  "examples": [
+    "Input: x = [[[[1.0], [2.0], [3.0], [4.0]], [[5.0], [6.0], [7.0], [8.0]], [[9.0], [10.0], [11.0], [12.0]], [[13.0], [14.0], [15.0], [16.0]]]], window_size = 2\n\nOutput: {\"num_windows\": 4, \"window_shape\": [4, 2, 2, 1], \"is_reconstructible\": 1}\n\nExplanation: Evaluated cv_window_partition under standard test conditions."
+  ],
+  "requirements": "* Function must be named `cv_window_partition`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `cv_window_partition`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import torch\n\ndef cv_window_partition(x: list, window_size: int = 2) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Window Partition and Reverse** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch\n\ndef cv_window_partition(x: list, window_size: int = 2) -> dict:\n    t = torch.tensor(x, dtype=torch.float32)\n    B, H, W, C = t.shape\n    M = window_size\n    w = t.view(B, H // M, M, W // M, M, C).permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, M, M, C)\n    rev = w.view(B, H // M, W // M, M, M, C).permute(0, 1, 3, 2, 4, 5).contiguous().view(B, H, W, C)\n    return {'num_windows': int(w.shape[0]), 'window_shape': list(w.shape), 'is_reconstructible': bool(torch.allclose(t, rev))}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "1 image 4x4 1 channel",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1.0
+              ],
+              [
+                2.0
+              ],
+              [
+                3.0
+              ],
+              [
+                4.0
+              ]
+            ],
+            [
+              [
+                5.0
+              ],
+              [
+                6.0
+              ],
+              [
+                7.0
+              ],
+              [
+                8.0
+              ]
+            ],
+            [
+              [
+                9.0
+              ],
+              [
+                10.0
+              ],
+              [
+                11.0
+              ],
+              [
+                12.0
+              ]
+            ],
+            [
+              [
+                13.0
+              ],
+              [
+                14.0
+              ],
+              [
+                15.0
+              ],
+              [
+                16.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 2
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cv-window-partition-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                2.0
+              ],
+              [
+                4.0
+              ],
+              [
+                6.0
+              ],
+              [
+                8.0
+              ]
+            ],
+            [
+              [
+                10.0
+              ],
+              [
+                12.0
+              ],
+              [
+                14.0
+              ],
+              [
+                16.0
+              ]
+            ],
+            [
+              [
+                18.0
+              ],
+              [
+                20.0
+              ],
+              [
+                22.0
+              ],
+              [
+                24.0
+              ]
+            ],
+            [
+              [
+                26.0
+              ],
+              [
+                28.0
+              ],
+              [
+                30.0
+              ],
+              [
+                32.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 4
+      },
+      "expectedOutput": {
+        "num_windows": 1,
+        "window_shape": [
+          1,
+          4,
+          4,
+          1
+        ],
+        "is_reconstructible": true
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cv-window-partition-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1.0
+              ],
+              [
+                1.5
+              ],
+              [
+                2.0
+              ]
+            ],
+            [
+              [
+                2.5
+              ],
+              [
+                3.0
+              ],
+              [
+                3.5
+              ],
+              [
+                4.0
+              ]
+            ],
+            [
+              [
+                4.5
+              ],
+              [
+                5.0
+              ],
+              [
+                5.5
+              ],
+              [
+                6.0
+              ]
+            ],
+            [
+              [
+                6.5
+              ],
+              [
+                7.0
+              ],
+              [
+                7.5
+              ],
+              [
+                8.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 1
+      },
+      "expectedOutput": {
+        "num_windows": 16,
+        "window_shape": [
+          16,
+          1,
+          1,
+          1
+        ],
+        "is_reconstructible": true
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -1.0
+              ],
+              [
+                -2.0
+              ],
+              [
+                -3.0
+              ],
+              [
+                -4.0
+              ]
+            ],
+            [
+              [
+                -5.0
+              ],
+              [
+                -6.0
+              ],
+              [
+                -7.0
+              ],
+              [
+                -8.0
+              ]
+            ],
+            [
+              [
+                -9.0
+              ],
+              [
+                -10.0
+              ],
+              [
+                -11.0
+              ],
+              [
+                -12.0
+              ]
+            ],
+            [
+              [
+                -13.0
+              ],
+              [
+                -14.0
+              ],
+              [
+                -15.0
+              ],
+              [
+                -16.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": -2
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                3.0
+              ],
+              [
+                6.0
+              ],
+              [
+                9.0
+              ],
+              [
+                12.0
+              ]
+            ],
+            [
+              [
+                15.0
+              ],
+              [
+                18.0
+              ],
+              [
+                21.0
+              ],
+              [
+                24.0
+              ]
+            ],
+            [
+              [
+                27.0
+              ],
+              [
+                30.0
+              ],
+              [
+                33.0
+              ],
+              [
+                36.0
+              ]
+            ],
+            [
+              [
+                39.0
+              ],
+              [
+                42.0
+              ],
+              [
+                45.0
+              ],
+              [
+                48.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 6
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                2.0
+              ],
+              [
+                3.0
+              ],
+              [
+                4.0
+              ],
+              [
+                5.0
+              ]
+            ],
+            [
+              [
+                6.0
+              ],
+              [
+                7.0
+              ],
+              [
+                8.0
+              ],
+              [
+                9.0
+              ]
+            ],
+            [
+              [
+                10.0
+              ],
+              [
+                11.0
+              ],
+              [
+                12.0
+              ],
+              [
+                13.0
+              ]
+            ],
+            [
+              [
+                14.0
+              ],
+              [
+                15.0
+              ],
+              [
+                16.0
+              ],
+              [
+                17.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 3.0
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -1.0
+              ],
+              [
+                0.0
+              ],
+              [
+                1.0
+              ],
+              [
+                2.0
+              ]
+            ],
+            [
+              [
+                3.0
+              ],
+              [
+                4.0
+              ],
+              [
+                5.0
+              ],
+              [
+                6.0
+              ]
+            ],
+            [
+              [
+                7.0
+              ],
+              [
+                8.0
+              ],
+              [
+                9.0
+              ],
+              [
+                10.0
+              ]
+            ],
+            [
+              [
+                11.0
+              ],
+              [
+                12.0
+              ],
+              [
+                13.0
+              ],
+              [
+                14.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 0.0
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1.0
+              ],
+              [
+                2.0
+              ],
+              [
+                3.0
+              ],
+              [
+                4.0
+              ]
+            ],
+            [
+              [
+                5.0
+              ],
+              [
+                6.0
+              ],
+              [
+                7.0
+              ],
+              [
+                8.0
+              ]
+            ],
+            [
+              [
+                9.0
+              ],
+              [
+                10.0
+              ],
+              [
+                11.0
+              ],
+              [
+                12.0
+              ]
+            ],
+            [
+              [
+                13.0
+              ],
+              [
+                14.0
+              ],
+              [
+                15.0
+              ],
+              [
+                16.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 2
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": true
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -1.0
+              ],
+              [
+                -2.0
+              ],
+              [
+                -3.0
+              ],
+              [
+                -4.0
+              ]
+            ],
+            [
+              [
+                -5.0
+              ],
+              [
+                -6.0
+              ],
+              [
+                -7.0
+              ],
+              [
+                -8.0
+              ]
+            ],
+            [
+              [
+                -9.0
+              ],
+              [
+                -10.0
+              ],
+              [
+                -11.0
+              ],
+              [
+                -12.0
+              ]
+            ],
+            [
+              [
+                -13.0
+              ],
+              [
+                -14.0
+              ],
+              [
+                -15.0
+              ],
+              [
+                -16.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": -2
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                10.0
+              ],
+              [
+                20.0
+              ],
+              [
+                30.0
+              ],
+              [
+                40.0
+              ]
+            ],
+            [
+              [
+                50.0
+              ],
+              [
+                60.0
+              ],
+              [
+                70.0
+              ],
+              [
+                80.0
+              ]
+            ],
+            [
+              [
+                90.0
+              ],
+              [
+                100.0
+              ],
+              [
+                110.0
+              ],
+              [
+                120.0
+              ]
+            ],
+            [
+              [
+                130.0
+              ],
+              [
+                140.0
+              ],
+              [
+                150.0
+              ],
+              [
+                160.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 20
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.1
+              ],
+              [
+                0.2
+              ],
+              [
+                0.3
+              ],
+              [
+                0.4
+              ]
+            ],
+            [
+              [
+                0.5
+              ],
+              [
+                0.6
+              ],
+              [
+                0.7
+              ],
+              [
+                0.8
+              ]
+            ],
+            [
+              [
+                0.9
+              ],
+              [
+                1.0
+              ],
+              [
+                1.1
+              ],
+              [
+                1.2
+              ]
+            ],
+            [
+              [
+                1.3
+              ],
+              [
+                1.4
+              ],
+              [
+                1.5
+              ],
+              [
+                1.6
+              ]
+            ]
+          ]
+        ],
+        "window_size": 0
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                6.0
+              ],
+              [
+                7.0
+              ],
+              [
+                8.0
+              ],
+              [
+                9.0
+              ]
+            ],
+            [
+              [
+                10.0
+              ],
+              [
+                11.0
+              ],
+              [
+                12.0
+              ],
+              [
+                13.0
+              ]
+            ],
+            [
+              [
+                14.0
+              ],
+              [
+                15.0
+              ],
+              [
+                16.0
+              ],
+              [
+                17.0
+              ]
+            ],
+            [
+              [
+                18.0
+              ],
+              [
+                19.0
+              ],
+              [
+                20.0
+              ],
+              [
+                21.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 7.0
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1.5
+              ],
+              [
+                3.0
+              ],
+              [
+                4.5
+              ],
+              [
+                6.0
+              ]
+            ],
+            [
+              [
+                7.5
+              ],
+              [
+                9.0
+              ],
+              [
+                10.5
+              ],
+              [
+                12.0
+              ]
+            ],
+            [
+              [
+                13.5
+              ],
+              [
+                15.0
+              ],
+              [
+                16.5
+              ],
+              [
+                18.0
+              ]
+            ],
+            [
+              [
+                19.5
+              ],
+              [
+                21.0
+              ],
+              [
+                22.5
+              ],
+              [
+                24.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 3
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -2.0
+              ],
+              [
+                -4.0
+              ],
+              [
+                -6.0
+              ],
+              [
+                -8.0
+              ]
+            ],
+            [
+              [
+                -10.0
+              ],
+              [
+                -12.0
+              ],
+              [
+                -14.0
+              ],
+              [
+                -16.0
+              ]
+            ],
+            [
+              [
+                -18.0
+              ],
+              [
+                -20.0
+              ],
+              [
+                -22.0
+              ],
+              [
+                -24.0
+              ]
+            ],
+            [
+              [
+                -26.0
+              ],
+              [
+                -28.0
+              ],
+              [
+                -30.0
+              ],
+              [
+                -32.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": -4
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.25
+              ],
+              [
+                0.5
+              ],
+              [
+                0.75
+              ],
+              [
+                1.0
+              ]
+            ],
+            [
+              [
+                1.25
+              ],
+              [
+                1.5
+              ],
+              [
+                1.75
+              ],
+              [
+                2.0
+              ]
+            ],
+            [
+              [
+                2.25
+              ],
+              [
+                2.5
+              ],
+              [
+                2.75
+              ],
+              [
+                3.0
+              ]
+            ],
+            [
+              [
+                3.25
+              ],
+              [
+                3.5
+              ],
+              [
+                3.75
+              ],
+              [
+                4.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 0
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.0
+              ],
+              [
+                1.0
+              ],
+              [
+                2.0
+              ],
+              [
+                3.0
+              ]
+            ],
+            [
+              [
+                4.0
+              ],
+              [
+                5.0
+              ],
+              [
+                6.0
+              ],
+              [
+                7.0
+              ]
+            ],
+            [
+              [
+                8.0
+              ],
+              [
+                9.0
+              ],
+              [
+                10.0
+              ],
+              [
+                11.0
+              ]
+            ],
+            [
+              [
+                12.0
+              ],
+              [
+                13.0
+              ],
+              [
+                14.0
+              ],
+              [
+                15.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 1.0
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                4.0
+              ],
+              [
+                8.0
+              ],
+              [
+                12.0
+              ],
+              [
+                16.0
+              ]
+            ],
+            [
+              [
+                20.0
+              ],
+              [
+                24.0
+              ],
+              [
+                28.0
+              ],
+              [
+                32.0
+              ]
+            ],
+            [
+              [
+                36.0
+              ],
+              [
+                40.0
+              ],
+              [
+                44.0
+              ],
+              [
+                48.0
+              ]
+            ],
+            [
+              [
+                52.0
+              ],
+              [
+                56.0
+              ],
+              [
+                60.0
+              ],
+              [
+                64.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 8
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.75
+              ],
+              [
+                1.5
+              ],
+              [
+                2.25
+              ],
+              [
+                3.0
+              ]
+            ],
+            [
+              [
+                3.75
+              ],
+              [
+                4.5
+              ],
+              [
+                5.25
+              ],
+              [
+                6.0
+              ]
+            ],
+            [
+              [
+                6.75
+              ],
+              [
+                7.5
+              ],
+              [
+                8.25
+              ],
+              [
+                9.0
+              ]
+            ],
+            [
+              [
+                9.75
+              ],
+              [
+                10.5
+              ],
+              [
+                11.25
+              ],
+              [
+                12.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 2
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": true
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                5.0
+              ],
+              [
+                10.0
+              ],
+              [
+                15.0
+              ],
+              [
+                20.0
+              ]
+            ],
+            [
+              [
+                25.0
+              ],
+              [
+                30.0
+              ],
+              [
+                35.0
+              ],
+              [
+                40.0
+              ]
+            ],
+            [
+              [
+                45.0
+              ],
+              [
+                50.0
+              ],
+              [
+                55.0
+              ],
+              [
+                60.0
+              ]
+            ],
+            [
+              [
+                65.0
+              ],
+              [
+                70.0
+              ],
+              [
+                75.0
+              ],
+              [
+                80.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 10
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-window-partition-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                11.0
+              ],
+              [
+                12.0
+              ],
+              [
+                13.0
+              ],
+              [
+                14.0
+              ]
+            ],
+            [
+              [
+                15.0
+              ],
+              [
+                16.0
+              ],
+              [
+                17.0
+              ],
+              [
+                18.0
+              ]
+            ],
+            [
+              [
+                19.0
+              ],
+              [
+                20.0
+              ],
+              [
+                21.0
+              ],
+              [
+                22.0
+              ]
+            ],
+            [
+              [
+                23.0
+              ],
+              [
+                24.0
+              ],
+              [
+                25.0
+              ],
+              [
+                26.0
+              ]
+            ]
+          ]
+        ],
+        "window_size": 12.0
+      },
+      "expectedOutput": {
+        "num_windows": 4,
+        "window_shape": [
+          4,
+          2,
+          2,
+          1
+        ],
+        "is_reconstructible": 1
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cv_window_partition",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

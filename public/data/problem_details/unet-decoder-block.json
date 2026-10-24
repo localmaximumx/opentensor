@@ -1,0 +1,2292 @@
+{
+  "id": "unet-decoder-block",
+  "title": "U-Net Decoder Block",
+  "description": "Implement one numerical U-Net decoder block in NHWC layout. Repeat each spatial value twice along height and width, apply the supplied channel projection and ReLU, center-crop the skip tensor to the upsampled size, concatenate skip channels before decoder channels, then apply two same-padded convolutions with ReLU.\n\n$$\nU = \\operatorname{ReLU}(\\operatorname{Upsample}(X)W_{\\mathrm{up}} + b_{\\mathrm{up}})\n$$\n\n$$\nY = \\operatorname{ConvBlock}(\\operatorname{Concat}(\\operatorname{CenterCrop}(S), U))\n$$\n\nHere, $X$ is the lower-resolution decoder input, $S$ is the encoder skip tensor, $U$ is the projected upsampled tensor, and $Y$ is the decoder output. Return $Y$ as a float64 NumPy array.",
+  "seoDescription": "Implement U-Net decoder shape transformations for up-convolution, cropped skip concatenation, and two valid convolutions.",
+  "examples": [
+    "Input: x = [[[[1]]]], skip = [[[[0.5],[1]],[[-0.5],[2]]]], W_up = [[2]], b_up = [0], kernel1 = [[[[0.5],[1]]]], bias1 = [0.1], kernel2 = [[[[1]]]], bias2 = [-0.2]\n\nOutput: [[[[2.15],[2.4]],[[1.65],[2.9]]]]\n\nExplanation: Upsampling restores spatial resolution before skip features and decoder features are fused.",
+    "Input: x = [[[[1,-1]]]], skip = [[[[0],[1]],[[2],[3]]]], W_up = [[1],[0.5]], b_up = [0.2], kernel1 = [[[[1,-1],[0.5,1]]]], bias1 = [0,0.1], kernel2 = [[[[0.5],[1]]]], bias2 = [0]\n\nOutput: [[[[0.975],[0.675]],[[1.175],[1.675]]]]",
+    "Input: x = [[[[0.5]]]], skip = [[[[1],[2],[3],[4]],[[5],[6],[7],[8]],[[9],[10],[11],[12]],[[13],[14],[15],[16]]]], W_up = [[1]], b_up = [0], kernel1 = [[[[1],[1]]]], bias1 = [0], kernel2 = [[[[1]]]], bias2 = [0]\n\nOutput: [[[[6.5],[7.5]],[[10.5],[11.5]]]]"
+  ],
+  "requirements": "- Use NumPy.\n- Upsample by repeating values along both spatial axes.\n- Apply the supplied channel projection and ReLU.\n- Center-crop and concatenate the skip tensor.\n- Apply both supplied same-padded convolutions with ReLU.\n- Return a float64 NumPy array.",
+  "theory": "# <span style=\"font-size: 20px;\">Decoder Block</span>\n\n<span style=\"font-size: 14px;\">The decoder block is the fundamental building block of U-Net's expanding path. It reverses the encoder's spatial compression by upsampling feature maps, fusing them with high-resolution skip connections from the contracting path, and refining the result through two unpadded convolutions. Each decoder block recovers spatial detail that the encoder discarded, enabling the network to produce precise, pixel-level segmentation masks.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">The expanding path of U-Net is the mirror image of the contracting path. Where the encoder compresses spatial dimensions and increases channel depth, the decoder does the opposite: it expands spatial dimensions and decreases channel depth. The decoder block is the repeating unit that accomplishes this expansion.</span>\n\n<span style=\"font-size: 14px;\">Each decoder block performs exactly three operations in sequence:</span>\n\n* <span style=\"font-size: 14px;\">**Up-convolution (2x2, stride 2):** A learned transposed convolution that doubles the spatial dimensions and halves the number of channels.</span>\n* <span style=\"font-size: 14px;\">**Crop and concatenate:** The corresponding encoder feature map is center-cropped to match the upsampled spatial dimensions, then concatenated along the channel axis.</span>\n* <span style=\"font-size: 14px;\">**Two 3x3 unpadded convolutions:** Each convolution uses \"valid\" mode (no padding), shrinking the spatial dimensions by 2 per convolution, 4 total. Each is followed by ReLU.</span>\n\n<span style=\"font-size: 14px;\">The decoder block is how U-Net combines deep, semantically rich features from the bottleneck with fine-grained spatial detail from the encoder. Without it, the network would have semantic understanding but no spatial precision.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">Let the decoder block input have shape $(B, H, W, C)$ and the corresponding encoder skip connection have shape $(B, H_e, W_e, C/2)$.</span>\n\n<span style=\"font-size: 14px;\">**Step 1 -- Up-convolution (transposed conv, 2x2, stride 2):**</span>\n\n$$\n(B, H, W, C) \\xrightarrow{\\text{Up-conv}} (B, 2H, 2W, C/2)\n$$\n\n<span style=\"font-size: 14px;\">The spatial dimensions double and the channel count halves.</span>\n\n<span style=\"font-size: 14px;\">**Step 2 -- Crop and concatenate:**</span>\n\n$$\n\\text{crop}(H_e, W_e \\to 2H, 2W) \\implies (B, 2H, 2W, C/2)\n$$\n\n$$\n\\text{concat}\\bigl((B, 2H, 2W, C/2),\\; (B, 2H, 2W, C/2)\\bigr) = (B, 2H, 2W, C)\n$$\n\n<span style=\"font-size: 14px;\">The encoder feature map is center-cropped to match the upsampled decoder map, then concatenated along the channel axis, doubling channels from $C/2$ to $C$.</span>\n\n<span style=\"font-size: 14px;\">**Step 3 -- Two 3x3 unpadded convolutions:**</span>\n\n$$\n(B, 2H, 2W, C) \\xrightarrow{\\text{Conv }3\\times3} (B, 2H-2, 2W-2, C_{out}) \\xrightarrow{\\text{Conv }3\\times3} (B, 2H-4, 2W-4, C_{out})\n$$\n\n<span style=\"font-size: 14px;\">Each valid convolution reduces spatial dimensions by 2. After two, the total reduction is 4. The output channel count $C_{out}$ is typically $C/2$.</span>\n\n<span style=\"font-size: 14px;\">**General spatial formula for valid convolution:**</span>\n\n$$\nH_{out} = H_{in} - k + 1\n$$\n\n<span style=\"font-size: 14px;\">For $k = 3$: $H_{out} = H_{in} - 2$. Applied twice: $H_{out} = H_{in} - 4$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Three Operations</span>\n\n### <span style=\"font-size: 14px;\">Operation 1: Up-Convolution</span>\n\n<span style=\"font-size: 14px;\">The up-convolution (transposed convolution) is the inverse of a strided convolution. A standard 2x2 convolution with stride 2 maps $2H \\times 2W$ to $H \\times W$. The up-convolution reverses this: $H \\times W$ becomes $2H \\times 2W$.</span>\n\n<span style=\"font-size: 14px;\">Each input pixel is multiplied by the $2 \\times 2$ kernel to produce a $2 \\times 2$ patch in the output. Adjacent input pixels produce adjacent patches with no overlap (stride equals kernel size), so the output is exactly twice the spatial size of the input.</span>\n\n<span style=\"font-size: 14px;\">The transposed convolution formula confirms this:</span>\n\n$$\nH_{out} = (H_{in} - 1) \\times s + k = (H_{in} - 1) \\times 2 + 2 = 2H_{in}\n$$\n\n<span style=\"font-size: 14px;\">The channel count halves because the up-convolution is configured with $C/2$ output filters. This is deliberate: the skip connection will add $C/2$ more channels via concatenation, so the combined result has $C$ channels for the subsequent convolutions.</span>\n\n<span style=\"font-size: 14px;\">Why not bilinear interpolation? Bilinear upsampling is parameter-free but cannot learn task-specific upsampling patterns. The transposed convolution has $2 \\times 2 \\times C \\times C/2$ learnable parameters that the network optimizes for the segmentation task.</span>\n\n### <span style=\"font-size: 14px;\">Operation 2: Crop and Concatenate</span>\n\n<span style=\"font-size: 14px;\">After upsampling, the decoder feature map must be merged with the corresponding encoder feature map. The encoder map carries spatial detail (edges, textures, fine boundaries) that was lost during max pooling. The decoder map carries semantic context built up through the bottleneck.</span>\n\n<span style=\"font-size: 14px;\">The encoder feature map is always spatially larger than the upsampled decoder map. This mismatch arises because unpadded convolutions in both paths shrink spatial dimensions at every stage. The encoder's pre-pooling feature map was saved after its two convolutions but before pooling, so it retains more spatial extent than the decoder path at the corresponding level.</span>\n\n<span style=\"font-size: 14px;\">The encoder map is center-cropped: equal pixels are removed from each border so the center region matches the upsampled decoder's spatial size. The crop per side is:</span>\n\n$$\n\\text{crop}_{\\text{per\\_side}} = \\frac{H_e - 2H}{2}\n$$\n\n<span style=\"font-size: 14px;\">After cropping, the two maps have identical spatial dimensions and are concatenated along the channel axis, doubling the channel count. This concatenation (not addition) preserves both feature sets independently and lets the subsequent convolutions learn how to combine them.</span>\n\n### <span style=\"font-size: 14px;\">Operation 3: Two 3x3 Unpadded Convolutions</span>\n\n<span style=\"font-size: 14px;\">The concatenated feature map passes through two consecutive 3x3 convolutions, each followed by ReLU. These convolutions serve two purposes:</span>\n\n* <span style=\"font-size: 14px;\">**Feature integration:** Learn to combine the encoder's spatial detail with the decoder's semantic context from the concatenated channels.</span>\n* <span style=\"font-size: 14px;\">**Channel reduction:** Map from $C$ input channels to $C_{out}$ output channels (typically $C/2$), restoring the channel count for the next decoder block.</span>\n\n<span style=\"font-size: 14px;\">Because these convolutions use no padding, each one shrinks spatial dimensions by 2. Two convolutions shrink by 4 total, matching the behavior of encoder blocks.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Skip Connection Integration</span>\n\n<span style=\"font-size: 14px;\">The skip connection is U-Net's defining architectural innovation. Without it, the decoder would reconstruct spatial detail from the bottleneck alone, producing blurry segmentation boundaries. With skip connections, the decoder has direct access to the encoder's high-resolution feature maps at every scale.</span>\n\n<span style=\"font-size: 14px;\">At each encoder level, the feature map after the two 3x3 convolutions (but before max pooling) is saved. This pre-pooling map preserves fine spatial detail that max pooling would destroy. When the decoder reaches the corresponding level, this saved map is retrieved and merged via crop+concat.</span>\n\n<span style=\"font-size: 14px;\">The paper states: \"a concatenation with the correspondingly cropped feature map from the contracting path.\" The word \"correspondingly\" means each decoder level is matched with its mirror encoder level. Level 1 of the decoder receives the skip from encoder level 4, level 2 from level 3, and so on -- symmetric across the bottleneck.</span>\n\n<span style=\"font-size: 14px;\">U-Net uses concatenation rather than element-wise addition (as in ResNet). Concatenation preserves both feature sets as separate channel groups. Addition forces features into the same representational space immediately. Concatenation gives the subsequent convolutions more raw material, at the cost of temporarily doubling the channel count.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">U-Net was introduced by Ronneberger, Fischer, and Brox (2015) for biomedical image segmentation. The core insight was that medical segmentation requires both semantic understanding (what is this tissue?) and precise spatial localization (where exactly is the boundary?). The encoder-decoder structure with skip connections delivers both.</span>\n\n<span style=\"font-size: 14px;\">The expanding path mirrors the contracting path: four encoder blocks with two 3x3 convolutions + max pooling are matched by four decoder blocks with up-conv + crop+concat + two 3x3 convolutions. The channel progression reverses:</span>\n\n* <span style=\"font-size: 14px;\">**Contracting:** 1 -> 64 -> 128 -> 256 -> 512 -> 1024 (bottleneck)</span>\n* <span style=\"font-size: 14px;\">**Expanding:** 1024 -> 512 -> 256 -> 128 -> 64</span>\n\n<span style=\"font-size: 14px;\">Each decoder block's up-conv halves the channels, the skip connection doubles them via concat, and the two convolutions restore them to the target count. The symmetry is precise: channels at each decoder level match the corresponding encoder level.</span>\n\n<span style=\"font-size: 14px;\">U-Net achieved state-of-the-art results on the ISBI cell tracking challenge with only 30 annotated training images. The skip connections were critical to this data efficiency -- by reusing encoder features directly, the decoder avoided relearning spatial patterns from scratch.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Trace decoder block 1 (immediately after the bottleneck). Batch size $B = 1$.</span>\n\n<span style=\"font-size: 14px;\">**Input to the decoder block (from bottleneck):** $(1, 28, 28, 1024)$</span>\n\n<span style=\"font-size: 14px;\">**Encoder skip connection (from encoder level 4):** $(1, 64, 64, 512)$</span>\n\n<span style=\"font-size: 14px;\">**Step 1 -- Up-convolution (2x2, stride 2, 512 filters):**</span>\n\n<span style=\"font-size: 14px;\">Spatial doubles: $28 \\times 2 = 56$. Channels halve: $1024 / 2 = 512$.</span>\n\n$$\n(1, 28, 28, 1024) \\to (1, 56, 56, 512)\n$$\n\n<span style=\"font-size: 14px;\">**Step 2 -- Crop encoder features:**</span>\n\n<span style=\"font-size: 14px;\">Encoder spatial: $64$. Decoder spatial: $56$. Crop per side: $(64 - 56) / 2 = 4$.</span>\n\n$$\n(1, 64, 64, 512) \\xrightarrow{\\text{crop}} (1, 56, 56, 512)\n$$\n\n<span style=\"font-size: 14px;\">**Step 3 -- Concatenate along channel axis:**</span>\n\n$$\n\\text{concat}\\bigl((1, 56, 56, 512),\\; (1, 56, 56, 512)\\bigr) = (1, 56, 56, 1024)\n$$\n\n<span style=\"font-size: 14px;\">**Step 4 -- First 3x3 unpadded convolution (512 filters):**</span>\n\n$$\n(1, 56, 56, 1024) \\to (1, 54, 54, 512)\n$$\n\n<span style=\"font-size: 14px;\">**Step 5 -- Second 3x3 unpadded convolution (512 filters):**</span>\n\n$$\n(1, 54, 54, 512) \\to (1, 52, 52, 512)\n$$\n\n<span style=\"font-size: 14px;\">**Final output of decoder block 1:** $(1, 52, 52, 512)$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Expanding Path in Full</span>\n\n<span style=\"font-size: 14px;\">All four decoder blocks traced end-to-end. Spatial values follow the original paper's $572 \\times 572$ input.</span>\n\n<span style=\"font-size: 14px;\">**Bottleneck output:** $(1, 28, 28, 1024)$</span>\n\n<span style=\"font-size: 14px;\">**Decoder Block 1** (encoder skip: $(1, 64, 64, 512)$):</span>\n\n* <span style=\"font-size: 14px;\">Up-conv: $(1, 28, 28, 1024) \\to (1, 56, 56, 512)$</span>\n* <span style=\"font-size: 14px;\">Crop encoder: $(1, 64, 64, 512) \\to (1, 56, 56, 512)$</span>\n* <span style=\"font-size: 14px;\">Concat: $(1, 56, 56, 1024)$</span>\n* <span style=\"font-size: 14px;\">Conv 1: $(1, 56, 56, 1024) \\to (1, 54, 54, 512)$</span>\n* <span style=\"font-size: 14px;\">Conv 2: $(1, 54, 54, 512) \\to (1, 52, 52, 512)$</span>\n\n<span style=\"font-size: 14px;\">**Decoder Block 2** (encoder skip: $(1, 136, 136, 256)$):</span>\n\n* <span style=\"font-size: 14px;\">Up-conv: $(1, 52, 52, 512) \\to (1, 104, 104, 256)$</span>\n* <span style=\"font-size: 14px;\">Crop encoder: $(1, 136, 136, 256) \\to (1, 104, 104, 256)$</span>\n* <span style=\"font-size: 14px;\">Concat: $(1, 104, 104, 512)$</span>\n* <span style=\"font-size: 14px;\">Conv 1: $(1, 104, 104, 512) \\to (1, 102, 102, 256)$</span>\n* <span style=\"font-size: 14px;\">Conv 2: $(1, 102, 102, 256) \\to (1, 100, 100, 256)$</span>\n\n<span style=\"font-size: 14px;\">**Decoder Block 3** (encoder skip: $(1, 280, 280, 128)$):</span>\n\n* <span style=\"font-size: 14px;\">Up-conv: $(1, 100, 100, 256) \\to (1, 200, 200, 128)$</span>\n* <span style=\"font-size: 14px;\">Crop encoder: $(1, 280, 280, 128) \\to (1, 200, 200, 128)$</span>\n* <span style=\"font-size: 14px;\">Concat: $(1, 200, 200, 256)$</span>\n* <span style=\"font-size: 14px;\">Conv 1: $(1, 200, 200, 256) \\to (1, 198, 198, 128)$</span>\n* <span style=\"font-size: 14px;\">Conv 2: $(1, 198, 198, 128) \\to (1, 196, 196, 128)$</span>\n\n<span style=\"font-size: 14px;\">**Decoder Block 4** (encoder skip: $(1, 568, 568, 64)$):</span>\n\n* <span style=\"font-size: 14px;\">Up-conv: $(1, 196, 196, 128) \\to (1, 392, 392, 64)$</span>\n* <span style=\"font-size: 14px;\">Crop encoder: $(1, 568, 568, 64) \\to (1, 392, 392, 64)$</span>\n* <span style=\"font-size: 14px;\">Concat: $(1, 392, 392, 128)$</span>\n* <span style=\"font-size: 14px;\">Conv 1: $(1, 392, 392, 128) \\to (1, 390, 390, 64)$</span>\n* <span style=\"font-size: 14px;\">Conv 2: $(1, 390, 390, 64) \\to (1, 388, 388, 64)$</span>\n\n<span style=\"font-size: 14px;\">The final output $(1, 388, 388, 64)$ feeds into a $1 \\times 1$ convolution that maps 64 channels to the number of segmentation classes. The output is $388 \\times 388$, smaller than the $572 \\times 572$ input due to unpadded convolutions throughout the network.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n<span style=\"font-size: 14px;\">**1. Wrong up-convolution output dimensions.** With kernel size 2 and stride 2, the output is exactly $2H \\times 2W$. Using the general formula $(H-1) \\times s + k$ with wrong $k$ or $s$ (e.g., $k=3$ instead of $k=2$) produces incorrect spatial dimensions that cascade through the rest of the block.</span>\n\n<span style=\"font-size: 14px;\">**2. Forgetting to crop the encoder features.** The encoder skip connection is always spatially larger than the upsampled decoder map. Attempting to concatenate without cropping fails due to mismatched spatial dimensions. The crop applies to the encoder map (not the decoder map) and must be a center crop (equal pixels removed from each border).</span>\n\n<span style=\"font-size: 14px;\">**3. Wrong concatenation axis.** Concatenation must happen along the channel axis, not spatial axes. If both maps are $(1, 56, 56, 512)$, the result is $(1, 56, 56, 1024)$. Concatenating along height would give $(1, 112, 56, 512)$, which is wrong.</span>\n\n<span style=\"font-size: 14px;\">**4. Spatial mismatch after crop.** The crop amount must be computed precisely: $(H_e - 2H) / 2$ pixels per side. An off-by-one error (cropping 3 on one side and 5 on the other) causes the concatenation to fail or produces misaligned features.</span>\n\n<span style=\"font-size: 14px;\">**5. Forgetting that two convolutions shrink spatial dimensions.** Each 3x3 unpadded convolution reduces spatial dimensions by 2 (not 1). Two convolutions reduce by 4 total. A common mistake is assuming padded convolutions (which preserve spatial size) or forgetting the second convolution entirely.</span>\n\n<span style=\"font-size: 14px;\">**6. Confusing channel counts through the block.** The channel count changes three times: halved by up-conv ($C \\to C/2$), doubled by concat ($C/2 \\to C$), then reduced by convolutions ($C \\to C_{out}$, typically $C/2$). Losing track of which operation changes channels is a frequent source of shape errors.</span>\n\n<span style=\"font-size: 14px;\">**7. Applying operations in wrong order.** The sequence must be: up-conv, then crop+concat, then two convolutions. Applying convolutions before the skip connection or concatenating before upsampling produces entirely different architectures.</span>\n\n---",
+  "hints": [
+    "Use np.repeat twice to upsample the spatial axes.",
+    "Project the upsampled last axis before concatenating the centered skip crop.",
+    "Reuse the same-padded convolution operation for both final stages."
+  ],
+  "constraints": "- x and skip use NHWC layout and dtype float64.\n- The skip height and width are at least twice those of x.\n- W_up and b_up match the decoder input and projected channel widths.\n- Both convolution kernels have positive odd spatial size.\n- Every supplied numeric array has dtype float64.",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef unet_decoder_block(x: np.ndarray, skip: np.ndarray,\n                       W_up: np.ndarray, b_up: np.ndarray,\n                       kernel1: np.ndarray, bias1: np.ndarray,\n                       kernel2: np.ndarray, bias2: np.ndarray) -> np.ndarray:\n    \"\"\"\n    Returns the float64 decoder features in NHWC layout.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-03T21:31:42.221Z",
+  "updatedAt": "2026-02-21T17:14:52.849Z",
+  "topicId": "unet-decoder-block",
+  "paperSnippet": "\"Every step in the expansive path consists of an upsampling of the feature map followed by a 2Ã2 convolution ('up-convolution') that halves the number of feature channels, a concatenation with the correspondingly cropped feature map from the contracting path.\"",
+  "visualizationComponent": "UNetDecoderBlockViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **U-Net Decoder Block** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef _conv2d_same(x: np.ndarray, k: np.ndarray, b: np.ndarray):\n    Kh, Kw, Cin, Cout = k.shape\n    pad_h = (Kh - 1) // 2\n    pad_w = (Kw - 1) // 2\n    padded = np.pad(x, ((0, 0), (pad_h, pad_h), (pad_w, pad_w), (0, 0)), mode='constant')\n    N, H, W, _ = x.shape\n    out = np.zeros((N, H, W, Cout), dtype=float)\n    for n in range(N):\n        for h in range(H):\n            for w in range(W):\n                patch = padded[n, h:h+Kh, w:w+Kw, :]\n                for c in range(Cout):\n                    out[n, h, w, c] = np.sum(patch * k[:, :, :, c]) + b[c]\n    return out\n\ndef unet_decoder_block(x: np.ndarray, skip: np.ndarray,\n                       W_up: np.ndarray, b_up: np.ndarray,\n                       kernel1: np.ndarray, bias1: np.ndarray,\n                       kernel2: np.ndarray, bias2: np.ndarray) -> np.ndarray:\n    x_arr = np.asarray(x, dtype=float)\n    skip_arr = np.asarray(skip, dtype=float)\n    w_up = np.asarray(W_up, dtype=float)\n    b_up_arr = np.asarray(b_up, dtype=float)\n    k1, b1 = np.asarray(kernel1, dtype=float), np.asarray(bias1, dtype=float)\n    k2, b2 = np.asarray(kernel2, dtype=float), np.asarray(bias2, dtype=float)\n    \n    upsampled = np.repeat(np.repeat(x_arr, 2, axis=1), 2, axis=2)\n    u = np.maximum(0.0, upsampled @ w_up + b_up_arr)\n    \n    H, W = skip_arr.shape[1], skip_arr.shape[2]\n    th, tw = u.shape[1], u.shape[2]\n    sh = (H - th) // 2\n    sw = (W - tw) // 2\n    cropped_skip = skip_arr[:, sh:sh+th, sw:sw+tw, :]\n    cat = np.concatenate([cropped_skip, u], axis=-1)\n    \n    h1 = np.maximum(0.0, _conv2d_same(cat, k1, b1))\n    out = np.maximum(0.0, _conv2d_same(h1, k2, b2))\n    return np.round(out, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "public-1",
+      "name": "One-channel decoder",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            2
+          ]
+        ],
+        "b_up": [
+          0
+        ],
+        "skip": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                -0.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0.1
+        ],
+        "bias2": [
+          -0.2
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.15
+            ],
+            [
+              2.4
+            ]
+          ],
+          [
+            [
+              1.65
+            ],
+            [
+              2.9
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "public-2",
+      "name": "Projected channels",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                -1
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            1
+          ],
+          [
+            0.5
+          ]
+        ],
+        "b_up": [
+          0.2
+        ],
+        "skip": [
+          [
+            [
+              [
+                0
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                2
+              ],
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0,
+          0.1
+        ],
+        "bias2": [
+          0
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                1,
+                -1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            [
+              0.975
+            ],
+            [
+              0.675
+            ]
+          ],
+          [
+            [
+              1.175
+            ],
+            [
+              1.675
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "public-3",
+      "name": "Centered skip crop",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.5
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            1
+          ]
+        ],
+        "b_up": [
+          0
+        ],
+        "skip": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0
+        ],
+        "bias2": [
+          0
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              6.5
+            ],
+            [
+              7.5
+            ]
+          ],
+          [
+            [
+              10.5
+            ],
+            [
+              11.5
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            2
+          ]
+        ],
+        "b_up": [
+          0
+        ],
+        "skip": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                -0.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0.1
+        ],
+        "bias2": [
+          -0.2
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.15
+            ],
+            [
+              2.4
+            ]
+          ],
+          [
+            [
+              1.65
+            ],
+            [
+              2.9
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                -1
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            1
+          ],
+          [
+            0.5
+          ]
+        ],
+        "b_up": [
+          0.2
+        ],
+        "skip": [
+          [
+            [
+              [
+                0
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                2
+              ],
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0,
+          0.1
+        ],
+        "bias2": [
+          0
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                1,
+                -1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              0.975
+            ],
+            [
+              0.675
+            ]
+          ],
+          [
+            [
+              1.175
+            ],
+            [
+              1.675
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.5
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            1
+          ]
+        ],
+        "b_up": [
+          0
+        ],
+        "skip": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0
+        ],
+        "bias2": [
+          0
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              6.5
+            ],
+            [
+              7.5
+            ]
+          ],
+          [
+            [
+              10.5
+            ],
+            [
+              11.5
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            2
+          ]
+        ],
+        "b_up": [
+          0
+        ],
+        "skip": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                -0.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0.1
+        ],
+        "bias2": [
+          -0.2
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.15
+            ],
+            [
+              2.4
+            ]
+          ],
+          [
+            [
+              1.65
+            ],
+            [
+              2.9
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                -1
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            1
+          ],
+          [
+            0.5
+          ]
+        ],
+        "b_up": [
+          0.2
+        ],
+        "skip": [
+          [
+            [
+              [
+                0
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                2
+              ],
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0,
+          0.1
+        ],
+        "bias2": [
+          0
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                1,
+                -1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              0.975
+            ],
+            [
+              0.675
+            ]
+          ],
+          [
+            [
+              1.175
+            ],
+            [
+              1.675
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.5
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            1
+          ]
+        ],
+        "b_up": [
+          0
+        ],
+        "skip": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0
+        ],
+        "bias2": [
+          0
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              6.5
+            ],
+            [
+              7.5
+            ]
+          ],
+          [
+            [
+              10.5
+            ],
+            [
+              11.5
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            2
+          ]
+        ],
+        "b_up": [
+          0
+        ],
+        "skip": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                -0.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0.1
+        ],
+        "bias2": [
+          -0.2
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.15
+            ],
+            [
+              2.4
+            ]
+          ],
+          [
+            [
+              1.65
+            ],
+            [
+              2.9
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                -1
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            1
+          ],
+          [
+            0.5
+          ]
+        ],
+        "b_up": [
+          0.2
+        ],
+        "skip": [
+          [
+            [
+              [
+                0
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                2
+              ],
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0,
+          0.1
+        ],
+        "bias2": [
+          0
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                1,
+                -1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              0.975
+            ],
+            [
+              0.675
+            ]
+          ],
+          [
+            [
+              1.175
+            ],
+            [
+              1.675
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.5
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            1
+          ]
+        ],
+        "b_up": [
+          0
+        ],
+        "skip": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0
+        ],
+        "bias2": [
+          0
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              6.5
+            ],
+            [
+              7.5
+            ]
+          ],
+          [
+            [
+              10.5
+            ],
+            [
+              11.5
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            2
+          ]
+        ],
+        "b_up": [
+          0
+        ],
+        "skip": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                -0.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0.1
+        ],
+        "bias2": [
+          -0.2
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.15
+            ],
+            [
+              2.4
+            ]
+          ],
+          [
+            [
+              1.65
+            ],
+            [
+              2.9
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                -1
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            1
+          ],
+          [
+            0.5
+          ]
+        ],
+        "b_up": [
+          0.2
+        ],
+        "skip": [
+          [
+            [
+              [
+                0
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                2
+              ],
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0,
+          0.1
+        ],
+        "bias2": [
+          0
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                1,
+                -1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              0.975
+            ],
+            [
+              0.675
+            ]
+          ],
+          [
+            [
+              1.175
+            ],
+            [
+              1.675
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.5
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            1
+          ]
+        ],
+        "b_up": [
+          0
+        ],
+        "skip": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0
+        ],
+        "bias2": [
+          0
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              6.5
+            ],
+            [
+              7.5
+            ]
+          ],
+          [
+            [
+              10.5
+            ],
+            [
+              11.5
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            2
+          ]
+        ],
+        "b_up": [
+          0
+        ],
+        "skip": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                -0.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0.1
+        ],
+        "bias2": [
+          -0.2
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.15
+            ],
+            [
+              2.4
+            ]
+          ],
+          [
+            [
+              1.65
+            ],
+            [
+              2.9
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                -1
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            1
+          ],
+          [
+            0.5
+          ]
+        ],
+        "b_up": [
+          0.2
+        ],
+        "skip": [
+          [
+            [
+              [
+                0
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                2
+              ],
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0,
+          0.1
+        ],
+        "bias2": [
+          0
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                1,
+                -1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              0.975
+            ],
+            [
+              0.675
+            ]
+          ],
+          [
+            [
+              1.175
+            ],
+            [
+              1.675
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.5
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            1
+          ]
+        ],
+        "b_up": [
+          0
+        ],
+        "skip": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0
+        ],
+        "bias2": [
+          0
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              6.5
+            ],
+            [
+              7.5
+            ]
+          ],
+          [
+            [
+              10.5
+            ],
+            [
+              11.5
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            2
+          ]
+        ],
+        "b_up": [
+          0
+        ],
+        "skip": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                -0.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0.1
+        ],
+        "bias2": [
+          -0.2
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.15
+            ],
+            [
+              2.4
+            ]
+          ],
+          [
+            [
+              1.65
+            ],
+            [
+              2.9
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-decoder-block-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                -1
+              ]
+            ]
+          ]
+        ],
+        "W_up": [
+          [
+            1
+          ],
+          [
+            0.5
+          ]
+        ],
+        "b_up": [
+          0.2
+        ],
+        "skip": [
+          [
+            [
+              [
+                0
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                2
+              ],
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "bias1": [
+          0,
+          0.1
+        ],
+        "bias2": [
+          0
+        ],
+        "kernel1": [
+          [
+            [
+              [
+                1,
+                -1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ]
+          ]
+        ],
+        "kernel2": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              0.975
+            ],
+            [
+              0.675
+            ]
+          ],
+          [
+            [
+              1.175
+            ],
+            [
+              1.675
+            ]
+          ]
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "unet_decoder_block",
+    "runtime": "numpy",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "description": "Supplied float64 x."
+      },
+      {
+        "name": "skip",
+        "type": "array",
+        "example": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                -0.5
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "description": "Supplied float64 skip."
+      },
+      {
+        "name": "W_up",
+        "type": "array",
+        "example": [
+          [
+            2
+          ]
+        ],
+        "description": "Supplied float64 W_up."
+      },
+      {
+        "name": "b_up",
+        "type": "array",
+        "example": [
+          0
+        ],
+        "description": "Supplied float64 b_up."
+      },
+      {
+        "name": "kernel1",
+        "type": "array",
+        "example": [
+          [
+            [
+              [
+                0.5
+              ],
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "description": "Supplied float64 kernel1."
+      },
+      {
+        "name": "bias1",
+        "type": "array",
+        "example": [
+          0.1
+        ],
+        "description": "Supplied float64 bias1."
+      },
+      {
+        "name": "kernel2",
+        "type": "array",
+        "example": [
+          [
+            [
+              [
+                1
+              ]
+            ]
+          ]
+        ],
+        "description": "Supplied float64 kernel2."
+      },
+      {
+        "name": "bias2",
+        "type": "array",
+        "example": [
+          -0.2
+        ],
+        "description": "Supplied float64 bias2."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "unet-decoder-block",
+    "name": "U-Net Decoder Block",
+    "description": "Up-conv + concat + double conv",
+    "color": "#8b5cf6"
+  },
+  "paper": {
+    "id": "unet",
+    "title": "U-Net: Convolutional Networks for Biomedical Image Segmentation",
+    "authors": "Ronneberger et al., 2015",
+    "year": 2015,
+    "paperUrl": "https://arxiv.org/abs/1505.04597",
+    "visualizationComponent": "UnetArchViz"
+  },
+  "navigation": {
+    "index": 2,
+    "total": 6,
+    "prev": "unet-encoder-block",
+    "next": "unet-skip-connection"
+  },
+  "cleanTitle": ""
+}

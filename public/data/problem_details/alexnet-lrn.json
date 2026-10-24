@@ -1,0 +1,875 @@
+{
+  "id": "alexnet-lrn",
+  "title": "Local Response Normalization",
+  "description": "Implement AlexNet local response normalization across neighboring channels:\n\n$$\ny_{b,h,w,c}=\\frac{x_{b,h,w,c}}{\\left(k+\\frac{\\alpha}{n}\\sum_{j=\\max(0,c-r)}^{\\min(C-1,c+r)}x_{b,h,w,j}^{2}\\right)^{\\beta}},\\qquad r=\\left\\lfloor\\frac{n}{2}\\right\\rfloor.\n$$\n\nHere, $B,H,W,C$ are the batch, height, width, and channel dimensions. The positive odd integer n gives the full channel-window width away from boundaries. Return a float64 NumPy array with the same shape as x.",
+  "seoDescription": "Implement AlexNet local response normalization across neighboring channels using the paper's scaling equation.",
+  "examples": [
+    "Input: x = [[[[1,2,3,0.5,-1]]]], k = 2, n = 5, alpha = 0.0001, beta = 0.75\n\nOutput: [[[[0.594541,1.18908,1.783607,0.29727,-0.594558]]]]\n\nExplanation: Each channel uses the squared values inside its clipped five-channel neighborhood.",
+    "Input: x = [[[[1,-2,3]]]], k = 1, n = 1, alpha = 0.1, beta = 0.5\n\nOutput: [[[[0.953463,-1.690309,2.176429]]]]",
+    "Input: x = [[[[1,2,3]],[[3,2,1]]]], k = 2, n = 3, alpha = 0.01, beta = 0.75\n\nOutput: [[[[0.590914,1.168812,1.755363]],[[1.755363,1.168812,0.590914]]]]"
+  ],
+  "requirements": "- Normalize each value using squared activations from its local channel window.\n- Clip the channel window at the first and last channels.\n- Preserve the input shape and return float64 values.",
+  "theory": "# <span style=\"font-size: 20px;\">Local Response Normalization</span>\n\n<span style=\"font-size: 14px;\">Local Response Normalization (LRN) is a normalization technique that operates across feature map channels at each spatial position, suppressing uniformly large responses while boosting uniquely strong ones. It was a key component of AlexNet (Krizhevsky, Sutskever, and Hinton, 2012), the CNN that won ILSVRC 2012 and ignited the modern deep learning era.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is / What It Does</span>\n\n<span style=\"font-size: 14px;\">LRN is a non-trainable normalization layer that introduces competition among activations at the same spatial location but across different channels. It divides each activation by a normalization factor computed from neighboring channels, so channels with relatively large activations retain their magnitude while non-distinctive ones get suppressed.</span>\n\n<span style=\"font-size: 14px;\">The purpose is twofold:</span>\n\n* <span style=\"font-size: 14px;\">**Lateral inhibition:** Borrowed from neuroscience -- strongly activated neurons suppress neighbors, sharpening the response profile and ensuring only the most relevant signals propagate forward.</span>\n* <span style=\"font-size: 14px;\">**Local contrast normalization:** Normalizing each activation relative to its channel neighborhood encourages diverse, complementary feature detectors rather than redundant ones.</span>\n\n<span style=\"font-size: 14px;\">LRN normalizes strictly across the channel dimension. For a given spatial position $(x, y)$, it looks at a window of adjacent channels centered on channel $i$ and computes the normalization factor from those activations. This inter-channel normalization is what produces lateral inhibition.</span>\n\n<span style=\"font-size: 14px;\">In AlexNet, LRN was applied after ReLU. The ordering is: convolution, ReLU, then LRN on the resulting non-negative activations.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">Let $a_{x,y}^i$ denote the activation at spatial position $(x, y)$ in channel $i$ (after convolution and ReLU). The normalized output $b_{x,y}^i$ is:</span>\n\n$$\nb_{x,y}^i = \\frac{a_{x,y}^i}{\\left( k + \\alpha \\sum_{j=\\max(0,\\, i - n/2)}^{\\min(N-1,\\, i + n/2)} (a_{x,y}^j)^2 \\right)^\\beta}\n$$\n\n* <span style=\"font-size: 14px;\">**$a_{x,y}^i$:** Input activation at $(x, y)$ in channel $i$, always $\\geq 0$ after ReLU.</span>\n* <span style=\"font-size: 14px;\">**$b_{x,y}^i$:** Normalized output passed to the next layer.</span>\n* <span style=\"font-size: 14px;\">**$k$:** Bias constant preventing division by zero. AlexNet uses $k = 2$.</span>\n* <span style=\"font-size: 14px;\">**$\\alpha$:** Scaling coefficient controlling neighborhood influence. AlexNet uses $\\alpha = 10^{-4}$ (deliberately small for gentle normalization).</span>\n* <span style=\"font-size: 14px;\">**$\\beta$:** Exponent controlling nonlinearity of suppression. $\\beta < 1$ gives sub-linear (softer) normalization; $\\beta > 1$ gives super-linear. AlexNet uses $\\beta = 0.75$.</span>\n* <span style=\"font-size: 14px;\">**$n$:** Channel neighborhood size. AlexNet uses $n = 5$, so $\\lfloor n/2 \\rfloor = 2$ channels on each side.</span>\n* <span style=\"font-size: 14px;\">**$N$:** Total number of channels; used to clip summation bounds to valid indices $[0, N-1]$.</span>\n* <span style=\"font-size: 14px;\">**Summation bounds:** From $j = \\max(0, i - \\lfloor n/2 \\rfloor)$ to $j = \\min(N-1, i + \\lfloor n/2 \\rfloor)$. The $\\max$/$\\min$ handle boundary channels where the full window would exceed valid range.</span>\n\n<span style=\"font-size: 14px;\">The denominator is a local energy estimate raised to a power. When local energy is high (many neighbors strongly activated), the denominator grows and the output is suppressed. When low, the denominator stays near $k^\\beta$ and the activation is preserved.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">How Each Hyperparameter Affects the Output</span>\n\n### <span style=\"font-size: 14px;\">The Bias Term $k$</span>\n\n<span style=\"font-size: 14px;\">Sets a baseline normalization strength and prevents division by zero. Large $k$ dominates the denominator regardless of activations, making LRN a near-constant scaling ($\\approx a_{x,y}^i / k^\\beta$) with no lateral inhibition. Very small $k$ makes normalization hypersensitive to even small neighboring activations. AlexNet's $k = 2$ provides a moderate baseline.</span>\n\n### <span style=\"font-size: 14px;\">The Scaling Coefficient $\\alpha$</span>\n\n<span style=\"font-size: 14px;\">Controls overall normalization strength. Larger $\\alpha$ means more aggressive suppression; smaller $\\alpha$ makes the layer more permissive. AlexNet's $\\alpha = 10^{-4}$ is deliberately tiny for gentle normalization. If $\\alpha \\approx 1.0$, even moderate activations would cause severe suppression. If $\\alpha \\approx 10^{-10}$, the layer becomes a no-op.</span>\n\n### <span style=\"font-size: 14px;\">The Exponent $\\beta$</span>\n\n<span style=\"font-size: 14px;\">Controls how aggressively suppression grows with local energy. $\\beta < 1$ (AlexNet: $0.75$) gives sub-linear normalization -- increasing energy has diminishing marginal suppression. $\\beta > 1$ creates super-linear, winner-take-all dynamics. The sub-linear choice ensures gradients can still flow during backpropagation.</span>\n\n### <span style=\"font-size: 14px;\">The Neighborhood Size $n$</span>\n\n<span style=\"font-size: 14px;\">Determines how many adjacent channels compete. $n = 1$ reduces LRN to self-normalization with no cross-channel competition. Very large $n$ (approaching $N$) creates global rather than local competition. AlexNet's $n = 5$ balances meaningful lateral inhibition with locality.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context / Design Decisions</span>\n\n<span style=\"font-size: 14px;\">In \"ImageNet Classification with Deep Convolutional Neural Networks\" (Krizhevsky, Sutskever, and Hinton, 2012), LRN is described as \"a form of lateral inhibition inspired by the type found in real neurons, creating competition for big activities amongst neuron outputs computed using different kernels.\"</span>\n\n<span style=\"font-size: 14px;\">LRN was placed after ReLU in the first two convolutional layers only. The per-layer ordering was: convolution, ReLU, LRN, max pooling.</span>\n\n<span style=\"font-size: 14px;\">The hyperparameters ($k = 2$, $n = 5$, $\\alpha = 10^{-4}$, $\\beta = 0.75$) were tuned empirically on a validation set, not derived theoretically.</span>\n\n<span style=\"font-size: 14px;\">The paper reports: \"Response normalization reduces our top-1 and top-5 error rates by 1.4% and 1.2%, respectively.\" This improvement was significant in the competitive ILSVRC context, achieved with no trainable parameters and minimal computational overhead.</span>\n\n<span style=\"font-size: 14px;\">LRN was applied only after the first two convolutional layers, likely because early layers detecting low-level features (edges, textures) benefit most from lateral inhibition to develop diverse feature detectors.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Biological Motivation: Lateral Inhibition</span>\n\n<span style=\"font-size: 14px;\">LRN draws from lateral inhibition in biological neural circuits. In the visual cortex, strongly activated neurons suppress neighbors through inhibitory synaptic connections, sharpening contrast and enhancing edge/boundary detection.</span>\n\n<span style=\"font-size: 14px;\">A classic example is the retina, where horizontal and amacrine cells create inhibitory connections producing center-surround receptive fields. This was studied extensively by Hartline and Ratliff in the 1950s-60s using the horseshoe crab (Limulus) eye.</span>\n\n<span style=\"font-size: 14px;\">In CNNs, LRN implements this along the channel dimension. Each channel is a feature detector; a strongly activated channel suppresses its neighbors, discouraging redundancy and encouraging diverse detectors.</span>\n\n<span style=\"font-size: 14px;\">Benefits of this competition:</span>\n\n* <span style=\"font-size: 14px;\">**Implicit regularization:** Suppressing redundant activations reduces effective capacity and discourages overfitting.</span>\n* <span style=\"font-size: 14px;\">**Sparse representations:** Few channels strongly active at each position, which are more robust for downstream processing.</span>\n* <span style=\"font-size: 14px;\">**Soft winner-take-all:** Strongest features dominate while weaker ones are suppressed.</span>\n\n<span style=\"font-size: 14px;\">The analogy is imperfect: biological lateral inhibition uses adaptive inhibitory synapses, while LRN uses a fixed formula with no learning. This limitation is one reason LRN was superseded by Batch Normalization, which has learnable parameters.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Consider $N = 5$ channels at a single spatial position with activations after ReLU:</span>\n\n* <span style=\"font-size: 14px;\">**Channel 0:** $a^0 = 1.0$</span>\n* <span style=\"font-size: 14px;\">**Channel 1:** $a^1 = 3.0$</span>\n* <span style=\"font-size: 14px;\">**Channel 2:** $a^2 = 5.0$</span>\n* <span style=\"font-size: 14px;\">**Channel 3:** $a^3 = 2.0$</span>\n* <span style=\"font-size: 14px;\">**Channel 4:** $a^4 = 4.0$</span>\n\n<span style=\"font-size: 14px;\">Using AlexNet hyperparameters: $k = 2$, $n = 5$, $\\alpha = 10^{-4}$, $\\beta = 0.75$. Half-window: $\\lfloor 5/2 \\rfloor = 2$.</span>\n\n### <span style=\"font-size: 14px;\">Channel 2 (Middle Channel, $i = 2$)</span>\n\n<span style=\"font-size: 14px;\">**Summation bounds:** $\\max(0, 2-2) = 0$ to $\\min(4, 2+2) = 4$. All 5 channels included.</span>\n\n$$\n\\sum_{j=0}^{4} (a^j)^2 = 1.0 + 9.0 + 25.0 + 4.0 + 16.0 = 55.0\n$$\n\n$$\nk + \\alpha \\sum_{j} (a^j)^2 = 2 + (10^{-4})(55.0) = 2.0055\n$$\n\n$$\n(2.0055)^{0.75} = e^{0.75 \\ln(2.0055)} = e^{0.75 \\times 0.6961} = e^{0.5221} \\approx 1.6857\n$$\n\n$$\nb^2 = \\frac{5.0}{1.6857} \\approx 2.9666\n$$\n\n<span style=\"font-size: 14px;\">The activation of 5.0 is reduced to ~2.967. Suppression is mild because $\\alpha$ is very small.</span>\n\n### <span style=\"font-size: 14px;\">Channel 0 (Boundary Channel, $i = 0$)</span>\n\n<span style=\"font-size: 14px;\">**Summation bounds:** $\\max(0, -2) = 0$ to $\\min(4, 2) = 2$. Only channels 0, 1, 2 (3 channels).</span>\n\n$$\n\\sum_{j=0}^{2} (a^j)^2 = 1.0 + 9.0 + 25.0 = 35.0\n$$\n\n$$\nk + \\alpha \\sum_{j} (a^j)^2 = 2 + 0.0035 = 2.0035\n$$\n\n$$\n(2.0035)^{0.75} \\approx 1.6844\n$$\n\n$$\nb^0 = \\frac{1.0}{1.6844} \\approx 0.5937\n$$\n\n### <span style=\"font-size: 14px;\">Key Observation</span>\n\n<span style=\"font-size: 14px;\">With AlexNet hyperparameters, the ratio $b^i / a^i \\approx 1/k^\\beta = 1/2^{0.75} \\approx 0.5946$ for all channels, because $\\alpha$ is so small that the squared activation sum barely perturbs the denominator from $k$. The lateral inhibition effect is subtle but accumulates over training to meaningfully impact learned features.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">LRN vs Batch Normalization</span>\n\n<span style=\"font-size: 14px;\">LRN was superseded by Batch Normalization (Ioffe and Szegedy, 2015). The transition represents a fundamental shift in normalization for deep learning.</span>\n\n### <span style=\"font-size: 14px;\">Normalization Axis</span>\n\n<span style=\"font-size: 14px;\">LRN normalizes across channels at each spatial position. BatchNorm normalizes across the batch dimension for each channel independently, ensuring each channel has zero mean and unit variance (before a learnable affine transform).</span>\n\n### <span style=\"font-size: 14px;\">Learnable Parameters</span>\n\n<span style=\"font-size: 14px;\">BatchNorm has two trainable parameters per channel ($\\gamma$, $\\delta$) for a learned affine transform $y = \\gamma \\hat{x} + \\delta$ after normalization. LRN uses fixed hyperparameters only. Learned normalization adapts during training, making it strictly more expressive.</span>\n\n### <span style=\"font-size: 14px;\">Effect on Training Dynamics</span>\n\n<span style=\"font-size: 14px;\">BatchNorm reduces sensitivity to weight initialization, enables higher learning rates, and dramatically accelerates convergence (Ioffe and Szegedy reported 14x fewer training steps). LRN has no such effect on training dynamics.</span>\n\n### <span style=\"font-size: 14px;\">The Decline of LRN</span>\n\n<span style=\"font-size: 14px;\">VGGNet (Simonyan and Zisserman, 2014) found LRN \"does not improve the performance on the ILSVRC dataset but leads to increased memory consumption and computation time.\" GoogLeNet (Szegedy et al., 2015) also omitted it. After BatchNorm, there was no reason to use LRN.</span>\n\n### <span style=\"font-size: 14px;\">Why BatchNorm Won</span>\n\n* <span style=\"font-size: 14px;\">**Solves a deeper problem:** Internal covariate shift, not just lateral inhibition.</span>\n* <span style=\"font-size: 14px;\">**Learnable:** Strictly more expressive than LRN's fixed formula.</span>\n* <span style=\"font-size: 14px;\">**Regularization:** Mini-batch noise reduces the need for dropout.</span>\n* <span style=\"font-size: 14px;\">**Faster convergence:** Enables higher learning rates.</span>\n* <span style=\"font-size: 14px;\">**Universal:** Applied to all layers, not selectively like LRN.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n### <span style=\"font-size: 14px;\">Off-by-One Errors in Summation Bounds</span>\n\n<span style=\"font-size: 14px;\">The summation runs from $\\max(0, i - \\lfloor n/2 \\rfloor)$ to $\\min(N - 1, i + \\lfloor n/2 \\rfloor)$. Common mistakes:</span>\n\n* <span style=\"font-size: 14px;\">**Float vs integer division:** With $n = 5$, float gives $2.5$ (wrong), integer gives $\\lfloor 5/2 \\rfloor = 2$ (correct).</span>\n* <span style=\"font-size: 14px;\">**Exclusive vs inclusive bounds:** The correct formulation uses inclusive bounds on both sides.</span>\n* <span style=\"font-size: 14px;\">**Skipping channel $i$:** The window includes $i$ itself. For $n = 5$ and $i = 3$, channels $\\{1, 2, 3, 4, 5\\}$ are summed (if $N$ is large enough).</span>\n\n### <span style=\"font-size: 14px;\">Confusing Inter-Channel vs Intra-Channel Normalization</span>\n\n<span style=\"font-size: 14px;\">LRN normalizes across channels at each spatial position (inter-channel). It does not normalize across spatial positions within a single channel. Implementing it as spatial normalization produces a fundamentally different operation.</span>\n\n### <span style=\"font-size: 14px;\">Integer Division of $n$</span>\n\n<span style=\"font-size: 14px;\">For odd $n$, the window is symmetric ($n = 5$ gives 5 channels). For even $n$, behavior can be surprising: $n = 4$ with $\\lfloor n/2 \\rfloor = 2$ gives a window from $i-2$ to $i+2$, which is 5 channels, not 4. Check your framework's convention.</span>\n\n### <span style=\"font-size: 14px;\">Applying LRN in the Wrong Position</span>\n\n<span style=\"font-size: 14px;\">The correct AlexNet ordering is: convolution, ReLU, LRN, pooling. Applying LRN before ReLU means negative activations contribute squared values to the denominator, changing the lateral inhibition behavior. Applying after pooling alters the spatial relationships. LRN belongs immediately after the nonlinearity and before spatial downsampling.</span>\n\n### <span style=\"font-size: 14px;\">Numerical Issues With Very Large Activations</span>\n\n<span style=\"font-size: 14px;\">When activations are very large, $\\alpha \\sum_j (a^j)^2$ can dominate the denominator, making outputs extremely small and killing gradients. In float16/bfloat16, squared activations may overflow to infinity/NaN. Use float32 for LRN computation even if the rest of the network uses lower precision.</span>\n\n### <span style=\"font-size: 14px;\">Gradient Computation Complexity</span>\n\n<span style=\"font-size: 14px;\">The gradient of $b^i$ with respect to $a^j$ (for $j \\neq i$ but within the window) is non-zero because the denominator for channel $i$ depends on neighboring activations. The full gradient involves both the direct path (numerator) and indirect path (denominator). Most frameworks handle this via autograd, but manual implementations must account for all gradient pathways.</span>\n\n---",
+  "hints": [
+    "Loop over the channel index and clip the local slice with max and min.",
+    "Sum x[..., start:stop] ** 2 along the last axis."
+  ],
+  "constraints": "- x has shape $(B,H,W,C)$ and contains finite values.\n- n is a positive odd integer.\n- $k>0$, $\\alpha\\ge0$, and $\\beta>0$.",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef local_response_normalization(x: np.ndarray, k: float, n: int,\n                                 alpha: float, beta: float) -> np.ndarray:\n    \"\"\"\n    Returns the float64 channel-normalized tensor.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-23T18:46:10.390Z",
+  "updatedAt": "2026-04-04T12:04:49.804Z",
+  "topicId": "alexnet-lrn",
+  "paperSnippet": "\"Response normalization reduces our top-1 and top-5 error rates by 1.4% and 1.2%, respectively.\"",
+  "visualizationComponent": "LRNViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Local Response Normalization** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef local_response_normalization(x: np.ndarray, k: float, n: int, alpha: float, beta: float) -> np.ndarray:\n    x_arr = np.asarray(x, dtype=float)\n    k = float(k)\n    n = int(n)\n    alpha = float(alpha)\n    beta = float(beta)\n    \n    N, H, W, C = x_arr.shape\n    r = n // 2\n    out = np.zeros_like(x_arr)\n    \n    for c in range(C):\n        c_min = max(0, c - r)\n        c_max = min(C, c + r + 1)\n        sub_slice = x_arr[:, :, :, c_min:c_max]\n        sum_sq = np.sum(sub_slice ** 2, axis=-1)\n        denom = (k + (alpha / n) * sum_sq) ** beta\n        out[:, :, :, c] = x_arr[:, :, :, c] / denom\n    return np.round(out, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Five-channel vector",
+      "inputs": {
+        "k": 2,
+        "n": 5,
+        "x": [
+          [
+            [
+              [
+                1,
+                2,
+                3,
+                0.5,
+                -1
+              ]
+            ]
+          ]
+        ],
+        "beta": 0.75,
+        "alpha": 0.0001
+      },
+      "output": [
+        [
+          [
+            [
+              0.594541,
+              1.18908,
+              1.783607,
+              0.29727,
+              -0.594558
+            ]
+          ]
+        ]
+      ],
+      "isPublic": true,
+      "explanation": "Each channel uses the squared values inside its clipped five-channel neighborhood.",
+      "expectedOutput": [
+        [
+          [
+            [
+              0.594541,
+              1.18908,
+              1.783607,
+              0.29727,
+              -0.594558
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Window of one",
+      "inputs": {
+        "k": 1,
+        "n": 1,
+        "x": [
+          [
+            [
+              [
+                1,
+                -2,
+                3
+              ]
+            ]
+          ]
+        ],
+        "beta": 0.5,
+        "alpha": 0.1
+      },
+      "output": [
+        [
+          [
+            [
+              0.953463,
+              -1.690309,
+              2.176429
+            ]
+          ]
+        ]
+      ],
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            [
+              0.953463,
+              -1.690309,
+              2.176429
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "test-3",
+      "name": "Two spatial positions",
+      "inputs": {
+        "k": 2,
+        "n": 3,
+        "x": [
+          [
+            [
+              [
+                1,
+                2,
+                3
+              ]
+            ],
+            [
+              [
+                3,
+                2,
+                1
+              ]
+            ]
+          ]
+        ],
+        "beta": 0.75,
+        "alpha": 0.01
+      },
+      "output": [
+        [
+          [
+            [
+              0.590914,
+              1.168812,
+              1.755363
+            ]
+          ],
+          [
+            [
+              1.755363,
+              1.168812,
+              0.590914
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              0.590914,
+              1.168812,
+              1.755363
+            ]
+          ],
+          [
+            [
+              1.755363,
+              1.168812,
+              0.590914
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "alexnet-lrn-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "k": 4,
+        "n": 10,
+        "x": [
+          [
+            [
+              [
+                2,
+                4,
+                6,
+                1.0,
+                -2
+              ]
+            ]
+          ]
+        ],
+        "beta": 1.5,
+        "alpha": 0.0002
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.249886,
+              0.499771,
+              0.749657,
+              0.124943,
+              -0.249886
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "k": 1,
+        "n": 2,
+        "x": [
+          [
+            [
+              [
+                0,
+                1,
+                2,
+                0.25,
+                0
+              ]
+            ]
+          ]
+        ],
+        "beta": 0.375,
+        "alpha": 0.0001
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.0,
+              0.999906,
+              1.99981,
+              0.249981,
+              0.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "k": -2,
+        "n": -5,
+        "x": [
+          [
+            [
+              [
+                -1,
+                -2,
+                -3,
+                -0.5,
+                1
+              ]
+            ]
+          ]
+        ],
+        "beta": -0.75,
+        "alpha": -0.0001
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "k": 6,
+        "n": 15,
+        "x": [
+          [
+            [
+              [
+                3,
+                6,
+                9,
+                1.5,
+                -3
+              ]
+            ]
+          ]
+        ],
+        "beta": 2.25,
+        "alpha": 0.0003
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.05319,
+              0.106381,
+              0.159571,
+              0.026595,
+              -0.05319
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "k": 3.0,
+        "n": 6.0,
+        "x": [
+          [
+            [
+              [
+                2.0,
+                3.0,
+                4.0,
+                1.5,
+                0.0
+              ]
+            ]
+          ]
+        ],
+        "beta": 1.75,
+        "alpha": 1.0001
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.050238,
+              0.075358,
+              0.100477,
+              0.037679,
+              0.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "k": 0.0,
+        "n": 3.0,
+        "x": [
+          [
+            [
+              [
+                -1.0,
+                0.0,
+                1.0,
+                -1.5,
+                -3.0
+              ]
+            ]
+          ]
+        ],
+        "beta": -1.25,
+        "alpha": -1.9999
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "k": 2,
+        "n": 5,
+        "x": [
+          [
+            [
+              [
+                -1,
+                0.5,
+                3,
+                2,
+                1
+              ]
+            ]
+          ]
+        ],
+        "beta": 0.75,
+        "alpha": 0.0001
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              -0.594558,
+              0.29727,
+              1.783607,
+              1.18908,
+              0.594541
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "k": -2,
+        "n": -5,
+        "x": [
+          [
+            [
+              [
+                -1,
+                -2,
+                -3,
+                -0.5,
+                1
+              ]
+            ]
+          ]
+        ],
+        "beta": -0.75,
+        "alpha": -0.0001
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "k": 20,
+        "n": 50,
+        "x": [
+          [
+            [
+              [
+                10,
+                20,
+                30,
+                5.0,
+                -10
+              ]
+            ]
+          ]
+        ],
+        "beta": 7.5,
+        "alpha": 0.001
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              -0.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "k": 0,
+        "n": 0,
+        "x": [
+          [
+            [
+              [
+                0,
+                0,
+                0,
+                0.05,
+                0
+              ]
+            ]
+          ]
+        ],
+        "beta": 0.075,
+        "alpha": 0.0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.594541,
+              1.18908,
+              1.783607,
+              0.29727,
+              -0.594558
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "k": 7.0,
+        "n": 10.0,
+        "x": [
+          [
+            [
+              [
+                6.0,
+                7.0,
+                8.0,
+                5.5,
+                4.0
+              ]
+            ]
+          ]
+        ],
+        "beta": 5.75,
+        "alpha": 5.0001
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "k": 3,
+        "n": 8,
+        "x": [
+          [
+            [
+              [
+                2,
+                3,
+                4,
+                0.75,
+                -2
+              ]
+            ]
+          ]
+        ],
+        "beta": 1.125,
+        "alpha": 0.0002
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.580941,
+              0.871411,
+              1.161882,
+              0.217853,
+              -0.580941
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "k": -4,
+        "n": -10,
+        "x": [
+          [
+            [
+              [
+                -2,
+                -4,
+                -6,
+                -1.0,
+                2
+              ]
+            ]
+          ]
+        ],
+        "beta": -1.5,
+        "alpha": -0.0002
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "k": 0,
+        "n": 1,
+        "x": [
+          [
+            [
+              [
+                0,
+                0,
+                1,
+                0.125,
+                0
+              ]
+            ]
+          ]
+        ],
+        "beta": 0.1875,
+        "alpha": 0.0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "k": 1.0,
+        "n": 4.0,
+        "x": [
+          [
+            [
+              [
+                0.0,
+                1.0,
+                2.0,
+                -0.5,
+                -2.0
+              ]
+            ]
+          ]
+        ],
+        "beta": -0.25,
+        "alpha": -0.9999
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "k": 8,
+        "n": 20,
+        "x": [
+          [
+            [
+              [
+                4,
+                8,
+                12,
+                2.0,
+                -4
+              ]
+            ]
+          ]
+        ],
+        "beta": 3.0,
+        "alpha": 0.0004
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.007798,
+              0.015596,
+              0.023395,
+              0.003899,
+              -0.007798
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-lrn-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "k": 2,
+        "n": 4,
+        "x": [
+          [
+            [
+              [
+                1,
+                2,
+                2,
+                0.375,
+                -1
+              ]
+            ]
+          ]
+        ],
+        "beta": 0.5625,
+        "alpha": 0.0001
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              0.677085,
+              1.354169,
+              1.354159,
+              0.253907,
+              -0.677103
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "local_response_normalization",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": "[[[[1,2,3,0.5,-1]]]]",
+        "description": "NHWC input tensor"
+      },
+      {
+        "name": "k",
+        "type": "number",
+        "example": "2",
+        "description": "Positive bias"
+      },
+      {
+        "name": "n",
+        "type": "number",
+        "example": "5",
+        "description": "Odd channel-window width"
+      },
+      {
+        "name": "alpha",
+        "type": "number",
+        "example": "0.0001",
+        "description": "Response scale"
+      },
+      {
+        "name": "beta",
+        "type": "number",
+        "example": "0.75",
+        "description": "Normalization exponent"
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "alexnet-lrn",
+    "name": "Local Response Normalization",
+    "description": "Cross-channel normalization",
+    "color": "#8b5cf6"
+  },
+  "paper": {
+    "id": "alexnet",
+    "title": "ImageNet Classification with Deep Convolutional Neural Networks",
+    "authors": "Krizhevsky, Sutskever & Hinton, 2012",
+    "year": 2012,
+    "paperUrl": "https://papers.nips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf",
+    "visualizationComponent": "AlexNetArchViz"
+  },
+  "navigation": {
+    "index": 4,
+    "total": 6,
+    "prev": "alexnet-dropout",
+    "next": "alexnet-pooling"
+  },
+  "cleanTitle": ""
+}

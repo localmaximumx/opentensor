@@ -1,0 +1,752 @@
+{
+  "id": "rmsprop-optimizer",
+  "title": "RMSProp Optimizer (Single Update Step)",
+  "description": "Implement one update step of the **RMSProp optimizer**. Given current parameters, gradients, and running squared gradient accumulator, return updated parameters and accumulator.\n\n**Step 1: Update Running Average**\n\n$$\ns_t = \\beta \\cdot s_{t-1} + (1 - \\beta) \\cdot g_t^2\n$$\n\n**Step 2: Parameter Update**\n\n$$\nw_t = w_{t-1} - \\frac{\\eta}{\\sqrt{s_t + \\varepsilon}} \\cdot g_t\n$$\n\nWhere: w = parameters, g = gradients, s = squared gradient accumulator, η = learning rate, β = decay factor, ε = stability constant",
+  "seoDescription": "Implement one RMSProp update in NumPy using an exponential squared-gradient average and adaptive scaling.",
+  "examples": [
+    "Input: w = [1.0, 2.0], g = [0.2, -0.4], s = [0.0, 0.0], lr = 0.1, beta = 0.9, eps = 1e-8\n\nOutput: ([0.683773, 2.316228], [0.004, 0.016])\n\nExplanation: The squared-gradient accumulator is updated first, then each parameter uses its own scaled step.",
+    "Input: w = [5.0], g = [0.0], s = [0.1], lr = 0.1, beta = 0.9, eps = 1e-8\n\nOutput: ([5.0], [0.09])",
+    "Input: w = [[1.0, 2.0]], g = [[0.1, 0.2]], s = [[0.01, 0.04]], lr = 0.1, beta = 0.9, eps = 1e-8\n\nOutput: ([[0.9, 1.9]], [[0.01, 0.04]])"
+  ],
+  "requirements": "* <span style=\"font-size: 14px;\">Return tuple (new_w, new_s) with same shapes as inputs</span>\n* <span style=\"font-size: 14px;\">Use the exact update formulas above</span>\n* <span style=\"font-size: 14px;\">Vectorized implementation only (no Python loops)</span>\n* <span style=\"font-size: 14px;\">Handle any array shape (1D, 2D, etc.)</span>\n* Round numeric outputs to 6 decimal places.",
+  "theory": "## Understanding the Theory: RMSProp Optimizer (Single Update Step)\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization challenge across highly non-convex loss surfaces filled with saddle points, ravines, and plateaus. Naive gradient descent often oscillates wildly in steep directions while crawling along flat regions. **RMSProp Optimizer (Single Update Step)** accelerates convergence, dampens oscillations, and stabilizes weight trajectories during training.\n\nIn this problem, the objective is to implement **RMSProp Optimizer (Single Update Step)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\ns_t = \\beta \\cdot s_{t-1} + (1 - \\beta) \\cdot g_t^2\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Momentum Accumulation**: Smoothing velocity vectors across successive mini-batches enables optimizers to escape shallow local minima and push through ill-conditioned ravines.\n* **Adaptive Scaling**: Tracking running second moments scales learning rates inversely with gradient variance, preventing rare features from vanishing and frequent features from exploding.\n* **Gradient Regularization**: Gradient clipping enforces hard norm bounds, preventing runaway parameter updates during training instability.",
+  "hints": [
+    "Convert w, g, and s to NumPy arrays before computing the accumulator update.",
+    "Use g * g for squared gradients and np.sqrt(new_s) in the parameter update."
+  ],
+  "constraints": "* <span style=\"font-size: 14px;\">Parameter dimension D: 1 ≤ D ≤ 10⁵</span>\n* <span style=\"font-size: 14px;\">Learning rate lr > 0</span>\n* <span style=\"font-size: 14px;\">Decay factor: 0 \\< β \\< 1</span>\n* <span style=\"font-size: 14px;\">Libraries: NumPy only</span>",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef rmsprop_step(\n    w: list,\n    g: list,\n    s: list,\n    lr: float = 0.001,\n    beta: float = 0.9,\n    eps: float = 1e-8,\n) -> tuple[list, list]:\n    \"\"\"\n    Returns (new_w, new_s) with the same shapes as the inputs.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-05T19:02:26.137Z",
+  "updatedAt": "2026-10-12T07:47:35.464Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef rmsprop_step(w: list, s: list, g: list, lr: float, eps: float, beta: float) -> list:\n    w_arr = np.array(w, dtype=float)\n    s_arr = np.array(s, dtype=float)\n    g_arr = np.array(g, dtype=float)\n    s_new = beta * s_arr + (1.0 - beta) * (g_arr ** 2)\n    w_new = w_arr - lr * g_arr / (np.sqrt(s_new) + eps)\n    return [np.round(w_new, 6).tolist(), np.round(s_new, 6).tolist()]\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "RMSPropViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "First step (Ex1)",
+      "inputs": {
+        "g": [
+          0.2,
+          -0.4
+        ],
+        "s": [
+          0,
+          0
+        ],
+        "w": [
+          1,
+          2
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.683773,
+          2.316228
+        ],
+        [
+          0.004,
+          0.016
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Zero gradient (Ex2)",
+      "inputs": {
+        "g": [
+          0
+        ],
+        "s": [
+          0.1
+        ],
+        "w": [
+          5
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          5.0
+        ],
+        [
+          0.09
+        ]
+      ]
+    },
+    {
+      "id": "test-3",
+      "name": "2D input (Ex3)",
+      "inputs": {
+        "g": [
+          [
+            0.1,
+            0.2
+          ]
+        ],
+        "s": [
+          [
+            0.01,
+            0.04
+          ]
+        ],
+        "w": [
+          [
+            1,
+            2
+          ]
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            0.9,
+            1.9
+          ]
+        ],
+        [
+          [
+            0.01,
+            0.04
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "g": [
+          0.2,
+          -0.4
+        ],
+        "s": [
+          0,
+          0
+        ],
+        "w": [
+          1,
+          2
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.683773,
+          2.316228
+        ],
+        [
+          0.004,
+          0.016
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "g": [
+          0
+        ],
+        "s": [
+          0.1
+        ],
+        "w": [
+          5
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          5.0
+        ],
+        [
+          0.09
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "g": [
+          [
+            0.1,
+            0.2
+          ]
+        ],
+        "s": [
+          [
+            0.01,
+            0.04
+          ]
+        ],
+        "w": [
+          [
+            1,
+            2
+          ]
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            0.9,
+            1.9
+          ]
+        ],
+        [
+          [
+            0.01,
+            0.04
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "g": [
+          0.2,
+          -0.4
+        ],
+        "s": [
+          0,
+          0
+        ],
+        "w": [
+          1,
+          2
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.683773,
+          2.316228
+        ],
+        [
+          0.004,
+          0.016
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "g": [
+          0
+        ],
+        "s": [
+          0.1
+        ],
+        "w": [
+          5
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          5.0
+        ],
+        [
+          0.09
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "g": [
+          [
+            0.1,
+            0.2
+          ]
+        ],
+        "s": [
+          [
+            0.01,
+            0.04
+          ]
+        ],
+        "w": [
+          [
+            1,
+            2
+          ]
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            0.9,
+            1.9
+          ]
+        ],
+        [
+          [
+            0.01,
+            0.04
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "g": [
+          0.2,
+          -0.4
+        ],
+        "s": [
+          0,
+          0
+        ],
+        "w": [
+          1,
+          2
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.683773,
+          2.316228
+        ],
+        [
+          0.004,
+          0.016
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "g": [
+          0
+        ],
+        "s": [
+          0.1
+        ],
+        "w": [
+          5
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          5.0
+        ],
+        [
+          0.09
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "g": [
+          [
+            0.1,
+            0.2
+          ]
+        ],
+        "s": [
+          [
+            0.01,
+            0.04
+          ]
+        ],
+        "w": [
+          [
+            1,
+            2
+          ]
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            0.9,
+            1.9
+          ]
+        ],
+        [
+          [
+            0.01,
+            0.04
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "g": [
+          0.2,
+          -0.4
+        ],
+        "s": [
+          0,
+          0
+        ],
+        "w": [
+          1,
+          2
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.683773,
+          2.316228
+        ],
+        [
+          0.004,
+          0.016
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "g": [
+          0
+        ],
+        "s": [
+          0.1
+        ],
+        "w": [
+          5
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          5.0
+        ],
+        [
+          0.09
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "g": [
+          [
+            0.1,
+            0.2
+          ]
+        ],
+        "s": [
+          [
+            0.01,
+            0.04
+          ]
+        ],
+        "w": [
+          [
+            1,
+            2
+          ]
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            0.9,
+            1.9
+          ]
+        ],
+        [
+          [
+            0.01,
+            0.04
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "g": [
+          0.2,
+          -0.4
+        ],
+        "s": [
+          0,
+          0
+        ],
+        "w": [
+          1,
+          2
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.683773,
+          2.316228
+        ],
+        [
+          0.004,
+          0.016
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "g": [
+          0
+        ],
+        "s": [
+          0.1
+        ],
+        "w": [
+          5
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          5.0
+        ],
+        [
+          0.09
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "g": [
+          [
+            0.1,
+            0.2
+          ]
+        ],
+        "s": [
+          [
+            0.01,
+            0.04
+          ]
+        ],
+        "w": [
+          [
+            1,
+            2
+          ]
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            0.9,
+            1.9
+          ]
+        ],
+        [
+          [
+            0.01,
+            0.04
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "g": [
+          0.2,
+          -0.4
+        ],
+        "s": [
+          0,
+          0
+        ],
+        "w": [
+          1,
+          2
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.683773,
+          2.316228
+        ],
+        [
+          0.004,
+          0.016
+        ]
+      ]
+    },
+    {
+      "id": "rmsprop-optimizer-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "g": [
+          0
+        ],
+        "s": [
+          0.1
+        ],
+        "w": [
+          5
+        ],
+        "lr": 0.1,
+        "eps": 1e-08,
+        "beta": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          5.0
+        ],
+        [
+          0.09
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "rmsprop_step",
+    "parameters": [
+      {
+        "name": "w",
+        "type": "array",
+        "example": "[1.0, 2.0]",
+        "description": "Current parameters"
+      },
+      {
+        "name": "g",
+        "type": "array",
+        "example": "[0.2, -0.4]",
+        "description": "Current gradients (same shape as w)"
+      },
+      {
+        "name": "s",
+        "type": "array",
+        "example": "[0.0, 0.0]",
+        "description": "Running squared gradient accumulator"
+      },
+      {
+        "name": "lr",
+        "type": "number",
+        "example": "0.1",
+        "description": "Learning rate"
+      },
+      {
+        "name": "beta",
+        "type": "number",
+        "example": "0.9",
+        "description": "Decay factor for moving average"
+      },
+      {
+        "name": "eps",
+        "type": "number",
+        "example": "1e-8",
+        "description": "Numerical stability constant"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "adam-optimizer",
+    "nesterov-momentum",
+    "nadam-optimizer",
+    "adagrad-optimizer",
+    "adamw-optimizer"
+  ],
+  "tags": [
+    "Optimization"
+  ],
+  "prevId": "adam-optimizer",
+  "nextId": "dropout-training",
+  "slug": "rmsprop-optimizer",
+  "cleanTitle": "RMSProp Optimizer (Single Update Step)",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/rmsprop-optimizer",
+  "localUrl": "http://localhost:3000/problems/rmsprop-optimizer",
+  "studyPlan": null
+}

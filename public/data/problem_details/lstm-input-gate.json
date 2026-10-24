@@ -1,0 +1,1336 @@
+{
+  "id": "lstm-input-gate",
+  "title": "Input Gate",
+  "description": "Implement the two LSTM input branches. The input gate chooses how much new information to write, while the candidate branch proposes the new content.\n\n$$\ni_t=\\sigma\\left(W_i[h_{t-1},x_t]+b_i\\right).\n$$\n\n$$\n\\widetilde{C}_t=\\tanh\\left(W_c[h_{t-1},x_t]+b_c\\right).\n$$\n\nReturn a dictionary containing input_gate and candidate_state as float64 NumPy arrays. Each array has shape (H,) for one sample or (N, H) for a batch.",
+  "seoDescription": "Implement the LSTM input gate and candidate activation that control new information written to the cell state.",
+  "examples": [
+    "Input: h_prev = [0,0], x_t = [1,0.5], W_i = [[0.2,0.3,0.1,0.4],[0.4,0.2,0.3,0.1]], b_i = [0,0], W_c = [[0.3,0.1,0.2,0.1],[0.1,0.4,0.1,0.3]], b_c = [0,0]\n\nOutput: {\"input_gate\":[0.574443,0.586618],\"candidate_state\":[0.244919,0.244919]}\n\nExplanation: Both branches read the same joined features but use different weights and activations.",
+    "Input: h_prev = [0.3,-0.2], x_t = [0.5,1], W_i = [[0.2,0.3,0.1,0.4],[0.4,0.2,0.3,0.1]], b_i = [0.1,-0.1], W_c = [[0.3,0.1,0.2,0.1],[0.1,0.4,0.1,0.3]], b_c = [0.05,0.1]\n\nOutput: {\"input_gate\":[0.634136,0.557248],\"candidate_state\":[0.309507,0.379949]}",
+    "Input: h_prev = [[0,0],[0.3,-0.2]], x_t = [[1,0.5],[0.5,1]], W_i = [[0.2,0.3,0.1,0.4],[0.4,0.2,0.3,0.1]], b_i = [0,0], W_c = [[0.3,0.1,0.2,0.1],[0.1,0.4,0.1,0.3]], b_c = [0,0]\n\nOutput: {\"input_gate\":[[0.574443,0.586618],[0.610639,0.581759]],\"candidate_state\":[[0.244919,0.244919],[0.263625,0.291313]]}"
+  ],
+  "requirements": "- Use the same [h_prev, x_t] concatenation for both branches.\n- Apply sigmoid to the input-gate branch and tanh to the candidate branch.\n- Return exactly the keys input_gate and candidate_state.",
+  "theory": "# <span style=\"font-size: 20px;\">Input Gate and Candidate Memory</span>\n\n<span style=\"font-size: 14px;\">The input gate and candidate memory form the \"write\" mechanism of the LSTM cell. While the forget gate decides what to erase from memory, the input gate and candidate together decide what new information to store. They are two separate computations: the input gate produces a vector in $[0, 1]$ controlling **how much** to write, and the candidate produces a vector in $[-1, 1]$ proposing **what** to write. Their element-wise product determines the actual update added to the cell state.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">The input gate and candidate memory are a **two-part mechanism** that together determine the new information written into the LSTM cell state at each time step. The mechanism is split into two components because \"what to write\" and \"how much to write\" require different mathematical properties:</span>\n\n* <span style=\"font-size: 14px;\">**Input gate $i_t$:** A sigmoid-activated vector in $[0, 1]$. Each element acts as a valve controlling the magnitude of the update for that cell state dimension. A value near 1 means \"write fully,\" near 0 means \"block this update.\"</span>\n* <span style=\"font-size: 14px;\">**Candidate memory $\\tilde{C}_t$:** A tanh-activated vector in $[-1, 1]$. Each element proposes a new value to add to the cell state. Positive values push the cell state up, negative values push it down.</span>\n\n<span style=\"font-size: 14px;\">Both components receive the **same concatenated input** $[h_{t-1}, x_t]$ but use separate weight matrices and biases. The gate learns to detect **when** information is relevant, while the candidate learns to encode **what** that information is. Their element-wise product $i_t \\odot \\tilde{C}_t$ produces the update vector added to the cell state after the forget gate has done its work.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">**Step 1 - Concatenate inputs.** The previous hidden state $h_{t-1} \\in \\mathbb{R}^{h}$ and current input $x_t \\in \\mathbb{R}^{d}$ are concatenated:</span>\n\n$$\n[h_{t-1}, x_t] \\in \\mathbb{R}^{h + d}\n$$\n\n<span style=\"font-size: 14px;\">This concatenation is shared across all LSTM gates. The combined vector carries both recurrent context and fresh input information.</span>\n\n<span style=\"font-size: 14px;\">**Step 2 - Input gate.** The concatenated vector is transformed by a learned weight matrix and bias, then passed through sigmoid:</span>\n\n$$\ni_t = \\sigma(W_i \\cdot [h_{t-1}, x_t] + b_i)\n$$\n\n<span style=\"font-size: 14px;\">where $W_i \\in \\mathbb{R}^{h \\times (h+d)}$ and $b_i \\in \\mathbb{R}^{h}$. The sigmoid $\\sigma(z) = \\frac{1}{1 + e^{-z}}$ squashes each element to $(0, 1)$, making the output interpretable as independent \"write intensity\" controls.</span>\n\n<span style=\"font-size: 14px;\">**Step 3 - Candidate memory.** The same concatenated vector is transformed by a different weight matrix and bias, then passed through tanh:</span>\n\n$$\n\\tilde{C}_t = \\tanh(W_C \\cdot [h_{t-1}, x_t] + b_C)\n$$\n\n<span style=\"font-size: 14px;\">where $W_C \\in \\mathbb{R}^{h \\times (h+d)}$ and $b_C \\in \\mathbb{R}^{h}$. The tanh maps each element to $(-1, 1)$, meaning the candidate can propose both increases and decreases to the cell state.</span>\n\n<span style=\"font-size: 14px;\">**Step 4 - Gated update.** The input gate and candidate combine via element-wise multiplication:</span>\n\n$$\ni_t \\odot \\tilde{C}_t \\in \\mathbb{R}^{h}\n$$\n\n<span style=\"font-size: 14px;\">Each dimension of the candidate is independently scaled by the corresponding gate value. This product is added to the cell state in the full update equation $C_t = f_t \\odot C_{t-1} + i_t \\odot \\tilde{C}_t$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why Two Separate Components</span>\n\n<span style=\"font-size: 14px;\">A natural question is: why not use a single computation to produce the cell state update? The separation exists because **magnitude control and content generation are fundamentally different tasks** that benefit from different activations and learned representations.</span>\n\n<span style=\"font-size: 14px;\">**The gate controls magnitude.** The input gate $i_t$ operates in $[0, 1]$ and determines the **scale** of the update per dimension. It answers \"how much should I modify this dimension of memory right now?\" During training, the gate learns to recognize contexts where memory should be updated (gate near 1) versus contexts where the cell state should be left alone (gate near 0).</span>\n\n<span style=\"font-size: 14px;\">**The candidate controls content.** The candidate $\\tilde{C}_t$ operates in $[-1, 1]$ and determines the **direction and content** of the update. It encodes the actual semantic information from the current input and context into a form suitable for long-term storage.</span>\n\n<span style=\"font-size: 14px;\">**The element-wise product combines both.** The product $i_t \\odot \\tilde{C}_t$ allows fine-grained control: one dimension might have a strong candidate value of $0.95$ but a gate value of only $0.1$, meaning the model has encoded useful information but decided now is not the time to write it. Another dimension might have a moderate candidate of $0.4$ but a fully open gate of $0.98$.</span>\n\n<span style=\"font-size: 14px;\">If a single computation produced the update directly (say, a single tanh layer), the model would have no mechanism to selectively suppress individual dimensions. It could only learn to produce small values, which conflates \"this information is not relevant now\" with \"this information has small magnitude.\" The gate-candidate separation disentangles relevance from content.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why Tanh for the Candidate</span>\n\n<span style=\"font-size: 14px;\">**Bounded output in $[-1, 1]$.** The tanh function prevents the candidate from proposing unbounded updates that could cause the cell state to explode. Combined with the gate's $[0, 1]$ range, the maximum possible update to any cell state dimension per time step is bounded between $-1$ and $+1$.</span>\n\n<span style=\"font-size: 14px;\">**Zero-centered output.** Unlike sigmoid which outputs in $(0, 1)$ with a mean around $0.5$, tanh is centered at zero. This is essential because the candidate needs to both **increase** and **decrease** the cell state. If the candidate used sigmoid (always positive), the cell state could only grow over time. Zero-centered outputs let the model naturally push cell state dimensions in either direction.</span>\n\n<span style=\"font-size: 14px;\">**Stronger gradients near zero.** The derivative of tanh at zero is 1 (compared to 0.25 for sigmoid). Since many pre-activation values cluster around zero during training, tanh provides stronger gradient signal for the candidate's weight updates, helping the model learn useful representations faster.</span>\n\n<span style=\"font-size: 14px;\">**Contrast with sigmoid for gates.** Gates use sigmoid because they need to be in $[0, 1]$ to function as multiplicative switches. A gate value of 0 means \"block completely\" and 1 means \"pass completely.\" Tanh values of $-1$ and $+1$ have no such interpretation for a gate. The functions are chosen to match the mathematical role: sigmoid for gating (scaling), tanh for content (representation).</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context: Hochreiter and Schmidhuber (1997)</span>\n\n<span style=\"font-size: 14px;\">The input gate was introduced in the original LSTM paper, \"Long Short-Term Memory\" by Sepp Hochreiter and Jurgen Schmidhuber (1997). The paper describes the input gate's role with a specific framing: **\"The input gate protects the memory contents from perturbation by irrelevant inputs.\"** This frames the gate as a **protective mechanism**, not merely a write controller.</span>\n\n<span style=\"font-size: 14px;\">The core problem being solved was the **vanishing gradient problem** in recurrent neural networks. Standard RNNs could not learn long-range dependencies because gradient signals decayed exponentially through time. The LSTM's solution was the **constant error carousel (CEC)**: a cell state updated additively rather than multiplicatively, allowing gradients to flow unchanged across many time steps.</span>\n\n<span style=\"font-size: 14px;\">The input gate is essential to making the CEC work. Without it, every input at every time step would perturb the cell state, drowning out stored long-term information. The gate acts as a bouncer: it learns which inputs carry information worth storing and blocks everything else. The paper's use of \"protection\" emphasizes that the default behavior should be to **not write**. The cell state is precious, and the input gate must actively decide to open before any modification occurs.</span>\n\n<span style=\"font-size: 14px;\">The candidate memory (called \"cell input\" in the original paper) represents the transformation of current input into a form suitable for storage. The original paper used a squashing function $g$ for this role, which in modern implementations is tanh.</span>\n\n<span style=\"font-size: 14px;\">Notably, the original 1997 LSTM did **not** include a forget gate. The cell state could only be written to (via input gate) and read from (via output gate), but old information could never be explicitly erased. The forget gate was added by Gers et al. (2000). In the original architecture, the input gate was even more critical: once information entered the cell state, it stayed indefinitely, so the gate had to be highly selective because there was no mechanism to undo a bad write.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Consider an LSTM with hidden size $h = 2$ and input size $d = 2$.</span>\n\n<span style=\"font-size: 14px;\">**Given values:**</span>\n\n$$\nh_{t-1} = \\begin{pmatrix} 0.5 \\\\ -0.3 \\end{pmatrix}, \\quad x_t = \\begin{pmatrix} 0.8 \\\\ 0.1 \\end{pmatrix}\n$$\n\n$$\nW_i = \\begin{pmatrix} 0.4 & -0.2 & 0.3 & 0.1 \\\\ 0.1 & 0.5 & -0.1 & 0.6 \\end{pmatrix}, \\quad b_i = \\begin{pmatrix} 0.1 \\\\ -0.2 \\end{pmatrix}\n$$\n\n$$\nW_C = \\begin{pmatrix} -0.3 & 0.7 & 0.2 & -0.4 \\\\ 0.6 & -0.1 & 0.5 & 0.3 \\end{pmatrix}, \\quad b_C = \\begin{pmatrix} 0.0 \\\\ 0.1 \\end{pmatrix}\n$$\n\n<span style=\"font-size: 14px;\">**Step 1 - Concatenate:** $[h_{t-1}, x_t] = (0.5, -0.3, 0.8, 0.1)^T$</span>\n\n<span style=\"font-size: 14px;\">**Step 2 - Input gate pre-activation:**</span>\n\n<span style=\"font-size: 14px;\">Dim 1: $(0.4)(0.5) + (-0.2)(-0.3) + (0.3)(0.8) + (0.1)(0.1) + 0.1 = 0.2 + 0.06 + 0.24 + 0.01 + 0.1 = 0.61$</span>\n\n<span style=\"font-size: 14px;\">Dim 2: $(0.1)(0.5) + (0.5)(-0.3) + (-0.1)(0.8) + (0.6)(0.1) + (-0.2) = 0.05 - 0.15 - 0.08 + 0.06 - 0.2 = -0.32$</span>\n\n<span style=\"font-size: 14px;\">**Step 3 - Apply sigmoid:**</span>\n\n$$\ni_t = \\begin{pmatrix} \\sigma(0.61) \\\\ \\sigma(-0.32) \\end{pmatrix} = \\begin{pmatrix} 0.648 \\\\ 0.421 \\end{pmatrix}\n$$\n\n<span style=\"font-size: 14px;\">Dimension 1 allows about 65% of the candidate through. Dimension 2 allows about 42%.</span>\n\n<span style=\"font-size: 14px;\">**Step 4 - Candidate pre-activation:**</span>\n\n<span style=\"font-size: 14px;\">Dim 1: $(-0.3)(0.5) + (0.7)(-0.3) + (0.2)(0.8) + (-0.4)(0.1) + 0.0 = -0.15 - 0.21 + 0.16 - 0.04 = -0.24$</span>\n\n<span style=\"font-size: 14px;\">Dim 2: $(0.6)(0.5) + (-0.1)(-0.3) + (0.5)(0.8) + (0.3)(0.1) + 0.1 = 0.3 + 0.03 + 0.4 + 0.03 + 0.1 = 0.86$</span>\n\n<span style=\"font-size: 14px;\">**Step 5 - Apply tanh:**</span>\n\n$$\n\\tilde{C}_t = \\begin{pmatrix} \\tanh(-0.24) \\\\ \\tanh(0.86) \\end{pmatrix} = \\begin{pmatrix} -0.235 \\\\ 0.697 \\end{pmatrix}\n$$\n\n<span style=\"font-size: 14px;\">The candidate proposes a **negative** update for dimension 1 and a **positive** update for dimension 2. This illustrates how tanh's zero-centered output naturally allows both directions.</span>\n\n<span style=\"font-size: 14px;\">**Step 6 - Element-wise product $i_t \\odot \\tilde{C}_t$:**</span>\n\n$$\ni_t \\odot \\tilde{C}_t = \\begin{pmatrix} 0.648 \\times (-0.235) \\\\ 0.421 \\times 0.697 \\end{pmatrix} = \\begin{pmatrix} -0.152 \\\\ 0.293 \\end{pmatrix}\n$$\n\n<span style=\"font-size: 14px;\">**Key observations:**</span>\n\n* <span style=\"font-size: 14px;\">**Dimension 1:** The candidate proposed $-0.235$ but the gate allowed 65% through, resulting in $-0.152$. The cell state will decrease by this amount.</span>\n* <span style=\"font-size: 14px;\">**Dimension 2:** The candidate proposed $0.697$ but the gate allowed only 42% through, resulting in $0.293$. Despite a stronger candidate, the lower gate value significantly reduced the update.</span>\n* <span style=\"font-size: 14px;\">**Independence:** The gate and candidate are independent. Dimension 2 has a strong candidate but weak gate; dimension 1 has a weaker candidate but stronger gate. Content and relevance are separate judgments.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Connection to GRU</span>\n\n<span style=\"font-size: 14px;\">The Gated Recurrent Unit (GRU), introduced by Cho et al. (2014), has its own candidate computation that differs from the LSTM candidate in an important way.</span>\n\n<span style=\"font-size: 14px;\">**LSTM candidate** uses the **raw** hidden state:</span>\n\n$$\n\\tilde{C}_t = \\tanh(W_C \\cdot [h_{t-1}, x_t] + b_C)\n$$\n\n<span style=\"font-size: 14px;\">**GRU candidate** uses a **reset-gated** hidden state:</span>\n\n$$\n\\tilde{h}_t = \\tanh(W \\cdot [r_t \\odot h_{t-1}, x_t] + b)\n$$\n\n<span style=\"font-size: 14px;\">where $r_t = \\sigma(W_r \\cdot [h_{t-1}, x_t] + b_r)$ is the reset gate. Before the hidden state enters the candidate computation, each dimension is scaled by the reset gate. When $r_t$ is near 0, the candidate ignores previous state and computes purely from current input, allowing the GRU to \"start fresh.\"</span>\n\n* <span style=\"font-size: 14px;\">**LSTM:** Relies on the forget gate to manage old information and the input gate to control writing. The candidate always sees the full hidden state.</span>\n* <span style=\"font-size: 14px;\">**GRU:** Uses the reset gate to filter the hidden state before it enters the candidate. This makes the candidate conditionally independent of history, something the LSTM candidate cannot do.</span>\n\n<span style=\"font-size: 14px;\">The GRU also merges forget and input gates into a single update gate $z_t$, using the complementary relationship $z_t$ and $(1 - z_t)$: whatever fraction of old state is kept, the complement is used for the new candidate. The LSTM treats forgetting and writing as independent decisions with separate gates, which is more expressive but uses more parameters.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n* <span style=\"font-size: 14px;\">**Using sigmoid instead of tanh for the candidate.** If the candidate uses sigmoid, its output is in $(0, 1)$ and can never produce a negative update. The cell state can only increase, destroying the model's ability to push dimensions downward. Tanh's $(-1, 1)$ range is essential for bidirectional updates.</span>\n\n* <span style=\"font-size: 14px;\">**Sharing weight matrices between $i_t$ and $\\tilde{C}_t$.** The input gate and candidate must have **separate** weight matrices ($W_i$ and $W_C$). Sharing makes gate and candidate deterministic functions of each other, eliminating independent control. The model loses the ability to say \"I see important content but now is not the time to write it.\"</span>\n\n* <span style=\"font-size: 14px;\">**Forgetting these are TWO separate computations returning a tuple.** A common error is treating the input gate as a single operation. You must compute **both** $i_t$ and $\\tilde{C}_t$ as separate tensors, then combine them with element-wise multiplication. If your implementation fuses them into a single linear layer followed by one activation, the mechanism is broken.</span>\n\n* <span style=\"font-size: 14px;\">**Incorrect concatenation order.** The convention $[h_{t-1}, x_t]$ means hidden state comes first, then input. If $W_i$ is shaped $h \\times (h + d)$, the first $h$ columns multiply $h_{t-1}$ and the last $d$ columns multiply $x_t$. Reversing concatenation without transposing the weight matrix produces wrong results.</span>\n\n* <span style=\"font-size: 14px;\">**Confusing $\\tilde{C}_t$ with $C_t$.** The candidate $\\tilde{C}_t$ (with tilde) is the **proposed** update. The actual cell state $C_t$ (without tilde) is the result of $C_t = f_t \\odot C_{t-1} + i_t \\odot \\tilde{C}_t$. These are different tensors at different stages. The input gate problem only asks you to compute $i_t$ and $\\tilde{C}_t$, not the final $C_t$.</span>\n\n* <span style=\"font-size: 14px;\">**Applying the gate before the activation.** The correct order is: linear transform, then activation, for each component separately. If you apply the gate to pre-activation values or compute $\\sigma(\\tanh(W \\cdot [h, x]))$, the math is completely different and the mechanism breaks.</span>\n\n---",
+  "hints": [
+    "Compute joined once and reuse it for both affine transforms.",
+    "Use sigmoid for input_gate and np.tanh for candidate_state."
+  ],
+  "constraints": "- Unbatched h_prev and x_t have shapes (H,) and (D,); batched inputs have shapes (N, H) and (N, D).\n- W_i and W_c have shape (H, H + D).\n- b_i and b_c have shape (H,).\n- Both returned arrays use float64.",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef sigmoid(x: np.ndarray) -> np.ndarray:\n    return 1.0 / (1.0 + np.exp(-np.clip(x, -500, 500)))\n\ndef input_gate(h_prev: np.ndarray, x_t: np.ndarray,\n               W_i: np.ndarray, b_i: np.ndarray,\n               W_c: np.ndarray, b_c: np.ndarray) -> dict:\n    \"\"\"\n    Returns input_gate and candidate_state as float64 arrays.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-10T22:45:26.025Z",
+  "updatedAt": "2026-04-04T12:04:53.803Z",
+  "topicId": "lstm-input-gate",
+  "paperSnippet": "\"The input gate protects the memory contents from perturbation by irrelevant inputs.\"",
+  "visualizationComponent": "LSTMInputGateViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Input Gate** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef sigmoid(x: np.ndarray) -> np.ndarray:\n    return 1.0 / (1.0 + np.exp(-np.clip(x, -500, 500)))\n\ndef input_gate(h_prev: np.ndarray, x_t: np.ndarray,\n               W_i: np.ndarray, b_i: np.ndarray,\n               W_c: np.ndarray, b_c: np.ndarray) -> dict:\n    hp = np.asarray(h_prev, dtype=float)\n    xt = np.asarray(x_t, dtype=float)\n    wi, bi = np.asarray(W_i, dtype=float), np.asarray(b_i, dtype=float)\n    wc, bc = np.asarray(W_c, dtype=float), np.asarray(b_c, dtype=float)\n    if hp.ndim == 1:\n        cat = np.concatenate([hp, xt])\n        i_t = sigmoid(wi @ cat + bi)\n        c_tilde = np.tanh(wc @ cat + bc)\n    else:\n        cat = np.concatenate([hp, xt], axis=-1)\n        i_t = sigmoid(cat @ wi.T + bi)\n        c_tilde = np.tanh(cat @ wc.T + bc)\n    return {\n        \"input_gate\": np.round(i_t, 6).tolist(),\n        \"candidate\": np.round(c_tilde, 6).tolist()\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Basic input gate",
+      "inputs": {
+        "W_c": [
+          [
+            0.3,
+            0.1,
+            0.2,
+            0.1
+          ],
+          [
+            0.1,
+            0.4,
+            0.1,
+            0.3
+          ]
+        ],
+        "W_i": [
+          [
+            0.2,
+            0.3,
+            0.1,
+            0.4
+          ],
+          [
+            0.4,
+            0.2,
+            0.3,
+            0.1
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          1,
+          0.5
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "input_gate": [
+          0.574443,
+          0.586618
+        ],
+        "candidate": [
+          0.244919,
+          0.244919
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "input gate with bias",
+      "inputs": {
+        "W_c": [
+          [
+            0.3,
+            0.1,
+            0.2,
+            0.1
+          ],
+          [
+            0.1,
+            0.4,
+            0.1,
+            0.3
+          ]
+        ],
+        "W_i": [
+          [
+            0.2,
+            0.3,
+            0.1,
+            0.4
+          ],
+          [
+            0.4,
+            0.2,
+            0.3,
+            0.1
+          ]
+        ],
+        "b_c": [
+          0.05,
+          0.1
+        ],
+        "b_i": [
+          0.1,
+          -0.1
+        ],
+        "x_t": [
+          0.5,
+          1
+        ],
+        "h_prev": [
+          0.3,
+          -0.2
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "input_gate": [
+          0.634136,
+          0.557248
+        ],
+        "candidate": [
+          0.309507,
+          0.379949
+        ]
+      }
+    },
+    {
+      "id": "test-3",
+      "name": "Batched input gate",
+      "inputs": {
+        "W_c": [
+          [
+            0.3,
+            0.1,
+            0.2,
+            0.1
+          ],
+          [
+            0.1,
+            0.4,
+            0.1,
+            0.3
+          ]
+        ],
+        "W_i": [
+          [
+            0.2,
+            0.3,
+            0.1,
+            0.4
+          ],
+          [
+            0.4,
+            0.2,
+            0.3,
+            0.1
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          [
+            1,
+            0.5
+          ],
+          [
+            0.5,
+            1
+          ]
+        ],
+        "h_prev": [
+          [
+            0,
+            0
+          ],
+          [
+            0.3,
+            -0.2
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "input_gate": [
+          [
+            0.574443,
+            0.586618
+          ],
+          [
+            0.610639,
+            0.581759
+          ]
+        ],
+        "candidate": [
+          [
+            0.244919,
+            0.244919
+          ],
+          [
+            0.263625,
+            0.291313
+          ]
+        ]
+      }
+    },
+    {
+      "id": "lstm-input-gate-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "W_c": [
+          [
+            0.6,
+            0.2,
+            0.4,
+            0.2
+          ],
+          [
+            0.2,
+            0.8,
+            0.2,
+            0.6
+          ]
+        ],
+        "W_i": [
+          [
+            0.4,
+            0.6,
+            0.2,
+            0.8
+          ],
+          [
+            0.8,
+            0.4,
+            0.6,
+            0.2
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          2,
+          1.0
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          0.768525,
+          0.802184
+        ],
+        "candidate": [
+          0.761594,
+          0.761594
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "W_c": [
+          [
+            0.15,
+            0.05,
+            0.1,
+            0.05
+          ],
+          [
+            0.05,
+            0.2,
+            0.05,
+            0.15
+          ]
+        ],
+        "W_i": [
+          [
+            0.1,
+            0.15,
+            0.05,
+            0.2
+          ],
+          [
+            0.2,
+            0.1,
+            0.15,
+            0.05
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          0,
+          0.25
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          0.512497,
+          0.503125
+        ],
+        "candidate": [
+          0.012499,
+          0.037482
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "W_c": [
+          [
+            1.3,
+            1.1,
+            1.2,
+            1.1
+          ],
+          [
+            1.1,
+            1.4,
+            1.1,
+            1.3
+          ]
+        ],
+        "W_i": [
+          [
+            1.2,
+            1.3,
+            1.1,
+            1.4
+          ],
+          [
+            1.4,
+            1.2,
+            1.3,
+            1.1
+          ]
+        ],
+        "b_c": [
+          1,
+          1
+        ],
+        "b_i": [
+          1,
+          1
+        ],
+        "x_t": [
+          2,
+          1.5
+        ],
+        "h_prev": [
+          1,
+          1
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          0.99959,
+          0.99961
+        ],
+        "candidate": [
+          0.999999,
+          1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "W_c": [
+          [
+            0.45,
+            0.15,
+            0.3,
+            0.15
+          ],
+          [
+            0.15,
+            0.6,
+            0.15,
+            0.45
+          ]
+        ],
+        "W_i": [
+          [
+            0.3,
+            0.45,
+            0.15,
+            0.6
+          ],
+          [
+            0.6,
+            0.3,
+            0.45,
+            0.15
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          2,
+          0.75
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          0.679179,
+          0.733509
+        ],
+        "candidate": [
+          0.612242,
+          0.563195
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "W_c": [
+          [
+            0.9,
+            0.3,
+            0.6,
+            0.3
+          ],
+          [
+            0.3,
+            1.2,
+            0.3,
+            0.9
+          ]
+        ],
+        "W_i": [
+          [
+            0.6,
+            0.9,
+            0.3,
+            1.2
+          ],
+          [
+            1.2,
+            0.6,
+            0.9,
+            0.3
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          3,
+          1.5
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          0.937027,
+          0.958909
+        ],
+        "candidate": [
+          0.978026,
+          0.978026
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "W_c": [
+          [
+            0.075,
+            0.025,
+            0.05,
+            0.025
+          ],
+          [
+            0.025,
+            0.1,
+            0.025,
+            0.075
+          ]
+        ],
+        "W_i": [
+          [
+            0.05,
+            0.075,
+            0.025,
+            0.1
+          ],
+          [
+            0.1,
+            0.05,
+            0.075,
+            0.025
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          0,
+          0.125
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          0.503125,
+          0.500781
+        ],
+        "candidate": [
+          0.003125,
+          0.009375
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "W_c": [
+          [
+            2.3,
+            2.1,
+            2.2,
+            2.1
+          ],
+          [
+            2.1,
+            2.4,
+            2.1,
+            2.3
+          ]
+        ],
+        "W_i": [
+          [
+            2.2,
+            2.3,
+            2.1,
+            2.4
+          ],
+          [
+            2.4,
+            2.2,
+            2.3,
+            2.1
+          ]
+        ],
+        "b_c": [
+          2,
+          2
+        ],
+        "b_i": [
+          2,
+          2
+        ],
+        "x_t": [
+          3,
+          2.5
+        ],
+        "h_prev": [
+          2,
+          2
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          1.0,
+          1.0
+        ],
+        "candidate": [
+          1.0,
+          1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "W_c": [
+          [
+            1.2,
+            0.4,
+            0.8,
+            0.4
+          ],
+          [
+            0.4,
+            1.6,
+            0.4,
+            1.2
+          ]
+        ],
+        "W_i": [
+          [
+            0.8,
+            1.2,
+            0.4,
+            1.6
+          ],
+          [
+            1.6,
+            0.8,
+            1.2,
+            0.4
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          4,
+          2.0
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          0.991837,
+          0.996316
+        ],
+        "candidate": [
+          0.999329,
+          0.999329
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "W_c": [
+          [
+            0.1,
+            0.2,
+            0.1,
+            0.3
+          ],
+          [
+            0.3,
+            0.1,
+            0.4,
+            0.1
+          ]
+        ],
+        "W_i": [
+          [
+            0.4,
+            0.1,
+            0.3,
+            0.2
+          ],
+          [
+            0.1,
+            0.3,
+            0.2,
+            0.4
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          0.5,
+          1
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          0.586618,
+          0.622459
+        ],
+        "candidate": [
+          0.336376,
+          0.291313
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "W_c": [
+          [
+            0.225,
+            0.075,
+            0.15,
+            0.075
+          ],
+          [
+            0.075,
+            0.3,
+            0.075,
+            0.225
+          ]
+        ],
+        "W_i": [
+          [
+            0.15,
+            0.225,
+            0.075,
+            0.3
+          ],
+          [
+            0.3,
+            0.15,
+            0.225,
+            0.075
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          1,
+          0.375
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          0.546738,
+          0.562946
+        ],
+        "candidate": [
+          0.176265,
+          0.158039
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "W_c": [
+          [
+            1.5,
+            0.5,
+            1.0,
+            0.5
+          ],
+          [
+            0.5,
+            2.0,
+            0.5,
+            1.5
+          ]
+        ],
+        "W_i": [
+          [
+            1.0,
+            1.5,
+            0.5,
+            2.0
+          ],
+          [
+            2.0,
+            1.0,
+            1.5,
+            0.5
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          5,
+          2.5
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          0.999447,
+          0.999842
+        ],
+        "candidate": [
+          0.999993,
+          0.999993
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "W_c": [
+          [
+            3.3,
+            3.1,
+            3.2,
+            3.1
+          ],
+          [
+            3.1,
+            3.4,
+            3.1,
+            3.3
+          ]
+        ],
+        "W_i": [
+          [
+            3.2,
+            3.3,
+            3.1,
+            3.4
+          ],
+          [
+            3.4,
+            3.2,
+            3.3,
+            3.1
+          ]
+        ],
+        "b_c": [
+          3,
+          3
+        ],
+        "b_i": [
+          3,
+          3
+        ],
+        "x_t": [
+          4,
+          3.5
+        ],
+        "h_prev": [
+          3,
+          3
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          1.0,
+          1.0
+        ],
+        "candidate": [
+          1.0,
+          1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "W_c": [
+          [
+            0.24,
+            0.08,
+            0.16,
+            0.08
+          ],
+          [
+            0.08,
+            0.32,
+            0.08,
+            0.24
+          ]
+        ],
+        "W_i": [
+          [
+            0.16,
+            0.24,
+            0.08,
+            0.32
+          ],
+          [
+            0.32,
+            0.16,
+            0.24,
+            0.08
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          1,
+          0.4
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          0.551813,
+          0.567584
+        ],
+        "candidate": [
+          0.189675,
+          0.174205
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "W_c": [
+          [
+            1.8,
+            0.6,
+            1.2,
+            0.6
+          ],
+          [
+            0.6,
+            2.4,
+            0.6,
+            1.8
+          ]
+        ],
+        "W_i": [
+          [
+            1.2,
+            1.8,
+            0.6,
+            2.4
+          ],
+          [
+            2.4,
+            1.2,
+            1.8,
+            0.6
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          6,
+          3.0
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          0.99998,
+          0.999997
+        ],
+        "candidate": [
+          1.0,
+          1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "W_c": [
+          [
+            4.3,
+            4.1,
+            4.2,
+            4.1
+          ],
+          [
+            4.1,
+            4.4,
+            4.1,
+            4.3
+          ]
+        ],
+        "W_i": [
+          [
+            4.2,
+            4.3,
+            4.1,
+            4.4
+          ],
+          [
+            4.4,
+            4.2,
+            4.3,
+            4.1
+          ]
+        ],
+        "b_c": [
+          4,
+          4
+        ],
+        "b_i": [
+          4,
+          4
+        ],
+        "x_t": [
+          5,
+          4.5
+        ],
+        "h_prev": [
+          4,
+          4
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          1.0,
+          1.0
+        ],
+        "candidate": [
+          1.0,
+          1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "W_c": [
+          [
+            0.36,
+            0.12,
+            0.24,
+            0.12
+          ],
+          [
+            0.12,
+            0.48,
+            0.12,
+            0.36
+          ]
+        ],
+        "W_i": [
+          [
+            0.24,
+            0.36,
+            0.12,
+            0.48
+          ],
+          [
+            0.48,
+            0.24,
+            0.36,
+            0.12
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          1,
+          0.6
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          0.600608,
+          0.606351
+        ],
+        "candidate": [
+          0.302255,
+          0.323902
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "lstm-input-gate-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "W_c": [
+          [
+            0.12,
+            0.04,
+            0.08,
+            0.04
+          ],
+          [
+            0.04,
+            0.16,
+            0.04,
+            0.12
+          ]
+        ],
+        "W_i": [
+          [
+            0.08,
+            0.12,
+            0.04,
+            0.16
+          ],
+          [
+            0.16,
+            0.08,
+            0.12,
+            0.04
+          ]
+        ],
+        "b_c": [
+          0,
+          0
+        ],
+        "b_i": [
+          0,
+          0
+        ],
+        "x_t": [
+          0,
+          0.2
+        ],
+        "h_prev": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "input_gate": [
+          0.507999,
+          0.502
+        ],
+        "candidate": [
+          0.008,
+          0.023995
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "input_gate",
+    "parameters": [
+      {
+        "name": "h_prev",
+        "type": "array",
+        "example": "[0,0]",
+        "description": "h prev"
+      },
+      {
+        "name": "x_t",
+        "type": "array",
+        "example": "[1,0.5]",
+        "description": "x t"
+      },
+      {
+        "name": "W_i",
+        "type": "array",
+        "example": "[[0.2,0.3,0.1,0.4],[0.4,0.2,0.3,0.1]]",
+        "description": "W i"
+      },
+      {
+        "name": "b_i",
+        "type": "array",
+        "example": "[0,0]",
+        "description": "b i"
+      },
+      {
+        "name": "W_c",
+        "type": "array",
+        "example": "[[0.3,0.1,0.2,0.1],[0.1,0.4,0.1,0.3]]",
+        "description": "W c"
+      },
+      {
+        "name": "b_c",
+        "type": "array",
+        "example": "[0,0]",
+        "description": "b c"
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "lstm-input-gate",
+    "name": "Input Gate",
+    "description": "Decides what new information to store",
+    "color": "#22c55e"
+  },
+  "paper": {
+    "id": "lstm",
+    "title": "Long Short-Term Memory",
+    "authors": "Hochreiter & Schmidhuber, 1997",
+    "year": 1997,
+    "paperUrl": "https://www.bioinf.jku.at/publications/older/2604.pdf",
+    "visualizationComponent": "LSTMArchViz"
+  },
+  "navigation": {
+    "index": 2,
+    "total": 6,
+    "prev": "lstm-forget-gate",
+    "next": "lstm-cell-state"
+  },
+  "cleanTitle": ""
+}

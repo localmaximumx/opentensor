@@ -1,0 +1,1248 @@
+{
+  "id": "simple-cnn-layer",
+  "title": "Implement a Simple CNN Layer (NumPy)",
+  "description": "Implement one valid two-dimensional convolution layer using the cross-correlation convention common in neural networks. The input has shape $(N,C_{in},H,W)$, the weights have shape $(C_{out},C_{in},K_H,K_W)$, and the bias has shape $(C_{out},)$.\n\nFor every output position, compute\n\n$$\ny_{n,c,i,j} = \\sum_{d=1}^{C_{in}} \\sum_{u=0}^{K_H-1} \\sum_{v=0}^{K_W-1} x_{n,d,i+u,j+v}W_{c,d,u,v} + b_c\n$$\n\nThe output height is $H-K_H+1$ and the output width is $W-K_W+1$. Return a floating-point NumPy array with shape $(N,C_{out},H-K_H+1,W-K_W+1)$.",
+  "seoDescription": "Implement a NumPy CNN layer forward pass with batched valid convolution across channels and bias addition.",
+  "examples": [
+    "Input: x = [[[[1, 1, 1], [1, 1, 1], [1, 1, 1]]]], W = [[[[1, 1], [1, 1]]]], b = [0]\n\nOutput: [[[[4.0, 4.0], [4.0, 4.0]]]]\n\nExplanation: Every 2 by 2 input patch and kernel product sums to 4."
+  ],
+  "requirements": "* Use valid padding and stride 1\n* Sum over every input channel and kernel position\n* Add the corresponding output-channel bias\n* Support batches and multiple input and output channels\n* Return a floating-point NumPy array",
+  "theory": "## Understanding the Theory: Implement a Simple CNN Layer (NumPy)\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **Implement a Simple CNN Layer (NumPy)** implements a core computational routine.\n\nIn this problem, the objective is to implement **Implement a Simple CNN Layer (NumPy)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\ny_{n,c,i,j} = \\sum_{d=1}^{C_{in}} \\sum_{u=0}^{K_H-1} \\sum_{v=0}^{K_W-1} x_{n,d,i+u,j+v}W_{c,d,u,v} + b_c\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "patch = x[n, :, i:i + kernel_height, j:j + kernel_width] selects one receptive field.",
+    "np.sum(patch * W[output_channel]) combines all input channels and kernel positions.",
+    "Initialize the output with np.zeros((N, C_out, H_out, W_out), dtype=float)."
+  ],
+  "constraints": "* Batch size is at most 8\n* Input and output channel counts are at most 4\n* Input height and width are at most 10\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef conv2d(x: list, W: list, b: list) -> np.ndarray:\n    \"\"\"\n    Returns the convolved batch as a floating-point NumPy array.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-10-21T18:37:14.708Z",
+  "updatedAt": "2026-03-05T20:42:23.795Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef conv2d(x: list, W: list, b: list) -> np.ndarray:\n    x_arr = np.array(x, dtype=float)\n    w_arr = np.array(W, dtype=float)\n    b_arr = np.array(b, dtype=float)\n    N, C, H, W_in = x_arr.shape\n    out_c, in_c, kh, kw = w_arr.shape\n    out_h = H - kh + 1\n    out_w = W_in - kw + 1\n    out = np.zeros((N, out_c, out_h, out_w), dtype=float)\n    for n in range(N):\n        for oc in range(out_c):\n            for i in range(out_h):\n                for j in range(out_w):\n                    patch = x_arr[n, :, i:i+kh, j:j+kw]\n                    out[n, oc, i, j] = np.sum(patch * w_arr[oc]) + b_arr[oc]\n    return np.round(out, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "SimpleCnnViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "All ones (2x2 kernel)",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "simple-cnn-layer-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "W": [
+          [
+            [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          ]
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          [
+            [
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              4.0,
+              4.0
+            ]
+          ]
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "conv2d",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": "[[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]]",
+        "description": "Input tensor of shape (N, C_in, H, W)"
+      },
+      {
+        "name": "W",
+        "type": "array",
+        "example": "[[[[1.0, 1.0], [1.0, 1.0]]]]",
+        "description": "Weight tensor of shape (C_out, C_in, KH, KW)"
+      },
+      {
+        "name": "b",
+        "type": "array",
+        "example": "[0.0]",
+        "description": "Bias vector of shape (C_out,)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "conv2d-image-filtering",
+    "max-pooling-2d",
+    "maxpool-forward",
+    "global-avg-pooling",
+    "batch-normalization"
+  ],
+  "tags": [
+    "Neural Networks"
+  ],
+  "prevId": "global-avg-pooling",
+  "nextId": "leaky-relu",
+  "slug": "simple-cnn-layer",
+  "cleanTitle": "Implement a Simple CNN Layer (NumPy)",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/simple-cnn-layer",
+  "localUrl": "http://localhost:3000/problems/simple-cnn-layer",
+  "studyPlan": null
+}

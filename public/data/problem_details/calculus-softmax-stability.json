@@ -1,0 +1,455 @@
+{
+  "catalogId": "python:calculus-softmax-stability",
+  "id": "calculus-softmax-stability",
+  "sourceId": "calculus-softmax-stability",
+  "slug": "calculus-softmax-stability",
+  "source": "python",
+  "category": "numpy",
+  "title": "Softmax Numerical Stability & Log-Sum-Exp",
+  "difficulty": "Medium",
+  "tags": [
+    "Calculus",
+    "Activation Functions"
+  ],
+  "isFree": false,
+  "planId": "math-calculus",
+  "planTitle": "Calculus for ML",
+  "sectionId": "math-calculus-foundations",
+  "sortOrder": 306,
+  "seoDescription": "Implement both naive softmax and the numerically stable version using the log-sum-exp trick.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Compute numerically stable softmax probabilities and Log-Sum-Exp scalars using coordinate max-subtraction.\n\nSubtracting the maximum coordinate guarantees that the largest exponent is e^0 = 1, completely preventing IEEE 754 infinity overflow.\n\n### Mathematical Formulation\n$$\np_i = \\frac{e^{z_i - c}}{\\sum e^{z_j - c}}, \\quad \\operatorname{LSE}(z) = c + \\log \\sum e^{z_j - c}, \\quad c = \\max(z)\n$$\n\n### Step-by-Step Implementation\n1. Identify maximum coordinate scalar c = max(z)\n2. Subtract max value c prior to exponentiation to prevent floating point overflow\n3. Compute Log-Sum-Exp using the factored logarithmic formula\n\n### Returns\nDictionary with 'stable_probabilities' and scalar 'log_sum_exp'.",
+  "theory": "## Understanding the Theory: Softmax Numerical Stability & Log-Sum-Exp\n\n### Core Intuition: Why Do We Need This?\nWhen training neural networks with gradient descent, our optimizers rely on derivatives to adjust weights in the direction that lowers the loss. If an analytical derivative formula has a bug, the model will learn slowly or fail to converge completely. **Softmax Numerical Stability & Log-Sum-Exp** provides the mathematical principles to calculate, verify, or inspect these gradient signals.\n\nSubtracting the maximum coordinate guarantees that the largest exponent is e^0 = 1, completely preventing IEEE 754 infinity overflow. In this problem, the goal is to: compute numerically stable softmax probabilities and log-sum-exp scalars using coordinate max-subtraction.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\np_i = \\frac{e^{z_i - c}}{\\sum e^{z_j - c}}, \\quad \\operatorname{LSE}(z) = c + \\log \\sum e^{z_j - c}, \\quad c = \\max(z)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Identify maximum coordinate scalar c = max(z)\n2. **Phase 2**: Subtract max value c prior to exponentiation to prevent floating point overflow\n3. **Phase 3**: Compute Log-Sum-Exp using the factored logarithmic formula\n\n### Practical Machine Learning Applications & Nuances\n* **Autograd Validation**: In machine learning frameworks like PyTorch and JAX, gradient verification tests custom backward functions against numerical approximations.\n* **Numerical Precision**: Choosing the right step size or threshold is critical. A perturbation that is too large causes truncation error, while one that is too small leads to floating-point roundoff error.\n* **Computational Cost**: While numerical approximations are useful for checking correctness, analytical gradients computed via backpropagation are far more efficient for training because they evaluate in a single backward pass.",
+  "examples": [
+    "Input: logits = [1000.0, 1001.0, 999.0]\n\nOutput: {\"stable_probabilities\": [0.244728, 0.665241, 0.090031], \"log_sum_exp\": 1001.407606}\n\nExplanation: Evaluated calculus_softmax_stability under standard test conditions."
+  ],
+  "requirements": "* Function must be named `calculus_softmax_stability`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `calculus_softmax_stability`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef calculus_softmax_stability(logits: list) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Softmax Numerical Stability & Log-Sum-Exp** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef calculus_softmax_stability(logits: list) -> dict:\n    z = np.array(logits, dtype=np.float64)\n    c = np.max(z)\n    ex = np.exp(z - c)\n    return {'stable_probabilities': np.round(ex / np.sum(ex), 6).tolist(), 'log_sum_exp': round(float(c + np.log(np.sum(ex))), 6)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Large magnitude logits",
+      "inputs": {
+        "logits": [
+          1000.0,
+          1001.0,
+          999.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.244728,
+          0.665241,
+          0.090031
+        ],
+        "log_sum_exp": 1001.407606
+      },
+      "isPublic": true
+    },
+    {
+      "id": "calculus-softmax-stability-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "logits": [
+          2000.0,
+          2002.0,
+          1998.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.11731,
+          0.866813,
+          0.015876
+        ],
+        "log_sum_exp": 2002.142932
+      },
+      "isPublic": true
+    },
+    {
+      "id": "calculus-softmax-stability-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "logits": [
+          500.0,
+          500.5,
+          499.5
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.307196,
+          0.50648,
+          0.186324
+        ],
+        "log_sum_exp": 501.18027
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "logits": [
+          -1000.0,
+          -1001.0,
+          -999.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.244728,
+          0.090031,
+          0.665241
+        ],
+        "log_sum_exp": -998.592394
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "logits": [
+          3000.0,
+          3003.0,
+          2997.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.047314,
+          0.95033,
+          0.002356
+        ],
+        "log_sum_exp": 3003.050946
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "logits": [
+          1001.0,
+          1002.0,
+          1000.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.244728,
+          0.665241,
+          0.090031
+        ],
+        "log_sum_exp": 1002.407606
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "logits": [
+          998.0,
+          999.0,
+          997.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.244728,
+          0.665241,
+          0.090031
+        ],
+        "log_sum_exp": 999.407606
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "logits": [
+          999.0,
+          1001.0,
+          1000.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.090031,
+          0.665241,
+          0.244728
+        ],
+        "log_sum_exp": 1001.407606
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "logits": [
+          -1000.0,
+          -1001.0,
+          -999.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.244728,
+          0.090031,
+          0.665241
+        ],
+        "log_sum_exp": -998.592394
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "logits": [
+          10000.0,
+          10010.0,
+          9990.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          4.5e-05,
+          0.999955,
+          0.0
+        ],
+        "log_sum_exp": 10010.000045
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "logits": [
+          100.0,
+          100.1,
+          99.9
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.332225,
+          0.367165,
+          0.30061
+        ],
+        "log_sum_exp": 101.101943
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "logits": [
+          1005.0,
+          1006.0,
+          1004.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.244728,
+          0.665241,
+          0.090031
+        ],
+        "log_sum_exp": 1006.407606
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "logits": [
+          1500.0,
+          1501.5,
+          1498.5
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.17529,
+          0.785597,
+          0.039113
+        ],
+        "log_sum_exp": 1501.741311
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "logits": [
+          -2000.0,
+          -2002.0,
+          -1998.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.11731,
+          0.015876,
+          0.866813
+        ],
+        "log_sum_exp": -1997.857068
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "logits": [
+          250.0,
+          250.25,
+          249.75
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.326496,
+          0.419229,
+          0.254275
+        ],
+        "log_sum_exp": 251.119338
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "logits": [
+          999.0,
+          1000.0,
+          998.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.244728,
+          0.665241,
+          0.090031
+        ],
+        "log_sum_exp": 1000.407606
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "logits": [
+          4000.0,
+          4004.0,
+          3996.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.01798,
+          0.98169,
+          0.000329
+        ],
+        "log_sum_exp": 4004.018479
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "logits": [
+          750.0,
+          750.75,
+          749.25
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.278601,
+          0.589798,
+          0.131602
+        ],
+        "log_sum_exp": 751.277976
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "logits": [
+          5000.0,
+          5005.0,
+          4995.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.006693,
+          0.993262,
+          4.5e-05
+        ],
+        "log_sum_exp": 5005.00676
+      },
+      "isPublic": false
+    },
+    {
+      "id": "calculus-softmax-stability-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "logits": [
+          1010.0,
+          1011.0,
+          1009.0
+        ]
+      },
+      "expectedOutput": {
+        "stable_probabilities": [
+          0.244728,
+          0.665241,
+          0.090031
+        ],
+        "log_sum_exp": 1011.407606
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "calculus_softmax_stability",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

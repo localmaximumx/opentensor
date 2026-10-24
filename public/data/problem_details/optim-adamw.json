@@ -1,0 +1,434 @@
+{
+  "catalogId": "python:optim-adamw",
+  "id": "optim-adamw",
+  "sourceId": "optim-adamw",
+  "slug": "optim-adamw",
+  "source": "python",
+  "category": "numpy",
+  "title": "AdamW (Decoupled Weight Decay)",
+  "difficulty": "Hard",
+  "tags": [
+    "Optimization"
+  ],
+  "isFree": false,
+  "planId": "math-optimization",
+  "planTitle": "Optimization",
+  "sectionId": "math-optimization-adaptive-methods",
+  "sortOrder": 708,
+  "seoDescription": "Implement both Adam with L2 regularization and AdamW (decoupled weight decay) to optimize weights for linear regression with MSE loss.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Execute single AdamW parameter update decoupling L2 regularization penalty from adaptive second moment accumulation.\n\nLoshchilov & Hutter showed standard L2 penalty in Adam divides weight decay by sqrt(v), penalizing high-gradient parameters less. AdamW restores proper weight decay regularization.\n\n### Mathematical Formulation\n$$\n\\boldsymbol{\\theta}_t = \\boldsymbol{\\theta}_{t-1} - \\eta \\lambda \\boldsymbol{\\theta}_{t-1} - \\frac{\\eta}{\\sqrt{\\hat{\\mathbf{v}}_t} + \\epsilon} \\hat{\\mathbf{m}}_t\n$$\n\n### Step-by-Step Implementation\n1. Apply direct weight decay regularization step to parameters theta\n2. Update first and second gradient moments m and v\n3. Perform bias correction and subtract adaptive gradient descent step\n\n### Returns\nDictionary with 'updated_param', 'm', and 'v' rounded to 6 decimal places.",
+  "theory": "## Understanding the Theory: AdamW (Decoupled Weight Decay)\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization problem: we want to find parameter values that minimize the loss function across training samples. Because loss landscapes in deep learning are non-convex with ravines, saddle points, and plateaus, simple gradient descent can get stuck or oscillate. **AdamW (Decoupled Weight Decay)** accelerates convergence and stabilizes parameter trajectories.\n\nLoshchilov & Hutter showed standard L2 penalty in Adam divides weight decay by sqrt(v), penalizing high-gradient parameters less. AdamW restores proper weight decay regularization. In this problem, the goal is to: execute single adamw parameter update decoupling l2 regularization penalty from adaptive second moment accumulation.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\boldsymbol{\\theta}_t = \\boldsymbol{\\theta}_{t-1} - \\eta \\lambda \\boldsymbol{\\theta}_{t-1} - \\frac{\\eta}{\\sqrt{\\hat{\\mathbf{v}}_t} + \\epsilon} \\hat{\\mathbf{m}}_t\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Apply direct weight decay regularization step to parameters theta\n2. **Phase 2**: Update first and second gradient moments m and v\n3. **Phase 3**: Perform bias correction and subtract adaptive gradient descent step\n\n### Practical Machine Learning Applications & Nuances\n* **Escaping Ravines**: Momentum methods accumulate velocity across successive steps, helping the optimizer push through flat regions and dampening high-frequency oscillations.\n* **Adaptive Learning Rates**: Algorithms like Adam scale learning rates per parameter, giving infrequent features larger updates and preventing exploding updates on frequent features.\n* **Gradient Regularization**: Techniques like gradient clipping and weight decay prevent exploding gradients and encourage simpler, more generalizable model weights.",
+  "examples": [
+    "Input: param = 1.0, grad = 0.5, m = 0.0, v = 0.0, t = 1, lr = 0.01, weight_decay = 0.01\n\nOutput: {\"updated_param\": 0.9899, \"m\": 0.05, \"v\": 0.00025}\n\nExplanation: Evaluated optim_adamw under standard test conditions."
+  ],
+  "requirements": "* Function must be named `optim_adamw`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `optim_adamw`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import math\n\ndef optim_adamw(param: float, grad: float, m: float, v: float, t: int, lr: float = 0.001, beta1: float = 0.9, beta2: float = 0.999, weight_decay: float = 0.01, eps: float = 1e-8) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **AdamW (Decoupled Weight Decay)** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport math\n\ndef optim_adamw(param: float, grad: float, m: float, v: float, t: int, lr: float = 0.001, beta1: float = 0.9, beta2: float = 0.999, weight_decay: float = 0.01, eps: float = 1e-8) -> dict:\n    p_d = param - lr * weight_decay * param\n    m_n = beta1 * m + (1.0 - beta1) * grad\n    v_n = beta2 * v + (1.0 - beta2) * (grad**2)\n    m_h = m_n / (1.0 - beta1**t)\n    v_h = v_n / (1.0 - beta2**t)\n    return {'updated_param': round(float(p_d - (lr / (math.sqrt(v_h) + eps)) * m_h), 6), 'm': round(float(m_n), 6), 'v': round(float(v_n), 6)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Step 1 update",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": true
+    },
+    {
+      "id": "optim-adamw-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-adamw-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "param": 1.0,
+        "grad": 0.5,
+        "m": 0.0,
+        "v": 0.0,
+        "t": 1,
+        "lr": 0.01,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": {
+        "updated_param": 0.9899,
+        "m": 0.05,
+        "v": 0.00025
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "optim_adamw",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

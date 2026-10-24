@@ -1,0 +1,564 @@
+{
+  "id": "alphago-l05-neural-guided-mcts",
+  "slug": "alphago-l05-neural-guided-mcts",
+  "title": "Run Deterministic Neural-Guided MCTS",
+  "cleanTitle": "Run Deterministic Neural-Guided MCTS",
+  "category": "numpy",
+  "difficulty": "Hard",
+  "tags": [
+    "Reinforcement Learning"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "alphago-from-scratch",
+    "title": "Build AlphaGo from Scratch",
+    "sectionId": "alphago-l05"
+  },
+  "seoDescription": "Run deterministic AlphaGo Zero search over a finite two-player game tree using neural priors, values, PUCT, and backup.",
+  "description": "Execute a deterministic Monte Carlo Tree Search loop over candidate actions using neural policy priors and leaf evaluation values with PUCT action selection.\n\n**Mathematical Formulation:**\n\n$$\na_t = \\arg\\max_a \\left( Q(a) + c_{\\text{puct}} P(a) \\frac{\\sqrt{\\sum N}}{1 + N(a)} \\right), \\quad N(a) \\leftarrow N(a) + 1\n$$\n\n**Step-by-Step Implementation:**\n1. Initialize visit counts, value sums, and mean Q-values for all candidate actions.\n2. Run num_simulations search iterations, selecting the best action via PUCT scoring.\n3. Retrieve neural evaluation for the selected leaf and update visit count and value estimates.\n4. Return the final array of action visit counts.\n\n**Returns:** List of integer visit counts per action.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Run Deterministic Neural-Guided MCTS specification."
+  ],
+  "requirements": "* Must implement `alphago_l05_neural_guided_mcts` using NUMPY.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Run Deterministic Neural-Guided MCTS\n\n### Core Intuition: Why Do We Need This?\nExecute a deterministic Monte Carlo Tree Search loop over candidate actions using neural policy priors and leaf evaluation values with PUCT action selection. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\na_t = \\arg\\max_a \\left( Q(a) + c_{\\text{puct}} P(a) \\frac{\\sqrt{\\sum N}}{1 + N(a)} \\right), \\quad N(a) \\leftarrow N(a) + 1\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Initialize visit counts, value sums, and mean Q-values for all candidate actions.\n3. **Phase 3: Iterative Execution & Reduction**: Run num_simulations search iterations, selecting the best action via PUCT scoring.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return the final array of action visit counts.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard NUMPY documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `np.ndarray` specifications."
+  ],
+  "constraints": "* Category: NUMPY\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, NUMPY\n",
+  "starterCode": "import numpy as np\n\ndef alphago_l05_neural_guided_mcts(num_actions: int = 4, prior_probs: list = None, values: list = None, num_simulations: int = 10, c_puct: float = 1.0) -> list:\n    \"\"\"\n    Execute a deterministic Monte Carlo Tree Search loop over candidate actions using neural policy priors and leaf evaluation values with PUCT action selection.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nExecute a deterministic Monte Carlo Tree Search loop over candidate actions using neural policy priors and leaf evaluation values with PUCT action selection.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef alphago_l05_neural_guided_mcts(num_actions: int = 4, prior_probs: list = None, values: list = None, num_simulations: int = 10, c_puct: float = 1.0) -> list:\n    priors = np.ones(num_actions) / num_actions if prior_probs is None else np.array(prior_probs, dtype=float)\n    val_map = values if values is not None else [0.0] * num_actions\n    N = np.zeros(num_actions, dtype=float)\n    W = np.zeros(num_actions, dtype=float)\n    Q = np.zeros(num_actions, dtype=float)\n    for _ in range(num_simulations):\n        u = c_puct * priors * (np.sqrt(np.sum(N)) / (1.0 + N))\n        a = int(np.argmax(Q + u))\n        N[a] += 1\n        W[a] += val_map[a % len(val_map)]\n        Q[a] = W[a] / N[a]\n    return N.astype(int).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "alphago-l05-neural-guided-mcts-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "num_actions": 3,
+        "prior_probs": [
+          0.6,
+          0.3,
+          0.1
+        ],
+        "values": [
+          0.5,
+          0.2,
+          -0.1
+        ],
+        "num_simulations": 6,
+        "c_puct": 1.0
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "num_actions": 2,
+        "prior_probs": [
+          0.5,
+          0.5
+        ],
+        "values": [
+          0.0,
+          0.0
+        ],
+        "num_simulations": 4,
+        "c_puct": 1.5
+      },
+      "expectedOutput": [
+        2,
+        2
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "num_actions": 6,
+        "prior_probs": [
+          1.2,
+          0.6,
+          0.2
+        ],
+        "values": [
+          1.0,
+          0.4,
+          -0.2
+        ],
+        "num_simulations": 12,
+        "c_puct": 2.0
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "num_actions": 2,
+        "prior_probs": [
+          0.3,
+          0.15,
+          0.05
+        ],
+        "values": [
+          0.25,
+          0.1,
+          -0.05
+        ],
+        "num_simulations": 3,
+        "c_puct": 0.5
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "num_actions": -3,
+        "prior_probs": [
+          -0.6,
+          -0.3,
+          -0.1
+        ],
+        "values": [
+          -0.5,
+          -0.2,
+          0.1
+        ],
+        "num_simulations": -6,
+        "c_puct": -1.0
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "num_actions": 9,
+        "prior_probs": [
+          1.8,
+          0.9,
+          0.3
+        ],
+        "values": [
+          1.5,
+          0.6,
+          -0.3
+        ],
+        "num_simulations": 18,
+        "c_puct": 3.0
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "num_actions": 4.0,
+        "prior_probs": [
+          1.6,
+          1.3,
+          1.1
+        ],
+        "values": [
+          1.5,
+          1.2,
+          0.9
+        ],
+        "num_simulations": 7.0,
+        "c_puct": 2.0
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "num_actions": 1.0,
+        "prior_probs": [
+          -1.4,
+          -1.7,
+          -1.9
+        ],
+        "values": [
+          -1.5,
+          -1.8,
+          -2.1
+        ],
+        "num_simulations": 4.0,
+        "c_puct": -1.0
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "num_actions": 3,
+        "prior_probs": [
+          0.1,
+          0.3,
+          0.6
+        ],
+        "values": [
+          -0.1,
+          0.2,
+          0.5
+        ],
+        "num_simulations": 6,
+        "c_puct": 1.0
+      },
+      "expectedOutput": [
+        1,
+        0,
+        5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "num_actions": -3,
+        "prior_probs": [
+          -0.6,
+          -0.3,
+          -0.1
+        ],
+        "values": [
+          -0.5,
+          -0.2,
+          0.1
+        ],
+        "num_simulations": -6,
+        "c_puct": -1.0
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "num_actions": 30,
+        "prior_probs": [
+          6.0,
+          3.0,
+          1.0
+        ],
+        "values": [
+          5.0,
+          2.0,
+          -1.0
+        ],
+        "num_simulations": 60,
+        "c_puct": 10.0
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "num_actions": 0,
+        "prior_probs": [
+          0.06,
+          0.03,
+          0.01
+        ],
+        "values": [
+          0.05,
+          0.02,
+          -0.01
+        ],
+        "num_simulations": 1,
+        "c_puct": 0.1
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "num_actions": 8.0,
+        "prior_probs": [
+          5.6,
+          5.3,
+          5.1
+        ],
+        "values": [
+          5.5,
+          5.2,
+          4.9
+        ],
+        "num_simulations": 11.0,
+        "c_puct": 6.0
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "num_actions": 4,
+        "prior_probs": [
+          0.9,
+          0.45,
+          0.15
+        ],
+        "values": [
+          0.75,
+          0.3,
+          -0.15
+        ],
+        "num_simulations": 9,
+        "c_puct": 1.5
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "num_actions": -6,
+        "prior_probs": [
+          -1.2,
+          -0.6,
+          -0.2
+        ],
+        "values": [
+          -1.0,
+          -0.4,
+          0.2
+        ],
+        "num_simulations": -12,
+        "c_puct": -2.0
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "num_actions": 1,
+        "prior_probs": [
+          0.15,
+          0.075,
+          0.025
+        ],
+        "values": [
+          0.125,
+          0.05,
+          -0.025
+        ],
+        "num_simulations": 2,
+        "c_puct": 0.25
+      },
+      "expectedOutput": [
+        2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "num_actions": 2.0,
+        "prior_probs": [
+          -0.4,
+          -0.7,
+          -0.9
+        ],
+        "values": [
+          -0.5,
+          -0.8,
+          -1.1
+        ],
+        "num_simulations": 5.0,
+        "c_puct": 0.0
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "num_actions": 12,
+        "prior_probs": [
+          2.4,
+          1.2,
+          0.4
+        ],
+        "values": [
+          2.0,
+          0.8,
+          -0.4
+        ],
+        "num_simulations": 24,
+        "c_puct": 4.0
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "num_actions": 2,
+        "prior_probs": [
+          0.45,
+          0.225,
+          0.075
+        ],
+        "values": [
+          0.375,
+          0.15,
+          -0.075
+        ],
+        "num_simulations": 4,
+        "c_puct": 0.75
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-neural-guided-mcts-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "num_actions": 15,
+        "prior_probs": [
+          3.0,
+          1.5,
+          0.5
+        ],
+        "values": [
+          2.5,
+          1.0,
+          -0.5
+        ],
+        "num_simulations": 30,
+        "c_puct": 5.0
+      },
+      "expectedOutput": [
+        6,
+        0,
+        0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "alphago_l05_neural_guided_mcts",
+    "parameters": [
+      {
+        "name": "num_actions",
+        "type": "any"
+      },
+      {
+        "name": "prior_probs",
+        "type": "any"
+      },
+      {
+        "name": "values",
+        "type": "any"
+      },
+      {
+        "name": "num_simulations",
+        "type": "any"
+      },
+      {
+        "name": "c_puct",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/alphago-l05-neural-guided-mcts",
+  "localUrl": "http://localhost:3000/problems/alphago-l05-neural-guided-mcts"
+}

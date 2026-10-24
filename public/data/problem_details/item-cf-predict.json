@@ -1,0 +1,524 @@
+{
+  "id": "item-cf-predict",
+  "title": "Item-Based CF Prediction",
+  "description": "Item-based collaborative filtering predicts a rating for a target item from the user's ratings of similar items. A rating of zero means that the item is unrated. For every item other than the target, include it only when its rating and similarity are both positive.\n\n$$\n\\widehat{r}_t = \\frac{\\sum_{i \\ne t} s_i r_i}{\\sum_{i \\ne t} s_i}\n$$\n\nHere, t is the target index, r_i is the user's rating for item i, and s_i is that item's similarity to the target. The sums include only qualifying items. Return 0.0 when none qualify; otherwise return the predicted rating as a float.",
+  "seoDescription": "Predict a user-item rating with item-based collaborative filtering from rated neighbors and item similarities.",
+  "examples": [
+    "Input: user_ratings = [5, 0, 3, 0, 4], item_similarities = [0.8, 0, 0.9, 0.1, 0.5], target = 1\n\nOutput: 3.954545\n\nExplanation: Items 0, 2, and 4 contribute, giving a weighted sum of 8.7 and a similarity sum of 2.2.",
+    "Input: user_ratings = [2, 4, 6], item_similarities = [0.5, 0, 0.5], target = 1\n\nOutput: 4.000000"
+  ],
+  "requirements": "* Exclude the target index from the calculation.\n* Include only items with a nonzero rating and positive similarity.\n* Divide the weighted rating sum by the included similarity sum.\n* Return 0.0 when no item qualifies.",
+  "theory": "## Understanding the Theory: Item-Based CF Prediction\n\n### Core Intuition: Why Do We Need This?\nRecommender systems surface relevant content, products, or information from catalogs containing millions of items. Evaluating recommendations requires ranking-sensitive metrics that emphasize placing the most relevant items near the top of the recommendation list. **Item-Based CF Prediction** calculates ranking quality, user-item affinities, or top-K relevance scores.\n\nIn this problem, the objective is to implement **Item-Based CF Prediction** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\widehat{r}_t = \\frac{\\sum_{i \\ne t} s_i r_i}{\\sum_{i \\ne t} s_i}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Position Discounting**: Users rarely scroll past the top items; ranking metrics heavily penalize placing relevant recommendations further down the list.\n* **Sparsity & Cold Start**: User-item interaction matrices are over 99% empty; embeddings and matrix factorization discover latent features to generalize to unseen interactions.\n* **Online vs. Offline Evaluation**: Offline ranking metrics (like NDCG@K and Recall@K) correlate strongly with online user engagement and click-through rates.",
+  "hints": [
+    "Accumulate similarity times rating and similarity in separate totals.",
+    "Return zero before division when the similarity total is zero."
+  ],
+  "constraints": "* user_ratings and item_similarities have equal length.\n* A zero rating represents an unrated item.\n* target is a valid index.\n* Time limit: 300 ms.",
+  "difficulty": "Medium",
+  "starterCode": "def item_cf_predict(user_ratings: list, item_similarities: list, target: int) -> float:\n    \"\"\"\n    Returns the similarity-weighted rating prediction.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T22:01:48.160Z",
+  "updatedAt": "2026-08-23T21:10:33.573Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef item_cf_predict(user_ratings: list, item_similarities: list, target: int) -> float:\n    r = np.array(user_ratings, dtype=float)\n    s = np.array(item_similarities, dtype=float)\n    mask = (r > 0) & (s > 0)\n    if np.sum(mask) == 0:\n        return 0.0\n    pred = np.sum(r[mask] * s[mask]) / np.sum(s[mask])\n    return float(round(pred, 6))\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "ItemCFPredictViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Basic",
+      "inputs": {
+        "target": 1,
+        "user_ratings": [
+          5,
+          0,
+          3,
+          0,
+          4
+        ],
+        "item_similarities": [
+          0.8,
+          0,
+          0.9,
+          0.1,
+          0.5
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 3.954545
+    },
+    {
+      "id": "test-2",
+      "name": "Equal sim",
+      "inputs": {
+        "target": 1,
+        "user_ratings": [
+          2,
+          4,
+          6
+        ],
+        "item_similarities": [
+          0.5,
+          0,
+          0.5
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 4.0
+    },
+    {
+      "id": "item-cf-predict-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "target": 2,
+        "user_ratings": [
+          10,
+          1,
+          6,
+          1,
+          8
+        ],
+        "item_similarities": [
+          1.6,
+          0,
+          1.8,
+          0.2,
+          1.0
+        ]
+      },
+      "expectedOutput": 7.608696,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "target": 0,
+        "user_ratings": [
+          2,
+          1,
+          2,
+          1,
+          2
+        ],
+        "item_similarities": [
+          0.4,
+          0,
+          0.45,
+          0.05,
+          0.25
+        ]
+      },
+      "expectedOutput": 1.956522,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "target": 2,
+        "user_ratings": [
+          5,
+          1,
+          3,
+          1,
+          4
+        ],
+        "item_similarities": [
+          1.8,
+          1,
+          1.9,
+          1.1,
+          1.5
+        ]
+      },
+      "expectedOutput": 3.123288,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "target": 2,
+        "user_ratings": [
+          8,
+          1,
+          4,
+          1,
+          6
+        ],
+        "item_similarities": [
+          1.2,
+          0,
+          1.35,
+          0.15,
+          0.75
+        ]
+      },
+      "expectedOutput": 5.695652,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "target": 3,
+        "user_ratings": [
+          15,
+          1,
+          9,
+          1,
+          12
+        ],
+        "item_similarities": [
+          2.4,
+          0,
+          2.7,
+          0.3,
+          1.5
+        ]
+      },
+      "expectedOutput": 11.391304,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "target": 0,
+        "user_ratings": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "item_similarities": [
+          0.2,
+          0,
+          0.225,
+          0.025,
+          0.125
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "target": 3,
+        "user_ratings": [
+          10,
+          1,
+          6,
+          1,
+          8
+        ],
+        "item_similarities": [
+          2.8,
+          2,
+          2.9,
+          2.1,
+          2.5
+        ]
+      },
+      "expectedOutput": 5.650407,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "target": 4,
+        "user_ratings": [
+          20,
+          1,
+          12,
+          1,
+          16
+        ],
+        "item_similarities": [
+          3.2,
+          0,
+          3.6,
+          0.4,
+          2.0
+        ]
+      },
+      "expectedOutput": 15.173913,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "target": 1,
+        "user_ratings": [
+          4,
+          0,
+          3,
+          0,
+          5
+        ],
+        "item_similarities": [
+          0.5,
+          0.1,
+          0.9,
+          0,
+          0.8
+        ]
+      },
+      "expectedOutput": 3.954545,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "target": 1,
+        "user_ratings": [
+          4,
+          1,
+          2,
+          1,
+          3
+        ],
+        "item_similarities": [
+          0.6,
+          0,
+          0.675,
+          0.075,
+          0.375
+        ]
+      },
+      "expectedOutput": 2.869565,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "target": 5,
+        "user_ratings": [
+          25,
+          1,
+          15,
+          1,
+          20
+        ],
+        "item_similarities": [
+          4.0,
+          0,
+          4.5,
+          0.5,
+          2.5
+        ]
+      },
+      "expectedOutput": 18.956522,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "target": 4,
+        "user_ratings": [
+          15,
+          1,
+          9,
+          1,
+          12
+        ],
+        "item_similarities": [
+          3.8,
+          3,
+          3.9,
+          3.1,
+          3.5
+        ]
+      },
+      "expectedOutput": 8.104046,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "target": 1,
+        "user_ratings": [
+          4,
+          1,
+          2,
+          1,
+          3
+        ],
+        "item_similarities": [
+          0.64,
+          0,
+          0.72,
+          0.08,
+          0.4
+        ]
+      },
+      "expectedOutput": 2.869565,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "target": 6,
+        "user_ratings": [
+          30,
+          1,
+          18,
+          1,
+          24
+        ],
+        "item_similarities": [
+          4.8,
+          0,
+          5.4,
+          0.6,
+          3.0
+        ]
+      },
+      "expectedOutput": 22.73913,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "target": 5,
+        "user_ratings": [
+          20,
+          1,
+          12,
+          1,
+          16
+        ],
+        "item_similarities": [
+          4.8,
+          4,
+          4.9,
+          4.1,
+          4.5
+        ]
+      },
+      "expectedOutput": 10.533632,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "target": 1,
+        "user_ratings": [
+          6,
+          1,
+          4,
+          1,
+          5
+        ],
+        "item_similarities": [
+          0.96,
+          0,
+          1.08,
+          0.12,
+          0.6
+        ]
+      },
+      "expectedOutput": 4.782609,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "target": 0,
+        "user_ratings": [
+          2,
+          1,
+          1,
+          1,
+          2
+        ],
+        "item_similarities": [
+          0.32,
+          0,
+          0.36,
+          0.04,
+          0.2
+        ]
+      },
+      "expectedOutput": 1.565217,
+      "isPublic": false
+    },
+    {
+      "id": "item-cf-predict-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "target": 8,
+        "user_ratings": [
+          40,
+          1,
+          24,
+          1,
+          32
+        ],
+        "item_similarities": [
+          6.4,
+          0,
+          7.2,
+          0.8,
+          4.0
+        ]
+      },
+      "expectedOutput": 30.304348,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "item_cf_predict",
+    "parameters": [
+      {
+        "name": "user_ratings",
+        "type": "array",
+        "example": "[5, 0, 3, 0, 4]",
+        "description": "User's ratings (0 = unrated)"
+      },
+      {
+        "name": "item_similarities",
+        "type": "array",
+        "example": "[0.8, 0.0, 0.9, 0.1, 0.5]",
+        "description": "Similarities with target item"
+      },
+      {
+        "name": "target",
+        "type": "number",
+        "example": "1",
+        "description": "Target item index"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "user-based-cf-prediction",
+    "adjusted-cosine-similarity",
+    "matrix-factorization-sgd-step",
+    "top-k-recommendations",
+    "baseline-predictor"
+  ],
+  "tags": [
+    "Recommender Systems"
+  ],
+  "prevId": "jaccard-similarity",
+  "nextId": "popularity-ranking",
+  "slug": "item-cf-predict",
+  "cleanTitle": "Item-Based CF Prediction",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/item-cf-predict",
+  "localUrl": "http://localhost:3000/problems/item-cf-predict",
+  "studyPlan": null
+}

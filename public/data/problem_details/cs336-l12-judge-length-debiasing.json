@@ -1,0 +1,781 @@
+{
+  "id": "cs336-l12-judge-length-debiasing",
+  "slug": "cs336-l12-judge-length-debiasing",
+  "title": "LLM-as-a-Judge Length Debiasing",
+  "cleanTitle": "LLM-as-a-Judge Length Debiasing",
+  "category": "pytorch",
+  "difficulty": "Hard",
+  "tags": [
+    "Metrics & Evaluation",
+    "Language Models"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "language-modeling-from-scratch",
+    "title": "Language Modeling from Scratch",
+    "sectionId": "cs336-l12"
+  },
+  "seoDescription": "Fit model utilities and a response-length coefficient, then evaluate every comparison with length difference fixed to zero.",
+  "description": "Estimate length bias coefficients in automated LLM-as-a-judge preferences and subtract length discrepancy effects.\n\n**Mathematical Formulation:**\n\n$$\n\\Delta S = \\alpha + \\beta \\Delta L + \\epsilon, \\quad \\Delta S_{\\text{debiased}} = \\Delta S - \\beta \\Delta L\n$$\n\n**Step-by-Step Implementation:**\n1. Compute pairwise score differences and character/token length differences.\n2. Fit linear regression estimating length bias sensitivity beta.\n3. Subtract length-attributed bias from observed preference margins.\n4. Return bias coefficient and debiased score differences.\n\n**Returns:** Dictionary with keys 'length_bias_coefficient', 'intrinsic_preference_intercept', and 'debiased_score_diffs'.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Remove Response-Length Bias from Judge Scores specification."
+  ],
+  "requirements": "* Must implement `cs336_l12_judge_length_debiasing` using PYTORCH.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: LLM-as-a-Judge Length Debiasing\n\n### Core Intuition: Why Do We Need This?\nEstimate length bias coefficients in automated LLM-as-a-judge preferences and subtract length discrepancy effects. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\n\\Delta S = \\alpha + \\beta \\Delta L + \\epsilon, \\quad \\Delta S_{\\text{debiased}} = \\Delta S - \\beta \\Delta L\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Compute pairwise score differences and character/token length differences.\n3. **Phase 3: Iterative Execution & Reduction**: Fit linear regression estimating length bias sensitivity beta.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return bias coefficient and debiased score differences.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard PYTORCH documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `torch.Tensor` specifications."
+  ],
+  "constraints": "* Category: PYTORCH\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, PYTORCH\n",
+  "starterCode": "import numpy as np\n\ndef cs336_l12_judge_length_debiasing(scores_a: list, scores_b: list, lengths_a: list, lengths_b: list) -> dict:\n    \"\"\"\n    Estimate length bias coefficients in automated LLM-as-a-judge preferences and subtract length discrepancy effects.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nEstimate length bias coefficients in automated LLM-as-a-judge preferences and subtract length discrepancy effects.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cs336_l12_judge_length_debiasing(scores_a: list, scores_b: list, lengths_a: list, lengths_b: list) -> dict:\n    ds = np.array(scores_a, dtype=float) - np.array(scores_b, dtype=float)\n    dl = np.array(lengths_a, dtype=float) - np.array(lengths_b, dtype=float)\n    if np.all(dl == dl[0]):\n        slope, intercept = 0.0, float(np.mean(ds))\n    else:\n        slope, intercept = np.polyfit(dl, ds, 1)\n    return {'length_bias_coefficient': round(float(slope), 6), 'intrinsic_preference_intercept': round(float(intercept), 6), 'debiased_score_diffs': np.round(ds - slope * dl, 6).tolist()}\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "cs336-l12-judge-length-debiasing-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "scores_a": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "scores_b": [
+          0.0,
+          1.0,
+          1.0
+        ],
+        "lengths_a": [
+          100,
+          200,
+          300
+        ],
+        "lengths_b": [
+          50,
+          100,
+          150
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": 0.333333,
+        "debiased_score_diffs": [
+          0.5,
+          0.0,
+          0.5
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "scores_a": [
+          2.0,
+          2.0
+        ],
+        "scores_b": [
+          2.0,
+          2.0
+        ],
+        "lengths_a": [
+          10,
+          20
+        ],
+        "lengths_b": [
+          10,
+          20
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.0,
+        "intrinsic_preference_intercept": 0.0,
+        "debiased_score_diffs": [
+          0.0,
+          0.0
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "scores_a": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "scores_b": [
+          0.0,
+          2.0,
+          2.0
+        ],
+        "lengths_a": [
+          200,
+          400,
+          600
+        ],
+        "lengths_b": [
+          100,
+          200,
+          300
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": 0.666667,
+        "debiased_score_diffs": [
+          1.0,
+          0.0,
+          1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "scores_a": [
+          0.5,
+          1.0,
+          1.5
+        ],
+        "scores_b": [
+          0.0,
+          0.5,
+          0.5
+        ],
+        "lengths_a": [
+          50,
+          100,
+          150
+        ],
+        "lengths_b": [
+          25,
+          50,
+          75
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": 0.166667,
+        "debiased_score_diffs": [
+          0.25,
+          0.0,
+          0.25
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "scores_a": [
+          -1.0,
+          -2.0,
+          -3.0
+        ],
+        "scores_b": [
+          -0.0,
+          -1.0,
+          -1.0
+        ],
+        "lengths_a": [
+          -100,
+          -200,
+          -300
+        ],
+        "lengths_b": [
+          -50,
+          -100,
+          -150
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": -0.333333,
+        "debiased_score_diffs": [
+          -0.5,
+          -0.0,
+          -0.5
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "scores_a": [
+          3.0,
+          6.0,
+          9.0
+        ],
+        "scores_b": [
+          0.0,
+          3.0,
+          3.0
+        ],
+        "lengths_a": [
+          300,
+          600,
+          900
+        ],
+        "lengths_b": [
+          150,
+          300,
+          450
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": 1.0,
+        "debiased_score_diffs": [
+          1.5,
+          0.0,
+          1.5
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "scores_a": [
+          2.0,
+          3.0,
+          4.0
+        ],
+        "scores_b": [
+          1.0,
+          2.0,
+          2.0
+        ],
+        "lengths_a": [
+          101.0,
+          201.0,
+          301.0
+        ],
+        "lengths_b": [
+          51.0,
+          101.0,
+          151.0
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": 0.333333,
+        "debiased_score_diffs": [
+          0.5,
+          0.0,
+          0.5
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "scores_a": [
+          -1.0,
+          0.0,
+          1.0
+        ],
+        "scores_b": [
+          -2.0,
+          -1.0,
+          -1.0
+        ],
+        "lengths_a": [
+          98.0,
+          198.0,
+          298.0
+        ],
+        "lengths_b": [
+          48.0,
+          98.0,
+          148.0
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": 0.333333,
+        "debiased_score_diffs": [
+          0.5,
+          0.0,
+          0.5
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "scores_a": [
+          3.0,
+          2.0,
+          1.0
+        ],
+        "scores_b": [
+          1.0,
+          1.0,
+          0.0
+        ],
+        "lengths_a": [
+          300,
+          200,
+          100
+        ],
+        "lengths_b": [
+          150,
+          100,
+          50
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": 0.333333,
+        "debiased_score_diffs": [
+          0.5,
+          0.0,
+          0.5
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "scores_a": [
+          -1.0,
+          -2.0,
+          -3.0
+        ],
+        "scores_b": [
+          -0.0,
+          -1.0,
+          -1.0
+        ],
+        "lengths_a": [
+          -100,
+          -200,
+          -300
+        ],
+        "lengths_b": [
+          -50,
+          -100,
+          -150
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": -0.333333,
+        "debiased_score_diffs": [
+          -0.5,
+          -0.0,
+          -0.5
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "scores_a": [
+          10.0,
+          20.0,
+          30.0
+        ],
+        "scores_b": [
+          0.0,
+          10.0,
+          10.0
+        ],
+        "lengths_a": [
+          1000,
+          2000,
+          3000
+        ],
+        "lengths_b": [
+          500,
+          1000,
+          1500
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": 3.333333,
+        "debiased_score_diffs": [
+          5.0,
+          0.0,
+          5.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "scores_a": [
+          0.1,
+          0.2,
+          0.3
+        ],
+        "scores_b": [
+          0.0,
+          0.1,
+          0.1
+        ],
+        "lengths_a": [
+          10,
+          20,
+          30
+        ],
+        "lengths_b": [
+          5,
+          10,
+          15
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": 0.033333,
+        "debiased_score_diffs": [
+          0.05,
+          0.0,
+          0.05
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "scores_a": [
+          6.0,
+          7.0,
+          8.0
+        ],
+        "scores_b": [
+          5.0,
+          6.0,
+          6.0
+        ],
+        "lengths_a": [
+          105.0,
+          205.0,
+          305.0
+        ],
+        "lengths_b": [
+          55.0,
+          105.0,
+          155.0
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": 0.333333,
+        "debiased_score_diffs": [
+          0.5,
+          0.0,
+          0.5
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "scores_a": [
+          1.5,
+          3.0,
+          4.5
+        ],
+        "scores_b": [
+          0.0,
+          1.5,
+          1.5
+        ],
+        "lengths_a": [
+          150,
+          300,
+          450
+        ],
+        "lengths_b": [
+          75,
+          150,
+          225
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": 0.5,
+        "debiased_score_diffs": [
+          0.75,
+          0.0,
+          0.75
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "scores_a": [
+          -2.0,
+          -4.0,
+          -6.0
+        ],
+        "scores_b": [
+          -0.0,
+          -2.0,
+          -2.0
+        ],
+        "lengths_a": [
+          -200,
+          -400,
+          -600
+        ],
+        "lengths_b": [
+          -100,
+          -200,
+          -300
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": -0.666667,
+        "debiased_score_diffs": [
+          -1.0,
+          -0.0,
+          -1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "scores_a": [
+          0.25,
+          0.5,
+          0.75
+        ],
+        "scores_b": [
+          0.0,
+          0.25,
+          0.25
+        ],
+        "lengths_a": [
+          25,
+          50,
+          75
+        ],
+        "lengths_b": [
+          12,
+          25,
+          38
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.010417,
+        "intrinsic_preference_intercept": 0.072917,
+        "debiased_score_diffs": [
+          0.114583,
+          -0.010417,
+          0.114583
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "scores_a": [
+          0.0,
+          1.0,
+          2.0
+        ],
+        "scores_b": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "lengths_a": [
+          99.0,
+          199.0,
+          299.0
+        ],
+        "lengths_b": [
+          49.0,
+          99.0,
+          149.0
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": 0.333333,
+        "debiased_score_diffs": [
+          0.5,
+          0.0,
+          0.5
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "scores_a": [
+          4.0,
+          8.0,
+          12.0
+        ],
+        "scores_b": [
+          0.0,
+          4.0,
+          4.0
+        ],
+        "lengths_a": [
+          400,
+          800,
+          1200
+        ],
+        "lengths_b": [
+          200,
+          400,
+          600
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": 1.333333,
+        "debiased_score_diffs": [
+          2.0,
+          0.0,
+          2.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "scores_a": [
+          0.75,
+          1.5,
+          2.25
+        ],
+        "scores_b": [
+          0.0,
+          0.75,
+          0.75
+        ],
+        "lengths_a": [
+          75,
+          150,
+          225
+        ],
+        "lengths_b": [
+          38,
+          75,
+          112
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.009868,
+        "intrinsic_preference_intercept": 0.259868,
+        "debiased_score_diffs": [
+          0.384868,
+          0.009868,
+          0.384868
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l12-judge-length-debiasing-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "scores_a": [
+          5.0,
+          10.0,
+          15.0
+        ],
+        "scores_b": [
+          0.0,
+          5.0,
+          5.0
+        ],
+        "lengths_a": [
+          500,
+          1000,
+          1500
+        ],
+        "lengths_b": [
+          250,
+          500,
+          750
+        ]
+      },
+      "expectedOutput": {
+        "length_bias_coefficient": 0.01,
+        "intrinsic_preference_intercept": 1.666667,
+        "debiased_score_diffs": [
+          2.5,
+          0.0,
+          2.5
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cs336_l12_judge_length_debiasing",
+    "parameters": [
+      {
+        "name": "scores_a",
+        "type": "any"
+      },
+      {
+        "name": "scores_b",
+        "type": "any"
+      },
+      {
+        "name": "lengths_a",
+        "type": "any"
+      },
+      {
+        "name": "lengths_b",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/cs336-l12-judge-length-debiasing",
+  "localUrl": "http://localhost:3000/problems/cs336-l12-judge-length-debiasing"
+}

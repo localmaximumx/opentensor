@@ -1,0 +1,423 @@
+{
+  "id": "ds3-sql-yoy-revenue",
+  "slug": "ds3-sql-yoy-revenue",
+  "title": "Year-over-Year Monthly Revenue",
+  "cleanTitle": "Year-over-Year Monthly Revenue",
+  "type": "sql",
+  "difficulty": "Medium",
+  "category": "Assessment",
+  "tags": [
+    "Assessment",
+    "SQL",
+    "SQL Sprint: Window Functions"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Given orders(order_date, revenue), aggregate revenue by calendar month and return each month’s revenue, revenue from the same month one year earlier, and year-over-year fractional change. If the prior-year revenue is missing or zero, yoy_change is NULL.",
+  "theory": "## Understanding the Theory: Year-over-Year Monthly Revenue\n\n### Core Intuition: Why Do We Need This?\n**Year-over-Year Monthly Revenue** represents a fundamental data modeling and statistical reasoning technique in **SQL Sprint: Window Functions**. In enterprise machine learning, quantitative analytics, and decision science, algorithms must handle asynchronous logs, missing observations, skewed class distributions, and high-cardinality partitions. A mathematically rigorous implementation guarantees statistically unbiased estimates and idempotent transformations.\n\nUnderstanding the core mechanics enables engineers to diagnose convergence anomalies, optimize memory layouts, and construct maintainable ML pipelines from first principles.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\text{YoY}_t = \\frac{\\text{Rev}_t - \\text{Rev}_{t-12}}{\\text{Rev}_{t-12}} \\times 100\\%\n$$\n\nIn this formulation:\n* The input features and parameters are projected, normalized, or aggregated according to established algorithmic invariants.\n* Dimensional consistency is preserved across all tensor or matrix axes, ensuring mathematical validity.\n* Intermediate accumulators maintain numerical dynamic range to protect against floating-point anomalies.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Validate input array dimensions, check for empty sequences or invalid bounds, and convert inputs into contiguous buffers.\n2. **Phase 2: Core Algorithmic Transformation**: Execute the foundational mathematical logic using vectorized SIMD array operations or optimized iteration.\n3. **Phase 3: Aggregation & Normalization**: Compute required sums, projections, or ranking reductions while guarding against division by zero.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Format outputs into required data types and verify that returned numerical estimates adhere to expected precision thresholds.\n\n### Practical Machine Learning Applications & Nuances\n* **Statistical Unbiasedness & Degrees of Freedom**: Applying proper Bessel corrections and degrees of freedom safeguards sample statistics against systemic sample bias.\n* **Vectorized Array Operations**: Leveraging contiguous columnar execution avoids slow Python interpreter loop overhead when evaluating million-row datasets.\n* **Null Safety & Edge Case Handling**: Explicit handling of missing data, empty partitions, and single-value inputs prevents runtime exceptions in production batch pipelines.\n* **Algorithmic Complexity**: Operates with optimal asymptotic time and space complexity, ensuring minimal compute overhead.",
+  "examples": [
+    {
+      "name": "prior-year comparison",
+      "tables": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedRows": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue."
+    }
+  ],
+  "requirements": [
+    "Aggregate first by month, then use LAG(revenue, 12) across the ordered monthly series. Assumes a complete monthly calendar; insert zero-revenue months if the source omits months."
+  ],
+  "hints": [
+    "Write the base aggregation/deduplication CTE first.",
+    "Use a window function or grouped date arithmetic to identify ranks/streaks.",
+    "Check tie and missing-prior-period behavior."
+  ],
+  "constraints": [
+    "SQL dialect: PostgreSQL unless a platform-specific adaptation is required.",
+    "Column names and schemas are specified in the statement."
+  ],
+  "starterCode": "-- Write your SQL query here\n",
+  "solution": "### 💡 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### ⚡ Implementation\n```sql\nWITH monthly AS (\n  SELECT date_trunc('month', order_date)::date AS month,\n         SUM(revenue) AS revenue\n  FROM orders\n  GROUP BY date_trunc('month', order_date)::date\n)\nSELECT cur.month, cur.revenue, prev.revenue AS revenue_prev_year,\n       CASE WHEN prev.revenue IS NULL OR prev.revenue = 0 THEN NULL\n            ELSE (cur.revenue - prev.revenue) / prev.revenue END AS yoy_change\nFROM monthly cur\nLEFT JOIN monthly prev ON prev.month = (cur.month - INTERVAL '1 year')::date\nORDER BY cur.month;\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
+  "testCases": [
+    {
+      "id": "case-1",
+      "name": "prior-year comparison",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-2",
+      "name": "Case 2",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-3",
+      "name": "Case 3",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-4",
+      "name": "Case 4",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-5",
+      "name": "Case 5",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-6",
+      "name": "Case 6",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-7",
+      "name": "Case 7",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-8",
+      "name": "Case 8",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-9",
+      "name": "Case 9",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-10",
+      "name": "Case 10",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-11",
+      "name": "Case 11",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-12",
+      "name": "Case 12",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-13",
+      "name": "Case 13",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-14",
+      "name": "Case 14",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-15",
+      "name": "Case 15",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-16",
+      "name": "Case 16",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-17",
+      "name": "Case 17",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-18",
+      "name": "Case 18",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-19",
+      "name": "Case 19",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-20",
+      "name": "Case 20",
+      "inputs": {
+        "orders": [
+          {
+            "order_date": "2023-01-05",
+            "revenue": 100
+          },
+          {
+            "order_date": "2024-01-10",
+            "revenue": 125
+          }
+        ]
+      },
+      "expectedOutput": "For 2024-01: revenue=125, revenue_prev_year=100, yoy_change=0.25; the 2023-01 row has NULL prior-year revenue.",
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "sql_query",
+    "signature": "sql_query()",
+    "language": "sql"
+  },
+  "assessmentNames": [
+    "SQL Sprint: Window Functions"
+  ],
+  "source": "assessment",
+  "sourceId": "assessment",
+  "updatedAt": "2026-03-01T00:00:00.000Z"
+}

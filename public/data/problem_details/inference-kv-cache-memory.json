@@ -1,0 +1,455 @@
+{
+  "catalogId": "python:inference-kv-cache-memory",
+  "id": "inference-kv-cache-memory",
+  "sourceId": "inference-kv-cache-memory",
+  "slug": "inference-kv-cache-memory",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Calculate KV Cache Memory for MHA, MQA, GQA, and MLA",
+  "difficulty": "Easy",
+  "tags": [
+    "Inference",
+    "Transformers"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-kv-decoding",
+  "sortOrder": 138,
+  "seoDescription": "Compute the total KV-cache memory, in bytes, for a full sequence under four attention variants: MHA, MQA, GQA, and MLA.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Calculate the total memory footprint in megabytes of key-value caches across Multi-Head, Multi-Query, Grouped-Query, and Multi-Head Latent Attention.\n\nDuring LLM generation, KV-cache capacity frequently caps concurrency; GQA and MLA dramatically compress KV memory bandwidth.\n\n### Mathematical Formulation\n$$\n\\text{Mem}_{\\text{KV}} = 2 \\times L \\times B \\times S \\times H_{\\text{KV}} \\times D \\times b_{\\text{elem}}\n$$\n\n### Step-by-Step Implementation\n1. Compute per-token key and value storage requirements across layers\n2. Scale by sequence length, batch size, and attention head configurations\n3. Convert total cache footprint from bytes to megabytes (MB)\n\n### Returns\nDictionary with memory consumption in MB for 'MHA_MB', 'MQA_MB', 'GQA_MB', and 'MLA_MB'.",
+  "theory": "## Understanding the Theory: Calculate KV Cache Memory for MHA, MQA, GQA, and MLA\n\n### Core Intuition: Why Do We Need This?\nRunning large AI models in production requires massive computing power. During text generation, memory bandwidth (fetching weights and past key-value caches from VRAM) is often the primary bottleneck rather than raw arithmetic compute. **Calculate KV Cache Memory for MHA, MQA, GQA, and MLA** optimizes hardware efficiency, memory consumption, or request serving throughput.\n\nDuring LLM generation, KV-cache capacity frequently caps concurrency; GQA and MLA dramatically compress KV memory bandwidth. In this problem, the goal is to: calculate the total memory footprint in megabytes of key-value caches across multi-head, multi-query, grouped-query, and multi-head latent attention.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\text{Mem}_{\\text{KV}} = 2 \\times L \\times B \\times S \\times H_{\\text{KV}} \\times D \\times b_{\\text{elem}}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute per-token key and value storage requirements across layers\n2. **Phase 2**: Scale by sequence length, batch size, and attention head configurations\n3. **Phase 3**: Convert total cache footprint from bytes to megabytes (MB)\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth Bottleneck**: Quantizing weights to INT8 or INT4 cuts memory traffic in half or quarters, dramatically increasing token generation speeds.\n* **Serving Systems**: Dynamic batching and PagedAttention maximize GPU utilization by grouping requests arriving at different times.\n* **Latency vs. Throughput**: In production serving, systems engineers balance Time-To-First-Token (TTFT) against overall tokens-per-second throughput.",
+  "examples": [
+    "Input: num_layers = 32, batch_size = 4, seq_len = 2048, num_heads = 32, head_dim = 128, num_kv_groups = 8, bytes_per_elem = 2\n\nOutput: {\"MHA_MB\": 4096.0, \"MQA_MB\": 128.0, \"GQA_MB\": 1024.0, \"MLA_MB\": 64.0}\n\nExplanation: Evaluated inference_kv_cache_memory under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_kv_cache_memory`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_kv_cache_memory`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def inference_kv_cache_memory(num_layers: int, batch_size: int, seq_len: int, num_heads: int, head_dim: int, num_kv_groups: int = 1, bytes_per_elem: int = 2) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Calculate KV Cache Memory for MHA, MQA, GQA, and MLA** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef inference_kv_cache_memory(num_layers: int, batch_size: int, seq_len: int, num_heads: int, head_dim: int, num_kv_groups: int = 1, bytes_per_elem: int = 2) -> dict:\n    L, B, S, H, D, G, bpe = num_layers, batch_size, seq_len, num_heads, head_dim, num_kv_groups, bytes_per_elem\n    mb = 1024 ** 2\n    return {'MHA_MB': round((2*L*B*S*H*D*bpe)/mb, 2), 'MQA_MB': round((2*L*B*S*1*D*bpe)/mb, 2), 'GQA_MB': round((2*L*B*S*G*D*bpe)/mb, 2), 'MLA_MB': round((1*L*B*S*D*bpe)/mb, 2)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "32 layers, B=4, S=2048, 32 heads, dim 128",
+      "inputs": {
+        "num_layers": 32,
+        "batch_size": 4,
+        "seq_len": 2048,
+        "num_heads": 32,
+        "head_dim": 128,
+        "num_kv_groups": 8,
+        "bytes_per_elem": 2
+      },
+      "expectedOutput": {
+        "MHA_MB": 4096.0,
+        "MQA_MB": 128.0,
+        "GQA_MB": 1024.0,
+        "MLA_MB": 64.0
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "num_layers": 64,
+        "batch_size": 8,
+        "seq_len": 4096,
+        "num_heads": 64,
+        "head_dim": 256,
+        "num_kv_groups": 16,
+        "bytes_per_elem": 4
+      },
+      "expectedOutput": {
+        "MHA_MB": 262144.0,
+        "MQA_MB": 4096.0,
+        "GQA_MB": 65536.0,
+        "MLA_MB": 2048.0
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "num_layers": 16,
+        "batch_size": 2,
+        "seq_len": 1024,
+        "num_heads": 16,
+        "head_dim": 64,
+        "num_kv_groups": 4,
+        "bytes_per_elem": 1
+      },
+      "expectedOutput": {
+        "MHA_MB": 64.0,
+        "MQA_MB": 4.0,
+        "GQA_MB": 16.0,
+        "MLA_MB": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "num_layers": 32,
+        "batch_size": 4,
+        "seq_len": 2048,
+        "num_heads": 32,
+        "head_dim": 128,
+        "num_kv_groups": 8,
+        "bytes_per_elem": 3
+      },
+      "expectedOutput": {
+        "MHA_MB": 6144.0,
+        "MQA_MB": 192.0,
+        "GQA_MB": 1536.0,
+        "MLA_MB": 96.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "num_layers": 48,
+        "batch_size": 6,
+        "seq_len": 3072,
+        "num_heads": 48,
+        "head_dim": 192,
+        "num_kv_groups": 12,
+        "bytes_per_elem": 3
+      },
+      "expectedOutput": {
+        "MHA_MB": 46656.0,
+        "MQA_MB": 972.0,
+        "GQA_MB": 11664.0,
+        "MLA_MB": 486.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "num_layers": 96,
+        "batch_size": 12,
+        "seq_len": 6144,
+        "num_heads": 96,
+        "head_dim": 384,
+        "num_kv_groups": 24,
+        "bytes_per_elem": 6
+      },
+      "expectedOutput": {
+        "MHA_MB": 2985984.0,
+        "MQA_MB": 31104.0,
+        "GQA_MB": 746496.0,
+        "MLA_MB": 15552.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "num_layers": 8,
+        "batch_size": 1,
+        "seq_len": 512,
+        "num_heads": 8,
+        "head_dim": 32,
+        "num_kv_groups": 2,
+        "bytes_per_elem": 0
+      },
+      "expectedOutput": {
+        "MHA_MB": 0.0,
+        "MQA_MB": 0.0,
+        "GQA_MB": 0.0,
+        "MLA_MB": 0.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "num_layers": 64,
+        "batch_size": 8,
+        "seq_len": 4096,
+        "num_heads": 64,
+        "head_dim": 256,
+        "num_kv_groups": 16,
+        "bytes_per_elem": 4
+      },
+      "expectedOutput": {
+        "MHA_MB": 262144.0,
+        "MQA_MB": 4096.0,
+        "GQA_MB": 65536.0,
+        "MLA_MB": 2048.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "num_layers": 128,
+        "batch_size": 16,
+        "seq_len": 8192,
+        "num_heads": 128,
+        "head_dim": 512,
+        "num_kv_groups": 32,
+        "bytes_per_elem": 8
+      },
+      "expectedOutput": {
+        "MHA_MB": 16777216.0,
+        "MQA_MB": 131072.0,
+        "GQA_MB": 4194304.0,
+        "MLA_MB": 65536.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "num_layers": 32,
+        "batch_size": 4,
+        "seq_len": 2048,
+        "num_heads": 32,
+        "head_dim": 128,
+        "num_kv_groups": 8,
+        "bytes_per_elem": 2
+      },
+      "expectedOutput": {
+        "MHA_MB": 4096.0,
+        "MQA_MB": 128.0,
+        "GQA_MB": 1024.0,
+        "MLA_MB": 64.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "num_layers": 24,
+        "batch_size": 3,
+        "seq_len": 1536,
+        "num_heads": 24,
+        "head_dim": 96,
+        "num_kv_groups": 6,
+        "bytes_per_elem": 2
+      },
+      "expectedOutput": {
+        "MHA_MB": 972.0,
+        "MQA_MB": 40.5,
+        "GQA_MB": 243.0,
+        "MLA_MB": 20.25
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "num_layers": 160,
+        "batch_size": 20,
+        "seq_len": 10240,
+        "num_heads": 160,
+        "head_dim": 640,
+        "num_kv_groups": 40,
+        "bytes_per_elem": 10
+      },
+      "expectedOutput": {
+        "MHA_MB": 64000000.0,
+        "MQA_MB": 400000.0,
+        "GQA_MB": 16000000.0,
+        "MLA_MB": 200000.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "num_layers": 96,
+        "batch_size": 12,
+        "seq_len": 6144,
+        "num_heads": 96,
+        "head_dim": 384,
+        "num_kv_groups": 24,
+        "bytes_per_elem": 5
+      },
+      "expectedOutput": {
+        "MHA_MB": 2488320.0,
+        "MQA_MB": 25920.0,
+        "GQA_MB": 622080.0,
+        "MLA_MB": 12960.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "num_layers": 26,
+        "batch_size": 3,
+        "seq_len": 1638,
+        "num_heads": 26,
+        "head_dim": 102,
+        "num_kv_groups": 6,
+        "bytes_per_elem": 2
+      },
+      "expectedOutput": {
+        "MHA_MB": 1292.53,
+        "MQA_MB": 49.71,
+        "GQA_MB": 298.28,
+        "MLA_MB": 24.86
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "num_layers": 192,
+        "batch_size": 24,
+        "seq_len": 12288,
+        "num_heads": 192,
+        "head_dim": 768,
+        "num_kv_groups": 48,
+        "bytes_per_elem": 12
+      },
+      "expectedOutput": {
+        "MHA_MB": 191102976.0,
+        "MQA_MB": 995328.0,
+        "GQA_MB": 47775744.0,
+        "MLA_MB": 497664.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "num_layers": 128,
+        "batch_size": 16,
+        "seq_len": 8192,
+        "num_heads": 128,
+        "head_dim": 512,
+        "num_kv_groups": 32,
+        "bytes_per_elem": 6
+      },
+      "expectedOutput": {
+        "MHA_MB": 12582912.0,
+        "MQA_MB": 98304.0,
+        "GQA_MB": 3145728.0,
+        "MLA_MB": 49152.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "num_layers": 38,
+        "batch_size": 5,
+        "seq_len": 2458,
+        "num_heads": 38,
+        "head_dim": 154,
+        "num_kv_groups": 10,
+        "bytes_per_elem": 2
+      },
+      "expectedOutput": {
+        "MHA_MB": 10425.57,
+        "MQA_MB": 274.36,
+        "GQA_MB": 2743.57,
+        "MLA_MB": 137.18
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "num_layers": 13,
+        "batch_size": 2,
+        "seq_len": 819,
+        "num_heads": 13,
+        "head_dim": 51,
+        "num_kv_groups": 3,
+        "bytes_per_elem": 1
+      },
+      "expectedOutput": {
+        "MHA_MB": 26.93,
+        "MQA_MB": 2.07,
+        "GQA_MB": 6.21,
+        "MLA_MB": 1.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "num_layers": 256,
+        "batch_size": 32,
+        "seq_len": 16384,
+        "num_heads": 256,
+        "head_dim": 1024,
+        "num_kv_groups": 64,
+        "bytes_per_elem": 16
+      },
+      "expectedOutput": {
+        "MHA_MB": 1073741824.0,
+        "MQA_MB": 4194304.0,
+        "GQA_MB": 268435456.0,
+        "MLA_MB": 2097152.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-kv-cache-memory-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "num_layers": 160,
+        "batch_size": 20,
+        "seq_len": 10240,
+        "num_heads": 160,
+        "head_dim": 640,
+        "num_kv_groups": 40,
+        "bytes_per_elem": 7
+      },
+      "expectedOutput": {
+        "MHA_MB": 44800000.0,
+        "MQA_MB": 280000.0,
+        "GQA_MB": 11200000.0,
+        "MLA_MB": 140000.0
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_kv_cache_memory",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

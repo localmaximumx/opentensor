@@ -1,0 +1,1841 @@
+{
+  "catalogId": "python:inference-chunked-prefill-scheduling",
+  "id": "inference-chunked-prefill-scheduling",
+  "sourceId": "inference-chunked-prefill-scheduling",
+  "slug": "inference-chunked-prefill-scheduling",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Simulate Chunked Prefill Scheduling",
+  "difficulty": "Hard",
+  "tags": [
+    "Inference",
+    "MLOps"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-serving",
+  "sortOrder": 528,
+  "seoDescription": "Simulate chunked prefill scheduling with strict decode priority, bounded token budgets, and request arrival order.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Simulate request token scheduling by interleaving single-token generation decodes with chunked prompt prefills under token batch limits.\n\nUnchunked prefills monopolize computational engines for hundreds of milliseconds. Chunking prompts into uniform token budgets bounds iteration latency while sustaining decode throughput.\n\n### Mathematical Formulation\n$$\nB_{\\text{step}} = N_{\\text{decode}} + \\min(B - N_{\\text{decode}}, L_{\\text{prompt\\_rem}})\n$$\n\n### Step-by-Step Implementation\n1. Allocate 1 decode token to active requests with 0 prompt tokens and positive decode tokens remaining\n2. Allocate remaining token budget to slice prompt tokens of arriving or ongoing prefill requests\n3. Record executed operations per scheduling cycle until all requests finish\n\n### Returns\nList of step execution lists containing request id, prefill_tokens, and decode_tokens.",
+  "theory": "## Understanding the Theory: Simulate Chunked Prefill Scheduling\n\n### Core Intuition: Why Do We Need This?\nRunning large AI models in production requires massive computing power. During text generation, memory bandwidth (fetching weights and past key-value caches from VRAM) is often the primary bottleneck rather than raw arithmetic compute. **Simulate Chunked Prefill Scheduling** optimizes hardware efficiency, memory consumption, or request serving throughput.\n\nUnchunked prefills monopolize computational engines for hundreds of milliseconds. Chunking prompts into uniform token budgets bounds iteration latency while sustaining decode throughput. In this problem, the goal is to: simulate request token scheduling by interleaving single-token generation decodes with chunked prompt prefills under token batch limits.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nB_{\\text{step}} = N_{\\text{decode}} + \\min(B - N_{\\text{decode}}, L_{\\text{prompt\\_rem}})\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Allocate 1 decode token to active requests with 0 prompt tokens and positive decode tokens remaining\n2. **Phase 2**: Allocate remaining token budget to slice prompt tokens of arriving or ongoing prefill requests\n3. **Phase 3**: Record executed operations per scheduling cycle until all requests finish\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth Bottleneck**: Quantizing weights to INT8 or INT4 cuts memory traffic in half or quarters, dramatically increasing token generation speeds.\n* **Serving Systems**: Dynamic batching and PagedAttention maximize GPU utilization by grouping requests arriving at different times.\n* **Latency vs. Throughput**: In production serving, systems engineers balance Time-To-First-Token (TTFT) against overall tokens-per-second throughput.",
+  "examples": [
+    "Input: requests = [{\"id\": 1, \"prompt_tokens_remaining\": 5, \"decode_tokens_remaining\": 2}, {\"id\": 2, \"prompt_tokens_remaining\": 2, \"decode_tokens_remaining\": 1}], max_tokens_per_batch = 4\n\nOutput: [[{\"id\": 1, \"prefill_tokens\": 4, \"decode_tokens\": 0}], [{\"id\": 1, \"prefill_tokens\": 1, \"decode_tokens\": 0}, {\"id\": 2, \"prefill_tokens\": 2, \"decode_tokens\": 0}], [{\"id\": 1, \"prefill_tokens\": 0, \"decode_tokens\": 1}, {\"id\": 2, \"prefill_tokens\": 0, \"decode_tokens\": 1}], [{\"id\": 1, \"prefill_tokens\": 0, \"decode_tokens\": 1}]]\n\nExplanation: Evaluated inference_chunked_prefill_scheduling under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_chunked_prefill_scheduling`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_chunked_prefill_scheduling`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def inference_chunked_prefill_scheduling(requests: list, max_tokens_per_batch: int = 4) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Simulate Chunked Prefill Scheduling** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef inference_chunked_prefill_scheduling(requests: list, max_tokens_per_batch: int = 4) -> list:\n    reqs = [{'id': r['id'], 'p': r['prompt_tokens_remaining'], 'd': r['decode_tokens_remaining']} for r in requests]\n    history = []\n    while any(r['p'] > 0 or r['d'] > 0 for r in reqs):\n        budget = max_tokens_per_batch\n        ops = []\n        for r in reqs:\n            if r['p'] == 0 and r['d'] > 0 and budget > 0:\n                r['d'] -= 1; budget -= 1\n                ops.append({'id': r['id'], 'prefill_tokens': 0, 'decode_tokens': 1})\n        for r in reqs:\n            if budget <= 0: break\n            if r['p'] > 0:\n                chunk = min(budget, r['p'])\n                r['p'] -= chunk; budget -= chunk\n                ops.append({'id': r['id'], 'prefill_tokens': chunk, 'decode_tokens': 0})\n        history.append(ops)\n    return history\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "2 requests chunked schedule",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "prompt_tokens_remaining": 5,
+            "decode_tokens_remaining": 2
+          },
+          {
+            "id": 2,
+            "prompt_tokens_remaining": 2,
+            "decode_tokens_remaining": 1
+          }
+        ],
+        "max_tokens_per_batch": 4
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 4,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 1,
+            "decode_tokens": 0
+          },
+          {
+            "id": 2,
+            "prefill_tokens": 2,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "requests": [
+          {
+            "id": 2,
+            "prompt_tokens_remaining": 10,
+            "decode_tokens_remaining": 4
+          },
+          {
+            "id": 4,
+            "prompt_tokens_remaining": 4,
+            "decode_tokens_remaining": 2
+          }
+        ],
+        "max_tokens_per_batch": 8
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 8,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 2,
+            "decode_tokens": 0
+          },
+          {
+            "id": 4,
+            "prefill_tokens": 4,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "prompt_tokens_remaining": 2,
+            "decode_tokens_remaining": 1
+          },
+          {
+            "id": 1,
+            "prompt_tokens_remaining": 1,
+            "decode_tokens_remaining": 1
+          }
+        ],
+        "max_tokens_per_batch": 2
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 2,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 1,
+            "prefill_tokens": 1,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "prompt_tokens_remaining": 5,
+            "decode_tokens_remaining": 2
+          },
+          {
+            "id": 2,
+            "prompt_tokens_remaining": 2,
+            "decode_tokens_remaining": 1
+          }
+        ],
+        "max_tokens_per_batch": 4
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 4,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 1,
+            "decode_tokens": 0
+          },
+          {
+            "id": 2,
+            "prefill_tokens": 2,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "requests": [
+          {
+            "id": 2,
+            "prompt_tokens_remaining": 8,
+            "decode_tokens_remaining": 3
+          },
+          {
+            "id": 3,
+            "prompt_tokens_remaining": 3,
+            "decode_tokens_remaining": 2
+          }
+        ],
+        "max_tokens_per_batch": 6
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 6,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 2,
+            "decode_tokens": 0
+          },
+          {
+            "id": 3,
+            "prefill_tokens": 3,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 3,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 3,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "requests": [
+          {
+            "id": 3,
+            "prompt_tokens_remaining": 15,
+            "decode_tokens_remaining": 6
+          },
+          {
+            "id": 6,
+            "prompt_tokens_remaining": 6,
+            "decode_tokens_remaining": 3
+          }
+        ],
+        "max_tokens_per_batch": 12
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 12,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 3,
+            "decode_tokens": 0
+          },
+          {
+            "id": 6,
+            "prefill_tokens": 6,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "prompt_tokens_remaining": 1,
+            "decode_tokens_remaining": 1
+          },
+          {
+            "id": 1,
+            "prompt_tokens_remaining": 1,
+            "decode_tokens_remaining": 1
+          }
+        ],
+        "max_tokens_per_batch": 1
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 1,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 1,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "requests": [
+          {
+            "id": 2,
+            "prompt_tokens_remaining": 10,
+            "decode_tokens_remaining": 4
+          },
+          {
+            "id": 4,
+            "prompt_tokens_remaining": 4,
+            "decode_tokens_remaining": 2
+          }
+        ],
+        "max_tokens_per_batch": 8
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 8,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 2,
+            "decode_tokens": 0
+          },
+          {
+            "id": 4,
+            "prefill_tokens": 4,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "requests": [
+          {
+            "id": 4,
+            "prompt_tokens_remaining": 20,
+            "decode_tokens_remaining": 8
+          },
+          {
+            "id": 8,
+            "prompt_tokens_remaining": 8,
+            "decode_tokens_remaining": 4
+          }
+        ],
+        "max_tokens_per_batch": 16
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 16,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 4,
+            "decode_tokens": 0
+          },
+          {
+            "id": 8,
+            "prefill_tokens": 8,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "prompt_tokens_remaining": 5,
+            "decode_tokens_remaining": 2
+          },
+          {
+            "id": 2,
+            "prompt_tokens_remaining": 2,
+            "decode_tokens_remaining": 1
+          }
+        ],
+        "max_tokens_per_batch": 4
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 4,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 1,
+            "decode_tokens": 0
+          },
+          {
+            "id": 2,
+            "prefill_tokens": 2,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "prompt_tokens_remaining": 4,
+            "decode_tokens_remaining": 2
+          },
+          {
+            "id": 2,
+            "prompt_tokens_remaining": 2,
+            "decode_tokens_remaining": 1
+          }
+        ],
+        "max_tokens_per_batch": 3
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 3,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 1,
+            "decode_tokens": 0
+          },
+          {
+            "id": 2,
+            "prefill_tokens": 2,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "requests": [
+          {
+            "id": 5,
+            "prompt_tokens_remaining": 25,
+            "decode_tokens_remaining": 10
+          },
+          {
+            "id": 10,
+            "prompt_tokens_remaining": 10,
+            "decode_tokens_remaining": 5
+          }
+        ],
+        "max_tokens_per_batch": 20
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 20,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 5,
+            "decode_tokens": 0
+          },
+          {
+            "id": 10,
+            "prefill_tokens": 10,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 10,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 10,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 10,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 10,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 10,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "requests": [
+          {
+            "id": 3,
+            "prompt_tokens_remaining": 15,
+            "decode_tokens_remaining": 6
+          },
+          {
+            "id": 6,
+            "prompt_tokens_remaining": 6,
+            "decode_tokens_remaining": 3
+          }
+        ],
+        "max_tokens_per_batch": 12
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 12,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 3,
+            "decode_tokens": 0
+          },
+          {
+            "id": 6,
+            "prefill_tokens": 6,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 3,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "prompt_tokens_remaining": 4,
+            "decode_tokens_remaining": 2
+          },
+          {
+            "id": 2,
+            "prompt_tokens_remaining": 2,
+            "decode_tokens_remaining": 1
+          }
+        ],
+        "max_tokens_per_batch": 3
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 3,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 1,
+            "decode_tokens": 0
+          },
+          {
+            "id": 2,
+            "prefill_tokens": 2,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "requests": [
+          {
+            "id": 6,
+            "prompt_tokens_remaining": 30,
+            "decode_tokens_remaining": 12
+          },
+          {
+            "id": 12,
+            "prompt_tokens_remaining": 12,
+            "decode_tokens_remaining": 6
+          }
+        ],
+        "max_tokens_per_batch": 24
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 6,
+            "prefill_tokens": 24,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 6,
+            "prefill_tokens": 6,
+            "decode_tokens": 0
+          },
+          {
+            "id": 12,
+            "prefill_tokens": 12,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 12,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 12,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 12,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 12,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 12,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 12,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 6,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "requests": [
+          {
+            "id": 4,
+            "prompt_tokens_remaining": 20,
+            "decode_tokens_remaining": 8
+          },
+          {
+            "id": 8,
+            "prompt_tokens_remaining": 8,
+            "decode_tokens_remaining": 4
+          }
+        ],
+        "max_tokens_per_batch": 16
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 16,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 4,
+            "decode_tokens": 0
+          },
+          {
+            "id": 8,
+            "prefill_tokens": 8,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 4,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "prompt_tokens_remaining": 6,
+            "decode_tokens_remaining": 2
+          },
+          {
+            "id": 2,
+            "prompt_tokens_remaining": 2,
+            "decode_tokens_remaining": 1
+          }
+        ],
+        "max_tokens_per_batch": 5
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 5,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 1,
+            "decode_tokens": 0
+          },
+          {
+            "id": 2,
+            "prefill_tokens": 2,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 2,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "prompt_tokens_remaining": 2,
+            "decode_tokens_remaining": 1
+          },
+          {
+            "id": 1,
+            "prompt_tokens_remaining": 1,
+            "decode_tokens_remaining": 1
+          }
+        ],
+        "max_tokens_per_batch": 2
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 2,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 1,
+            "prefill_tokens": 1,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 1,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "requests": [
+          {
+            "id": 8,
+            "prompt_tokens_remaining": 40,
+            "decode_tokens_remaining": 16
+          },
+          {
+            "id": 16,
+            "prompt_tokens_remaining": 16,
+            "decode_tokens_remaining": 8
+          }
+        ],
+        "max_tokens_per_batch": 32
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 32,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 8,
+            "decode_tokens": 0
+          },
+          {
+            "id": 16,
+            "prefill_tokens": 16,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 16,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 16,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 16,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 16,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 16,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 16,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 16,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 16,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 8,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-chunked-prefill-scheduling-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "requests": [
+          {
+            "id": 5,
+            "prompt_tokens_remaining": 25,
+            "decode_tokens_remaining": 10
+          },
+          {
+            "id": 10,
+            "prompt_tokens_remaining": 10,
+            "decode_tokens_remaining": 5
+          }
+        ],
+        "max_tokens_per_batch": 20
+      },
+      "expectedOutput": [
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 20,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 5,
+            "decode_tokens": 0
+          },
+          {
+            "id": 10,
+            "prefill_tokens": 10,
+            "decode_tokens": 0
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 10,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 10,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 10,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 10,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          },
+          {
+            "id": 10,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ],
+        [
+          {
+            "id": 5,
+            "prefill_tokens": 0,
+            "decode_tokens": 1
+          }
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_chunked_prefill_scheduling",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

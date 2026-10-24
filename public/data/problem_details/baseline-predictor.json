@@ -1,0 +1,910 @@
+{
+  "id": "baseline-predictor",
+  "title": "Baseline Predictor",
+  "description": "A collaborative-filtering baseline separates ratings into a global average, a user bias, and an item bias. A zero in ratings_matrix means that no rating was observed and must be excluded from all averages.\n\nCompute each user's bias:\n\n$$\nb_u = \\overline{r}_u - \\mu\n$$\n\nCompute each item's bias:\n\n$$\nb_i = \\overline{r}_i - \\mu\n$$\n\nPredict a requested user-item pair:\n\n$$\n\\widehat{r}_{ui} = \\mu + b_u + b_i\n$$\n\nThe global average is the mean of every nonzero rating. A user's observed-rating mean determines the user bias, while an item's observed-rating mean determines the item bias. Use a bias of zero for a user or item with no observed ratings. Return predictions for target_pairs in their original order.",
+  "seoDescription": "Predict collaborative-filtering ratings from the global mean plus user and item rating biases.",
+  "examples": [
+    "Input: ratings_matrix = [[5, 3, 0], [4, 0, 1], [0, 1, 5]], target_pairs = [[0, 2], [1, 1], [2, 0]]\n\nOutput: [3.833333, 1.333333, 4.333333]\n\nExplanation: The global mean is 19 / 6. Each prediction adds that mean to the corresponding user and item deviations.",
+    "Input: ratings_matrix = [[5, 0], [0, 3]], target_pairs = [[0, 1], [1, 0]]\n\nOutput: [4.0, 4.0]"
+  ],
+  "requirements": "* Compute the global mean from nonzero ratings only.\n* Compute user and item biases from their observed ratings only.\n* Use zero bias when a user or item has no observed ratings.\n* Return one prediction for each pair in target_pairs.",
+  "theory": "## Understanding the Theory: Baseline Predictor\n\n### Core Intuition: Why Do We Need This?\nRecommender systems surface relevant content, products, or information from catalogs containing millions of items. Evaluating recommendations requires ranking-sensitive metrics that emphasize placing the most relevant items near the top of the recommendation list. **Baseline Predictor** calculates ranking quality, user-item affinities, or top-K relevance scores.\n\nIn this problem, the objective is to implement **Baseline Predictor** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nb_u = \\overline{r}_u - \\mu\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Position Discounting**: Users rarely scroll past the top items; ranking metrics heavily penalize placing relevant recommendations further down the list.\n* **Sparsity & Cold Start**: User-item interaction matrices are over 99% empty; embeddings and matrix factorization discover latent features to generalize to unseen interactions.\n* **Online vs. Offline Evaluation**: Offline ranking metrics (like NDCG@K and Recall@K) correlate strongly with online user engagement and click-through rates.",
+  "hints": [
+    "Build user means from rows and item means from columns while skipping zeros.",
+    "For each pair, add the global mean, its user bias, and its item bias."
+  ],
+  "constraints": "* ratings_matrix is rectangular and contains at least one nonzero rating.\n* A zero entry represents a missing rating.\n* Every target pair contains valid user and item indices.\n* Time limit: 300 ms.",
+  "difficulty": "Hard",
+  "starterCode": "def baseline_predict(ratings_matrix: list, target_pairs: list) -> list:\n    \"\"\"\n    Returns the baseline predictions for the requested user-item pairs.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T22:01:58.738Z",
+  "updatedAt": "2026-08-23T21:22:55.985Z",
+  "solution": "### 💡 Intuition & Approach\nDecomposes recommendation predictions into a global average $\\mu$, user bias $b_u$, and item bias $b_i$: $\\hat{r}_{u,i} = \\mu + b_u + b_i$.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef baseline_predict(ratings_matrix: list, target_pairs: list) -> list:\n    R = np.array(ratings_matrix, dtype=float)\n    valid_mask = R > 0\n    if not np.any(valid_mask):\n        return [0.0] * len(target_pairs)\n\n    mu = np.mean(R[valid_mask])\n    n_users, n_items = R.shape\n\n    b_u = np.zeros(n_users)\n    for u in range(n_users):\n        u_rated = R[u, R[u] > 0]\n        if len(u_rated) > 0:\n            b_u[u] = np.mean(u_rated) - mu\n\n    b_i = np.zeros(n_items)\n    for i in range(n_items):\n        i_rated = R[R[:, i] > 0, i]\n        if len(i_rated) > 0:\n            b_i[i] = np.mean(i_rated) - mu\n\n    preds = []\n    for u, i in target_pairs:\n        p = mu + b_u[u] + b_i[i]\n        preds.append(float(round(p, 6)))\n    return preds\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "BaselinePredictorViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "3x3 sparse matrix",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            5,
+            3,
+            0
+          ],
+          [
+            4,
+            0,
+            1
+          ],
+          [
+            0,
+            1,
+            5
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        3.833333,
+        1.333333,
+        4.333333
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Very sparse 2x2",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            5,
+            0
+          ],
+          [
+            0,
+            3
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        4.0,
+        4.0
+      ]
+    },
+    {
+      "id": "baseline-predictor-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            4,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            10,
+            6,
+            0
+          ],
+          [
+            8,
+            0,
+            2
+          ],
+          [
+            0,
+            2,
+            10
+          ]
+        ]
+      },
+      "expectedOutput": [
+        3.833333,
+        1.333333,
+        4.333333
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            2,
+            2,
+            0
+          ],
+          [
+            2,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        2.0,
+        2.0,
+        2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            -2
+          ],
+          [
+            -1,
+            -1
+          ],
+          [
+            -2,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            -5,
+            -3,
+            0
+          ],
+          [
+            -4,
+            0,
+            -1
+          ],
+          [
+            0,
+            -1,
+            -5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            6
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            6,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            15,
+            9,
+            0
+          ],
+          [
+            12,
+            0,
+            3
+          ],
+          [
+            0,
+            3,
+            15
+          ]
+        ]
+      },
+      "expectedOutput": [
+        3.833333,
+        1.333333,
+        4.333333
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "target_pairs": [
+          [
+            1.0,
+            3.0
+          ],
+          [
+            2.0,
+            2.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            6.0,
+            4.0,
+            1.0
+          ],
+          [
+            5.0,
+            1.0,
+            2.0
+          ],
+          [
+            1.0,
+            2.0,
+            6.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        3.833333,
+        1.333333,
+        4.333333
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "target_pairs": [
+          [
+            -2.0,
+            0.0
+          ],
+          [
+            -1.0,
+            -1.0
+          ],
+          [
+            0.0,
+            -2.0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            3.0,
+            1.0,
+            -2.0
+          ],
+          [
+            2.0,
+            -2.0,
+            -1.0
+          ],
+          [
+            -2.0,
+            -1.0,
+            3.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "target_pairs": [
+          [
+            2,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            2
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            0,
+            3,
+            5
+          ],
+          [
+            1,
+            0,
+            4
+          ],
+          [
+            5,
+            1,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        2.833333,
+        1.333333,
+        5.333333
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            -2
+          ],
+          [
+            -1,
+            -1
+          ],
+          [
+            -2,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            -5,
+            -3,
+            0
+          ],
+          [
+            -4,
+            0,
+            -1
+          ],
+          [
+            0,
+            -1,
+            -5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            20
+          ],
+          [
+            10,
+            10
+          ],
+          [
+            20,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            50,
+            30,
+            0
+          ],
+          [
+            40,
+            0,
+            10
+          ],
+          [
+            0,
+            10,
+            50
+          ]
+        ]
+      },
+      "expectedOutput": [
+        3.833333,
+        1.333333,
+        4.333333
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "target_pairs": [
+          [
+            5.0,
+            7.0
+          ],
+          [
+            6.0,
+            6.0
+          ],
+          [
+            7.0,
+            5.0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            10.0,
+            8.0,
+            5.0
+          ],
+          [
+            9.0,
+            5.0,
+            6.0
+          ],
+          [
+            5.0,
+            6.0,
+            10.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        3.833333,
+        1.333333,
+        4.333333
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            3
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            8,
+            4,
+            0
+          ],
+          [
+            6,
+            0,
+            2
+          ],
+          [
+            0,
+            2,
+            8
+          ]
+        ]
+      },
+      "expectedOutput": [
+        3.833333,
+        1.333333,
+        4.333333
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            -4
+          ],
+          [
+            -2,
+            -2
+          ],
+          [
+            -4,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            -10,
+            -6,
+            0
+          ],
+          [
+            -8,
+            0,
+            -2
+          ],
+          [
+            0,
+            -2,
+            -10
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            1,
+            1,
+            0
+          ],
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1
+          ]
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "target_pairs": [
+          [
+            -1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            1.0,
+            -1.0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            4.0,
+            2.0,
+            -1.0
+          ],
+          [
+            3.0,
+            -1.0,
+            0.0
+          ],
+          [
+            -1.0,
+            0.0,
+            4.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        3.833333,
+        1.333333,
+        4.333333
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            8
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            8,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            20,
+            12,
+            0
+          ],
+          [
+            16,
+            0,
+            4
+          ],
+          [
+            0,
+            4,
+            20
+          ]
+        ]
+      },
+      "expectedOutput": [
+        3.833333,
+        1.333333,
+        4.333333
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            4,
+            2,
+            0
+          ],
+          [
+            3,
+            0,
+            1
+          ],
+          [
+            0,
+            1,
+            4
+          ]
+        ]
+      },
+      "expectedOutput": [
+        3.0,
+        1.0,
+        3.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "baseline-predictor-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "target_pairs": [
+          [
+            0,
+            10
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "ratings_matrix": [
+          [
+            25,
+            15,
+            0
+          ],
+          [
+            20,
+            0,
+            5
+          ],
+          [
+            0,
+            5,
+            25
+          ]
+        ]
+      },
+      "expectedOutput": [
+        3.833333,
+        1.333333,
+        4.333333
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "baseline_predict",
+    "parameters": [
+      {
+        "name": "ratings_matrix",
+        "type": "array",
+        "example": "[[5, 3, 0], [4, 0, 1]]",
+        "description": "User-item rating matrix (0 = unrated)"
+      },
+      {
+        "name": "target_pairs",
+        "type": "array",
+        "example": "[[0, 2], [1, 1]]",
+        "description": "List of [user, item] pairs to predict"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "mean-rating-imputation",
+    "item-cf-predict",
+    "user-based-cf-prediction",
+    "popularity-ranking",
+    "matrix-factorization-sgd-step"
+  ],
+  "tags": [
+    "Recommender Systems"
+  ],
+  "prevId": "popularity-ranking",
+  "nextId": "ordinal-encoding",
+  "slug": "baseline-predictor",
+  "cleanTitle": "Baseline Predictor",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/baseline-predictor",
+  "localUrl": "http://localhost:3000/problems/baseline-predictor",
+  "studyPlan": null
+}

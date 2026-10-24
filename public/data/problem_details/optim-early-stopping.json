@@ -1,0 +1,474 @@
+{
+  "catalogId": "python:optim-early-stopping",
+  "id": "optim-early-stopping",
+  "sourceId": "optim-early-stopping",
+  "slug": "optim-early-stopping",
+  "source": "python",
+  "category": "python",
+  "title": "Early Stopping",
+  "difficulty": "Easy",
+  "tags": [
+    "Optimization"
+  ],
+  "isFree": false,
+  "planId": "math-optimization",
+  "planTitle": "Optimization",
+  "sectionId": "math-optimization-regularization",
+  "sortOrder": 587,
+  "seoDescription": "Apply patience-based early stopping to validation losses and return the best epoch, value, and stopping point.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Track validation loss over epochs and trigger training termination when performance fails to improve for patience epochs.\n\nEarly stopping restricts the effective capacity of the model, preventing parameter trajectories from overfitting to noisy training artifacts.\n\n### Mathematical Formulation\n$$\n\\text{Stop if } \\sum_{t=\\tau-k}^\\tau \\mathbb{I}\\left(L_{\\text{val}}^{(t)} \\ge L_{\\text{val}}^* - \\delta\\right) \\ge \\text{patience}\n$$\n\n### Step-by-Step Implementation\n1. Track historical minimum validation loss best_loss\n2. Increment counter if current epoch loss fails to improve by at least min_delta\n3. Trigger early stopping when counter reaches patience limit\n\n### Returns\nDictionary with boolean 'should_stop', integer 'stopped_epoch', and 'best_loss' rounded to 4 decimal places.",
+  "theory": "## Understanding the Theory: Early Stopping\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization problem: we want to find parameter values that minimize the loss function across training samples. Because loss landscapes in deep learning are non-convex with ravines, saddle points, and plateaus, simple gradient descent can get stuck or oscillate. **Early Stopping** accelerates convergence and stabilizes parameter trajectories.\n\nEarly stopping restricts the effective capacity of the model, preventing parameter trajectories from overfitting to noisy training artifacts. In this problem, the goal is to: track validation loss over epochs and trigger training termination when performance fails to improve for patience epochs.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\text{Stop if } \\sum_{t=\\tau-k}^\\tau \\mathbb{I}\\left(L_{\\text{val}}^{(t)} \\ge L_{\\text{val}}^* - \\delta\\right) \\ge \\text{patience}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Track historical minimum validation loss best_loss\n2. **Phase 2**: Increment counter if current epoch loss fails to improve by at least min_delta\n3. **Phase 3**: Trigger early stopping when counter reaches patience limit\n\n### Practical Machine Learning Applications & Nuances\n* **Escaping Ravines**: Momentum methods accumulate velocity across successive steps, helping the optimizer push through flat regions and dampening high-frequency oscillations.\n* **Adaptive Learning Rates**: Algorithms like Adam scale learning rates per parameter, giving infrequent features larger updates and preventing exploding updates on frequent features.\n* **Gradient Regularization**: Techniques like gradient clipping and weight decay prevent exploding gradients and encourage simpler, more generalizable model weights.",
+  "examples": [
+    "Input: val_losses = [1.0, 0.8, 0.82, 0.85, 0.9], patience = 2, min_delta = 0.01\n\nOutput: {\"should_stop\": 1, \"stopped_epoch\": 3, \"best_loss\": 0.8}\n\nExplanation: Evaluated optim_early_stopping under standard test conditions."
+  ],
+  "requirements": "* Function must be named `optim_early_stopping`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `optim_early_stopping`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def optim_early_stopping(val_losses: list, patience: int = 2, min_delta: float = 1e-4) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Early Stopping** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef optim_early_stopping(val_losses: list, patience: int = 2, min_delta: float = 1e-4) -> dict:\n    best_l, cnt, stop_ep = float('inf'), 0, -1\n    for ep, l in enumerate(val_losses):\n        if l < best_l - min_delta:\n            best_l, cnt = l, 0\n        else:\n            cnt += 1\n            if cnt >= patience: stop_ep = ep; break\n    return {'should_stop': stop_ep != -1, 'stopped_epoch': stop_ep, 'best_loss': round(float(best_l), 4)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Patience 2 early stop at epoch 3",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": true
+    },
+    {
+      "id": "optim-early-stopping-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-early-stopping-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "val_losses": [
+          1.0,
+          0.8,
+          0.82,
+          0.85,
+          0.9
+        ],
+        "patience": 2,
+        "min_delta": 0.01
+      },
+      "expectedOutput": {
+        "should_stop": 1,
+        "stopped_epoch": 3,
+        "best_loss": 0.8
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "optim_early_stopping",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "gradient-descent-quadratic",
+    "anchor-box-generation",
+    "value-iteration-step",
+    "precision-recall-at-k",
+    "cs336-l01-train-byte-pair-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "python",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

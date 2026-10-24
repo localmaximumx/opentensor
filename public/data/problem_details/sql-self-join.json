@@ -1,0 +1,874 @@
+{
+  "catalogId": "sql:sql-self-join",
+  "id": "sql-self-join",
+  "sourceId": "sql-self-join",
+  "slug": "sql-self-join",
+  "source": "sql",
+  "category": "sql",
+  "title": "Self Join",
+  "difficulty": "Medium",
+  "tags": [
+    "Data Processing"
+  ],
+  "isFree": false,
+  "planId": "sql-basics",
+  "planTitle": "SQL Sheet",
+  "sectionId": "sql-basics-joins-relationships",
+  "sortOrder": 374,
+  "seoDescription": "Use a SQL self join to pair users with their referrers while labeling organic signups without a referral.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Join a table to itself on foreign key referrer_id, labeling unreferred signups as Organic.\n\nSelf joins resolve adjacency list hierarchies (such as referrals and managerial reporting chains) within a single relational table.\n\n### Query Logic & Formulation\n$$\n\\text{Users } u \\operatorname{LEFT JOIN} \\text{ Users } r \\text{ ON } u.\\text{referrer\\_id} = r.\\text{user\\_id}\n$$\n\n### Relational Execution Steps\n1. Index user primary keys in hash dictionary for self-referential lookup\n2. Join user entity against referrer record on matching referrer_id\n3. Label organic signups with fallback string and sort deterministically by user_id\n\n### Expected Query Output\nList of records containing user_id, username, and referrer_name.",
+  "theory": "## Understanding the Theory: Self Join\n\n### Core Intuition: Why Do We Need This?\nRelational databases structure data into normalized tables with strict schemas and foreign-key relationships. SQL allows data engineers and analysts to write declarative queries describing what data is needed, while the database query engine optimizes the underlying execution plan. **Self Join** combines, aggregates, or transforms records across tables.\n\nSelf joins resolve adjacency list hierarchies (such as referrals and managerial reporting chains) within a single relational table. In this problem, the goal is to: join a table to itself on foreign key referrer_id, labeling unreferred signups as organic.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\text{Users } u \\operatorname{LEFT JOIN} \\text{ Users } r \\text{ ON } u.\\text{referrer\\_id} = r.\\text{user\\_id}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Index user primary keys in hash dictionary for self-referential lookup\n2. **Phase 2**: Join user entity against referrer record on matching referrer_id\n3. **Phase 3**: Label organic signups with fallback string and sort deterministically by user_id\n\n### Practical Machine Learning Applications & Nuances\n* **Join Mechanics**: Inner joins filter for matching records across tables, while outer joins preserve all rows from one table even when no matches exist.\n* **Window Functions**: Functions like `ROW_NUMBER()` and `RANK()` allow computing partitioned running totals and top-K ranks without requiring self-joins.\n* **Index Optimization**: Proper indexing on join keys and filter conditions ensures queries run in milliseconds rather than doing full table scans.",
+  "examples": [
+    "Input: users = [{\"user_id\": 1, \"username\": \"Alice\", \"referrer_id\": null}, {\"user_id\": 2, \"username\": \"Bob\", \"referrer_id\": 1}, {\"user_id\": 3, \"username\": \"Charlie\", \"referrer_id\": 2}]\n\nOutput: [{\"user_id\": 1, \"username\": \"Alice\", \"referrer_name\": \"Organic\"}, {\"user_id\": 2, \"username\": \"Bob\", \"referrer_name\": \"Alice\"}, {\"user_id\": 3, \"username\": \"Charlie\", \"referrer_name\": \"Bob\"}]\n\nExplanation: Evaluated sql_self_join under standard test conditions."
+  ],
+  "requirements": "* Function must be named `sql_self_join`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `sql_self_join`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "-- SQL Self Join\nSELECT u.user_id, u.username, COALESCE(r.username, 'Organic') AS referrer_name\nFROM users u\nLEFT JOIN users r ON u.referrer_id = r.user_id\nORDER BY u.user_id;",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Self Join** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef sql_self_join(users: list) -> list:\n    umap = {u['user_id']: u['username'] for u in users}\n    res = [{'user_id': u['user_id'], 'username': u['username'], 'referrer_name': umap.get(u.get('referrer_id'), 'Organic')} for u in users]\n    res.sort(key=lambda x: x['user_id'])\n    return res\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Users with and without referrers",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "sql-self-join-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-self-join-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "users": [
+          {
+            "user_id": 1,
+            "username": "Alice",
+            "referrer_id": null
+          },
+          {
+            "user_id": 2,
+            "username": "Bob",
+            "referrer_id": 1
+          },
+          {
+            "user_id": 3,
+            "username": "Charlie",
+            "referrer_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "user_id": 1,
+          "username": "Alice",
+          "referrer_name": "Organic"
+        },
+        {
+          "user_id": 2,
+          "username": "Bob",
+          "referrer_name": "Alice"
+        },
+        {
+          "user_id": 3,
+          "username": "Charlie",
+          "referrer_name": "Bob"
+        }
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "sql_self_join",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sql-multiple-joins",
+    "sql-subqueries",
+    "sql-distinct-values",
+    "sql-row-number",
+    "sql-inner-join"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "sql",
+    "placeholderType": "sql_dummy_select (SELECT * FROM main_table)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

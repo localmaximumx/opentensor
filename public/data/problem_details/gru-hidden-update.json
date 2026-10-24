@@ -1,0 +1,575 @@
+{
+  "id": "gru-hidden-update",
+  "title": "Hidden State Update",
+  "description": "Combine the previous GRU hidden state and the candidate state with the update gate:\n\n$$\nh_t=z_t\\odot h_{t-1}+(1-z_t)\\odot\\widetilde{h}_t.\n$$\n\nHere, $z_t$ is the update gate, $h_{t-1}$ is the previous state, $\\widetilde{h}_t$ is the candidate state, and $\\odot$ means elementwise multiplication. Accept one sample or a batch and return the new state as a matching float64 NumPy array.",
+  "seoDescription": "Implement the GRU hidden-state interpolation between the previous state and candidate using the update gate.",
+  "examples": [
+    "Input: z_t = [0.5,0.5], h_prev = [1,-1], h_tilde = [0.2,0.4]\n\nOutput: [0.6,-0.3]\n\nExplanation: A gate value of 0.5 averages the corresponding old and candidate values.",
+    "Input: z_t = [1,1], h_prev = [2,-3], h_tilde = [8,9]\n\nOutput: [2,-3]",
+    "Input: z_t = [[0,0.25],[0.75,1]], h_prev = [[1,2],[3,4]], h_tilde = [[5,6],[7,8]]\n\nOutput: [[5,5],[4,4]]"
+  ],
+  "requirements": "- Blend the previous and candidate states elementwise using z_t.\n- Return a float64 NumPy array with the same shape as the inputs.",
+  "theory": "# <span style=\"font-size: 20px;\">Hidden State Update</span>\n\n<span style=\"font-size: 14px;\">The hidden state update is the final step in a GRU cell, where the new hidden state $h_t$ is formed by linearly interpolating between the previous hidden state $h_{t-1}$ and the candidate activation $\\tilde{h}_t$. Described in Cho et al. (2014), this formula is what allows a GRU to selectively remember or overwrite information at every time step.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">After the reset gate has produced a candidate activation $\\tilde{h}_t$ and the update gate has produced a blending coefficient $z_t$, the GRU must combine the old hidden state with the new candidate into a single output. The hidden state update performs this combination through **linear interpolation**: a weighted average where the weights at each dimension sum to exactly one.</span>\n\n<span style=\"font-size: 14px;\">The result $h_t$ serves a dual role. It is the **output** of the GRU cell at time step $t$ (unlike the LSTM, which has separate cell state and hidden state), and it is also the **memory** carried forward to time step $t+1$. The interpolation formula simultaneously decides what to output and what to remember.</span>\n\n<span style=\"font-size: 14px;\">No additional parameters are needed for the interpolation itself. The update gate $z_t$ was already computed using learned weight matrices. The hidden state update is purely a pointwise arithmetic operation: multiply, subtract, multiply, add. Yet this simple formula is how the GRU learns when to maintain long-term memory and when to incorporate new information.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n### <span style=\"font-size: 14px;\">The Interpolation Formula</span>\n\n$$\nh_t = z_t \\odot h_{t-1} + (1 - z_t) \\odot \\tilde{h}_t\n$$\n\n<span style=\"font-size: 14px;\">where:</span>\n\n* <span style=\"font-size: 14px;\">$h_t \\in \\mathbb{R}^H$ is the **new hidden state** (output of this time step)</span>\n* <span style=\"font-size: 14px;\">$z_t \\in (0, 1)^H$ is the **update gate** output (computed earlier in the pipeline)</span>\n* <span style=\"font-size: 14px;\">$h_{t-1} \\in \\mathbb{R}^H$ is the **previous hidden state** (memory from the last time step)</span>\n* <span style=\"font-size: 14px;\">$\\tilde{h}_t \\in (-1, 1)^H$ is the **candidate hidden state** (new information via the reset gate)</span>\n* <span style=\"font-size: 14px;\">$\\odot$ denotes **element-wise (Hadamard) multiplication**, not matrix multiplication</span>\n\n### <span style=\"font-size: 14px;\">Element-wise Form</span>\n\n<span style=\"font-size: 14px;\">For each hidden dimension $k$ (where $k = 1, 2, \\ldots, H$):</span>\n\n$$\nh_t^{(k)} = z_t^{(k)} \\cdot h_{t-1}^{(k)} + (1 - z_t^{(k)}) \\cdot \\tilde{h}_t^{(k)}\n$$\n\n<span style=\"font-size: 14px;\">Each dimension operates independently. Dimension $k$ has its own gate value $z_t^{(k)}$ controlling how much old value to retain versus how much new candidate to accept.</span>\n\n### <span style=\"font-size: 14px;\">The Complementary Constraint</span>\n\n$$\nz_t^{(k)} + (1 - z_t^{(k)}) = 1 \\quad \\forall \\, k\n$$\n\n<span style=\"font-size: 14px;\">Because $z_t$ comes from a sigmoid with range $(0, 1)$, both $z_t$ and $(1 - z_t)$ are strictly positive and sum to one. The output $h_t$ is a **convex combination** of $h_{t-1}$ and $\\tilde{h}_t$, always lying on the line segment between them in each dimension.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why Linear Interpolation</span>\n\n### <span style=\"font-size: 14px;\">Smooth Blending Between Old and New</span>\n\n<span style=\"font-size: 14px;\">Linear interpolation provides a continuous spectrum between fully keeping the old state ($z = 1$) and fully replacing with the new candidate ($z = 0$). Any value in between produces a smooth blend. During training, gradients can nudge $z_t$ incrementally, allowing the network to learn fine-grained memory policies rather than hard binary switches.</span>\n\n### <span style=\"font-size: 14px;\">Independent Control Per Dimension</span>\n\n<span style=\"font-size: 14px;\">Each hidden dimension has its own gate value. In a hidden state of size $H = 256$, there are 256 independent interpolation decisions at every time step. Dimension 12 might keep 95% of its old value (tracking sentence topic), while dimension 47 replaces 80% (adapting to the current word). This per-dimension independence allows a single hidden state vector to maintain multiple timescales of information.</span>\n\n### <span style=\"font-size: 14px;\">Gradient Flow Properties</span>\n\n<span style=\"font-size: 14px;\">The $z_t \\odot h_{t-1}$ term creates a **direct linear path** from $h_{t-1}$ to $h_t$. When $z_t \\approx 1$, the gradient $\\partial h_t / \\partial h_{t-1} \\approx 1$ along that dimension. Dimensions that need to preserve information over many time steps learn to keep $z_t$ close to 1, creating a gradient highway analogous to skip connections in residual networks.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Per-Dimension Independence</span>\n\n<span style=\"font-size: 14px;\">The hidden state update is not a single global decision but $H$ independent local decisions. Consider a GRU with $H = 4$:</span>\n\n* <span style=\"font-size: 14px;\">$z_t = [0.95, \\; 0.10, \\; 0.50, \\; 0.02]$</span>\n\n<span style=\"font-size: 14px;\">This means:</span>\n\n* <span style=\"font-size: 14px;\">**Dimension 0** ($z = 0.95$): Keep 95% old, take 5% new. Memory mode.</span>\n* <span style=\"font-size: 14px;\">**Dimension 1** ($z = 0.10$): Keep 10% old, take 90% new. Update mode.</span>\n* <span style=\"font-size: 14px;\">**Dimension 2** ($z = 0.50$): Equal blend. Smooth transition.</span>\n* <span style=\"font-size: 14px;\">**Dimension 3** ($z = 0.02$): Near-complete replacement, effectively resetting.</span>\n\n<span style=\"font-size: 14px;\">All four behaviors happen simultaneously. The network learns which dimensions serve as long-term memory channels and which should respond to new inputs. If the update gate produced a single scalar for the entire hidden state, all dimensions would update at the same rate, severely limiting expressiveness.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Complete GRU Pipeline</span>\n\n### <span style=\"font-size: 14px;\">Step 1: Update Gate</span>\n\n$$\nz_t = \\sigma(W_z x_t + U_z h_{t-1} + b_z)\n$$\n\n<span style=\"font-size: 14px;\">Decides per dimension how much of the old state to retain. Output range: $(0, 1)^H$.</span>\n\n### <span style=\"font-size: 14px;\">Step 2: Reset Gate</span>\n\n$$\nr_t = \\sigma(W_r x_t + U_r h_{t-1} + b_r)\n$$\n\n<span style=\"font-size: 14px;\">Decides how much of the previous hidden state should influence the candidate. When $r_t \\approx 0$, the candidate ignores previous state entirely.</span>\n\n### <span style=\"font-size: 14px;\">Step 3: Candidate Hidden State</span>\n\n$$\n\\tilde{h}_t = \\tanh(W_h x_t + U_h (r_t \\odot h_{t-1}) + b_h)\n$$\n\n<span style=\"font-size: 14px;\">The \"proposed new content.\" The reset gate modulates how much $h_{t-1}$ participates. Tanh squashes results to $(-1, 1)$.</span>\n\n### <span style=\"font-size: 14px;\">Step 4: Hidden State Update (This Problem)</span>\n\n$$\nh_t = z_t \\odot h_{t-1} + (1 - z_t) \\odot \\tilde{h}_t\n$$\n\n<span style=\"font-size: 14px;\">Blends old and new. The **reset gate** controls what goes into the candidate (Step 3), while the **update gate** controls how much of the candidate reaches the final state (Step 4).</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n### <span style=\"font-size: 14px;\">Cho et al. (2014)</span>\n\n<span style=\"font-size: 14px;\">In \"Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation,\" the hidden state update appears as Equation 5. The authors state: \"The actual activation of the proposed unit $h_j^t$ is then a linear interpolation between the previous activation $h_j^{t-1}$ and the candidate activation $\\tilde{h}_j^t$.\"</span>\n\n### <span style=\"font-size: 14px;\">Leaky Integration</span>\n\n<span style=\"font-size: 14px;\">The hidden state update is a form of **leaky integration** from signal processing and neuroscience. In a leaky integrator, the current state is a weighted sum of the previous state (decayed by a leak factor) and new input. The GRU's $z_t$ plays the role of the leak rate, but unlike classical leaky integrators where the rate is fixed, the GRU learns it dynamically as a function of input and state.</span>\n\n### <span style=\"font-size: 14px;\">Enabling Long-Term Memory</span>\n\n<span style=\"font-size: 14px;\">Standard RNNs compute $h_t = \\tanh(W x_t + U h_{t-1})$, completely overwriting the hidden state at each step. The GRU's interpolation formula provides a selective preservation mechanism: by setting $z_t$ close to 1, the network copies information forward across many time steps with minimal degradation, analogous to skip connections in residual networks.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n### <span style=\"font-size: 14px;\">Setup</span>\n\n<span style=\"font-size: 14px;\">GRU with hidden size $H = 4$, single sample ($N = 1$):</span>\n\n$$\nz_t = [0.8, \\; 0.2, \\; 0.6, \\; 0.1]\n$$\n\n$$\nh_{t-1} = [1.0, \\; -0.5, \\; 0.3, \\; 2.0]\n$$\n\n$$\n\\tilde{h}_t = [-0.4, \\; 0.9, \\; 0.7, \\; -1.0]\n$$\n\n### <span style=\"font-size: 14px;\">Step 1: Compute $z_t \\odot h_{t-1}$</span>\n\n* <span style=\"font-size: 14px;\">Dim 0: $0.8 \\times 1.0 = 0.80$</span>\n* <span style=\"font-size: 14px;\">Dim 1: $0.2 \\times (-0.5) = -0.10$</span>\n* <span style=\"font-size: 14px;\">Dim 2: $0.6 \\times 0.3 = 0.18$</span>\n* <span style=\"font-size: 14px;\">Dim 3: $0.1 \\times 2.0 = 0.20$</span>\n\n$$\nz_t \\odot h_{t-1} = [0.80, \\; -0.10, \\; 0.18, \\; 0.20]\n$$\n\n### <span style=\"font-size: 14px;\">Step 2: Compute $(1 - z_t)$</span>\n\n$$\n(1 - z_t) = [0.2, \\; 0.8, \\; 0.4, \\; 0.9]\n$$\n\n### <span style=\"font-size: 14px;\">Step 3: Compute $(1 - z_t) \\odot \\tilde{h}_t$</span>\n\n* <span style=\"font-size: 14px;\">Dim 0: $0.2 \\times (-0.4) = -0.08$</span>\n* <span style=\"font-size: 14px;\">Dim 1: $0.8 \\times 0.9 = 0.72$</span>\n* <span style=\"font-size: 14px;\">Dim 2: $0.4 \\times 0.7 = 0.28$</span>\n* <span style=\"font-size: 14px;\">Dim 3: $0.9 \\times (-1.0) = -0.90$</span>\n\n$$\n(1 - z_t) \\odot \\tilde{h}_t = [-0.08, \\; 0.72, \\; 0.28, \\; -0.90]\n$$\n\n### <span style=\"font-size: 14px;\">Step 4: Add Both Terms</span>\n\n* <span style=\"font-size: 14px;\">Dim 0: $0.80 + (-0.08) = 0.72$</span>\n* <span style=\"font-size: 14px;\">Dim 1: $-0.10 + 0.72 = 0.62$</span>\n* <span style=\"font-size: 14px;\">Dim 2: $0.18 + 0.28 = 0.46$</span>\n* <span style=\"font-size: 14px;\">Dim 3: $0.20 + (-0.90) = -0.70$</span>\n\n$$\nh_t = [0.72, \\; 0.62, \\; 0.46, \\; -0.70]\n$$\n\n### <span style=\"font-size: 14px;\">Interpreting the Results</span>\n\n* <span style=\"font-size: 14px;\">**Dim 0** ($z = 0.8$): Old $= 1.0$, candidate $= -0.4$, result $= 0.72$. High $z$ kept most of the old value.</span>\n* <span style=\"font-size: 14px;\">**Dim 1** ($z = 0.2$): Old $= -0.5$, candidate $= 0.9$, result $= 0.62$. Low $z$ swung heavily toward the candidate.</span>\n* <span style=\"font-size: 14px;\">**Dim 2** ($z = 0.6$): Old $= 0.3$, candidate $= 0.7$, result $= 0.46$. Moderate $z$ blended evenly.</span>\n* <span style=\"font-size: 14px;\">**Dim 3** ($z = 0.1$): Old $= 2.0$, candidate $= -1.0$, result $= -0.70$. Very low $z$ caused near-complete replacement.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Connection to LSTM</span>\n\n### <span style=\"font-size: 14px;\">LSTM Cell State Update</span>\n\n$$\nc_t = f_t \\odot c_{t-1} + i_t \\odot \\tilde{c}_t\n$$\n\n<span style=\"font-size: 14px;\">The LSTM uses two separate gates: $f_t$ (forget gate) and $i_t$ (input gate), computed by separate weight matrices. $f_t + i_t$ is not constrained to equal 1.</span>\n\n### <span style=\"font-size: 14px;\">GRU's Complementary Design</span>\n\n$$\nh_t = z_t \\odot h_{t-1} + (1 - z_t) \\odot \\tilde{h}_t\n$$\n\n<span style=\"font-size: 14px;\">The GRU uses a single gate $z_t$ to replace both. $z_t$ acts as the forget gate and $(1 - z_t)$ acts as the input gate, linked by the complementary constraint.</span>\n\n### <span style=\"font-size: 14px;\">Practical Differences</span>\n\n* <span style=\"font-size: 14px;\">**LSTM**: Can have $f_t = 0.9$ and $i_t = 0.9$ simultaneously, keeping 90% old AND adding 90% new. Cell state magnitude can grow.</span>\n* <span style=\"font-size: 14px;\">**GRU**: If $z_t = 0.9$, then $(1 - z_t) = 0.1$. Keeping and replacing are a **zero-sum game**. Hidden state stays bounded.</span>\n* <span style=\"font-size: 14px;\">**LSTM**: Has an output gate $o_t$ filtering cell state: $h_t = o_t \\odot \\tanh(c_t)$. GRU exposes $h_t$ directly.</span>\n\n<span style=\"font-size: 14px;\">The GRU trades flexibility (independent gates, separate cell/hidden states) for simplicity: 3 gate matrices instead of 4. Cho et al. (2014) and Chung et al. (2014) showed this tradeoff is often favorable, especially with limited training data.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Gradient Flow</span>\n\n### <span style=\"font-size: 14px;\">Derivative Through the Interpolation</span>\n\n$$\n\\frac{\\partial h_t}{\\partial h_{t-1}} = \\text{diag}(z_t) + \\text{diag}(1 - z_t) \\cdot \\frac{\\partial \\tilde{h}_t}{\\partial h_{t-1}} + \\text{terms from } \\frac{\\partial z_t}{\\partial h_{t-1}}\n$$\n\n<span style=\"font-size: 14px;\">The first term, $\\text{diag}(z_t)$, provides a **direct additive path** from $h_{t-1}$ to $h_t$. When $z_t^{(k)} \\approx 1$, the gradient for dimension $k$ passes through with near-unit magnitude.</span>\n\n### <span style=\"font-size: 14px;\">The Gradient Highway</span>\n\n<span style=\"font-size: 14px;\">For a dimension where $z_\\tau^{(k)} \\approx 1$ across time steps $t+1$ through $T$:</span>\n\n$$\n\\prod_{\\tau=t+1}^{T} z_\\tau^{(k)} \\approx 1\n$$\n\n<span style=\"font-size: 14px;\">Unlike vanilla RNNs where gradients pass through tanh at every step (exponential decay), the GRU provides a linear shortcut. Gradients traverse many time steps without vanishing, as long as the update gate keeps those dimensions open.</span>\n\n### <span style=\"font-size: 14px;\">Two Gradient Paths</span>\n\n* <span style=\"font-size: 14px;\">**Direct path** ($z_t \\odot h_{t-1}$): Gradient scaled by $z_t$. The \"memory highway\" preventing vanishing gradients.</span>\n* <span style=\"font-size: 14px;\">**Candidate path** ($(1 - z_t) \\odot \\tilde{h}_t$): Gradient flows through tanh and the reset gate. Subject to attenuation, but necessary for learning new representations.</span>\n\n<span style=\"font-size: 14px;\">Both paths contribute simultaneously. The direct path ensures learning signals reach earlier time steps even when the candidate path's gradient is small, analogous to residual connections in feedforward networks.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n### <span style=\"font-size: 14px;\">Swapping $z_t$ and $(1 - z_t)$</span>\n\n<span style=\"font-size: 14px;\">Writing $h_t = (1 - z_t) \\odot h_{t-1} + z_t \\odot \\tilde{h}_t$ reverses the semantics: $z = 1$ would mean \"take the candidate\" instead of \"keep old state.\" The correct formula has $z_t$ multiplying $h_{t-1}$. Mnemonic: $z$ is the \"lazy gate\" -- high $z$ means the unit does not bother updating.</span>\n\n### <span style=\"font-size: 14px;\">Using Matrix Multiplication Instead of Element-wise</span>\n\n<span style=\"font-size: 14px;\">The $\\odot$ symbol means element-wise multiplication. Both $z_t$ and $h_{t-1}$ have shape $(N, H)$, and the result has shape $(N, H)$. Using `np.matmul` or `@` instead of `*` produces shape errors or silently wrong results.</span>\n\n### <span style=\"font-size: 14px;\">Confusing This Step with the Candidate Computation</span>\n\n<span style=\"font-size: 14px;\">The candidate computation uses the **reset gate** $r_t$ and applies tanh. The hidden state update uses the **update gate** $z_t$ and has **no nonlinearity**. Students sometimes apply tanh to the final output or use $r_t$ where $z_t$ belongs.</span>\n\n### <span style=\"font-size: 14px;\">Forgetting the Complement</span>\n\n<span style=\"font-size: 14px;\">Computing $h_t = z_t \\odot h_{t-1} + z_t \\odot \\tilde{h}_t$ (using $z_t$ for both terms) breaks the convex combination. Coefficients no longer sum to one, and hidden state magnitude drifts. The $(1 - z_t)$ complement is essential.</span>\n\n### <span style=\"font-size: 14px;\">Assuming $z = 1$ Means \"Update\"</span>\n\n<span style=\"font-size: 14px;\">The name \"update gate\" is misleading. When $z_t = 1$: $h_t = 1 \\cdot h_{t-1} + 0 \\cdot \\tilde{h}_t = h_{t-1}$. The unit does **not** update. When $z_t = 0$: $h_t = 0 \\cdot h_{t-1} + 1 \\cdot \\tilde{h}_t = \\tilde{h}_t$. Full update. The gate value represents how much to **keep**, not how much to **change**.</span>\n\n### <span style=\"font-size: 14px;\">Ignoring Batch Dimensions</span>\n\n<span style=\"font-size: 14px;\">All tensors have shape $(N, H)$ where $N$ is the batch size. The interpolation runs independently per sample. Incorrect reshaping can cause cross-sample contamination. Element-wise operations broadcast correctly across the batch dimension without special handling.</span>\n\n---",
+  "hints": [
+    "Compute z_t * h_prev + (1.0 - z_t) * h_tilde elementwise."
+  ],
+  "constraints": "- All three arrays have the same shape, either $(H,)$ or $(N,H)$.\n- Gate values lie in $[0,1]$.\n- Every input is float64 and finite.",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef hidden_state_update(z_t: np.ndarray, h_prev: np.ndarray,\n                        h_tilde: np.ndarray) -> np.ndarray:\n    \"\"\"\n    Returns the float64 updated hidden state.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-11T16:51:24.809Z",
+  "updatedAt": "2026-04-04T12:04:52.603Z",
+  "topicId": "gru-hidden-update",
+  "paperSnippet": "\"The hidden state h_j is a linear interpolation between the previous activation and the candidate activation. The update gate determines how much the unit updates its content.\"",
+  "visualizationComponent": "GRUHiddenUpdateViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Hidden State Update** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef hidden_state_update(z_t: np.ndarray, h_prev: np.ndarray,\n                        h_tilde: np.ndarray) -> np.ndarray:\n    zt = np.asarray(z_t, dtype=float)\n    hp = np.asarray(h_prev, dtype=float)\n    ht = np.asarray(h_tilde, dtype=float)\n    return np.round(zt * hp + (1.0 - zt) * ht, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Keep old and new equally",
+      "inputs": {
+        "z_t": [
+          0.5,
+          0.5
+        ],
+        "h_prev": [
+          1,
+          -1
+        ],
+        "h_tilde": [
+          0.2,
+          0.4
+        ]
+      },
+      "output": [
+        0.6,
+        -0.3
+      ],
+      "isPublic": true,
+      "expectedOutput": [
+        0.6,
+        -0.3
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Keep previous state",
+      "inputs": {
+        "z_t": [
+          1,
+          1
+        ],
+        "h_prev": [
+          2,
+          -3
+        ],
+        "h_tilde": [
+          8,
+          9
+        ]
+      },
+      "output": [
+        2,
+        -3
+      ],
+      "isPublic": true,
+      "expectedOutput": [
+        2,
+        -3
+      ]
+    },
+    {
+      "id": "test-3",
+      "name": "Batched update",
+      "inputs": {
+        "z_t": [
+          [
+            0,
+            0.25
+          ],
+          [
+            0.75,
+            1
+          ]
+        ],
+        "h_prev": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "h_tilde": [
+          [
+            5,
+            6
+          ],
+          [
+            7,
+            8
+          ]
+        ]
+      },
+      "output": [
+        [
+          5,
+          5
+        ],
+        [
+          4,
+          4
+        ]
+      ],
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          5,
+          5
+        ],
+        [
+          4,
+          4
+        ]
+      ]
+    },
+    {
+      "id": "gru-hidden-update-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "z_t": [
+          1.0,
+          1.0
+        ],
+        "h_prev": [
+          2,
+          -2
+        ],
+        "h_tilde": [
+          0.4,
+          0.8
+        ]
+      },
+      "expectedOutput": [
+        2.0,
+        -2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "z_t": [
+          0.25,
+          0.25
+        ],
+        "h_prev": [
+          0,
+          0
+        ],
+        "h_tilde": [
+          0.1,
+          0.2
+        ]
+      },
+      "expectedOutput": [
+        0.075,
+        0.15
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "z_t": [
+          -0.5,
+          -0.5
+        ],
+        "h_prev": [
+          -1,
+          1
+        ],
+        "h_tilde": [
+          -0.2,
+          -0.4
+        ]
+      },
+      "expectedOutput": [
+        0.2,
+        -1.1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "z_t": [
+          1.5,
+          1.5
+        ],
+        "h_prev": [
+          3,
+          -3
+        ],
+        "h_tilde": [
+          0.6,
+          1.2
+        ]
+      },
+      "expectedOutput": [
+        4.2,
+        -5.1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "z_t": [
+          1.5,
+          1.5
+        ],
+        "h_prev": [
+          2.0,
+          0.0
+        ],
+        "h_tilde": [
+          1.2,
+          1.4
+        ]
+      },
+      "expectedOutput": [
+        2.4,
+        -0.7
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "z_t": [
+          -1.5,
+          -1.5
+        ],
+        "h_prev": [
+          -1.0,
+          -3.0
+        ],
+        "h_tilde": [
+          -1.8,
+          -1.6
+        ]
+      },
+      "expectedOutput": [
+        -3.0,
+        0.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "z_t": [
+          0.5,
+          0.5
+        ],
+        "h_prev": [
+          -1,
+          1
+        ],
+        "h_tilde": [
+          0.4,
+          0.2
+        ]
+      },
+      "expectedOutput": [
+        -0.3,
+        0.6
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "z_t": [
+          -0.5,
+          -0.5
+        ],
+        "h_prev": [
+          -1,
+          1
+        ],
+        "h_tilde": [
+          -0.2,
+          -0.4
+        ]
+      },
+      "expectedOutput": [
+        0.2,
+        -1.1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "z_t": [
+          5.0,
+          5.0
+        ],
+        "h_prev": [
+          10,
+          -10
+        ],
+        "h_tilde": [
+          2.0,
+          4.0
+        ]
+      },
+      "expectedOutput": [
+        42.0,
+        -66.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "z_t": [
+          0.05,
+          0.05
+        ],
+        "h_prev": [
+          0,
+          0
+        ],
+        "h_tilde": [
+          0.02,
+          0.04
+        ]
+      },
+      "expectedOutput": [
+        0.019,
+        0.038
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "z_t": [
+          5.5,
+          5.5
+        ],
+        "h_prev": [
+          6.0,
+          4.0
+        ],
+        "h_tilde": [
+          5.2,
+          5.4
+        ]
+      },
+      "expectedOutput": [
+        9.6,
+        -2.3
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "z_t": [
+          0.75,
+          0.75
+        ],
+        "h_prev": [
+          2,
+          -2
+        ],
+        "h_tilde": [
+          0.3,
+          0.6
+        ]
+      },
+      "expectedOutput": [
+        1.575,
+        -1.35
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "z_t": [
+          -1.0,
+          -1.0
+        ],
+        "h_prev": [
+          -2,
+          2
+        ],
+        "h_tilde": [
+          -0.4,
+          -0.8
+        ]
+      },
+      "expectedOutput": [
+        1.2,
+        -3.6
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "z_t": [
+          0.125,
+          0.125
+        ],
+        "h_prev": [
+          0,
+          0
+        ],
+        "h_tilde": [
+          0.05,
+          0.1
+        ]
+      },
+      "expectedOutput": [
+        0.04375,
+        0.0875
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "z_t": [
+          -0.5,
+          -0.5
+        ],
+        "h_prev": [
+          0.0,
+          -2.0
+        ],
+        "h_tilde": [
+          -0.8,
+          -0.6
+        ]
+      },
+      "expectedOutput": [
+        -1.2,
+        0.1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "z_t": [
+          2.0,
+          2.0
+        ],
+        "h_prev": [
+          4,
+          -4
+        ],
+        "h_tilde": [
+          0.8,
+          1.6
+        ]
+      },
+      "expectedOutput": [
+        7.2,
+        -9.6
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gru-hidden-update-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "z_t": [
+          0.375,
+          0.375
+        ],
+        "h_prev": [
+          1,
+          -1
+        ],
+        "h_tilde": [
+          0.15,
+          0.3
+        ]
+      },
+      "expectedOutput": [
+        0.46875,
+        -0.1875
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "hidden_state_update",
+    "parameters": [
+      {
+        "name": "z_t",
+        "type": "array",
+        "example": "[0.5,0.5]",
+        "description": "Update-gate values"
+      },
+      {
+        "name": "h_prev",
+        "type": "array",
+        "example": "[1,-1]",
+        "description": "Previous hidden state"
+      },
+      {
+        "name": "h_tilde",
+        "type": "array",
+        "example": "[0.2,0.4]",
+        "description": "Candidate hidden state"
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "gru-hidden-update",
+    "name": "Hidden State Update",
+    "description": "Interpolate old and candidate",
+    "color": "#a855f7"
+  },
+  "paper": {
+    "id": "gru",
+    "title": "Learning Phrase Representations using RNN Encoder-Decoder (GRU)",
+    "authors": "Cho et al., 2014",
+    "year": 2014,
+    "paperUrl": "https://arxiv.org/abs/1406.1078",
+    "visualizationComponent": "GRUArchViz"
+  },
+  "navigation": {
+    "index": 4,
+    "total": 6,
+    "prev": "gru-candidate",
+    "next": "gru-cell"
+  },
+  "cleanTitle": ""
+}

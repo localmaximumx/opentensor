@@ -1,0 +1,902 @@
+{
+  "id": "k3-kda-context-parallel",
+  "title": "KDA Context Parallelism",
+  "description": "A KDA sequence segment acts on an incoming recurrent state through an affine map. For segment $i$, cumulative transition $M_i$, local zero-initialized contribution $U_i$, and incoming state $S$, define\n\n$$\nF_i(S)=M_iS+U_i.\n$$\n\nTwo ordered maps compose as\n\n$$\n(M_2,U_2)\\circ(M_1,U_1)=\\left(M_2M_1,M_2U_1+U_2\\right).\n$$\n\nUse an exclusive prefix composition so each segment receives the state produced by preceding segments only. Apply the current segment map to that incoming state to obtain its outgoing state. Matrix multiplication order must follow sequence order because transitions need not commute. Return a dictionary with incoming_states, outgoing_states, and final_state. All tensors preserve the input floating-point dtype and device.",
+  "seoDescription": "Implement Kimi K3 KDA context parallelism by processing sequence shards while carrying recurrent state across shard boundaries.",
+  "examples": [
+    "Input: transition_matrices = [[[2]]], local_contributions = [[[3]]], initial_state = [[4]]\n\nOutput: {\"incoming_states\": tensor([[[4.0]]]), \"outgoing_states\": tensor([[[11.0]]]), \"final_state\": tensor([[11.0]])}\n\nExplanation: The single segment receives state 4 and applies the affine map 2 times 4 plus 3, producing final state 11.",
+    "Input: transition_matrices.shape = (3, 2, 2), local_contributions.shape = (3, 2, 1), initial_state.shape = (2, 1)\n\nOutput: {\"incoming_states\": tensor of shape (3, 2, 1), \"outgoing_states\": tensor of shape (3, 2, 1), \"final_state\": tensor of shape (2, 1)}",
+    "Input: transition_matrices.shape = (2, 2, 2), local_contributions.shape = (2, 2, 2), initial_state.shape = (2, 2)\n\nOutput: {\"incoming_states\": tensor of shape (2, 2, 2), \"outgoing_states\": tensor of shape (2, 2, 2), \"final_state\": tensor of shape (2, 2)}"
+  ],
+  "requirements": "- Return a dictionary with exactly incoming_states, outgoing_states, and final_state.\n- Incoming and outgoing stacks use segment order as their leading dimension.\n- Preserve floating-point dtype and device.\n- Do not mutate transition matrices, local contributions, or initial state.",
+  "theory": "# KDA Context Parallelism\n\nKDA Context Parallelism lets several sequence segments be processed in parallel even though KDA normally carries a recurrent state from one token to the next. The key is to summarize each segment as an affine state transformation, then combine those transformations in sequence order.\n\n## Why a zero-state result is not enough\n\nFor simple additive linear attention, a segment can compute the state created from zero, and preceding segment states can be added later. KDA also transforms the state that enters a segment. Its local result therefore depends on both the segment's own contribution and the incoming memory.\n\nEach segment is summarized by two tensors:\n\n- A transition matrix $M_i$ describing how the segment transforms incoming state.\n- A local contribution $U_i$ describing the state the segment creates when starting from zero.\n\nTogether they define an affine map\n\n$$\nF_i(S)=M_iS+U_i\n$$\n\nOnce these two pieces are known, the segment can be applied to any incoming state without replaying its tokens.\n\n## Compose segments in sequence order\n\nSuppose segment 1 is followed by segment 2. Applying the first map and then the second gives\n\n$$\nF_2(F_1(S))=M_2(M_1S+U_1)+U_2\n$$\n\nAfter regrouping, their combined summary is\n\n$$\n(M_2,U_2)\\circ(M_1,U_1)\n=\n(M_2M_1,\\;M_2U_1+U_2)\n$$\n\nThis composition is associative, so a parallel prefix scan can combine many segment summaries efficiently. It is not commutative. Swapping two segments usually changes both the transition product and the transformed local contribution.\n\nThe implementation in this problem can process segments in a clear loop. The important result is the same exclusive-prefix behavior that a parallel scan would produce.\n\n## Incoming and outgoing states\n\nThe incoming state for segment 0 is the supplied initial state. Its outgoing state is\n\n$$\nS_0^{\\mathrm{out}}=M_0S^{\\mathrm{initial}}+U_0\n$$\n\nThat outgoing state becomes the incoming state for segment 1, and the process continues. The incoming stack records the state before each segment. The outgoing stack records the state after each segment.\n\nThis is an exclusive prefix for incoming states because segment $i$ receives the result of preceding segments only. An inclusive prefix would incorrectly include the current segment in its own input.\n\n## A scalar three-segment example\n\nUse scalar states so every matrix is a number. Let the initial state be $1$, and let the three segment maps be\n\n$$\nF_0(S)=2S+1,\\qquad F_1(S)=3S+0,\\qquad F_2(S)=S-4\n$$\n\nSegment 0 receives $1$ and outputs $3$. Segment 1 receives $3$ and outputs $9$. Segment 2 receives $9$ and outputs $5$.\n\nThe incoming states are $[1,3,9]$, the outgoing states are $[3,9,5]$, and the final global state is $5$.\n\nComposing the first two maps gives $F_{1\\circ0}(S)=6S+3$. Applied to the initial state, this gives $9$, matching the second outgoing state. Reversing them would give $6S+1$, which demonstrates why order matters.\n\n## Matrix order matters\n\nWith real KDA states, $M_i$ is a matrix and state multiplication is left-sided. The current transition multiplies the incoming state as $M_iS$. Do not reverse this to $SM_i$, and do not accumulate transition matrices in the opposite order.\n\nLocal contributions have the same shape as the recurrent state. When a later transition is composed with an earlier segment, that later matrix must also transform the earlier local contribution.\n\n## Implementation order\n\n- Start a working state from the supplied initial state.\n- For each segment in sequence order, append the current working state to the incoming list.\n- Compute the outgoing state as current transition times incoming state plus local contribution.\n- Append that result to the outgoing list and use it as the next working state.\n- Stack incoming states and outgoing states along the segment axis.\n- Return both stacks followed by the final working state.\n\n## Common mistakes to avoid\n\n- **Using an inclusive prefix for inputs.** A segment's incoming state excludes its own transformation.\n- **Adding local contributions without transitions.** Earlier contributions are transformed by later segment matrices.\n- **Reversing matrix multiplication order.** Segment maps follow sequence order and do not generally commute.\n- **Starting from zero.** The supplied initial state must enter the first segment.\n- **Returning only the final state.** The task also requires every incoming and outgoing state.\n",
+  "hints": [
+    "Represent the completed prefix with one transition matrix and one accumulated contribution.",
+    "Evaluate each outgoing state as the current transition applied to its incoming state plus its contribution.",
+    "Compose transitions on the left so segment order is preserved."
+  ],
+  "constraints": "- At least one segment is supplied.\n- Transition matrices have shape (segments, state width, state width).\n- Local contributions have shape (segments, state width, value width).\n- Initial state has shape (state width, value width).",
+  "difficulty": "Hard",
+  "starterCode": "import torch\n\ndef kda_context_parallel(transition_matrices: torch.Tensor, local_contributions: torch.Tensor, initial_state: torch.Tensor) -> dict[str, torch.Tensor]:\n    \"\"\"\n    Returns a dictionary containing incoming states, outgoing states, and the final global state.\n    \"\"\"\n    pass",
+  "createdAt": "2026-07-29T07:43:16.647Z",
+  "updatedAt": "2026-09-03T19:22:49.691Z",
+  "topicId": "k3-kda-context-parallel",
+  "paperSnippet": "\"state\"",
+  "visualizationComponent": "K3KDAContextParallelViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **KDA Context Parallelism** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch\n\ndef kda_context_parallel(transition_matrices: torch.Tensor, local_contributions: torch.Tensor, initial_state: torch.Tensor) -> dict[str, torch.Tensor]:\n    M = transition_matrices if isinstance(transition_matrices, torch.Tensor) else torch.tensor(transition_matrices, dtype=torch.float64)\n    U = local_contributions if isinstance(local_contributions, torch.Tensor) else torch.tensor(local_contributions, dtype=torch.float64)\n    S0 = initial_state if isinstance(initial_state, torch.Tensor) else torch.tensor(initial_state, dtype=torch.float64)\n    \n    N = M.shape[0]\n    incoming = []\n    outgoing = []\n    cur_s = S0\n    for i in range(N):\n        incoming.append(cur_s)\n        cur_s = M[i] @ cur_s + U[i]\n        outgoing.append(cur_s)\n        \n    inc_tensor = torch.stack(incoming, dim=0)\n    out_tensor = torch.stack(outgoing, dim=0)\n    return {\n        \"incoming_states\": torch.round(inc_tensor * 1e6) / 1e6,\n        \"outgoing_states\": torch.round(out_tensor * 1e6) / 1e6,\n        \"final_state\": torch.round(cur_s * 1e6) / 1e6\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Single affine segment",
+      "inputs": {
+        "initial_state": [
+          [
+            4
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              3
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              2
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "incoming_states": [
+          [
+            [
+              4.0
+            ]
+          ]
+        ],
+        "outgoing_states": [
+          [
+            [
+              11.0
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            11.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Noncommuting segment maps",
+      "inputs": {
+        "initial_state": [
+          [
+            0.5
+          ],
+          [
+            -1
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              1
+            ],
+            [
+              0
+            ]
+          ],
+          [
+            [
+              0
+            ],
+            [
+              2
+            ]
+          ],
+          [
+            [
+              -0.5
+            ],
+            [
+              0.25
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              0
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          [
+            [
+              0.5,
+              -0.25
+            ],
+            [
+              0.75,
+              1
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "incoming_states": [
+          [
+            [
+              0.5
+            ],
+            [
+              -1.0
+            ]
+          ],
+          [
+            [
+              0.5
+            ],
+            [
+              -1.0
+            ]
+          ],
+          [
+            [
+              0.5
+            ],
+            [
+              2.0
+            ]
+          ]
+        ],
+        "outgoing_states": [
+          [
+            [
+              0.5
+            ],
+            [
+              -1.0
+            ]
+          ],
+          [
+            [
+              0.5
+            ],
+            [
+              2.0
+            ]
+          ],
+          [
+            [
+              -0.75
+            ],
+            [
+              2.625
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            -0.75
+          ],
+          [
+            2.625
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-3",
+      "name": "Two value columns",
+      "inputs": {
+        "initial_state": [
+          [
+            0.2,
+            -0.4
+          ],
+          [
+            0.6,
+            0.8
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0.5,
+              -0.5
+            ]
+          ],
+          [
+            [
+              -0.25,
+              0.75
+            ],
+            [
+              1,
+              0.25
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              0.8,
+              0.1
+            ],
+            [
+              -0.2,
+              1.1
+            ]
+          ],
+          [
+            [
+              1.2,
+              -0.3
+            ],
+            [
+              0.4,
+              0.7
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "incoming_states": [
+          [
+            [
+              0.2,
+              -0.4
+            ],
+            [
+              0.6,
+              0.8
+            ]
+          ],
+          [
+            [
+              1.22,
+              -0.24
+            ],
+            [
+              1.12,
+              0.46
+            ]
+          ]
+        ],
+        "outgoing_states": [
+          [
+            [
+              1.22,
+              -0.24
+            ],
+            [
+              1.12,
+              0.46
+            ]
+          ],
+          [
+            [
+              0.878,
+              0.324
+            ],
+            [
+              2.272,
+              0.476
+            ]
+          ]
+        ],
+        "final_state": [
+          [
+            0.878,
+            0.324
+          ],
+          [
+            2.272,
+            0.476
+          ]
+        ]
+      }
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "initial_state": [
+          [
+            8
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              6
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              4
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[8.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[38.]]], dtype=torch.float64)",
+        "final_state": "tensor([[38.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "initial_state": [
+          [
+            2
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              2
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              1
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[2.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[4.]]], dtype=torch.float64)",
+        "final_state": "tensor([[4.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "initial_state": [
+          [
+            4
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              3
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              2
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[4.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[11.]]], dtype=torch.float64)",
+        "final_state": "tensor([[11.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "initial_state": [
+          [
+            6
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              4
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              3
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[6.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[22.]]], dtype=torch.float64)",
+        "final_state": "tensor([[22.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "initial_state": [
+          [
+            12
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              9
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              6
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[12.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[81.]]], dtype=torch.float64)",
+        "final_state": "tensor([[81.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "initial_state": [
+          [
+            1
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              1
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              1
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[1.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[2.]]], dtype=torch.float64)",
+        "final_state": "tensor([[2.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "initial_state": [
+          [
+            8
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              6
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              4
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[8.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[38.]]], dtype=torch.float64)",
+        "final_state": "tensor([[38.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "initial_state": [
+          [
+            16
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              12
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              8
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[16.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[140.]]], dtype=torch.float64)",
+        "final_state": "tensor([[140.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "initial_state": [
+          [
+            4
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              3
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              2
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[4.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[11.]]], dtype=torch.float64)",
+        "final_state": "tensor([[11.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "initial_state": [
+          [
+            3
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              2
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              2
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[3.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[8.]]], dtype=torch.float64)",
+        "final_state": "tensor([[8.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "initial_state": [
+          [
+            20
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              15
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              10
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[20.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[215.]]], dtype=torch.float64)",
+        "final_state": "tensor([[215.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "initial_state": [
+          [
+            12
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              9
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              6
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[12.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[81.]]], dtype=torch.float64)",
+        "final_state": "tensor([[81.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "initial_state": [
+          [
+            3
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              2
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              2
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[3.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[8.]]], dtype=torch.float64)",
+        "final_state": "tensor([[8.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "initial_state": [
+          [
+            24
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              18
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              12
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[24.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[306.]]], dtype=torch.float64)",
+        "final_state": "tensor([[306.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "initial_state": [
+          [
+            16
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              12
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              8
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[16.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[140.]]], dtype=torch.float64)",
+        "final_state": "tensor([[140.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "initial_state": [
+          [
+            5
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              4
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              2
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[5.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[14.]]], dtype=torch.float64)",
+        "final_state": "tensor([[14.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-kda-context-parallel-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "initial_state": [
+          [
+            2
+          ]
+        ],
+        "local_contributions": [
+          [
+            [
+              1
+            ]
+          ]
+        ],
+        "transition_matrices": [
+          [
+            [
+              1
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "incoming_states": "tensor([[[2.]]], dtype=torch.float64)",
+        "outgoing_states": "tensor([[[3.]]], dtype=torch.float64)",
+        "final_state": "tensor([[3.]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "kda_context_parallel",
+    "runtime": "pytorch",
+    "parameters": [
+      {
+        "name": "transition_matrices",
+        "type": "array",
+        "example": "[[[2]]]",
+        "description": "Segment cumulative transitions."
+      },
+      {
+        "name": "local_contributions",
+        "type": "array",
+        "example": "[[[3]]]",
+        "description": "Segment states generated from zero."
+      },
+      {
+        "name": "initial_state",
+        "type": "array",
+        "example": "[[4]]",
+        "description": "Initial global recurrent state."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "k3-kda-context-parallel",
+    "name": "KDA Context Parallel",
+    "description": "Compose recurrent segment transitions with an associative prefix operation.",
+    "color": "#8b5cf6"
+  },
+  "paper": {
+    "id": "kimik3",
+    "title": "Kimi K3",
+    "authors": "Kimi Team",
+    "year": 2026,
+    "paperUrl": "https://github.com/MoonshotAI/Kimi-K3/blob/main/k3_tech_report.pdf",
+    "visualizationComponent": "KimiK3ArchViz"
+  },
+  "navigation": {
+    "index": 11,
+    "total": 11,
+    "prev": "k3-multi-teacher-opd",
+    "next": null
+  },
+  "cleanTitle": ""
+}

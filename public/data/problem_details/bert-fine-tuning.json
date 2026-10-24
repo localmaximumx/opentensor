@@ -1,0 +1,1446 @@
+{
+  "id": "bert-fine-tuning",
+  "title": "Fine-tuning Architecture",
+  "description": "Implement one gradient-descent step for a BERT sequence-classification head. Treat the supplied hidden states as the output of a pre-trained encoder and update only the classifier parameters. Use the hidden state at sequence position zero for every sample.\n\n$$\nZ = H_{:,0,:}W + b\n$$\n\n$$\nP_{i,c} = \\frac{\\exp(Z_{i,c})}{\\sum_{k=1}^{C}\\exp(Z_{i,k})}\n$$\n\n$$\nL = -\\frac{1}{B}\\sum_{i=1}^{B}\\log P_{i,y_i}\n$$\n\nFor the softmax-cross-entropy gradient, subtract one from the probability of each true class and divide by $B$. Here, $B$ is batch size, $C$ is class count, and $y_i$ is the integer label for sample $i$. Return a Python dictionary with exactly new_classifier_W, new_classifier_b, and loss. The updated parameters must be float64 NumPy arrays, and loss must be a Python float measured before the update.",
+  "seoDescription": "Build BERT fine-tuning utilities for freezing encoder layers and producing sequence or token classification logits.",
+  "examples": [
+    "Input: hidden_states = [[[1,0],[0.2,0.3]],[[0,1],[-0.1,0.4]]], labels = [0,1], classifier_W = [[0.2,-0.1],[-0.3,0.4]], classifier_b = [0.05,-0.05], learning_rate = 0.1\n\nOutput: {\"new_classifier_W\":[[0.220066,-0.120066],[-0.317717,0.417717]],\"new_classifier_b\":[0.052348,-0.052348],\"loss\":0.475252}\n\nExplanation: Only the classification-token states contribute to the softmax loss and the classifier update.",
+    "Input: hidden_states = [[[0.5,-0.5,1],[9,9,9]],[[-1,0.25,0.5],[8,8,8]],[[0.2,0.1,-0.3],[7,7,7]]], labels = [2,0,1], classifier_W = [[0.1,-0.2,0.3],[0.4,0.1,-0.1],[-0.3,0.2,0.5]], classifier_b = [0,0.1,-0.1], learning_rate = 0.05\n\nOutput: {\"new_classifier_W\":[[0.085013,-0.192573,0.30756],[0.403876,0.101804,-0.10568],[-0.294879,0.187395,0.507484]],\"new_classifier_b\":[0.002816,0.097798,-0.100613],\"loss\":1.031599}",
+    "Input: hidden_states = [[[1,-1],[4,4]]], labels = [1], classifier_W = [[0,0],[0,0]], classifier_b = [0,0], learning_rate = 0.2\n\nOutput: {\"new_classifier_W\":[[-0.1,0.1],[0.1,-0.1]],\"new_classifier_b\":[-0.1,0.1],\"loss\":0.693147}"
+  ],
+  "requirements": "- Use NumPy.\n- Select the position-zero state from each sequence.\n- Compute numerically stable softmax probabilities and mean cross-entropy.\n- Compute analytical gradients for the classifier weights and bias.\n- Apply exactly one gradient-descent update.\n- Return exactly the documented arrays and pre-update loss.",
+  "theory": "# <span style=\"font-size: 20px;\">Fine-tuning Architecture</span>\n\n<span style=\"font-size: 14px;\">Fine-tuning is the second stage of BERT's two-stage paradigm (Devlin et al., 2019): first pre-train a deep bidirectional Transformer on unlabeled corpora, then fine-tune the entire model on a smaller labeled dataset for a specific downstream task. As the paper states: \"Fine-tuning is straightforward since the self-attention mechanism in the Transformer allows BERT to model many downstream tasks. For each task, we simply plug in the task-specific inputs and outputs and fine-tune all the parameters end-to-end.\"</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is / What It Does</span>\n\n<span style=\"font-size: 14px;\">Fine-tuning takes the pre-trained BERT encoder and adds a small, randomly initialized task-specific layer (the \"head\") on top. The entire system is trained end-to-end on labeled data. This contrasts with feature-based approaches (like ELMo) where pre-trained representations are frozen.</span>\n\n* <span style=\"font-size: 14px;\">**Stage 1 (Pre-training):** BERT learns general language understanding from massive unlabeled text via masked language modeling and next sentence prediction, building deep contextual representations across 12 or 24 Transformer layers.</span>\n* <span style=\"font-size: 14px;\">**Stage 2 (Fine-tuning):** All parameters are updated on a small labeled dataset. The pre-trained weights provide an excellent initialization, so the model converges quickly with minimal data.</span>\n\n<span style=\"font-size: 14px;\">The task head is typically a single linear layer. For sequence classification it operates on the [CLS] hidden state; for token classification it operates on every token's hidden state independently. The head is the only component initialized from scratch.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">Let $H \\in \\mathbb{R}^{L \\times d}$ be the final encoder output, where $L$ is sequence length and $d$ is hidden dimension (768 for BERT-Base, 1024 for BERT-Large). $h_{\\text{CLS}} \\in \\mathbb{R}^d$ is the [CLS] hidden state, and $h_i \\in \\mathbb{R}^d$ is the hidden state at position $i$.</span>\n\n<span style=\"font-size: 14px;\">**Sequence classification** uses only the [CLS] token's representation:</span>\n\n$$\n\\text{logits} = h_{\\text{CLS}} \\cdot W + b\n$$\n\n<span style=\"font-size: 14px;\">where $W \\in \\mathbb{R}^{d \\times K}$ is the classifier weight matrix, $b \\in \\mathbb{R}^K$ is the bias vector, and $K$ is the number of classes.</span>\n\n<span style=\"font-size: 14px;\">**Token classification** applies the same linear transformation to every token independently:</span>\n\n$$\n\\text{logits}_i = h_i \\cdot W + b \\quad \\text{for } i = 1, 2, \\ldots, L\n$$\n\n<span style=\"font-size: 14px;\">where $W \\in \\mathbb{R}^{d \\times K}$ and $b \\in \\mathbb{R}^K$ are shared across all positions.</span>\n\n<span style=\"font-size: 14px;\">**Probability distribution** via softmax:</span>\n\n$$\nP(y = k \\mid h) = \\frac{\\exp(\\text{logits}_k)}{\\sum_{j=1}^{K} \\exp(\\text{logits}_j)}\n$$\n\n<span style=\"font-size: 14px;\">**Training loss** is standard cross-entropy. For sequence classification with ground-truth class $c$:</span>\n\n$$\n\\mathcal{L} = -\\log P(y = c \\mid h_{\\text{CLS}})\n$$\n\n<span style=\"font-size: 14px;\">For token classification, the loss sums over all token positions (ignoring padding and special tokens):</span>\n\n$$\n\\mathcal{L} = -\\sum_{i=1}^{L} \\log P(y_i = c_i \\mid h_i)\n$$\n\n<span style=\"font-size: 14px;\">Gradients from this loss flow back through the entire encoder, adjusting all pre-trained parameters. This end-to-end gradient flow is what distinguishes fine-tuning from feature extraction.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Sequence vs Token Classification</span>\n\n<span style=\"font-size: 14px;\">The same BERT encoder serves both tasks. The difference lies entirely in which hidden states the classifier head reads.</span>\n\n<span style=\"font-size: 14px;\">**Sequence classification** produces one prediction per input:</span>\n\n* <span style=\"font-size: 14px;\">**Input representation:** The [CLS] token aggregates information from the entire sequence into $h_{\\text{CLS}}$ via self-attention across all layers.</span>\n* <span style=\"font-size: 14px;\">**Classifier:** A single linear layer maps $h_{\\text{CLS}} \\in \\mathbb{R}^d$ to $\\mathbb{R}^K$.</span>\n* <span style=\"font-size: 14px;\">**Tasks:** Sentiment analysis, natural language inference, topic classification, paraphrase detection.</span>\n\n<span style=\"font-size: 14px;\">**Token classification** produces one prediction per token:</span>\n\n* <span style=\"font-size: 14px;\">**Input representation:** Every token position's hidden state $h_i$ is used, not just [CLS].</span>\n* <span style=\"font-size: 14px;\">**Classifier:** The same linear layer is applied independently to each token's hidden state. Weights $W$ and $b$ are shared across positions.</span>\n* <span style=\"font-size: 14px;\">**Tasks:** Named entity recognition (NER), part-of-speech tagging, slot filling in dialog systems.</span>\n\n<span style=\"font-size: 14px;\">For sentence-pair tasks, BERT packs both sentences into one input: [CLS] sentence_A [SEP] sentence_B [SEP]. Segment embeddings distinguish which sentence each token belongs to, and [CLS] captures the cross-sentence relationship.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Layer Freezing</span>\n\n<span style=\"font-size: 14px;\">Layer freezing disables gradient updates for selected parameters by setting `requires_grad = False`, so they retain pre-trained values throughout training.</span>\n\n<span style=\"font-size: 14px;\">**Why freeze layers:**</span>\n\n* <span style=\"font-size: 14px;\">**Prevent catastrophic forgetting:** On small datasets, updating all parameters risks overwriting the general linguistic knowledge learned during pre-training.</span>\n* <span style=\"font-size: 14px;\">**Reduce overfitting:** Fewer trainable parameters means lower model capacity relative to dataset size, acting as implicit regularization.</span>\n* <span style=\"font-size: 14px;\">**Speed up training:** Frozen layers skip gradient computation and weight updates, reducing memory and training time.</span>\n\n<span style=\"font-size: 14px;\">**Which layers to freeze:**</span>\n\n* <span style=\"font-size: 14px;\">**Bottom layers (0-3 in BERT-Base):** Capture general linguistic features like syntax and morphology. Transfer well across tasks and are safest to freeze.</span>\n* <span style=\"font-size: 14px;\">**Middle layers (4-7):** Capture intermediate representations. Whether to freeze depends on domain similarity to pre-training data.</span>\n* <span style=\"font-size: 14px;\">**Top layers (8-11):** Capture task-relevant, high-level semantic features. Benefit most from fine-tuning and should generally remain trainable.</span>\n* <span style=\"font-size: 14px;\">**Embedding layer:** Often frozen since subword embeddings are well-learned during pre-training.</span>\n\n<span style=\"font-size: 14px;\">**Guidelines by dataset size:**</span>\n\n* <span style=\"font-size: 14px;\">**Very small (< 1K examples):** Freeze all encoder layers, train only the classifier head.</span>\n* <span style=\"font-size: 14px;\">**Small (1K-10K examples):** Freeze bottom 6-8 layers, fine-tune top layers and head.</span>\n* <span style=\"font-size: 14px;\">**Medium (10K-100K examples):** Freeze bottom 2-4 layers or none. Use a small learning rate.</span>\n* <span style=\"font-size: 14px;\">**Large (100K+ examples):** Fine-tune all layers. Sufficient data prevents catastrophic forgetting.</span>\n\n<span style=\"font-size: 14px;\">Gradual unfreezing is a related technique: start with only the top layer unfrozen, train briefly, then unfreeze the next layer down and repeat.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">Devlin et al. (2019) introduced a fine-tuning recipe that became the standard. The recommended hyperparameters were deliberately conservative.</span>\n\n<span style=\"font-size: 14px;\">**Recommended hyperparameters:**</span>\n\n* <span style=\"font-size: 14px;\">**Learning rate:** 2e-5, 3e-5, 4e-5, or 5e-5 -- roughly 100x smaller than typical training-from-scratch rates.</span>\n* <span style=\"font-size: 14px;\">**Batch size:** 16 or 32.</span>\n* <span style=\"font-size: 14px;\">**Epochs:** 2, 3, or 4. Very few epochs needed because the model starts from strong representations.</span>\n* <span style=\"font-size: 14px;\">**Warmup:** Linear warmup over the first 10% of steps, then linear decay.</span>\n* <span style=\"font-size: 14px;\">**Dropout:** 0.1 on the classifier head.</span>\n\n<span style=\"font-size: 14px;\">**Key results from the paper:**</span>\n\n* <span style=\"font-size: 14px;\">**GLUE benchmark:** 80.5 accuracy, a 7.7 point improvement over prior state of the art.</span>\n* <span style=\"font-size: 14px;\">**SQuAD 1.1:** F1 of 93.2, surpassing human performance (91.2 F1).</span>\n* <span style=\"font-size: 14px;\">**SQuAD 2.0:** F1 of 83.1, handling unanswerable questions via [CLS].</span>\n* <span style=\"font-size: 14px;\">**CoNLL-2003 NER:** F1 of 92.8, showing the same model excels at both sequence-level and token-level tasks.</span>\n\n<span style=\"font-size: 14px;\">Fine-tuning outperformed feature-based approaches on most tasks, validating the end-to-end strategy.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Catastrophic Forgetting</span>\n\n<span style=\"font-size: 14px;\">Catastrophic forgetting occurs when fine-tuning overwrites the general knowledge learned during pre-training. The model becomes specialized for the new task at the cost of losing broad linguistic understanding.</span>\n\n<span style=\"font-size: 14px;\">**Why small learning rates matter:**</span>\n\n* <span style=\"font-size: 14px;\">**Small updates preserve knowledge:** A rate of 2e-5 to 5e-5 nudges pre-trained weights rather than replacing them.</span>\n* <span style=\"font-size: 14px;\">**Large rates destroy representations:** At 1e-3 or higher, gradients rapidly overwrite attention patterns learned from billions of tokens.</span>\n\n<span style=\"font-size: 14px;\">**Why few epochs matter:**</span>\n\n* <span style=\"font-size: 14px;\">**Drift compounds:** Every step pushes parameters further from pre-trained values. Many epochs on small data cause substantial cumulative drift.</span>\n\n<span style=\"font-size: 14px;\">**Connection to layer freezing:**</span>\n\n* <span style=\"font-size: 14px;\">**Freezing as direct remedy:** If parameters do not update, they cannot forget.</span>\n* <span style=\"font-size: 14px;\">**Complementary strategies:** Layer freezing, small learning rates, few epochs, and warmup address the same problem from different angles and are often combined.</span>\n\n<span style=\"font-size: 14px;\">**Discriminative learning rates** offer a middle ground: assign smaller rates to lower layers and larger rates to upper layers. For example, layer 0 uses 1e-6, layer 6 uses 1e-5, layer 11 uses 5e-5.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Consider 3-class sentiment classification (negative, neutral, positive) with hidden dimension $d = 4$.</span>\n\n<span style=\"font-size: 14px;\">**Step 1: Encoder output.** After passing \"[CLS] This movie is great [SEP]\" through BERT, the [CLS] hidden state is:</span>\n\n$$\nh_{\\text{CLS}} = [0.5, -0.3, 0.8, 0.1]\n$$\n\n<span style=\"font-size: 14px;\">**Step 2: Classifier weights.** $W \\in \\mathbb{R}^{4 \\times 3}$ and $b \\in \\mathbb{R}^3$:</span>\n\n$$\nW = \\begin{bmatrix} 0.2 & -0.1 & 0.4 \\\\ 0.3 & 0.5 & -0.2 \\\\ -0.1 & 0.2 & 0.6 \\\\ 0.4 & -0.3 & 0.1 \\end{bmatrix}, \\quad b = [0.1, -0.1, 0.2]\n$$\n\n<span style=\"font-size: 14px;\">**Step 3: Compute logits.** $\\text{logits} = h_{\\text{CLS}} \\cdot W + b$:</span>\n\n$$\n\\text{logits}_0 = (0.5)(0.2) + (-0.3)(0.3) + (0.8)(-0.1) + (0.1)(0.4) + 0.1 = 0.07\n$$\n\n$$\n\\text{logits}_1 = (0.5)(-0.1) + (-0.3)(0.5) + (0.8)(0.2) + (0.1)(-0.3) - 0.1 = -0.17\n$$\n\n$$\n\\text{logits}_2 = (0.5)(0.4) + (-0.3)(-0.2) + (0.8)(0.6) + (0.1)(0.1) + 0.2 = 0.95\n$$\n\n$$\n\\text{logits} = [0.07, -0.17, 0.95]\n$$\n\n<span style=\"font-size: 14px;\">**Step 4: Softmax.**</span>\n\n$$\n\\exp(\\text{logits}) = [e^{0.07}, e^{-0.17}, e^{0.95}] = [1.073, 0.844, 2.586]\n$$\n\n$$\n\\text{sum} = 1.073 + 0.844 + 2.586 = 4.503\n$$\n\n$$\nP = [0.238, 0.187, 0.574]\n$$\n\n<span style=\"font-size: 14px;\">The model predicts class 2 (positive) with 57.4% probability, matching \"This movie is great.\"</span>\n\n<span style=\"font-size: 14px;\">**Step 5: Loss.** With ground-truth label class 2:</span>\n\n$$\n\\mathcal{L} = -\\log(0.574) = 0.555\n$$\n\n<span style=\"font-size: 14px;\">This loss backpropagates through the classifier head and the entire BERT encoder.</span>\n\n### <span style=\"font-size: 14px;\">Token Classification Example</span>\n\n<span style=\"font-size: 14px;\">NER on \"John works at Google\" with labels {O, PER, ORG} ($K = 3$). The same $W$ and $b$ are applied to every token's hidden state independently.</span>\n\n<span style=\"font-size: 14px;\">After encoding:</span>\n\n$$\nh_{\\text{John}} = [0.9, -0.2, 0.4, 0.3], \\quad h_{\\text{works}} = [0.1, 0.5, -0.1, 0.2], \\quad h_{\\text{Google}} = [0.7, 0.1, 0.6, -0.4]\n$$\n\n<span style=\"font-size: 14px;\">**\"John\":** $\\text{logits} = h_{\\text{John}} \\cdot W + b = [0.30, -0.30, 0.87]$. Softmax: $[0.243, 0.133, 0.624]$. Prediction: ORG. With random weights this is incorrect -- a trained model would predict PER.</span>\n\n<span style=\"font-size: 14px;\">**\"works\":** $\\text{logits} = [0.36, 0.06, 0.10]$. Softmax: $[0.402, 0.298, 0.310]$. Prediction: O. Correct -- \"works\" is not an entity.</span>\n\n<span style=\"font-size: 14px;\">**\"Google\":** $\\text{logits} = [0.05, 0.12, 0.78]$. Softmax: $[0.225, 0.242, 0.533]$. Prediction: ORG. Correct -- \"Google\" is an organization.</span>\n\n<span style=\"font-size: 14px;\">The total loss sums cross-entropy across all token positions.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Modern Context</span>\n\n<span style=\"font-size: 14px;\">As models grew to hundreds of billions of parameters, full fine-tuning became impractical, driving parameter-efficient alternatives.</span>\n\n* <span style=\"font-size: 14px;\">**LoRA (Low-Rank Adaptation):** Freezes pre-trained weights and injects trainable low-rank matrices. The update is $\\Delta W = AB$ with $A \\in \\mathbb{R}^{d \\times r}$, $B \\in \\mathbb{R}^{r \\times d}$, $r \\ll d$. Reduces trainable parameters by 1000x while matching full fine-tuning on many tasks.</span>\n* <span style=\"font-size: 14px;\">**Adapter layers:** Small bottleneck modules inserted between Transformer layers. Only adapters train; the base model is frozen.</span>\n* <span style=\"font-size: 14px;\">**Prompt tuning:** Learnable continuous vectors prepended to input embeddings. The model is completely frozen; only prompt vectors are optimized.</span>\n* <span style=\"font-size: 14px;\">**In-context learning (ICL):** Introduced by GPT-3. Task demonstrations given in the input prompt; the model performs zero-shot or few-shot without parameter updates.</span>\n* <span style=\"font-size: 14px;\">**QLoRA:** Combines 4-bit quantization with LoRA, enabling fine-tuning of 65B+ parameter models on a single GPU.</span>\n\n<span style=\"font-size: 14px;\">Despite these advances, full fine-tuning remains the gold standard when maximum performance is needed. BERT's core insight -- that pre-trained representations can be adapted with minimal architecture changes -- underpins all of these methods.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n* <span style=\"font-size: 14px;\">**Learning rate too high:** Using 1e-3 or higher rapidly destroys pre-trained representations. Always use 2e-5 to 5e-5.</span>\n* <span style=\"font-size: 14px;\">**Too many epochs on small data:** Training 10+ epochs on a few thousand examples causes severe overfitting and catastrophic forgetting. Stick to 2-4 epochs.</span>\n* <span style=\"font-size: 14px;\">**Forgetting to use [CLS] for sequence tasks:** Averaging all token states or using the last token misaligns with pre-training, which used [CLS] as the aggregate representation.</span>\n* <span style=\"font-size: 14px;\">**Applying sequence head to token tasks:** Using only [CLS] for NER or POS tagging discards per-token information. Token classification requires every token's hidden state.</span>\n* <span style=\"font-size: 14px;\">**Skipping warmup:** The randomly initialized head produces large, noisy gradients that can permanently damage pre-trained representations. Use warmup for 5-10% of steps.</span>\n* <span style=\"font-size: 14px;\">**Freezing too many layers:** Training only the head limits adaptation. Underperforms on domain-specific tasks.</span>\n* <span style=\"font-size: 14px;\">**Freezing too few layers on small data:** Fine-tuning all 12 layers on 500 examples gives too many degrees of freedom. Freeze the bottom 8-10 layers.</span>\n* <span style=\"font-size: 14px;\">**Ignoring input formatting:** Omitting [CLS]/[SEP], wrong segment IDs, or exceeding 512 tokens produces degraded results without an obvious error.</span>\n\n---",
+  "hints": [
+    "Subtract each row maximum before exponentiating logits.",
+    "Set grad_logits[np.arange(batch_size), labels] -= 1.",
+    "Use cls_states.T @ grad_logits for the weight gradient."
+  ],
+  "constraints": "- hidden_states has shape (B, S, D) and dtype float64.\n- labels has shape (B), dtype int64, and values from zero through C minus one.\n- classifier_W has shape (D, C) and dtype float64.\n- classifier_b has shape (C) and dtype float64.\n- learning_rate is a positive float.\n- B, S, D, and C are positive.",
+  "difficulty": "Hard",
+  "starterCode": "import numpy as np\n\ndef bert_fine_tuning_step(hidden_states: np.ndarray, labels: np.ndarray,\n                          classifier_W: np.ndarray, classifier_b: np.ndarray,\n                          learning_rate: float) -> dict:\n    \"\"\"\n    Returns updated classifier parameters and the pre-update loss.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-03T18:27:22.814Z",
+  "updatedAt": "2026-04-11T18:36:24.134Z",
+  "topicId": "bert-fine-tuning",
+  "paperSnippet": "\"Fine-tuning is straightforward since the self-attention mechanism in the Transformer allows BERT to model many downstream tasks. For each task, we simply plug in the task-specific inputs and outputs and fine-tune all the parameters end-to-end.\"",
+  "visualizationComponent": "FineTuningViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Fine-tuning Architecture** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef bert_fine_tuning_step(hidden_states: np.ndarray, labels: np.ndarray,\n                          classifier_W: np.ndarray, classifier_b: np.ndarray,\n                          learning_rate: float) -> dict:\n    hs = np.asarray(hidden_states, dtype=float)\n    y = np.asarray(labels, dtype=int)\n    w = np.asarray(classifier_W, dtype=float)\n    b = np.asarray(classifier_b, dtype=float)\n    lr = float(learning_rate)\n    \n    cls_tok = hs[:, 0, :]\n    B = cls_tok.shape[0]\n    logits = cls_tok @ w + b\n    \n    logits_max = np.max(logits, axis=-1, keepdims=True)\n    exp_l = np.exp(logits - logits_max)\n    probs = exp_l / np.sum(exp_l, axis=-1, keepdims=True)\n    \n    loss = -np.mean(np.log(np.maximum(probs[np.arange(B), y], 1e-12)))\n    \n    dlogits = probs.copy()\n    dlogits[np.arange(B), y] -= 1.0\n    dlogits /= B\n    \n    dw = cls_tok.T @ dlogits\n    db = np.sum(dlogits, axis=0)\n    \n    new_w = w - lr * dw\n    new_b = b - lr * db\n    \n    return {\n        \"new_classifier_W\": np.round(new_w, 6).tolist(),\n        \"new_classifier_b\": np.round(new_b, 6).tolist(),\n        \"loss\": float(np.round(loss, 6))\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "public-1",
+      "name": "Binary classifier step",
+      "inputs": {
+        "labels": [
+          0,
+          1
+        ],
+        "classifier_W": [
+          [
+            0.2,
+            -0.1
+          ],
+          [
+            -0.3,
+            0.4
+          ]
+        ],
+        "classifier_b": [
+          0.05,
+          -0.05
+        ],
+        "hidden_states": [
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0.2,
+              0.3
+            ]
+          ],
+          [
+            [
+              0,
+              1
+            ],
+            [
+              -0.1,
+              0.4
+            ]
+          ]
+        ],
+        "learning_rate": 0.1
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            0.220066,
+            -0.120066
+          ],
+          [
+            -0.317717,
+            0.417717
+          ]
+        ],
+        "new_classifier_b": [
+          0.052348,
+          -0.052348
+        ],
+        "loss": 0.475252
+      }
+    },
+    {
+      "id": "public-2",
+      "name": "Three classes",
+      "inputs": {
+        "labels": [
+          2,
+          0,
+          1
+        ],
+        "classifier_W": [
+          [
+            0.1,
+            -0.2,
+            0.3
+          ],
+          [
+            0.4,
+            0.1,
+            -0.1
+          ],
+          [
+            -0.3,
+            0.2,
+            0.5
+          ]
+        ],
+        "classifier_b": [
+          0,
+          0.1,
+          -0.1
+        ],
+        "hidden_states": [
+          [
+            [
+              0.5,
+              -0.5,
+              1
+            ],
+            [
+              9,
+              9,
+              9
+            ]
+          ],
+          [
+            [
+              -1,
+              0.25,
+              0.5
+            ],
+            [
+              8,
+              8,
+              8
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.1,
+              -0.3
+            ],
+            [
+              7,
+              7,
+              7
+            ]
+          ]
+        ],
+        "learning_rate": 0.05
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            0.085013,
+            -0.192573,
+            0.30756
+          ],
+          [
+            0.403876,
+            0.101804,
+            -0.10568
+          ],
+          [
+            -0.294879,
+            0.187395,
+            0.507484
+          ]
+        ],
+        "new_classifier_b": [
+          0.002816,
+          0.097798,
+          -0.100613
+        ],
+        "loss": 1.031599
+      }
+    },
+    {
+      "id": "public-3",
+      "name": "Single sample",
+      "inputs": {
+        "labels": [
+          1
+        ],
+        "classifier_W": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "classifier_b": [
+          0,
+          0
+        ],
+        "hidden_states": [
+          [
+            [
+              1,
+              -1
+            ],
+            [
+              4,
+              4
+            ]
+          ]
+        ],
+        "learning_rate": 0.2
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            0.1,
+            -0.1
+          ]
+        ],
+        "new_classifier_b": [
+          -0.1,
+          0.1
+        ],
+        "loss": 0.693147
+      }
+    },
+    {
+      "id": "bert-fine-tuning-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "labels": [
+          0,
+          2
+        ],
+        "classifier_W": [
+          [
+            0.4,
+            -0.2
+          ],
+          [
+            -0.6,
+            0.8
+          ]
+        ],
+        "classifier_b": [
+          0.1,
+          -0.1
+        ],
+        "hidden_states": [
+          [
+            [
+              2,
+              0
+            ],
+            [
+              0.4,
+              0.6
+            ]
+          ],
+          [
+            [
+              0,
+              2
+            ],
+            [
+              -0.2,
+              0.8
+            ]
+          ]
+        ],
+        "learning_rate": 0.2
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            0.220066,
+            -0.120066
+          ],
+          [
+            -0.317717,
+            0.417717
+          ]
+        ],
+        "new_classifier_b": [
+          0.052348,
+          -0.052348
+        ],
+        "loss": 0.475252
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "labels": [
+          0,
+          0
+        ],
+        "classifier_W": [
+          [
+            0.1,
+            -0.05
+          ],
+          [
+            -0.15,
+            0.2
+          ]
+        ],
+        "classifier_b": [
+          0.025,
+          -0.025
+        ],
+        "hidden_states": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0.1,
+              0.15
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ],
+            [
+              -0.05,
+              0.2
+            ]
+          ]
+        ],
+        "learning_rate": 0.05
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            0.1,
+            -0.05
+          ],
+          [
+            -0.15,
+            0.2
+          ]
+        ],
+        "new_classifier_b": [
+          0.049375,
+          -0.049375
+        ],
+        "loss": 0.66846
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "labels": [
+          0,
+          -1
+        ],
+        "classifier_W": [
+          [
+            -0.2,
+            0.1
+          ],
+          [
+            0.3,
+            -0.4
+          ]
+        ],
+        "classifier_b": [
+          -0.05,
+          0.05
+        ],
+        "hidden_states": [
+          [
+            [
+              -1,
+              0
+            ],
+            [
+              -0.2,
+              -0.3
+            ]
+          ],
+          [
+            [
+              0,
+              -1
+            ],
+            [
+              0.1,
+              -0.4
+            ]
+          ]
+        ],
+        "learning_rate": -0.1
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            -0.177492,
+            0.077492
+          ],
+          [
+            0.284499,
+            -0.384499
+          ]
+        ],
+        "new_classifier_b": [
+          -0.057007,
+          0.057007
+        ],
+        "loss": 0.48462
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "labels": [
+          0,
+          3
+        ],
+        "classifier_W": [
+          [
+            0.6,
+            -0.3
+          ],
+          [
+            -0.9,
+            1.2
+          ]
+        ],
+        "classifier_b": [
+          0.15,
+          -0.15
+        ],
+        "hidden_states": [
+          [
+            [
+              3,
+              0
+            ],
+            [
+              0.6,
+              0.9
+            ]
+          ],
+          [
+            [
+              0,
+              3
+            ],
+            [
+              -0.3,
+              1.2
+            ]
+          ]
+        ],
+        "learning_rate": 0.3
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            0.220066,
+            -0.120066
+          ],
+          [
+            -0.317717,
+            0.417717
+          ]
+        ],
+        "new_classifier_b": [
+          0.052348,
+          -0.052348
+        ],
+        "loss": 0.475252
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "labels": [
+          1.0,
+          2.0
+        ],
+        "classifier_W": [
+          [
+            1.2,
+            0.9
+          ],
+          [
+            0.7,
+            1.4
+          ]
+        ],
+        "classifier_b": [
+          1.05,
+          0.95
+        ],
+        "hidden_states": [
+          [
+            [
+              2.0,
+              1.0
+            ],
+            [
+              1.2,
+              1.3
+            ]
+          ],
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              0.9,
+              1.4
+            ]
+          ]
+        ],
+        "learning_rate": 1.1
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            0.220066,
+            -0.120066
+          ],
+          [
+            -0.317717,
+            0.417717
+          ]
+        ],
+        "new_classifier_b": [
+          0.052348,
+          -0.052348
+        ],
+        "loss": 0.475252
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "labels": [
+          -2.0,
+          -1.0
+        ],
+        "classifier_W": [
+          [
+            -1.8,
+            -2.1
+          ],
+          [
+            -2.3,
+            -1.6
+          ]
+        ],
+        "classifier_b": [
+          -1.95,
+          -2.05
+        ],
+        "hidden_states": [
+          [
+            [
+              -1.0,
+              -2.0
+            ],
+            [
+              -1.8,
+              -1.7
+            ]
+          ],
+          [
+            [
+              -2.0,
+              -1.0
+            ],
+            [
+              -2.1,
+              -1.6
+            ]
+          ]
+        ],
+        "learning_rate": -1.9
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            -2.624783,
+            -1.275217
+          ],
+          [
+            -2.382539,
+            -1.517461
+          ]
+        ],
+        "new_classifier_b": [
+          -1.647559,
+          -2.352441
+        ],
+        "loss": 0.530711
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "labels": [
+          1,
+          0
+        ],
+        "classifier_W": [
+          [
+            -0.1,
+            0.2
+          ],
+          [
+            0.4,
+            -0.3
+          ]
+        ],
+        "classifier_b": [
+          -0.05,
+          0.05
+        ],
+        "hidden_states": [
+          [
+            [
+              0,
+              1
+            ],
+            [
+              0.3,
+              0.2
+            ]
+          ],
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0.4,
+              -0.1
+            ]
+          ]
+        ],
+        "learning_rate": 0.1
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            -0.070066,
+            0.170066
+          ],
+          [
+            0.367717,
+            -0.267717
+          ]
+        ],
+        "new_classifier_b": [
+          -0.052348,
+          0.052348
+        ],
+        "loss": 0.975252
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "labels": [
+          0,
+          -1
+        ],
+        "classifier_W": [
+          [
+            -0.2,
+            0.1
+          ],
+          [
+            0.3,
+            -0.4
+          ]
+        ],
+        "classifier_b": [
+          -0.05,
+          0.05
+        ],
+        "hidden_states": [
+          [
+            [
+              -1,
+              0
+            ],
+            [
+              -0.2,
+              -0.3
+            ]
+          ],
+          [
+            [
+              0,
+              -1
+            ],
+            [
+              0.1,
+              -0.4
+            ]
+          ]
+        ],
+        "learning_rate": -0.1
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            -0.177492,
+            0.077492
+          ],
+          [
+            0.284499,
+            -0.384499
+          ]
+        ],
+        "new_classifier_b": [
+          -0.057007,
+          0.057007
+        ],
+        "loss": 0.48462
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "labels": [
+          0,
+          10
+        ],
+        "classifier_W": [
+          [
+            2.0,
+            -1.0
+          ],
+          [
+            -3.0,
+            4.0
+          ]
+        ],
+        "classifier_b": [
+          0.5,
+          -0.5
+        ],
+        "hidden_states": [
+          [
+            [
+              10,
+              0
+            ],
+            [
+              2.0,
+              3.0
+            ]
+          ],
+          [
+            [
+              0,
+              10
+            ],
+            [
+              -1.0,
+              4.0
+            ]
+          ]
+        ],
+        "learning_rate": 1.0
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            0.220066,
+            -0.120066
+          ],
+          [
+            -0.317717,
+            0.417717
+          ]
+        ],
+        "new_classifier_b": [
+          0.052348,
+          -0.052348
+        ],
+        "loss": 0.475252
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "labels": [
+          0,
+          0
+        ],
+        "classifier_W": [
+          [
+            0.02,
+            -0.01
+          ],
+          [
+            -0.03,
+            0.04
+          ]
+        ],
+        "classifier_b": [
+          0.005,
+          -0.005
+        ],
+        "hidden_states": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0.02,
+              0.03
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ],
+            [
+              -0.01,
+              0.04
+            ]
+          ]
+        ],
+        "learning_rate": 0.01
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            0.02,
+            -0.01
+          ],
+          [
+            -0.03,
+            0.04
+          ]
+        ],
+        "new_classifier_b": [
+          0.009975,
+          -0.009975
+        ],
+        "loss": 0.68816
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "labels": [
+          5.0,
+          6.0
+        ],
+        "classifier_W": [
+          [
+            5.2,
+            4.9
+          ],
+          [
+            4.7,
+            5.4
+          ]
+        ],
+        "classifier_b": [
+          5.05,
+          4.95
+        ],
+        "hidden_states": [
+          [
+            [
+              6.0,
+              5.0
+            ],
+            [
+              5.2,
+              5.3
+            ]
+          ],
+          [
+            [
+              5.0,
+              6.0
+            ],
+            [
+              4.9,
+              5.4
+            ]
+          ]
+        ],
+        "learning_rate": 5.1
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            0.220066,
+            -0.120066
+          ],
+          [
+            -0.317717,
+            0.417717
+          ]
+        ],
+        "new_classifier_b": [
+          0.052348,
+          -0.052348
+        ],
+        "loss": 0.475252
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "labels": [
+          0,
+          2
+        ],
+        "classifier_W": [
+          [
+            0.3,
+            -0.15
+          ],
+          [
+            -0.45,
+            0.6
+          ]
+        ],
+        "classifier_b": [
+          0.075,
+          -0.075
+        ],
+        "hidden_states": [
+          [
+            [
+              2,
+              0
+            ],
+            [
+              0.3,
+              0.45
+            ]
+          ],
+          [
+            [
+              0,
+              2
+            ],
+            [
+              -0.15,
+              0.6
+            ]
+          ]
+        ],
+        "learning_rate": 0.15
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            0.220066,
+            -0.120066
+          ],
+          [
+            -0.317717,
+            0.417717
+          ]
+        ],
+        "new_classifier_b": [
+          0.052348,
+          -0.052348
+        ],
+        "loss": 0.475252
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "labels": [
+          0,
+          -2
+        ],
+        "classifier_W": [
+          [
+            -0.4,
+            0.2
+          ],
+          [
+            0.6,
+            -0.8
+          ]
+        ],
+        "classifier_b": [
+          -0.1,
+          0.1
+        ],
+        "hidden_states": [
+          [
+            [
+              -2,
+              0
+            ],
+            [
+              -0.4,
+              -0.6
+            ]
+          ],
+          [
+            [
+              0,
+              -2
+            ],
+            [
+              0.2,
+              -0.8
+            ]
+          ]
+        ],
+        "learning_rate": -0.2
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            -0.346212,
+            0.146212
+          ],
+          [
+            0.790515,
+            -0.990515
+          ]
+        ],
+        "new_classifier_b": [
+          -0.222152,
+          0.222152
+        ],
+        "loss": 1.680925
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "labels": [
+          0,
+          0
+        ],
+        "classifier_W": [
+          [
+            0.05,
+            -0.025
+          ],
+          [
+            -0.075,
+            0.1
+          ]
+        ],
+        "classifier_b": [
+          0.0125,
+          -0.0125
+        ],
+        "hidden_states": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0.05,
+              0.075
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ],
+            [
+              -0.025,
+              0.1
+            ]
+          ]
+        ],
+        "learning_rate": 0.025
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            0.05,
+            -0.025
+          ],
+          [
+            -0.075,
+            0.1
+          ]
+        ],
+        "new_classifier_b": [
+          0.024844,
+          -0.024844
+        ],
+        "loss": 0.680725
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "labels": [
+          -1.0,
+          0.0
+        ],
+        "classifier_W": [
+          [
+            -0.8,
+            -1.1
+          ],
+          [
+            -1.3,
+            -0.6
+          ]
+        ],
+        "classifier_b": [
+          -0.95,
+          -1.05
+        ],
+        "hidden_states": [
+          [
+            [
+              0.0,
+              -1.0
+            ],
+            [
+              -0.8,
+              -0.7
+            ]
+          ],
+          [
+            [
+              -1.0,
+              0.0
+            ],
+            [
+              -1.1,
+              -0.6
+            ]
+          ]
+        ],
+        "learning_rate": -0.9
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            -0.552575,
+            -1.347425
+          ],
+          [
+            -1.610489,
+            -0.289511
+          ]
+        ],
+        "new_classifier_b": [
+          -0.886937,
+          -1.113063
+        ],
+        "loss": 0.98462
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "labels": [
+          0,
+          4
+        ],
+        "classifier_W": [
+          [
+            0.8,
+            -0.4
+          ],
+          [
+            -1.2,
+            1.6
+          ]
+        ],
+        "classifier_b": [
+          0.2,
+          -0.2
+        ],
+        "hidden_states": [
+          [
+            [
+              4,
+              0
+            ],
+            [
+              0.8,
+              1.2
+            ]
+          ],
+          [
+            [
+              0,
+              4
+            ],
+            [
+              -0.4,
+              1.6
+            ]
+          ]
+        ],
+        "learning_rate": 0.4
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            0.220066,
+            -0.120066
+          ],
+          [
+            -0.317717,
+            0.417717
+          ]
+        ],
+        "new_classifier_b": [
+          0.052348,
+          -0.052348
+        ],
+        "loss": 0.475252
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-fine-tuning-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "labels": [
+          0,
+          1
+        ],
+        "classifier_W": [
+          [
+            0.15,
+            -0.075
+          ],
+          [
+            -0.225,
+            0.3
+          ]
+        ],
+        "classifier_b": [
+          0.0375,
+          -0.0375
+        ],
+        "hidden_states": [
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0.15,
+              0.225
+            ]
+          ],
+          [
+            [
+              0,
+              1
+            ],
+            [
+              -0.075,
+              0.3
+            ]
+          ]
+        ],
+        "learning_rate": 0.075
+      },
+      "expectedOutput": {
+        "new_classifier_W": [
+          [
+            0.165958,
+            -0.090958
+          ],
+          [
+            -0.239601,
+            0.314601
+          ]
+        ],
+        "new_classifier_b": [
+          0.038857,
+          -0.038857
+        ],
+        "loss": 0.523802
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "bert_fine_tuning_step",
+    "runtime": "numpy",
+    "parameters": [
+      {
+        "name": "hidden_states",
+        "type": "array",
+        "example": [
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0.2,
+              0.3
+            ]
+          ],
+          [
+            [
+              0,
+              1
+            ],
+            [
+              -0.1,
+              0.4
+            ]
+          ]
+        ],
+        "description": "Float64 encoder states with shape (B, S, D)."
+      },
+      {
+        "name": "labels",
+        "type": "array",
+        "example": [
+          0,
+          1
+        ],
+        "description": "Int64 class labels with shape (B)."
+      },
+      {
+        "name": "classifier_W",
+        "type": "array",
+        "example": [
+          [
+            0.2,
+            -0.1
+          ],
+          [
+            -0.3,
+            0.4
+          ]
+        ],
+        "description": "Float64 classifier weights with shape (D, C)."
+      },
+      {
+        "name": "classifier_b",
+        "type": "array",
+        "example": [
+          0.05,
+          -0.05
+        ],
+        "description": "Float64 classifier bias with shape (C)."
+      },
+      {
+        "name": "learning_rate",
+        "type": "number",
+        "example": 0.1,
+        "description": "Positive gradient-descent step size."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "bert-fine-tuning",
+    "name": "Fine-tuning Architecture",
+    "description": "Adding task-specific heads",
+    "color": "#10b981"
+  },
+  "paper": {
+    "id": "bert",
+    "title": "BERT: Pre-training of Deep Bidirectional Transformers",
+    "authors": "Devlin et al., 2018",
+    "year": 2018,
+    "paperUrl": "https://arxiv.org/abs/1810.04805",
+    "visualizationComponent": "BertArchViz"
+  },
+  "navigation": {
+    "index": 6,
+    "total": 6,
+    "prev": "bert-pooler",
+    "next": null
+  },
+  "cleanTitle": ""
+}

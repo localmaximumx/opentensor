@@ -1,0 +1,425 @@
+{
+  "id": "re-temperature-softmax",
+  "slug": "re-temperature-softmax",
+  "title": "Temperature Softmax",
+  "cleanTitle": "Temperature Softmax",
+  "type": "code",
+  "difficulty": "Medium",
+  "category": "Assessment",
+  "tags": [
+    "Assessment",
+    "CODE",
+    "LLM Internals"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Compute softmax(logits/temperature), rejecting non-positive temperatures and stabilizing exponentiation.",
+  "theory": "## Understanding the Theory: Temperature Softmax\n\n### Core Intuition: Why Do We Need This?\n**Temperature Softmax** forms a vital mathematical pillar within **LLM Internals**. In modern foundation models and frontier LLM architectures, computational efficiency, activation stability, and precise hardware memory alignment govern both pre-training scalability and low-latency autoregressive generation. Flaws in numerical precision or suboptimal tensor transformations can silently corrupt model weights or cause distributed training divergence.\n\nUnderstanding the core mechanics enables engineers to diagnose convergence anomalies, optimize memory layouts, and construct maintainable ML pipelines from first principles.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nP_i = \\frac{\\exp(z_i / T)}{\\sum_j \\exp(z_j / T)}\n$$\n\nIn this formulation:\n* The input features and parameters are projected, normalized, or aggregated according to established algorithmic invariants.\n* Dimensional consistency is preserved across all tensor or matrix axes, ensuring mathematical validity.\n* Intermediate accumulators maintain numerical dynamic range to protect against floating-point anomalies.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Validate input array dimensions, check for empty sequences or invalid bounds, and convert inputs into contiguous buffers.\n2. **Phase 2: Core Algorithmic Transformation**: Execute the foundational mathematical logic using vectorized SIMD array operations or optimized iteration.\n3. **Phase 3: Aggregation & Normalization**: Compute required sums, projections, or ranking reductions while guarding against division by zero.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Format outputs into required data types and verify that returned numerical estimates adhere to expected precision thresholds.\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth & Cache Hierarchy**: High-throughput transformer operators must saturate hardware cache lines and minimize redundant memory reads between DRAM and fast register buffers.\n* **Numerical Stability & Gradient Flow**: Preventing floating-point cancellation, underflow in softmax exponents, and division by zero ensures smooth loss descent across billions of tokens.\n* **Inference Throughput**: Idempotent, stateless tensor updates allow distributed inference engines to execute asynchronous prefill and decoding iterations without race conditions.\n* **Algorithmic Complexity**: Operates with optimal asymptotic time and space complexity, ensuring minimal compute overhead.",
+  "examples": [
+    {
+      "inputArgs": [
+        [
+          1.0,
+          2.0,
+          3.0
+        ],
+        1.0
+      ],
+      "output": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "explanation": "Illustrative small example for temperature softmax."
+    }
+  ],
+  "requirements": [
+    "Implement the mathematical or algorithmic behavior described above.",
+    "Match the function signature and output structure in starterCode.",
+    "Handle boundary inputs and ties consistently with the supplied test cases."
+  ],
+  "hints": [
+    "Implement the small mathematical contract first; do not add production-only model machinery.",
+    "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+  ],
+  "constraints": [
+    "Inputs are small enough for a straightforward reference implementation.",
+    "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+    "Unless otherwise stated, dimensions must be consistent."
+  ],
+  "starterCode": "import math\ndef solve(logits, temperature):\n    pass",
+  "solution": "### 💡 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### ⚡ Implementation\n```python\nimport math\ndef solve(logits, temperature):\n    if temperature<=0: raise ValueError(\"temperature must be positive\")\n    z=[v/temperature for v in logits]; m=max(z); e=[math.exp(v-m) for v in z]; s=sum(e)\n    return [v/s for v in e]\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
+  "testCases": [
+    {
+      "id": "case-1",
+      "name": "smoke test",
+      "inputs": {
+        "logits": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "temperature": 1.0
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-2",
+      "name": "Case 2",
+      "inputs": {
+        "logits": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "temperature": 2.0
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-3",
+      "name": "Case 3",
+      "inputs": {
+        "logits": [
+          0.5,
+          1.0,
+          1.5
+        ],
+        "temperature": 0.5
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-4",
+      "name": "Case 4",
+      "inputs": {
+        "logits": [
+          -1.0,
+          -2.0,
+          -3.0
+        ],
+        "temperature": -1.0
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-5",
+      "name": "Case 5",
+      "inputs": {
+        "logits": [
+          3.0,
+          6.0,
+          9.0
+        ],
+        "temperature": 3.0
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-6",
+      "name": "Case 6",
+      "inputs": {
+        "logits": [
+          2.0,
+          3.0,
+          4.0
+        ],
+        "temperature": 2.0
+      },
+      "expectedOutput": [
+        0.1863237232258476,
+        0.3071958857184984,
+        0.506480391055654
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-7",
+      "name": "Case 7",
+      "inputs": {
+        "logits": [
+          -1.0,
+          0.0,
+          1.0
+        ],
+        "temperature": -1.0
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-8",
+      "name": "Case 8",
+      "inputs": {
+        "logits": [
+          3.0,
+          2.0,
+          1.0
+        ],
+        "temperature": 1.0
+      },
+      "expectedOutput": [
+        0.6652409557748218,
+        0.24472847105479764,
+        0.09003057317038046
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-9",
+      "name": "Case 9",
+      "inputs": {
+        "logits": [
+          -1.0,
+          -2.0,
+          -3.0
+        ],
+        "temperature": -1.0
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-10",
+      "name": "Case 10",
+      "inputs": {
+        "logits": [
+          10.0,
+          20.0,
+          30.0
+        ],
+        "temperature": 10.0
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-11",
+      "name": "Case 11",
+      "inputs": {
+        "logits": [
+          0.1,
+          0.2,
+          0.3
+        ],
+        "temperature": 0.1
+      },
+      "expectedOutput": [
+        0.09003057317038049,
+        0.24472847105479775,
+        0.6652409557748218
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-12",
+      "name": "Case 12",
+      "inputs": {
+        "logits": [
+          6.0,
+          7.0,
+          8.0
+        ],
+        "temperature": 6.0
+      },
+      "expectedOutput": [
+        0.27956600323882386,
+        0.33026820900941556,
+        0.39016578775176053
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-13",
+      "name": "Case 13",
+      "inputs": {
+        "logits": [
+          1.5,
+          3.0,
+          4.5
+        ],
+        "temperature": 1.5
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-14",
+      "name": "Case 14",
+      "inputs": {
+        "logits": [
+          -2.0,
+          -4.0,
+          -6.0
+        ],
+        "temperature": -2.0
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-15",
+      "name": "Case 15",
+      "inputs": {
+        "logits": [
+          0.25,
+          0.5,
+          0.75
+        ],
+        "temperature": 0.25
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-16",
+      "name": "Case 16",
+      "inputs": {
+        "logits": [
+          0.0,
+          1.0,
+          2.0
+        ],
+        "temperature": 0.0
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-17",
+      "name": "Case 17",
+      "inputs": {
+        "logits": [
+          4.0,
+          8.0,
+          12.0
+        ],
+        "temperature": 4.0
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-18",
+      "name": "Case 18",
+      "inputs": {
+        "logits": [
+          0.75,
+          1.5,
+          2.25
+        ],
+        "temperature": 0.75
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-19",
+      "name": "Case 19",
+      "inputs": {
+        "logits": [
+          5.0,
+          10.0,
+          15.0
+        ],
+        "temperature": 5.0
+      },
+      "expectedOutput": [
+        0.09003057317038046,
+        0.24472847105479764,
+        0.6652409557748218
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-20",
+      "name": "Case 20",
+      "inputs": {
+        "logits": [
+          11.0,
+          12.0,
+          13.0
+        ],
+        "temperature": 11.0
+      },
+      "expectedOutput": [
+        0.3035301581586512,
+        0.3324169532956783,
+        0.36405288854567047
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "solve",
+    "signature": "def solve(logits, temperature):",
+    "returnType": "varies by problem; see example output"
+  },
+  "assessmentNames": [
+    "LLM Internals"
+  ],
+  "source": "assessment",
+  "sourceId": "assessment",
+  "updatedAt": "2026-03-01T00:00:00.000Z"
+}

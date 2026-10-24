@@ -1,0 +1,498 @@
+{
+  "id": "color-to-grayscale",
+  "title": "Color to Grayscale",
+  "description": "Converting a color image to grayscale is one of the most fundamental image processing operations. The human eye perceives different colors with varying sensitivity, so a simple average of RGB channels does not produce a perceptually accurate grayscale image. Instead, a weighted sum based on human vision is used.\n\nGiven a color image represented as a 3D array (H × W × 3 with RGB channels), convert it to a grayscale image (H × W) using the luminance formula.\n\n### Algorithm\n\nFor each pixel, compute the grayscale intensity using the ITU-R BT.601 luminance weights:\n\n$$\nY = 0.299 \\cdot R + 0.587 \\cdot G + 0.114 \\cdot B\n$$\n\nThese weights reflect the human eye's greater sensitivity to green light, moderate sensitivity to red, and lower sensitivity to blue.\n\nReturn an H by W list of grayscale floats.",
+  "seoDescription": "Convert an RGB image to grayscale using weighted color channels while preserving its spatial dimensions.",
+  "examples": [
+    "Input: image = [[[255, 0, 0]]]\n\nOutput: [[76.245]]\n\nExplanation: The red channel contributes 0.299 times 255.",
+    "Input: image = [[[255, 0, 0], [0, 255, 0]], [[0, 0, 255], [255, 255, 255]]]\n\nOutput: [[76.245, 149.685], [29.07, 255.0]]"
+  ],
+  "requirements": "* Convert each RGB pixel to a single grayscale value using the luminance formula\n* Use the standard ITU-R BT.601 weights: R=0.299, G=0.587, B=0.114\n* Return a 2D matrix (H × W) of grayscale values\n* Preserve the spatial dimensions of the input image\n* Round numeric outputs to 6 decimal places.",
+  "theory": "## Understanding the Theory: Color to Grayscale\n\n### Core Intuition: Why Do We Need This?\nImages possess rich spatial structure: nearby pixels are correlated, and visual patterns (edges, textures, object parts) are translation invariant. Computer vision models apply local receptive fields and weight sharing to process high-resolution visual inputs with minimal parameter overhead. **Color to Grayscale** extracts localized visual features, pools spatial maps, or reconciles geometric bounding boxes.\n\nIn this problem, the objective is to implement **Color to Grayscale** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nY = 0.299 \\cdot R + 0.587 \\cdot G + 0.114 \\cdot B\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Receptive Field Growth**: Stacking convolutional layers with strides or pooling progressively expands the effective field of view, enabling deep layers to capture global semantic context.\n* **Boundary Padding & Strides**: Padding controls spatial dimension retention, while strides downsample feature resolutions efficiently without extra parameters.\n* **Vectorized im2col**: High-performance vision libraries transform sliding window convolutions into matrix multiplications (`GEMM`) via im2col operations.",
+  "hints": [
+    "Unpack each pixel into red, green, and blue channel values.",
+    "Append the weighted channel sum to the corresponding grayscale row."
+  ],
+  "constraints": "* image is a 3D list of shape H × W × 3 with integer RGB values in [0, 255]\n* H >= 1, W >= 1\n* Return a 2D list of floats\n* Time limit: 300 ms",
+  "difficulty": "Easy",
+  "starterCode": "def color_to_grayscale(image: list) -> list:\n    \"\"\"\n    Returns the luminance value of every RGB pixel.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T20:37:48.627Z",
+  "updatedAt": "2026-10-12T07:46:35.024Z",
+  "solution": "### 💡 Intuition & Approach\nPerceptual luminance conversion following ITU-R BT.601 standard weights for human visual sensitivity.\n\n### ⚡ Python Reference Implementation\n```python\ndef color_to_grayscale(image: list) -> list:\n    out = []\n    for row in image:\n        out_row = []\n        for p in row:\n            # Luminance weights: 0.2989 R + 0.5870 G + 0.1140 B\n            gray = 0.2989 * p[0] + 0.5870 * p[1] + 0.1140 * p[2]\n            out_row.append(round(gray, 4))\n        out.append(out_row)\n    return out\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "ColorToGrayscaleViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Pure red pixel",
+      "inputs": {
+        "image": [
+          [
+            [
+              255,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          76.245
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "2x2 color grid",
+      "inputs": {
+        "image": [
+          [
+            [
+              255,
+              0,
+              0
+            ],
+            [
+              0,
+              255,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0,
+              255
+            ],
+            [
+              255,
+              255,
+              255
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          76.245,
+          149.685
+        ],
+        [
+          29.07,
+          255.0
+        ]
+      ]
+    },
+    {
+      "id": "color-to-grayscale-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "image": [
+          [
+            [
+              510,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          152.439
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "image": [
+          [
+            [
+              128,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          38.2592
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "image": [
+          [
+            [
+              -255,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -76.2195
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "image": [
+          [
+            [
+              765,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          228.6585
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "image": [
+          [
+            [
+              256.0,
+              1.0,
+              1.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          77.2194
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "image": [
+          [
+            [
+              253.0,
+              -2.0,
+              -2.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          74.2197
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "image": [
+          [
+            [
+              0,
+              0,
+              255
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          29.07
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "image": [
+          [
+            [
+              -255,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -76.2195
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "image": [
+          [
+            [
+              2550,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          762.195
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "image": [
+          [
+            [
+              26,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          7.7714
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "image": [
+          [
+            [
+              260.0,
+              5.0,
+              5.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          81.219
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "image": [
+          [
+            [
+              382,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          114.1798
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "image": [
+          [
+            [
+              -510,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -152.439
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "image": [
+          [
+            [
+              64,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          19.1296
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "image": [
+          [
+            [
+              254.0,
+              -1.0,
+              -1.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          75.2196
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "image": [
+          [
+            [
+              1020,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          304.878
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "image": [
+          [
+            [
+              191,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          57.0899
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "color-to-grayscale-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "image": [
+          [
+            [
+              1275,
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          381.0975
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "color_to_grayscale",
+    "parameters": [
+      {
+        "name": "image",
+        "type": "array",
+        "example": "[[[255, 0, 0], [0, 255, 0]], [[0, 0, 255], [255, 255, 255]]]",
+        "description": "3D array (H x W x 3) representing RGB image"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "image-histogram",
+    "histogram-equalization",
+    "gaussian-blur-kernel",
+    "sobel-edge-detection",
+    "conv2d-image-filtering"
+  ],
+  "tags": [
+    "Computer Vision"
+  ],
+  "prevId": "average-pooling-2d",
+  "nextId": "simple-moving-average",
+  "slug": "color-to-grayscale",
+  "cleanTitle": "Color to Grayscale",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/color-to-grayscale",
+  "localUrl": "http://localhost:3000/problems/color-to-grayscale",
+  "studyPlan": null
+}

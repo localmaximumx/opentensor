@@ -1,0 +1,796 @@
+{
+  "id": "bm25",
+  "title": "Implement BM25 Ranking Score",
+  "description": "Compute one BM25 relevance score per tokenized document. Repeated query terms are counted once.\n\n$$\n\\operatorname{idf}(t) = \\log\\left(\\frac{N-\\operatorname{df}(t)+0.5}{\\operatorname{df}(t)+0.5}+1\\right)\n$$\n\n$$\n\\operatorname{score}(D,Q) = \\sum_{t \\in Q} \\operatorname{idf}(t)\\frac{\\operatorname{tf}(t,D)(k_1+1)}{\\operatorname{tf}(t,D)+k_1\\left(1-b+b\\frac{|D|}{\\operatorname{avgdl}}\\right)}\n$$\n\nHere, $N$ is the document count, $\\operatorname{df}(t)$ counts documents containing term $t$, $\\operatorname{tf}(t,D)$ counts the term in document $D$, $|D|$ is document length, and $\\operatorname{avgdl}$ is average document length. Return a NumPy array whose entries follow the original document order.",
+  "seoDescription": "Implement BM25 document ranking with term frequency saturation, inverse document frequency, and length normalization.",
+  "examples": [
+    "Input: query_tokens = [\"machine\", \"learning\"], docs = [[\"introduction\", \"to\", \"machine\", \"learning\"], [\"deep\", \"learning\", \"basics\"], [\"cooking\", \"pasta\", \"guide\"]], k1 = 1.2, b = 0.75\n\nOutput: [1.341106, 0.490052, 0.0]\n\nExplanation: The first document matches both query terms, the second matches one, and the third matches neither.",
+    "Input: query_tokens = [\"data\"], docs = [[\"data\", \"data\", \"mining\"], [\"applied\", \"data\", \"science\", \"science\", \"science\"], [\"sports\", \"news\"]], k1 = 1.2, b = 0.75\n\nOutput: [0.664957, 0.390192, 0.0]"
+  ],
+  "requirements": "* Use the stated BM25 IDF and scoring formulas\n* Count repeated query terms once\n* Preserve document order\n* Return a NumPy array of floating-point scores",
+  "theory": "## Understanding the Theory: Implement BM25 Ranking Score\n\n### Core Intuition: Why Do We Need This?\nLinear algebra is the foundational mathematical language of artificial intelligence. Image pixels, word embeddings, and hidden representations are all structured as multi-dimensional vectors and matrices. **Implement BM25 Ranking Score** allows machine learning practitioners to project representations into informative subspaces, rotate coordinate frames, or decompose complex transformations into simpler geometric building blocks.\n\nIn this problem, the objective is to implement **Implement BM25 Ranking Score** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\operatorname{idf}(t) = \\log\\left(\\frac{N-\\operatorname{df}(t)+0.5}{\\operatorname{df}(t)+0.5}+1\\right)\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Dimensionality & Subspaces**: Orthogonal projections and low-rank factorizations compress massive feature vectors while preserving maximum variance.\n* **Condition Numbers & Inversion**: Inverting ill-conditioned matrices (matrices with near-zero determinants) causes numerical explosion; regularization (e.g. Ridge / Tikhonov) stabilizes these systems.\n* **Tensor Core Acceleration**: Modern hardware accelerators (GPUs and TPUs) are specialized matrix multiplication engines; formulating operations linearly maximizes throughput.",
+  "hints": [
+    "Use one Counter per document for term frequencies.",
+    "Use Counter.update(set(document)) to count document frequencies.",
+    "Build a NumPy vector of one term's frequency across all documents before applying the formula."
+  ],
+  "constraints": "* docs is a list of token lists\n* $k_1 > 0$ and $0 \\le b \\le 1$\n* Use NumPy and the Python standard library only",
+  "difficulty": "Hard",
+  "starterCode": "import math\nfrom collections import Counter\nimport numpy as np\n\ndef bm25_score(query_tokens: list[str], docs: list[list[str]], k1: float = 1.2, b: float = 0.75) -> np.ndarray:\n    \"\"\"\n    Returns a NumPy array with one score per document.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-10-30T23:37:41.622Z",
+  "updatedAt": "2026-03-05T17:00:56.298Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport math\nfrom collections import Counter\nimport numpy as np\n\ndef bm25_score(query_tokens: list[str], docs: list[list[str]], k1: float = 1.2, b: float = 0.75) -> np.ndarray:\n    N = len(docs)\n    avgdl = sum(len(d) for d in docs) / N\n    df = Counter()\n    for d in docs:\n        for t in set(d):\n            df[t] += 1\n    scores = []\n    for d in docs:\n        dl = len(d)\n        counts = Counter(d)\n        score = 0.0\n        for q in query_tokens:\n            if q in counts:\n                tf = counts[q]\n                q_df = df[q]\n                idf = math.log(1.0 + (N - q_df + 0.5) / (q_df + 0.5))\n                num = tf * (k1 + 1.0)\n                denom = tf + k1 * (1.0 - b + b * (dl / avgdl))\n                score += idf * (num / denom)\n        scores.append(round(score, 6))\n    return np.array(scores, dtype=float)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "BM25Viz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Basic query",
+      "inputs": {
+        "b": 0.75,
+        "k1": 1.2,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        1.341106,
+        0.490052,
+        0.0
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Single term, multiple docs",
+      "inputs": {
+        "b": 0.75,
+        "k1": 1.2,
+        "docs": [
+          [
+            "data",
+            "data",
+            "mining"
+          ],
+          [
+            "applied",
+            "data",
+            "science",
+            "science",
+            "science"
+          ],
+          [
+            "sports",
+            "news"
+          ]
+        ],
+        "query_tokens": [
+          "data"
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        0.664957,
+        0.390192,
+        0.0
+      ]
+    },
+    {
+      "id": "bm25-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "b": 1.5,
+        "k1": 2.4,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        1.197289,
+        0.525662,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "b": 0.375,
+        "k1": 0.6,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        1.411144,
+        0.476707,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "b": -0.75,
+        "k1": -1.2,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        14.508329,
+        0.32414,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "b": 2.25,
+        "k1": 3.6,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        1.072963,
+        0.570453,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "b": 1.75,
+        "k1": 2.2,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        1.169437,
+        0.534285,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "b": -1.25,
+        "k1": -0.8,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        0.725416,
+        0.940007,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "b": 0.75,
+        "k1": 1.2,
+        "docs": [
+          [
+            "learning",
+            "machine",
+            "to",
+            "introduction"
+          ],
+          [
+            "basics",
+            "learning",
+            "deep"
+          ],
+          [
+            "guide",
+            "pasta",
+            "cooking"
+          ]
+        ],
+        "query_tokens": [
+          "learning",
+          "machine"
+        ]
+      },
+      "expectedOutput": [
+        1.341106,
+        0.490051,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "b": -0.75,
+        "k1": -1.2,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        14.508329,
+        0.32414,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "b": 7.5,
+        "k1": 12.0,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        0.608414,
+        1.527512,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "b": 0.075,
+        "k1": 0.12,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        1.448505,
+        0.470382,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "b": 5.75,
+        "k1": 6.2,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        0.72896,
+        0.930956,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "b": 1.125,
+        "k1": 1.8,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        1.267498,
+        0.506645,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "b": -1.5,
+        "k1": -2.4,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        2.987009,
+        0.373867,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "b": 0.1875,
+        "k1": 0.3,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        1.438385,
+        0.472046,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "b": -0.25,
+        "k1": 0.19999999999999996,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        1.463025,
+        0.468053,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "b": 3.0,
+        "k1": 4.8,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        0.969451,
+        0.625234,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "b": 0.5625,
+        "k1": 0.9,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        1.37743,
+        0.48287,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bm25-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "b": 3.75,
+        "k1": 6.0,
+        "docs": [
+          [
+            "introduction",
+            "to",
+            "machine",
+            "learning"
+          ],
+          [
+            "deep",
+            "learning",
+            "basics"
+          ],
+          [
+            "cooking",
+            "pasta",
+            "guide"
+          ]
+        ],
+        "query_tokens": [
+          "machine",
+          "learning"
+        ]
+      },
+      "expectedOutput": [
+        0.883116,
+        0.692637,
+        0.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "bm25_score",
+    "parameters": [
+      {
+        "name": "query_tokens",
+        "type": "array",
+        "example": "[\"machine\", \"learning\"]",
+        "description": "List of query terms to search for"
+      },
+      {
+        "name": "docs",
+        "type": "array",
+        "example": "[[\"introduction\", \"to\", \"machine\"], [\"deep\", \"learning\"]]",
+        "description": "List of documents, each document is a list of tokens"
+      },
+      {
+        "name": "k1",
+        "type": "number",
+        "example": "1.2",
+        "description": "Term frequency saturation parameter (default: 1.2)"
+      },
+      {
+        "name": "b",
+        "type": "number",
+        "example": "0.75",
+        "description": "Length normalization parameter (default: 0.75)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "tfidf-vectorizer",
+    "bag-of-words",
+    "cosine-similarity",
+    "jaccard-similarity",
+    "edit-distance"
+  ],
+  "tags": [
+    "NLP",
+    "Linear Algebra",
+    "Data Processing"
+  ],
+  "prevId": "tfidf-vectorizer",
+  "nextId": "eigenvalues",
+  "slug": "bm25",
+  "cleanTitle": "Implement BM25 Ranking Score",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/bm25",
+  "localUrl": "http://localhost:3000/problems/bm25",
+  "studyPlan": null
+}

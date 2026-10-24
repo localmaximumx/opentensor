@@ -1,0 +1,574 @@
+{
+  "id": "gae-computation",
+  "title": "Generalized Advantage Estimation",
+  "description": "Generalized Advantage Estimation (GAE) provides a family of advantage estimators that trade off bias and variance using a parameter lambda. When lambda = 0 it reduces to the one-step TD error (low variance, high bias). When lambda = 1 it becomes equivalent to the full Monte Carlo advantage (high variance, low bias). In practice, lambda around 0.95 works well.\n\nGiven rewards, value estimates (including V(s_T) = 0 for the terminal state), gamma, and lambda, compute the GAE advantages for each timestep.\n\n### Algorithm\n\n1. Compute the TD error (delta) at each timestep:\n\n$$\n\\delta_t = r_t + \\gamma \\cdot V(s_{t+1}) - V(s_t)\n$$\n\n2. Compute advantages backward using the recursive formula:\n\n$$\nA_{T-1} = \\delta_{T-1}\n$$\n\n$$\nA_t = \\delta_t + \\gamma \\cdot \\lambda \\cdot A_{t+1}\n$$\n\nReturn the advantages as a list of floats with the same length as rewards.",
+  "seoDescription": "Compute generalized advantage estimates backward through rewards, values, discounting, and trace decay.",
+  "examples": [
+    "Input: rewards = [1, 1, 1], values = [0, 0, 0, 0], gamma = 1, lam = 1\n\nOutput: [3.0, 2.0, 1.0]\n\nExplanation: With gamma and lambda equal to 1, future TD errors accumulate without decay.",
+    "Input: rewards = [1, 0, 5], values = [1, 2, 3, 0], gamma = 0.9, lam = 0.95\n\nOutput: [3.86055, 2.41, 2.0]"
+  ],
+  "requirements": "* Compute TD errors: delta_t = rewards[t] + gamma * values[t+1] - values[t]\n* Compute advantages backward: A[t] = delta_t + gamma * lambda * A[t+1]\n* The values list has length T+1 (includes the terminal value)\n* Return a list of floats with length T (same as rewards)",
+  "theory": "## Understanding the Theory: Generalized Advantage Estimation\n\n### Core Intuition: Why Do We Need This?\nIn reinforcement learning, an agent learns optimal decision policies through environmental trial-and-error without explicit target labels. The agent must balance exploiting known high-value actions against exploring uncertain actions that may yield higher cumulative discounted rewards. **Generalized Advantage Estimation** provides the algorithmic rule for updating state values, policy distributions, or Q-tables.\n\nIn this problem, the objective is to implement **Generalized Advantage Estimation** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\delta_t = r_t + \\gamma \\cdot V(s_{t+1}) - V(s_t)\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Bellman Optimality**: Dynamic programming in RL computes value functions iteratively: current value equals immediate reward plus discounted expectation of subsequent state values.\n* **Exploration Strategies**: Techniques like $\\\\epsilon$-greedy and entropy regularization prevent the policy from collapsing prematurely into sub-optimal actions.\n* **Credit Assignment**: Temporal difference learning allows agents to update value estimates after every step rather than waiting until the end of an episode.",
+  "hints": [
+    "Traverse timesteps backward while carrying the next advantage.",
+    "At each step, add the TD error to gamma times lambda times the carried advantage."
+  ],
+  "constraints": "* rewards has at least one element\n* values has len(rewards) + 1 elements\n* 0 <= gamma <= 1, 0 <= lam <= 1\n* Return a list of floats with the same length as rewards\n* Time limit: 300 ms",
+  "difficulty": "Medium",
+  "starterCode": "def gae(rewards: list, values: list, gamma: float, lam: float) -> list:\n    \"\"\"\n    Returns the generalized advantage estimate at every timestep.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T17:15:03.972Z",
+  "updatedAt": "2026-08-23T20:14:05.557Z",
+  "solution": "### 💡 Intuition & Approach\nGeneralized Advantage Estimation interpolates between TD(0) and Monte Carlo returns via parameter $\\lambda$.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef compute_gae(rewards: list, values: list, gamma: float, lam: float) -> list:\n    n = len(rewards)\n    adv = np.zeros(n)\n    last_gae = 0.0\n    for t in reversed(range(n)):\n        next_val = values[t + 1] if t + 1 < n else 0.0\n        delta = rewards[t] + gamma * next_val - values[t]\n        last_gae = delta + gamma * lam * last_gae\n        adv[t] = last_gae\n    return np.round(adv, 4).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "GAEComputationViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Lambda = 1",
+      "inputs": {
+        "lam": 1,
+        "gamma": 1,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        3.0,
+        2.0,
+        1.0
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Discounted with value estimates",
+      "inputs": {
+        "lam": 0.95,
+        "gamma": 0.9,
+        "values": [
+          1,
+          2,
+          3,
+          0
+        ],
+        "rewards": [
+          1,
+          0,
+          5
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        3.86055,
+        2.41,
+        2.0
+      ]
+    },
+    {
+      "id": "gae-computation-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "lam": 2,
+        "gamma": 2,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          2,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": [
+        42.0,
+        10.0,
+        2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "lam": 0,
+        "gamma": 0,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "lam": -1,
+        "gamma": -1,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          -1,
+          -1,
+          -1
+        ]
+      },
+      "expectedOutput": [
+        -3.0,
+        -2.0,
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "lam": 3,
+        "gamma": 3,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          3,
+          3,
+          3
+        ]
+      },
+      "expectedOutput": [
+        273.0,
+        30.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "lam": 2.0,
+        "gamma": 2.0,
+        "values": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "rewards": [
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        31.0,
+        7.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "lam": -1.0,
+        "gamma": -1.0,
+        "values": [
+          -2.0,
+          -2.0,
+          -2.0,
+          -2.0
+        ],
+        "rewards": [
+          -1.0,
+          -1.0,
+          -1.0
+        ]
+      },
+      "expectedOutput": [
+        7.0,
+        4.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "lam": 1,
+        "gamma": 1,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          1,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": [
+        3.0,
+        2.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "lam": -1,
+        "gamma": -1,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          -1,
+          -1,
+          -1
+        ]
+      },
+      "expectedOutput": [
+        -3.0,
+        -2.0,
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "lam": 10,
+        "gamma": 10,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          10,
+          10,
+          10
+        ]
+      },
+      "expectedOutput": [
+        101010.0,
+        1010.0,
+        10.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "lam": 0,
+        "gamma": 0,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "lam": 6.0,
+        "gamma": 6.0,
+        "values": [
+          5.0,
+          5.0,
+          5.0,
+          5.0
+        ],
+        "rewards": [
+          6.0,
+          6.0,
+          6.0
+        ]
+      },
+      "expectedOutput": [
+        2443.0,
+        67.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "lam": 2,
+        "gamma": 2,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          2,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": [
+        42.0,
+        10.0,
+        2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "lam": -2,
+        "gamma": -2,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          -2,
+          -2,
+          -2
+        ]
+      },
+      "expectedOutput": [
+        -42.0,
+        -10.0,
+        -2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "lam": 0,
+        "gamma": 0,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "lam": 0.0,
+        "gamma": 0.0,
+        "values": [
+          -1.0,
+          -1.0,
+          -1.0,
+          -1.0
+        ],
+        "rewards": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "lam": 4,
+        "gamma": 4,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          4,
+          4,
+          4
+        ]
+      },
+      "expectedOutput": [
+        1092.0,
+        68.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "lam": 1,
+        "gamma": 1,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          1,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": [
+        3.0,
+        2.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gae-computation-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "lam": 5,
+        "gamma": 5,
+        "values": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          5,
+          5,
+          5
+        ]
+      },
+      "expectedOutput": [
+        3255.0,
+        130.0,
+        5.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "gae",
+    "parameters": [
+      {
+        "name": "rewards",
+        "type": "array",
+        "example": "[1, 1, 1]",
+        "description": "Rewards at each timestep"
+      },
+      {
+        "name": "values",
+        "type": "array",
+        "example": "[0, 0, 0, 0]",
+        "description": "Value estimates (length = len(rewards) + 1)"
+      },
+      {
+        "name": "gamma",
+        "type": "number",
+        "example": "0.99",
+        "description": "Discount factor"
+      },
+      {
+        "name": "lam",
+        "type": "number",
+        "example": "0.95",
+        "description": "GAE lambda parameter"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "compute-advantage",
+    "policy-gradient-loss",
+    "discount-returns",
+    "td-value-update",
+    "value-iteration-step"
+  ],
+  "tags": [
+    "Reinforcement Learning"
+  ],
+  "prevId": "policy-gradient-loss",
+  "nextId": "priority-replay-sample",
+  "slug": "gae-computation",
+  "cleanTitle": "Generalized Advantage Estimation",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/gae-computation",
+  "localUrl": "http://localhost:3000/problems/gae-computation",
+  "studyPlan": null
+}

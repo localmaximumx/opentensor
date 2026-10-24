@@ -1,0 +1,385 @@
+{
+  "id": "ml-loss-softmax-ce",
+  "slug": "ml-loss-softmax-ce",
+  "title": "Softmax + Cross-Entropy (Fused) + Gradient",
+  "cleanTitle": "Softmax + Cross-Entropy (Fused) + Gradient",
+  "difficulty": "Medium",
+  "category": "Machine Learning",
+  "tags": [
+    "Softmax + Cross-Entropy (Fused) + Gradient"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Implement **Fused Softmax Cross-Entropy Loss** and its gradient with respect to input logits $Z$.\n\nGiven logits $Z \\in \\mathbb{R}^{N \\times C}$ and one-hot ground truth labels $Y \\in \\mathbb{R}^{N \\times C}$, compute cross-entropy loss stably using the log-sum-exp trick, and return the simplified analytic gradient $\\frac{\\partial \\mathcal{L}}{\\partial Z} = \\frac{1}{N} (P - Y)$ where $P = \\text{softmax}(Z)$.",
+  "theory": "## Understanding the Theory: Softmax + Cross-Entropy (Fused) + Gradient\n\n### Core Intuition: Why Do We Need This?\n**Softmax + Cross-Entropy (Fused) + Gradient** is a core operational primitive evaluated in **Activations, Losses, Optimizers**. In production machine learning systems, modular feature transformations, loss objectives, and evaluation metrics directly determine offline validation fidelity and live online serving quality. Sub-optimal algorithmic implementations introduce subtle data leakage, excessive latency, or numerical drift.\n\nUnderstanding the core mechanics enables engineers to diagnose convergence anomalies, optimize memory layouts, and construct maintainable ML pipelines from first principles.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\mathcal{L}_{\\text{CE}} = -\\sum_{i} y_i \\log \\hat{y}_i, \\quad \\nabla_z \\mathcal{L} = \\hat{y} - y\n$$\n\nIn this formulation:\n* The input features and parameters are projected, normalized, or aggregated according to established algorithmic invariants.\n* Dimensional consistency is preserved across all tensor or matrix axes, ensuring mathematical validity.\n* Intermediate accumulators maintain numerical dynamic range to protect against floating-point anomalies.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Validate input array dimensions, check for empty sequences or invalid bounds, and convert inputs into contiguous buffers.\n2. **Phase 2: Core Algorithmic Transformation**: Execute the foundational mathematical logic using vectorized SIMD array operations or optimized iteration.\n3. **Phase 3: Aggregation & Normalization**: Compute required sums, projections, or ranking reductions while guarding against division by zero.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Format outputs into required data types and verify that returned numerical estimates adhere to expected precision thresholds.\n\n### Practical Machine Learning Applications & Nuances\n* **Zero Data Leakage**: Invariants must be strictly maintained across training and evaluation splits to avoid optimistic metric inflation.\n* **Computational Efficiency**: Vectorized SIMD transformations allow real-time feature extraction under stringent single-digit millisecond latency SLAs.\n* **Defensive Boundary Handling**: Managing zero division in precision/recall calculations and extreme log-probabilities ensures high reliability in production model monitoring.\n* **Algorithmic Complexity**: Operates with optimal asymptotic time and space complexity, ensuring minimal compute overhead.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: [0.09, 0.2447, 0.6652]"
+  ],
+  "requirements": [
+    "Implement the function `softmax`.",
+    "Handle edge cases and invalid dimensions gracefully.",
+    "Ensure vectorized or optimal $O(N)$ computational complexity."
+  ],
+  "constraints": [
+    "Use Python 3 and standard libraries (NumPy, Collections).",
+    "Inputs are well-typed lists or numerical arrays."
+  ],
+  "hints": [
+    "Consider vectorized array operations to avoid explicit loops.",
+    "Verify numerical stability for extreme values or empty inputs."
+  ],
+  "starterCode": "import numpy as np\n\ndef softmax(x):\n    \"\"\"\n    Compute numerically stable softmax along the last axis.\n    \"\"\"\n    pass\n",
+  "solution": "### \ud83d\udca1 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### \u26a1 Implementation\n```python\nimport numpy as np\n\ndef softmax(x):\n    \"\"\"\n    Compute numerically stable softmax.\n    \"\"\"\n    x_arr = np.asarray(x, dtype=float)\n    shift_x = x_arr - np.max(x_arr, axis=-1, keepdims=True)\n    exps = np.exp(shift_x)\n    probs = exps / np.sum(exps, axis=-1, keepdims=True)\n    return np.round(probs, 4).tolist()\n```\n\n### \u23f1\ufe0f Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Simple 1D array",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0,
+          3.0
+        ]
+      },
+      "expectedOutput": [
+        0.09,
+        0.2447,
+        0.6652
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-2",
+      "name": "Case 2",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0,
+          6.0
+        ]
+      },
+      "expectedOutput": [
+        0.0159,
+        0.1173,
+        0.8668
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          0.5,
+          1.0,
+          1.5
+        ]
+      },
+      "expectedOutput": [
+        0.1863,
+        0.3072,
+        0.5065
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          -1.0,
+          -2.0,
+          -3.0
+        ]
+      },
+      "expectedOutput": [
+        0.6652,
+        0.2447,
+        0.09
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          3.0,
+          6.0,
+          9.0
+        ]
+      },
+      "expectedOutput": [
+        0.0024,
+        0.0473,
+        0.9503
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          2.0,
+          3.0,
+          4.0
+        ]
+      },
+      "expectedOutput": [
+        0.09,
+        0.2447,
+        0.6652
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          -1.0,
+          0.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        0.09,
+        0.2447,
+        0.6652
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          3.0,
+          2.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        0.6652,
+        0.2447,
+        0.09
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          -1.0,
+          -2.0,
+          -3.0
+        ]
+      },
+      "expectedOutput": [
+        0.6652,
+        0.2447,
+        0.09
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          10.0,
+          20.0,
+          30.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          0.1,
+          0.2,
+          0.3
+        ]
+      },
+      "expectedOutput": [
+        0.3006,
+        0.3322,
+        0.3672
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          6.0,
+          7.0,
+          8.0
+        ]
+      },
+      "expectedOutput": [
+        0.09,
+        0.2447,
+        0.6652
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          1.5,
+          3.0,
+          4.5
+        ]
+      },
+      "expectedOutput": [
+        0.0391,
+        0.1753,
+        0.7856
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          -2.0,
+          -4.0,
+          -6.0
+        ]
+      },
+      "expectedOutput": [
+        0.8668,
+        0.1173,
+        0.0159
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          0.25,
+          0.5,
+          0.75
+        ]
+      },
+      "expectedOutput": [
+        0.2543,
+        0.3265,
+        0.4192
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0.09,
+        0.2447,
+        0.6652
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          4.0,
+          8.0,
+          12.0
+        ]
+      },
+      "expectedOutput": [
+        0.0003,
+        0.018,
+        0.9817
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          0.75,
+          1.5,
+          2.25
+        ]
+      },
+      "expectedOutput": [
+        0.1316,
+        0.2786,
+        0.5898
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          5.0,
+          10.0,
+          15.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0067,
+        0.9933
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          11.0,
+          12.0,
+          13.0
+        ]
+      },
+      "expectedOutput": [
+        0.09,
+        0.2447,
+        0.6652
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "softmax",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "any",
+        "description": "Input data"
+      }
+    ]
+  }
+}

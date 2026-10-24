@@ -1,0 +1,1003 @@
+{
+  "id": "pca-projection",
+  "title": "PCA Projection",
+  "description": "Principal Component Analysis (PCA) finds the directions of maximum variance in the data and projects it onto a lower-dimensional subspace. This is done by computing the eigenvectors of the covariance matrix and projecting onto the top-k eigenvectors (principal components).\n\nGiven a data matrix X (n samples, d features) and the number of components k, project the data onto its top-k principal components.\n\n### Algorithm\n\n1. Center the data by subtracting the mean of each feature\n\n2. Compute the d x d covariance matrix using sample covariance (divide by n-1)\n\n$$\nC = \\frac{1}{n-1} X_c^T X_c\n$$\n\n3. Find the top-k eigenvectors of C sorted by eigenvalue in descending order (e.g., using power iteration with deflation)\n\n4. Project the centered data onto these eigenvectors\n\n$$\nX_{\\text{proj}} = X_c \\cdot W\n$$\n\nWhere W is the d x k matrix whose columns are the top-k eigenvectors.\n\nReturn an n by k list of projected values.",
+  "seoDescription": "Project centered observations onto supplied principal components to produce lower-dimensional features.",
+  "examples": [
+    "Input: X = [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0]], k = 1\n\nOutput: [[-2.0], [-1.0], [0.0], [1.0], [2.0]]\n\nExplanation: Centering leaves all variance along the first feature.",
+    "Input: X = [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5]], k = 1\n\nOutput: [[-2.8284], [-1.4142], [0.0], [1.4142], [2.8284]]"
+  ],
+  "requirements": "* Center the data by subtracting the column means\n* Compute the covariance matrix using n-1 (sample covariance)\n* Find the top-k eigenvectors ordered by decreasing eigenvalue\n* Project the centered data onto these k eigenvectors\n* Return an n x k list of floats",
+  "theory": "## Understanding the Theory: PCA Projection\n\n### Core Intuition: Why Do We Need This?\nLinear algebra is the foundational mathematical language of artificial intelligence. Image pixels, word embeddings, and hidden representations are all structured as multi-dimensional vectors and matrices. **PCA Projection** allows machine learning practitioners to project representations into informative subspaces, rotate coordinate frames, or decompose complex transformations into simpler geometric building blocks.\n\nIn this problem, the objective is to implement **PCA Projection** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nC = \\frac{1}{n-1} X_c^T X_c\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Dimensionality & Subspaces**: Orthogonal projections and low-rank factorizations compress massive feature vectors while preserving maximum variance.\n* **Condition Numbers & Inversion**: Inverting ill-conditioned matrices (matrices with near-zero determinants) causes numerical explosion; regularization (e.g. Ridge / Tikhonov) stabilizes these systems.\n* **Tensor Core Acceleration**: Modern hardware accelerators (GPUs and TPUs) are specialized matrix multiplication engines; formulating operations linearly maximizes throughput.",
+  "hints": [
+    "Center each feature before forming the sample covariance matrix.",
+    "Use np.linalg.eigh, sort eigenvectors by descending eigenvalue, then project onto the first k columns."
+  ],
+  "constraints": "* X has at least 2 rows and k <= d (number of features)\n* The top-k eigenvalues are distinct (no ties)\n* Return an n x k list of floats\n* Time limit: 300 ms",
+  "difficulty": "Hard",
+  "starterCode": "import numpy as np\n\ndef pca_projection(X: list, k: int) -> list:\n    \"\"\"\n    Returns the centered data projected onto the top components.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T17:58:03.345Z",
+  "updatedAt": "2026-08-23T20:39:28.810Z",
+  "solution": "### 💡 Intuition & Approach\nProjects features onto orthogonal principal axes maximizing explained variance.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef pca_transform(X: list, k: int) -> list:\n    arr = np.array(X, dtype=float)\n    centered = arr - np.mean(arr, axis=0)\n    cov = np.cov(centered, rowvar=False)\n    eigvals, eigvecs = np.linalg.eigh(cov)\n    # Top k eigenvectors\n    top_vecs = eigvecs[:, np.argsort(eigvals)[::-1][:k]]\n    proj = centered @ top_vecs\n    return np.round(proj, 4).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "PCAProjectionViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Variance in one dim",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          -2.0
+        ],
+        [
+          -1.0
+        ],
+        [
+          0.0
+        ],
+        [
+          1.0
+        ],
+        [
+          2.0
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Diagonal data",
+      "inputs": {
+        "X": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            5,
+            5
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          -2.8284
+        ],
+        [
+          -1.4142
+        ],
+        [
+          0.0
+        ],
+        [
+          1.4142
+        ],
+        [
+          2.8284
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.0
+        ],
+        [
+          -1.0
+        ],
+        [
+          0.0
+        ],
+        [
+          1.0
+        ],
+        [
+          2.0
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            5,
+            5
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8284
+        ],
+        [
+          -1.4142
+        ],
+        [
+          0.0
+        ],
+        [
+          1.4142
+        ],
+        [
+          2.8284
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.0
+        ],
+        [
+          -1.0
+        ],
+        [
+          0.0
+        ],
+        [
+          1.0
+        ],
+        [
+          2.0
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            5,
+            5
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8284
+        ],
+        [
+          -1.4142
+        ],
+        [
+          0.0
+        ],
+        [
+          1.4142
+        ],
+        [
+          2.8284
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.0
+        ],
+        [
+          -1.0
+        ],
+        [
+          0.0
+        ],
+        [
+          1.0
+        ],
+        [
+          2.0
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            5,
+            5
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8284
+        ],
+        [
+          -1.4142
+        ],
+        [
+          0.0
+        ],
+        [
+          1.4142
+        ],
+        [
+          2.8284
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.0
+        ],
+        [
+          -1.0
+        ],
+        [
+          0.0
+        ],
+        [
+          1.0
+        ],
+        [
+          2.0
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            5,
+            5
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8284
+        ],
+        [
+          -1.4142
+        ],
+        [
+          0.0
+        ],
+        [
+          1.4142
+        ],
+        [
+          2.8284
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.0
+        ],
+        [
+          -1.0
+        ],
+        [
+          0.0
+        ],
+        [
+          1.0
+        ],
+        [
+          2.0
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            5,
+            5
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8284
+        ],
+        [
+          -1.4142
+        ],
+        [
+          0.0
+        ],
+        [
+          1.4142
+        ],
+        [
+          2.8284
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.0
+        ],
+        [
+          -1.0
+        ],
+        [
+          0.0
+        ],
+        [
+          1.0
+        ],
+        [
+          2.0
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            5,
+            5
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8284
+        ],
+        [
+          -1.4142
+        ],
+        [
+          0.0
+        ],
+        [
+          1.4142
+        ],
+        [
+          2.8284
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.0
+        ],
+        [
+          -1.0
+        ],
+        [
+          0.0
+        ],
+        [
+          1.0
+        ],
+        [
+          2.0
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            5,
+            5
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8284
+        ],
+        [
+          -1.4142
+        ],
+        [
+          0.0
+        ],
+        [
+          1.4142
+        ],
+        [
+          2.8284
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.0
+        ],
+        [
+          -1.0
+        ],
+        [
+          0.0
+        ],
+        [
+          1.0
+        ],
+        [
+          2.0
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            5,
+            5
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8284
+        ],
+        [
+          -1.4142
+        ],
+        [
+          0.0
+        ],
+        [
+          1.4142
+        ],
+        [
+          2.8284
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.0
+        ],
+        [
+          -1.0
+        ],
+        [
+          0.0
+        ],
+        [
+          1.0
+        ],
+        [
+          2.0
+        ]
+      ]
+    },
+    {
+      "id": "pca-projection-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            5,
+            5
+          ]
+        ],
+        "k": 1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -2.8284
+        ],
+        [
+          -1.4142
+        ],
+        [
+          0.0
+        ],
+        [
+          1.4142
+        ],
+        [
+          2.8284
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "pca_projection",
+    "parameters": [
+      {
+        "name": "X",
+        "type": "array",
+        "example": "[[1, 0], [2, 0], [3, 0]]",
+        "description": "Data matrix, shape (n_samples, n_features)"
+      },
+      {
+        "name": "k",
+        "type": "number",
+        "example": "1",
+        "description": "Number of principal components to project onto"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "covariance-matrix",
+    "eigenvalues",
+    "matrix-normalization",
+    "matrix-inverse",
+    "pearson-correlation"
+  ],
+  "tags": [
+    "Linear Algebra",
+    "Classic ML"
+  ],
+  "prevId": "ridge-regression",
+  "nextId": "decision-tree-split",
+  "slug": "pca-projection",
+  "cleanTitle": "PCA Projection",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/pca-projection",
+  "localUrl": "http://localhost:3000/problems/pca-projection",
+  "studyPlan": null
+}

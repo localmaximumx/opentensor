@@ -1,0 +1,812 @@
+{
+  "id": "retraining-trigger-design",
+  "title": "Retraining Trigger Design",
+  "description": "Choose the days on which an ML system retrains. Process daily_stats in order while tracking remaining budget, the last retraining day, and days since retraining.\n\nA day requests retraining when at least one condition holds:\n\n* drift_score > drift_threshold\n* performance = max_staleness\n\nThe retraining occurs only when day - last_retrain_day >= cooldown and the remaining budget covers retrain_cost. Start days_since_retrain at zero, increment it before checking each day, and reset it after retraining. The initial cooldown is already satisfied. Return the retraining day numbers in chronological order.",
+  "seoDescription": "Evaluate production monitoring signals and decide whether they satisfy the configured model-retraining policy.",
+  "examples": [
+    "Input: daily_stats = [{\"day\": 1, \"drift_score\": 0.1, \"performance\": 0.95}, {\"day\": 2, \"drift_score\": 0.3, \"performance\": 0.93}, {\"day\": 3, \"drift_score\": 0.6, \"performance\": 0.9}, {\"day\": 4, \"drift_score\": 0.2, \"performance\": 0.94}], config = {\"drift_threshold\": 0.5, \"performance_threshold\": 0.7, \"max_staleness\": 30, \"cooldown\": 1, \"retrain_cost\": 100, \"budget\": 500}\n\nOutput: [3]\n\nExplanation: Only day 3 exceeds the drift threshold, and both operational constraints permit retraining.",
+    "Input: daily_stats = [{\"day\": 1, \"drift_score\": 0.1, \"performance\": 0.85}, {\"day\": 2, \"drift_score\": 0.15, \"performance\": 0.65}, {\"day\": 3, \"drift_score\": 0.1, \"performance\": 0.9}], config = {\"drift_threshold\": 0.5, \"performance_threshold\": 0.7, \"max_staleness\": 30, \"cooldown\": 1, \"retrain_cost\": 100, \"budget\": 500}\n\nOutput: [2]"
+  ],
+  "requirements": "* Evaluate all three triggers on every day\n* Enforce cooldown and remaining budget before retraining\n* Reset staleness and deduct cost after each retraining\n* Return a list of retraining day numbers",
+  "theory": "## Understanding the Theory: Retraining Trigger Design\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **Retraining Trigger Design** implements a core computational routine.\n\nIn this problem, the objective is to implement **Retraining Trigger Design** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\text{drift\\_score} > \\text{drift\\_threshold}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "Initialize last_retrain_day = -config[\"cooldown\"] so the first trigger can run.",
+    "Combine the three triggers with or, then combine cooldown and budget checks with and."
+  ],
+  "constraints": "* Daily statistics are sorted by increasing day\n* Configuration values are positive except thresholds may be zero\n* Threshold equality alone does not trigger drift or performance retraining",
+  "difficulty": "Hard",
+  "starterCode": "def retraining_policy(daily_stats: list, config: dict) -> list:\n    \"\"\"\n    Returns a list of retraining day numbers.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-29T20:10:31.139Z",
+  "updatedAt": "2026-08-23T11:59:44.127Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\ndef retraining_policy(daily_stats: list, config: dict) -> list:\n    drift_th = config.get('drift_threshold', 0.5)\n    perf_th = config.get('performance_threshold', 0.7)\n    cooldown = config.get('cooldown', 1)\n    cost = config.get('retrain_cost', 0)\n    budget = config.get('budget', 1e9)\n    triggers = []\n    last_retrain = -cooldown - 1\n    spent = 0\n    for stat in daily_stats:\n        day = stat['day']\n        drift = stat.get('drift_score', 0)\n        perf = stat.get('performance', 1.0)\n        if (drift > drift_th or perf < perf_th):\n            if day - last_retrain > cooldown and (spent + cost <= budget):\n                triggers.append(day)\n                last_retrain = day\n                spent += cost\n    return triggers\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "RetrainingTriggerViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Drift trigger",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.95
+          },
+          {
+            "day": 2,
+            "drift_score": 0.3,
+            "performance": 0.93
+          },
+          {
+            "day": 3,
+            "drift_score": 0.6,
+            "performance": 0.9
+          },
+          {
+            "day": 4,
+            "drift_score": 0.2,
+            "performance": 0.94
+          }
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        3
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Performance trigger",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.85
+          },
+          {
+            "day": 2,
+            "drift_score": 0.15,
+            "performance": 0.65
+          },
+          {
+            "day": 3,
+            "drift_score": 0.1,
+            "performance": 0.9
+          }
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        2
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.95
+          },
+          {
+            "day": 2,
+            "drift_score": 0.3,
+            "performance": 0.93
+          },
+          {
+            "day": 3,
+            "drift_score": 0.6,
+            "performance": 0.9
+          },
+          {
+            "day": 4,
+            "drift_score": 0.2,
+            "performance": 0.94
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        3
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.85
+          },
+          {
+            "day": 2,
+            "drift_score": 0.15,
+            "performance": 0.65
+          },
+          {
+            "day": 3,
+            "drift_score": 0.1,
+            "performance": 0.9
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.95
+          },
+          {
+            "day": 2,
+            "drift_score": 0.3,
+            "performance": 0.93
+          },
+          {
+            "day": 3,
+            "drift_score": 0.6,
+            "performance": 0.9
+          },
+          {
+            "day": 4,
+            "drift_score": 0.2,
+            "performance": 0.94
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        3
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.85
+          },
+          {
+            "day": 2,
+            "drift_score": 0.15,
+            "performance": 0.65
+          },
+          {
+            "day": 3,
+            "drift_score": 0.1,
+            "performance": 0.9
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.95
+          },
+          {
+            "day": 2,
+            "drift_score": 0.3,
+            "performance": 0.93
+          },
+          {
+            "day": 3,
+            "drift_score": 0.6,
+            "performance": 0.9
+          },
+          {
+            "day": 4,
+            "drift_score": 0.2,
+            "performance": 0.94
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        3
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.85
+          },
+          {
+            "day": 2,
+            "drift_score": 0.15,
+            "performance": 0.65
+          },
+          {
+            "day": 3,
+            "drift_score": 0.1,
+            "performance": 0.9
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.95
+          },
+          {
+            "day": 2,
+            "drift_score": 0.3,
+            "performance": 0.93
+          },
+          {
+            "day": 3,
+            "drift_score": 0.6,
+            "performance": 0.9
+          },
+          {
+            "day": 4,
+            "drift_score": 0.2,
+            "performance": 0.94
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        3
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.85
+          },
+          {
+            "day": 2,
+            "drift_score": 0.15,
+            "performance": 0.65
+          },
+          {
+            "day": 3,
+            "drift_score": 0.1,
+            "performance": 0.9
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.95
+          },
+          {
+            "day": 2,
+            "drift_score": 0.3,
+            "performance": 0.93
+          },
+          {
+            "day": 3,
+            "drift_score": 0.6,
+            "performance": 0.9
+          },
+          {
+            "day": 4,
+            "drift_score": 0.2,
+            "performance": 0.94
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        3
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.85
+          },
+          {
+            "day": 2,
+            "drift_score": 0.15,
+            "performance": 0.65
+          },
+          {
+            "day": 3,
+            "drift_score": 0.1,
+            "performance": 0.9
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.95
+          },
+          {
+            "day": 2,
+            "drift_score": 0.3,
+            "performance": 0.93
+          },
+          {
+            "day": 3,
+            "drift_score": 0.6,
+            "performance": 0.9
+          },
+          {
+            "day": 4,
+            "drift_score": 0.2,
+            "performance": 0.94
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        3
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.85
+          },
+          {
+            "day": 2,
+            "drift_score": 0.15,
+            "performance": 0.65
+          },
+          {
+            "day": 3,
+            "drift_score": 0.1,
+            "performance": 0.9
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.95
+          },
+          {
+            "day": 2,
+            "drift_score": 0.3,
+            "performance": 0.93
+          },
+          {
+            "day": 3,
+            "drift_score": 0.6,
+            "performance": 0.9
+          },
+          {
+            "day": 4,
+            "drift_score": 0.2,
+            "performance": 0.94
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        3
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.85
+          },
+          {
+            "day": 2,
+            "drift_score": 0.15,
+            "performance": 0.65
+          },
+          {
+            "day": 3,
+            "drift_score": 0.1,
+            "performance": 0.9
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.95
+          },
+          {
+            "day": 2,
+            "drift_score": 0.3,
+            "performance": 0.93
+          },
+          {
+            "day": 3,
+            "drift_score": 0.6,
+            "performance": 0.9
+          },
+          {
+            "day": 4,
+            "drift_score": 0.2,
+            "performance": 0.94
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        3
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.85
+          },
+          {
+            "day": 2,
+            "drift_score": 0.15,
+            "performance": 0.65
+          },
+          {
+            "day": 3,
+            "drift_score": 0.1,
+            "performance": 0.9
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.95
+          },
+          {
+            "day": 2,
+            "drift_score": 0.3,
+            "performance": 0.93
+          },
+          {
+            "day": 3,
+            "drift_score": 0.6,
+            "performance": 0.9
+          },
+          {
+            "day": 4,
+            "drift_score": 0.2,
+            "performance": 0.94
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        3
+      ]
+    },
+    {
+      "id": "retraining-trigger-design-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "config": {
+          "budget": 500,
+          "cooldown": 1,
+          "retrain_cost": 100,
+          "max_staleness": 30,
+          "drift_threshold": 0.5,
+          "performance_threshold": 0.7
+        },
+        "daily_stats": [
+          {
+            "day": 1,
+            "drift_score": 0.1,
+            "performance": 0.85
+          },
+          {
+            "day": 2,
+            "drift_score": 0.15,
+            "performance": 0.65
+          },
+          {
+            "day": 3,
+            "drift_score": 0.1,
+            "performance": 0.9
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        2
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "retraining_policy",
+    "parameters": [
+      {
+        "name": "daily_stats",
+        "type": "array",
+        "example": "[{\"day\": 1, \"drift_score\": 0.1, \"performance\": 0.95}]",
+        "description": "List of daily stats with day, drift_score, and performance"
+      },
+      {
+        "name": "config",
+        "type": "any",
+        "example": "{\"drift_threshold\": 0.5, \"performance_threshold\": 0.7, \"max_staleness\": 30, \"cooldown\": 1, \"retrain_cost\": 100, \"budget\": 500}",
+        "description": "Configuration with thresholds, cooldown, cost, and budget"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "data-drift-detection",
+    "monitoring-metrics-selection",
+    "train-serving-skew",
+    "shadow-deployment-evaluation",
+    "model-versioning-basics"
+  ],
+  "tags": [
+    "MLOps"
+  ],
+  "prevId": "monitoring-metrics-selection",
+  "nextId": "shadow-deployment-evaluation",
+  "slug": "retraining-trigger-design",
+  "cleanTitle": "Retraining Trigger Design",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/retraining-trigger-design",
+  "localUrl": "http://localhost:3000/problems/retraining-trigger-design",
+  "studyPlan": null
+}

@@ -1,0 +1,1092 @@
+{
+  "id": "gaussian-naive-bayes",
+  "title": "Gaussian Naive Bayes",
+  "description": "Gaussian Naive Bayes is a classification algorithm based on Bayes' theorem with a \"naive\" assumption that features are conditionally independent given the class. Each feature's likelihood is modeled as a Gaussian distribution, making it fast and effective for many real-world problems.\n\nGiven labeled training data and unlabeled test data, predict the class for each test sample by computing the posterior probability for each class.\n\n### Algorithm\n\n1. For each class c, compute the prior probability:\n\n$$\nP(c) = \\frac{n_c}{n}\n$$\n\n2. For each class c and feature j, compute the mean and population variance:\n\n$$\n\\mu_{cj} = \\frac{1}{n_c} \\sum_{i \\in c} x_{ij}\n$$\n\n$$\n\\sigma^2_{cj} = \\frac{1}{n_c} \\sum_{i \\in c} (x_{ij} - \\mu_{cj})^2\n$$\n\n3. For each test sample, compute the log posterior for each class:\n\n$$\n\\log P(c | x) \\propto \\log P(c) + \\sum_j \\left[ -\\frac{1}{2} \\log(2\\pi\\sigma^2_{cj}) - \\frac{(x_j - \\mu_{cj})^2}{2\\sigma^2_{cj}} \\right]\n$$\n\n4. Predict the class with the highest log posterior. Add a small epsilon (1e-9) to variances to avoid division by zero.\n\nReturn one integer class label for each row of X_test.",
+  "seoDescription": "Fit Gaussian Naive Bayes class statistics and predict labels from priors and feature likelihoods.",
+  "examples": [
+    "Input: X_train = [[1], [2], [3], [10], [11], [12]], y_train = [0, 0, 0, 1, 1, 1], X_test = [[2], [11], [6]]\n\nOutput: [0, 1, 0]\n\nExplanation: Each test value is assigned to the class with the larger Gaussian log posterior.",
+    "Input: X_train = [[0, 0], [1, 0], [0, 1], [10, 10], [11, 10], [10, 11]], y_train = [0, 0, 0, 1, 1, 1], X_test = [[0.5, 0.5], [10.5, 10.5]]\n\nOutput: [0, 1]"
+  ],
+  "requirements": "* Compute the prior P(c) = n_c / n for each class\n* Compute the mean and population variance (divide by n_c, not n_c - 1) for each feature per class\n* Add epsilon = 1e-9 to all variances to handle zero-variance features\n* Compute log posteriors and predict the class with the highest value\n* Return a list of predicted class labels for the test set",
+  "theory": "## Understanding the Theory: Gaussian Naive Bayes\n\n### Core Intuition: Why Do We Need This?\nReal-world data is inherently stochastic and incomplete. Probability theory and statistics provide principled methods to quantify uncertainty, model data-generating distributions, and evaluate confidence in empirical predictions. **Gaussian Naive Bayes** computes statistical moments, likelihoods, or uncertainty metrics across observation samples.\n\nIn this problem, the objective is to implement **Gaussian Naive Bayes** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nP(c) = \\frac{n_c}{n}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Log-Space Calculations**: Probabilities can be extremely small; computing log-likelihoods prevents floating-point underflow when multiplying many probability densities.\n* **Maximum Likelihood Estimation**: Many machine learning loss functions (like Cross-Entropy and Mean Squared Error) directly derive from minimizing negative log-likelihood under specific distributional assumptions.\n* **Outlier Sensitivity**: High-order moments (skewness and kurtosis) reveal distribution heavy-tails, signaling when robust statistics or clipping are necessary.",
+  "hints": [
+    "Group training rows by class before computing each feature mean and population variance.",
+    "Add log prior and per-feature Gaussian log likelihoods, then keep the largest class score."
+  ],
+  "constraints": "* X_train has at least 2 rows with at least 2 distinct classes in y_train\n* X_test has at least 1 row\n* All feature values are numeric\n* Return a list of integer class labels with the same length as X_test\n* Time limit: 300 ms",
+  "difficulty": "Hard",
+  "starterCode": "import math\n\ndef gaussian_naive_bayes(X_train: list, y_train: list, X_test: list) -> list:\n    \"\"\"\n    Returns a predicted class label for every test sample.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T17:58:10.943Z",
+  "updatedAt": "2026-08-23T20:39:28.810Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport math\nimport numpy as np\n\ndef gaussian_naive_bayes(X_train: list, y_train: list, X_test: list) -> list:\n    Xt = np.array(X_train, dtype=float)\n    yt = np.array(y_train)\n    Xte = np.array(X_test, dtype=float)\n    classes = np.unique(yt)\n    stats = {}\n    for c in classes:\n        Xc = Xt[yt == c]\n        stats[c] = (len(Xc) / len(Xt), Xc.mean(axis=0), Xc.var(axis=0) + 1e-9)\n    preds = []\n    for x in Xte:\n        best_c, best_logp = None, -1e18\n        for c, (prior, mean, var) in stats.items():\n            logp = math.log(prior) - 0.5 * np.sum(np.log(2 * np.pi * var) + ((x - mean)**2) / var)\n            if logp > best_logp:\n                best_logp = logp\n                best_c = c\n        preds.append(int(best_c))\n    return preds\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "GaussianNaiveBayesViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "1D features",
+      "inputs": {
+        "X_test": [
+          [
+            2
+          ],
+          [
+            11
+          ],
+          [
+            6
+          ]
+        ],
+        "X_train": [
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ],
+          [
+            10
+          ],
+          [
+            11
+          ],
+          [
+            12
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "2D features",
+      "inputs": {
+        "X_test": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            10.5,
+            10.5
+          ]
+        ],
+        "X_train": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            10,
+            10
+          ],
+          [
+            11,
+            10
+          ],
+          [
+            10,
+            11
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        0,
+        1
+      ]
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X_test": [
+          [
+            4
+          ],
+          [
+            22
+          ],
+          [
+            12
+          ]
+        ],
+        "X_train": [
+          [
+            2
+          ],
+          [
+            4
+          ],
+          [
+            6
+          ],
+          [
+            20
+          ],
+          [
+            22
+          ],
+          [
+            24
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          2,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": [
+        0,
+        2,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X_test": [
+          [
+            1
+          ],
+          [
+            6
+          ],
+          [
+            3
+          ]
+        ],
+        "X_train": [
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            5
+          ],
+          [
+            6
+          ],
+          [
+            6
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X_test": [
+          [
+            -2
+          ],
+          [
+            -11
+          ],
+          [
+            -6
+          ]
+        ],
+        "X_train": [
+          [
+            -1
+          ],
+          [
+            -2
+          ],
+          [
+            -3
+          ],
+          [
+            -10
+          ],
+          [
+            -11
+          ],
+          [
+            -12
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          -1,
+          -1,
+          -1
+        ]
+      },
+      "expectedOutput": [
+        0,
+        -1,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X_test": [
+          [
+            6
+          ],
+          [
+            33
+          ],
+          [
+            18
+          ]
+        ],
+        "X_train": [
+          [
+            3
+          ],
+          [
+            6
+          ],
+          [
+            9
+          ],
+          [
+            30
+          ],
+          [
+            33
+          ],
+          [
+            36
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          3,
+          3,
+          3
+        ]
+      },
+      "expectedOutput": [
+        0,
+        3,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X_test": [
+          [
+            3.0
+          ],
+          [
+            12.0
+          ],
+          [
+            7.0
+          ]
+        ],
+        "X_train": [
+          [
+            2.0
+          ],
+          [
+            3.0
+          ],
+          [
+            4.0
+          ],
+          [
+            11.0
+          ],
+          [
+            12.0
+          ],
+          [
+            13.0
+          ]
+        ],
+        "y_train": [
+          1.0,
+          1.0,
+          1.0,
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        1,
+        2,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X_test": [
+          [
+            0.0
+          ],
+          [
+            9.0
+          ],
+          [
+            4.0
+          ]
+        ],
+        "X_train": [
+          [
+            -1.0
+          ],
+          [
+            0.0
+          ],
+          [
+            1.0
+          ],
+          [
+            8.0
+          ],
+          [
+            9.0
+          ],
+          [
+            10.0
+          ]
+        ],
+        "y_train": [
+          -2.0,
+          -2.0,
+          -2.0,
+          -1.0,
+          -1.0,
+          -1.0
+        ]
+      },
+      "expectedOutput": [
+        -2,
+        -1,
+        -2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X_test": [
+          [
+            2
+          ],
+          [
+            11
+          ],
+          [
+            6
+          ]
+        ],
+        "X_train": [
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ],
+          [
+            10
+          ],
+          [
+            11
+          ],
+          [
+            12
+          ]
+        ],
+        "y_train": [
+          1,
+          1,
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        1,
+        0,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X_test": [
+          [
+            -2
+          ],
+          [
+            -11
+          ],
+          [
+            -6
+          ]
+        ],
+        "X_train": [
+          [
+            -1
+          ],
+          [
+            -2
+          ],
+          [
+            -3
+          ],
+          [
+            -10
+          ],
+          [
+            -11
+          ],
+          [
+            -12
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          -1,
+          -1,
+          -1
+        ]
+      },
+      "expectedOutput": [
+        0,
+        -1,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X_test": [
+          [
+            20
+          ],
+          [
+            110
+          ],
+          [
+            60
+          ]
+        ],
+        "X_train": [
+          [
+            10
+          ],
+          [
+            20
+          ],
+          [
+            30
+          ],
+          [
+            100
+          ],
+          [
+            110
+          ],
+          [
+            120
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          10,
+          10,
+          10
+        ]
+      },
+      "expectedOutput": [
+        0,
+        10,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X_test": [
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ]
+        ],
+        "X_train": [
+          [
+            0
+          ],
+          [
+            0
+          ],
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X_test": [
+          [
+            7.0
+          ],
+          [
+            16.0
+          ],
+          [
+            11.0
+          ]
+        ],
+        "X_train": [
+          [
+            6.0
+          ],
+          [
+            7.0
+          ],
+          [
+            8.0
+          ],
+          [
+            15.0
+          ],
+          [
+            16.0
+          ],
+          [
+            17.0
+          ]
+        ],
+        "y_train": [
+          5.0,
+          5.0,
+          5.0,
+          6.0,
+          6.0,
+          6.0
+        ]
+      },
+      "expectedOutput": [
+        5,
+        6,
+        5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X_test": [
+          [
+            3
+          ],
+          [
+            16
+          ],
+          [
+            9
+          ]
+        ],
+        "X_train": [
+          [
+            2
+          ],
+          [
+            3
+          ],
+          [
+            4
+          ],
+          [
+            15
+          ],
+          [
+            16
+          ],
+          [
+            18
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          2,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": [
+        0,
+        2,
+        2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X_test": [
+          [
+            -4
+          ],
+          [
+            -22
+          ],
+          [
+            -12
+          ]
+        ],
+        "X_train": [
+          [
+            -2
+          ],
+          [
+            -4
+          ],
+          [
+            -6
+          ],
+          [
+            -20
+          ],
+          [
+            -22
+          ],
+          [
+            -24
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          -2,
+          -2,
+          -2
+        ]
+      },
+      "expectedOutput": [
+        0,
+        -2,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X_test": [
+          [
+            0
+          ],
+          [
+            3
+          ],
+          [
+            2
+          ]
+        ],
+        "X_train": [
+          [
+            0
+          ],
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ],
+          [
+            3
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0,
+        0,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X_test": [
+          [
+            1.0
+          ],
+          [
+            10.0
+          ],
+          [
+            5.0
+          ]
+        ],
+        "X_train": [
+          [
+            0.0
+          ],
+          [
+            1.0
+          ],
+          [
+            2.0
+          ],
+          [
+            9.0
+          ],
+          [
+            10.0
+          ],
+          [
+            11.0
+          ]
+        ],
+        "y_train": [
+          -1.0,
+          -1.0,
+          -1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        -1,
+        0,
+        -1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X_test": [
+          [
+            8
+          ],
+          [
+            44
+          ],
+          [
+            24
+          ]
+        ],
+        "X_train": [
+          [
+            4
+          ],
+          [
+            8
+          ],
+          [
+            12
+          ],
+          [
+            40
+          ],
+          [
+            44
+          ],
+          [
+            48
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          4,
+          4,
+          4
+        ]
+      },
+      "expectedOutput": [
+        0,
+        4,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X_test": [
+          [
+            2
+          ],
+          [
+            8
+          ],
+          [
+            4
+          ]
+        ],
+        "X_train": [
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            2
+          ],
+          [
+            8
+          ],
+          [
+            8
+          ],
+          [
+            9
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": [
+        0,
+        1,
+        0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gaussian-naive-bayes-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X_test": [
+          [
+            10
+          ],
+          [
+            55
+          ],
+          [
+            30
+          ]
+        ],
+        "X_train": [
+          [
+            5
+          ],
+          [
+            10
+          ],
+          [
+            15
+          ],
+          [
+            50
+          ],
+          [
+            55
+          ],
+          [
+            60
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          5,
+          5,
+          5
+        ]
+      },
+      "expectedOutput": [
+        0,
+        5,
+        0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "gaussian_naive_bayes",
+    "parameters": [
+      {
+        "name": "X_train",
+        "type": "array",
+        "example": "[[1], [2], [3]]",
+        "description": "Training features (2D array)"
+      },
+      {
+        "name": "y_train",
+        "type": "array",
+        "example": "[0, 0, 1]",
+        "description": "Training labels"
+      },
+      {
+        "name": "X_test",
+        "type": "array",
+        "example": "[[2], [11]]",
+        "description": "Test features (2D array)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "naive-bayes-bernoulli",
+    "linear-regression-closed-form",
+    "ridge-regression",
+    "logistic-regression-training",
+    "bernoulli-pmf"
+  ],
+  "tags": [
+    "Classic ML"
+  ],
+  "prevId": "decision-tree-split",
+  "nextId": "linear-layer-forward",
+  "slug": "gaussian-naive-bayes",
+  "cleanTitle": "Gaussian Naive Bayes",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/gaussian-naive-bayes",
+  "localUrl": "http://localhost:3000/problems/gaussian-naive-bayes",
+  "studyPlan": null
+}

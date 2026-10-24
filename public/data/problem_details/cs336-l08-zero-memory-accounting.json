@@ -1,0 +1,357 @@
+{
+  "id": "cs336-l08-zero-memory-accounting",
+  "slug": "cs336-l08-zero-memory-accounting",
+  "title": "ZeRO Stages 1, 2, and 3 Memory Accounting",
+  "cleanTitle": "ZeRO Stages 1, 2, and 3 Memory Accounting",
+  "category": "python",
+  "difficulty": "Easy",
+  "tags": [
+    "Distributed Computing"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "language-modeling-from-scratch",
+    "title": "Language Modeling from Scratch",
+    "sectionId": "cs336-l08"
+  },
+  "seoDescription": "Calculate persistent model-state bytes per rank for DDP and ZeRO stages 1, 2, and 3 with ceiling division for uneven shards.",
+  "description": "Compute persistent model-state memory per GPU rank across standard DDP and ZeRO stages 1, 2, and 3 using ceiling division for uneven parameter shards.\n\n**Mathematical Formulation:**\n\n$$\nM_{\\text{ZeRO-1}} = 2N + 2N + \\frac{12N}{R}, \\quad M_{\\text{ZeRO-2}} = 2N + \\frac{14N}{R}, \\quad M_{\\text{ZeRO-3}} = \\frac{16N}{R}\n$$\n\n**Step-by-Step Implementation:**\n1. Compute baseline unpartitioned parameter, gradient, and optimizer memory.\n2. Partition optimizer states by world size R for ZeRO Stage 1.\n3. Partition gradients and optimizer states for ZeRO Stage 2.\n4. Partition all model states (parameters, gradients, and optimizer) for ZeRO Stage 3.\n\n**Returns:** Dictionary with bytes per rank across DDP, ZeRO-1, ZeRO-2, and ZeRO-3.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Account for ZeRO Memory by Stage specification."
+  ],
+  "requirements": "* Must implement `cs336_l08_zero_memory_accounting` using PYTHON.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: ZeRO Stages 1, 2, and 3 Memory Accounting\n\n### Core Intuition: Why Do We Need This?\nCompute persistent model-state memory per GPU rank across standard DDP and ZeRO stages 1, 2, and 3 using ceiling division for uneven parameter shards. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\nM_{\\text{ZeRO-1}} = 2N + 2N + \\frac{12N}{R}, \\quad M_{\\text{ZeRO-2}} = 2N + \\frac{14N}{R}, \\quad M_{\\text{ZeRO-3}} = \\frac{16N}{R}\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Compute baseline unpartitioned parameter, gradient, and optimizer memory.\n3. **Phase 3: Iterative Execution & Reduction**: Partition optimizer states by world size R for ZeRO Stage 1.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Partition all model states (parameters, gradients, and optimizer) for ZeRO Stage 3.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard PYTHON documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `any` specifications."
+  ],
+  "constraints": "* Category: PYTHON\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, PYTHON\n",
+  "starterCode": "import math\n\ndef cs336_l08_zero_memory_accounting(param_count: int, num_ranks: int, bytes_per_param: int = 2) -> dict:\n    \"\"\"\n    Compute persistent model-state memory per GPU rank across standard DDP and ZeRO stages 1, 2, and 3 using ceiling division for uneven parameter shards.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nCompute persistent model-state memory per GPU rank across standard DDP and ZeRO stages 1, 2, and 3 using ceiling division for uneven parameter shards.\n\n### ⚡ Python Reference Implementation\n```python\nimport math\n\ndef cs336_l08_zero_memory_accounting(param_count: int, num_ranks: int, bytes_per_param: int = 2) -> dict:\n    p, g, o = param_count * bytes_per_param, param_count * bytes_per_param, param_count * 12\n    return {\n        'ddp_bytes_per_rank': p + g + o,\n        'zero_stage1_bytes_per_rank': p + g + math.ceil(o / num_ranks),\n        'zero_stage2_bytes_per_rank': p + math.ceil((g + o) / num_ranks),\n        'zero_stage3_bytes_per_rank': math.ceil((p + g + o) / num_ranks)\n    }\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "cs336-l08-zero-memory-accounting-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "param_count": 1000000,
+        "num_ranks": 8
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 16000000,
+        "zero_stage1_bytes_per_rank": 5500000,
+        "zero_stage2_bytes_per_rank": 3750000,
+        "zero_stage3_bytes_per_rank": 2000000
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "param_count": 7000000000,
+        "num_ranks": 64
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 112000000000,
+        "zero_stage1_bytes_per_rank": 29312500000,
+        "zero_stage2_bytes_per_rank": 15531250000,
+        "zero_stage3_bytes_per_rank": 1750000000
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "param_count": 2000000,
+        "num_ranks": 16
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 32000000,
+        "zero_stage1_bytes_per_rank": 9500000,
+        "zero_stage2_bytes_per_rank": 5750000,
+        "zero_stage3_bytes_per_rank": 2000000
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "param_count": 500000,
+        "num_ranks": 4
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 8000000,
+        "zero_stage1_bytes_per_rank": 3500000,
+        "zero_stage2_bytes_per_rank": 2750000,
+        "zero_stage3_bytes_per_rank": 2000000
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "param_count": -1000000,
+        "num_ranks": -8
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": -16000000,
+        "zero_stage1_bytes_per_rank": -2500000,
+        "zero_stage2_bytes_per_rank": -250000,
+        "zero_stage3_bytes_per_rank": 2000000
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "param_count": 3000000,
+        "num_ranks": 24
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 48000000,
+        "zero_stage1_bytes_per_rank": 13500000,
+        "zero_stage2_bytes_per_rank": 7750000,
+        "zero_stage3_bytes_per_rank": 2000000
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "param_count": 1000001.0,
+        "num_ranks": 9.0
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 16000016.0,
+        "zero_stage1_bytes_per_rank": 5333339.0,
+        "zero_stage2_bytes_per_rank": 3555560.0,
+        "zero_stage3_bytes_per_rank": 1777780
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "param_count": 999998.0,
+        "num_ranks": 6.0
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 15999968.0,
+        "zero_stage1_bytes_per_rank": 5999988.0,
+        "zero_stage2_bytes_per_rank": 4333325.0,
+        "zero_stage3_bytes_per_rank": 2666662
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "param_count": 1000000,
+        "num_ranks": 8
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 16000000,
+        "zero_stage1_bytes_per_rank": 5500000,
+        "zero_stage2_bytes_per_rank": 3750000,
+        "zero_stage3_bytes_per_rank": 2000000
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "param_count": -1000000,
+        "num_ranks": -8
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": -16000000,
+        "zero_stage1_bytes_per_rank": -2500000,
+        "zero_stage2_bytes_per_rank": -250000,
+        "zero_stage3_bytes_per_rank": 2000000
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "param_count": 10000000,
+        "num_ranks": 80
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 160000000,
+        "zero_stage1_bytes_per_rank": 41500000,
+        "zero_stage2_bytes_per_rank": 21750000,
+        "zero_stage3_bytes_per_rank": 2000000
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "param_count": 100000,
+        "num_ranks": 1
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 1600000,
+        "zero_stage1_bytes_per_rank": 1600000,
+        "zero_stage2_bytes_per_rank": 1600000,
+        "zero_stage3_bytes_per_rank": 1600000
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "param_count": 1000005.0,
+        "num_ranks": 13.0
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 16000080.0,
+        "zero_stage1_bytes_per_rank": 4923102.0,
+        "zero_stage2_bytes_per_rank": 3076939.0,
+        "zero_stage3_bytes_per_rank": 1230776
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "param_count": 1500000,
+        "num_ranks": 12
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 24000000,
+        "zero_stage1_bytes_per_rank": 7500000,
+        "zero_stage2_bytes_per_rank": 4750000,
+        "zero_stage3_bytes_per_rank": 2000000
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "param_count": -2000000,
+        "num_ranks": -16
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": -32000000,
+        "zero_stage1_bytes_per_rank": -6500000,
+        "zero_stage2_bytes_per_rank": -2250000,
+        "zero_stage3_bytes_per_rank": 2000000
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "param_count": 250000,
+        "num_ranks": 2
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 4000000,
+        "zero_stage1_bytes_per_rank": 2500000,
+        "zero_stage2_bytes_per_rank": 2250000,
+        "zero_stage3_bytes_per_rank": 2000000
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "param_count": 999999.0,
+        "num_ranks": 7.0
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 15999984.0,
+        "zero_stage1_bytes_per_rank": 5714280.0,
+        "zero_stage2_bytes_per_rank": 3999996.0,
+        "zero_stage3_bytes_per_rank": 2285712
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "param_count": 4000000,
+        "num_ranks": 32
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 64000000,
+        "zero_stage1_bytes_per_rank": 17500000,
+        "zero_stage2_bytes_per_rank": 9750000,
+        "zero_stage3_bytes_per_rank": 2000000
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "param_count": 750000,
+        "num_ranks": 6
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 12000000,
+        "zero_stage1_bytes_per_rank": 4500000,
+        "zero_stage2_bytes_per_rank": 3250000,
+        "zero_stage3_bytes_per_rank": 2000000
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l08-zero-memory-accounting-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "param_count": 5000000,
+        "num_ranks": 40
+      },
+      "expectedOutput": {
+        "ddp_bytes_per_rank": 80000000,
+        "zero_stage1_bytes_per_rank": 21500000,
+        "zero_stage2_bytes_per_rank": 11750000,
+        "zero_stage3_bytes_per_rank": 2000000
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cs336_l08_zero_memory_accounting",
+    "parameters": [
+      {
+        "name": "param_count",
+        "type": "any"
+      },
+      {
+        "name": "num_ranks",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "gradient-descent-quadratic",
+    "anchor-box-generation",
+    "value-iteration-step",
+    "precision-recall-at-k",
+    "cs336-l01-train-byte-pair-encoding"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/cs336-l08-zero-memory-accounting",
+  "localUrl": "http://localhost:3000/problems/cs336-l08-zero-memory-accounting"
+}

@@ -1,0 +1,515 @@
+{
+  "catalogId": "python:dl-loss-functions",
+  "id": "dl-loss-functions",
+  "sourceId": "dl-loss-functions",
+  "slug": "dl-loss-functions",
+  "source": "python",
+  "category": "numpy",
+  "title": "Loss Functions",
+  "difficulty": "Medium",
+  "tags": [
+    "Loss Functions",
+    "Neural Networks"
+  ],
+  "isFree": false,
+  "planId": "cracking-dl",
+  "planTitle": "Cracking Deep Learning",
+  "sectionId": "cracking-dl-neural-network-foundations",
+  "sortOrder": 419,
+  "seoDescription": "Implement MSE, binary cross-entropy, categorical cross-entropy, and Huber losses from supplied predictions and targets.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Implement Mean Squared Error (MSE), Binary Cross-Entropy (BCE), and Huber losses from predictions and targets.\n\nDifferent loss functions balance outlier sensitivity, likelihood calibration, and gradient smoothness.\n\n### Mathematical Formulation\n$$\n\\mathcal{L}_{\\text{MSE}} = \\frac{1}{N}\\sum (\\hat{y} - y)^2, \\quad \\mathcal{L}_{\\text{BCE}} = -\\frac{1}{N}\\sum [y \\log \\hat{y} + (1-y)\\log(1-\\hat{y})]\n$$\n\n### Step-by-Step Implementation\n1. Compute element-wise squared deviations for MSE\n2. Evaluate clamped binary cross-entropy loss\n3. Compute piecewise Huber loss for robust regression\n\n### Returns\nDictionary with 'mse', 'bce', and 'huber' loss values.",
+  "theory": "## Understanding the Theory: Loss Functions\n\n### Core Intuition: Why Do We Need This?\nNeural networks achieve their remarkable expressive power by stacking linear layers interspersed with non-linear activation functions and normalization layers. Without non-linear activations, any deep network would collapse into a single shallow linear regression. **Loss Functions** ensures signals propagate cleanly through dozens or hundreds of layers without vanishing or exploding.\n\nDifferent loss functions balance outlier sensitivity, likelihood calibration, and gradient smoothness. In this problem, the goal is to: implement mean squared error (mse), binary cross-entropy (bce), and huber losses from predictions and targets.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\mathcal{L}_{\\text{MSE}} = \\frac{1}{N}\\sum (\\hat{y} - y)^2, \\quad \\mathcal{L}_{\\text{BCE}} = -\\frac{1}{N}\\sum [y \\log \\hat{y} + (1-y)\\log(1-\\hat{y})]\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute element-wise squared deviations for MSE\n2. **Phase 2**: Evaluate clamped binary cross-entropy loss\n3. **Phase 3**: Compute piecewise Huber loss for robust regression\n\n### Practical Machine Learning Applications & Nuances\n* **Gradient Flow**: Carefully designed activation functions (like ReLU, GELU, and Swish) maintain strong gradient signals during backpropagation.\n* **Internal Covariate Shift**: Normalization techniques (like LayerNorm and RMSNorm) standardize hidden states across channels or batch dimensions, allowing models to train stably at higher learning rates.\n* **Hardware Friendly**: Modern deep learning frameworks implement these layers using fused GPU kernels to reduce memory round-trips.",
+  "examples": [
+    "Input: predictions = [0.8, 0.2, 0.7], targets = [1.0, 0.0, 1.0], delta = 0.5\n\nOutput: {\"mse\": 0.0567, \"bce\": 0.2677, \"huber\": 0.0283}\n\nExplanation: Evaluated dl_loss_functions under standard test conditions."
+  ],
+  "requirements": "* Function must be named `dl_loss_functions`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `dl_loss_functions`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef dl_loss_functions(predictions: list, targets: list, delta: float = 1.0) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Loss Functions** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef dl_loss_functions(predictions: list, targets: list, delta: float = 1.0) -> dict:\n    yp, yt = np.array(predictions, dtype=np.float64), np.array(targets, dtype=np.float64)\n    p = np.clip(yp, 1e-12, 1.0 - 1e-12); diff = np.abs(yp - yt)\n    return {'mse': round(float(np.mean((yp - yt)**2)), 4), 'bce': round(float(-np.mean(yt*np.log(p) + (1.0 - yt)*np.log(1.0 - p))), 4), 'huber': round(float(np.mean(np.where(diff <= float(delta), 0.5*(diff**2), float(delta)*(diff - 0.5*float(delta))))), 4)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Basic loss evaluation",
+      "inputs": {
+        "predictions": [
+          0.8,
+          0.2,
+          0.7
+        ],
+        "targets": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.0567,
+        "bce": 0.2677,
+        "huber": 0.0283
+      },
+      "isPublic": true
+    },
+    {
+      "id": "dl-loss-functions-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "predictions": [
+          1.6,
+          0.4,
+          1.4
+        ],
+        "targets": [
+          2.0,
+          0.0,
+          2.0
+        ],
+        "delta": 1.0
+      },
+      "expectedOutput": {
+        "mse": 0.2267,
+        "bce": -18.2504,
+        "huber": 0.1133
+      },
+      "isPublic": true
+    },
+    {
+      "id": "dl-loss-functions-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "predictions": [
+          0.4,
+          0.1,
+          0.35
+        ],
+        "targets": [
+          0.5,
+          0.0,
+          0.5
+        ],
+        "delta": 0.25
+      },
+      "expectedOutput": {
+        "mse": 0.0142,
+        "bce": 0.5197,
+        "huber": 0.0071
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "predictions": [
+          -0.8,
+          -0.2,
+          -0.7
+        ],
+        "targets": [
+          -1.0,
+          -0.0,
+          -1.0
+        ],
+        "delta": -0.5
+      },
+      "expectedOutput": {
+        "mse": 0.0567,
+        "bce": -18.4207,
+        "huber": -0.2417
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "predictions": [
+          2.4,
+          0.6,
+          2.1
+        ],
+        "targets": [
+          3.0,
+          0.0,
+          3.0
+        ],
+        "delta": 1.5
+      },
+      "expectedOutput": {
+        "mse": 0.51,
+        "bce": -36.536,
+        "huber": 0.255
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "predictions": [
+          1.8,
+          1.2,
+          1.7
+        ],
+        "targets": [
+          2.0,
+          1.0,
+          2.0
+        ],
+        "delta": 1.5
+      },
+      "expectedOutput": {
+        "mse": 0.0567,
+        "bce": -18.4207,
+        "huber": 0.0283
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "predictions": [
+          -1.2,
+          -1.8,
+          -1.3
+        ],
+        "targets": [
+          -1.0,
+          -2.0,
+          -1.0
+        ],
+        "delta": -1.5
+      },
+      "expectedOutput": {
+        "mse": 0.0567,
+        "bce": -36.8414,
+        "huber": -1.475
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "predictions": [
+          0.7,
+          0.2,
+          0.8
+        ],
+        "targets": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.0567,
+        "bce": 0.2677,
+        "huber": 0.0283
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "predictions": [
+          -0.8,
+          -0.2,
+          -0.7
+        ],
+        "targets": [
+          -1.0,
+          -0.0,
+          -1.0
+        ],
+        "delta": -0.5
+      },
+      "expectedOutput": {
+        "mse": 0.0567,
+        "bce": -18.4207,
+        "huber": -0.2417
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "predictions": [
+          8.0,
+          2.0,
+          7.0
+        ],
+        "targets": [
+          10.0,
+          0.0,
+          10.0
+        ],
+        "delta": 5.0
+      },
+      "expectedOutput": {
+        "mse": 5.6667,
+        "bce": -156.5759,
+        "huber": 2.8333
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "predictions": [
+          0.08,
+          0.02,
+          0.07
+        ],
+        "targets": [
+          0.1,
+          0.0,
+          0.1
+        ],
+        "delta": 0.05
+      },
+      "expectedOutput": {
+        "mse": 0.0006,
+        "bce": 0.2264,
+        "huber": 0.0003
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "predictions": [
+          5.8,
+          5.2,
+          5.7
+        ],
+        "targets": [
+          6.0,
+          5.0,
+          6.0
+        ],
+        "delta": 5.5
+      },
+      "expectedOutput": {
+        "mse": 0.0567,
+        "bce": -128.9449,
+        "huber": 0.0283
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "predictions": [
+          1.2,
+          0.3,
+          1.05
+        ],
+        "targets": [
+          1.5,
+          0.0,
+          1.5
+        ],
+        "delta": 0.75
+      },
+      "expectedOutput": {
+        "mse": 0.1275,
+        "bce": -9.0915,
+        "huber": 0.0637
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "predictions": [
+          -1.6,
+          -0.4,
+          -1.4
+        ],
+        "targets": [
+          -2.0,
+          -0.0,
+          -2.0
+        ],
+        "delta": -1.0
+      },
+      "expectedOutput": {
+        "mse": 0.2267,
+        "bce": -36.8414,
+        "huber": -0.9667
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "predictions": [
+          0.2,
+          0.05,
+          0.175
+        ],
+        "targets": [
+          0.25,
+          0.0,
+          0.25
+        ],
+        "delta": 0.125
+      },
+      "expectedOutput": {
+        "mse": 0.0035,
+        "bce": 0.4003,
+        "huber": 0.0018
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "predictions": [
+          -0.19999999999999996,
+          -0.8,
+          -0.30000000000000004
+        ],
+        "targets": [
+          0.0,
+          -1.0,
+          0.0
+        ],
+        "delta": -0.5
+      },
+      "expectedOutput": {
+        "mse": 0.0567,
+        "bce": -9.2103,
+        "huber": -0.2417
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "predictions": [
+          3.2,
+          0.8,
+          2.8
+        ],
+        "targets": [
+          4.0,
+          0.0,
+          4.0
+        ],
+        "delta": 2.0
+      },
+      "expectedOutput": {
+        "mse": 0.9067,
+        "bce": -54.7256,
+        "huber": 0.4533
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "predictions": [
+          0.6,
+          0.15,
+          0.525
+        ],
+        "targets": [
+          0.75,
+          0.0,
+          0.75
+        ],
+        "delta": 0.375
+      },
+      "expectedOutput": {
+        "mse": 0.0319,
+        "bce": 0.4814,
+        "huber": 0.0159
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "predictions": [
+          4.0,
+          1.0,
+          3.5
+        ],
+        "targets": [
+          5.0,
+          0.0,
+          5.0
+        ],
+        "delta": 2.5
+      },
+      "expectedOutput": {
+        "mse": 1.4167,
+        "bce": -64.4724,
+        "huber": 0.7083
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-loss-functions-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "predictions": [
+          10.8,
+          10.2,
+          10.7
+        ],
+        "targets": [
+          11.0,
+          10.0,
+          11.0
+        ],
+        "delta": 10.5
+      },
+      "expectedOutput": {
+        "mse": 0.0567,
+        "bce": -267.1001,
+        "huber": 0.0283
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "dl_loss_functions",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

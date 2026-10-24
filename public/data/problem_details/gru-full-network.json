@@ -1,0 +1,2174 @@
+{
+  "id": "gru-full-network",
+  "title": "Complete GRU Network",
+  "description": "Implement the forward method of a GRU sequence network. Start with a zero hidden state, apply the GRU cell at each time step, and project every hidden state:\n\n$$\nh_t=\\operatorname{GRUCell}(x_t,h_{t-1}),\\qquad t=1,\\ldots,T.\n$$\n\n$$\ny_t=W_yh_t+b_y.\n$$\n\nHere, N is batch size, T is sequence length, D is input width, H is hidden width, and O is output width. Return a dictionary with outputs of shape $(N,T,O)$ and final_hidden_state of shape $(N,H)$, both float64 NumPy arrays.",
+  "seoDescription": "Assemble a GRU sequence forward pass that recurrently updates and returns hidden states across time steps.",
+  "examples": [
+    "Input: X = [[[1,0.5],[0.5,1]]], W_r = [[0.2,0.1,0.1,0.2],[0.1,0.3,0.2,0.1]], W_z = [[0.1,0.2,0.3,0.1],[0.2,0.1,0.1,0.3]], W_h = [[0.3,0.1,0.2,0.1],[0.1,0.2,0.1,0.3]], b_r = [0,0], b_z = [0,0], b_h = [0,0], W_y = [[0.3,0.5]], b_y = [0]\n\nOutput: {\"outputs\":[[[0.083989],[0.148955]]],\"final_hidden_state\":[[0.152178,0.206602]]}\n\nExplanation: The zero initial state is updated twice, and each resulting hidden state is projected to one output value.",
+    "Input: X = [[[1,0],[0,1]]], W_r = [[0.2,0.1,0.1,0.2],[0.1,0.3,0.2,0.1]], W_z = [[0.1,0.2,0.3,0.1],[0.2,0.1,0.1,0.3]], W_h = [[0.3,0.1,0.2,0.1],[0.1,0.2,0.1,0.3]], b_r = [0.1,0], b_z = [0,-0.1], b_h = [0.1,0.1], W_y = [[0.4,0.6]], b_y = [0.1]\n\nOutput: {\"outputs\":[[[0.208801],[0.305857]]],\"final_hidden_state\":[[0.170286,0.229571]]}",
+    "Input: X = [[[1,0.5],[0.5,1]]], W_r = [[0.2,0.1,0.1,0.2],[0.1,0.3,0.2,0.1]], W_z = [[0.1,0.2,0.3,0.1],[0.2,0.1,0.1,0.3]], W_h = [[0.3,0.1,0.2,0.1],[0.1,0.2,0.1,0.3]], b_r = [0,0], b_z = [0,0], b_h = [0,0], W_y = [[0.3,0.5],[0.2,0.4]], b_y = [0,0]\n\nOutput: {\"outputs\":[[[0.083989,0.063141],[0.148955,0.113076]]],\"final_hidden_state\":[[0.152178,0.206602]]}"
+  ],
+  "requirements": "- Initialize the hidden state to zeros for every batch item.\n- Reuse the same GRU parameters at every time step.\n- Project every hidden state with W_y and b_y.\n- Return exactly the keys outputs and final_hidden_state.",
+  "theory": "# <span style=\"font-size: 20px;\">Complete GRU Network</span>\n\n<span style=\"font-size: 14px;\">A Complete GRU Network unrolls a single Gated Recurrent Unit cell across every time step of an input sequence, accumulating information in a hidden state, and projects each hidden state to an output through a learned linear map. Introduced by Cho et al. (2014) for encoder-decoder machine translation, the GRU processes variable-length sequences with fewer parameters than the LSTM by merging the forget and input gates into a single update gate and eliminating the separate cell state.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">The Complete GRU Network is the full sequence-processing system built around the GRU cell. A GRU cell defines the computation for a single time step, taking $x_t$ and $h_{t-1}$ and producing $h_t$. The complete network handles the entire sequence: it initializes $h_0$, iterates the cell $T$ times, collects all hidden states, and applies an output projection at each step to produce the final output tensor.</span>\n\n<span style=\"font-size: 14px;\">The architecture has three components. First, initialization of $h_0$ to zeros with shape $(N, H)$ where $N$ is batch size and $H$ is hidden dimension. Second, the recurrent loop applying GRU cell equations at each $t = 1, \\ldots, T$, consuming $x_t \\in \\mathbb{R}^{N \\times I}$ and $h_{t-1} \\in \\mathbb{R}^{N \\times H}$ to produce $h_t \\in \\mathbb{R}^{N \\times H}$. Third, the output projection $y_t = W_y h_t + b_y$ mapping each hidden state from dimension $H$ to output dimension $O$.</span>\n\n<span style=\"font-size: 14px;\">The key distinction from an LSTM network is structural simplicity. The LSTM maintains two state vectors per time step ($h_t$ and cell state $c_t$), while the GRU maintains only $h_t$. The final return value $h_{\\text{last}}$ is simply $h_T$ rather than a tuple of $(h_T, c_T)$. Despite this, the GRU achieves comparable performance because the update and reset gates provide sufficient control over information flow.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">The GRU cell at each time step $t$ computes the update gate $z_t$, reset gate $r_t$, and candidate hidden state $\\tilde{h}_t$, then combines them into $h_t$.</span>\n\n<span style=\"font-size: 14px;\">**Update gate:**</span>\n\n$$\nz_t = \\sigma(W_z x_t + U_z h_{t-1} + b_z)\n$$\n\n<span style=\"font-size: 14px;\">**Reset gate:**</span>\n\n$$\nr_t = \\sigma(W_r x_t + U_r h_{t-1} + b_r)\n$$\n\n<span style=\"font-size: 14px;\">**Candidate hidden state:**</span>\n\n$$\n\\tilde{h}_t = \\tanh(W_h x_t + U_h (r_t \\odot h_{t-1}) + b_h)\n$$\n\n<span style=\"font-size: 14px;\">**New hidden state:**</span>\n\n$$\nh_t = (1 - z_t) \\odot h_{t-1} + z_t \\odot \\tilde{h}_t\n$$\n\n<span style=\"font-size: 14px;\">Here $\\sigma$ is sigmoid, $\\odot$ is element-wise multiplication, $W_z, W_r, W_h \\in \\mathbb{R}^{I \\times H}$ are input-to-hidden weights, $U_z, U_r, U_h \\in \\mathbb{R}^{H \\times H}$ are hidden-to-hidden weights, and $b_z, b_r, b_h \\in \\mathbb{R}^{H}$ are biases. The update gate controls how much old state to keep versus how much candidate to accept. The reset gate controls how much previous hidden state participates in computing the candidate.</span>\n\n<span style=\"font-size: 14px;\">**Output projection (every time step):**</span>\n\n$$\ny_t = W_y h_t + b_y\n$$\n\n<span style=\"font-size: 14px;\">where $W_y \\in \\mathbb{R}^{H \\times O}$ and $b_y \\in \\mathbb{R}^{O}$. The network has two parameter groups: cell parameters ($W_z, U_z, b_z, W_r, U_r, b_r, W_h, U_h, b_h$) shared across all time steps, and projection parameters ($W_y, b_y$) also shared across time steps.</span>\n\n<span style=\"font-size: 14px;\">**Initialization:**</span>\n\n$$\nh_0 = \\mathbf{0} \\in \\mathbb{R}^{N \\times H}\n$$\n\n---\n\n## <span style=\"font-size: 16px;\">The Unrolling Loop</span>\n\n<span style=\"font-size: 14px;\">The core of the network is a loop that unrolls the cell across time. Given input $X \\in \\mathbb{R}^{N \\times T \\times I}$, the loop extracts one slice $x_t \\in \\mathbb{R}^{N \\times I}$ at each step, feeds it with $h_{t-1}$ into the GRU cell, and stores $h_t$.</span>\n\n* <span style=\"font-size: 14px;\">**Step 0:** Initialize $h_0 = \\mathbf{0} \\in \\mathbb{R}^{N \\times H}$.</span>\n* <span style=\"font-size: 14px;\">**Step 1 (t=1):** Extract $x_1 = X[:, 0, :]$. Compute $h_1 = \\text{GRUCell}(x_1, h_0)$. Store $h_1$.</span>\n* <span style=\"font-size: 14px;\">**Step 2 (t=2):** Extract $x_2 = X[:, 1, :]$. Compute $h_2 = \\text{GRUCell}(x_2, h_1)$. Store $h_2$.</span>\n* <span style=\"font-size: 14px;\">**Step T:** Extract $x_T = X[:, T{-}1, :]$. Compute $h_T = \\text{GRUCell}(x_T, h_{T-1})$. Store $h_T$.</span>\n\n<span style=\"font-size: 14px;\">After the loop, all hidden states are stacked into $H_{\\text{all}} \\in \\mathbb{R}^{N \\times T \\times H}$. The last hidden state $h_{\\text{last}} = h_T \\in \\mathbb{R}^{N \\times H}$ is retained separately.</span>\n\n<span style=\"font-size: 14px;\">A critical property is **weight sharing**: the same cell parameters are used at every time step. This lets recurrent networks handle variable-length sequences. A network trained on length-10 sequences can process length-100 at inference because the same cell is applied more times. The loop must process steps in order because each depends on the previous hidden state, which enables temporal reasoning but prevents parallelization across time.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Output Projection</span>\n\n<span style=\"font-size: 14px;\">The output projection is a linear layer applied independently at each time step. It maps $h_t \\in \\mathbb{R}^{N \\times H}$ to $y_t \\in \\mathbb{R}^{N \\times O}$ via $y_t = W_y h_t + b_y$. It is separate from the GRU cell and uses its own parameters.</span>\n\n<span style=\"font-size: 14px;\">This separation matters. The GRU cell maintains the hidden state as a compressed representation of all inputs seen so far. The output projection extracts task-specific information from that representation. For language modeling, $O$ might equal vocabulary size. For sequence tagging, $O$ equals the number of tags. The same GRU cell serves all tasks by swapping only the projection.</span>\n\n<span style=\"font-size: 14px;\">The projection can be applied inside the loop (computing $y_t$ right after $h_t$) or after the loop as a batched operation: $Y = H_{\\text{all}} \\cdot W_y + b_y$, yielding $Y \\in \\mathbb{R}^{N \\times T \\times O}$. Both produce identical results, but the batched approach is more efficient because it replaces $T$ small matrix multiplications with one large one. The output $Y$ contains one vector per time step per sample, the many-to-many pattern.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Initialization</span>\n\n<span style=\"font-size: 14px;\">The initial hidden state $h_0$ is set to zeros with shape $(N, H)$. This is standard across PyTorch's `nn.GRU` and TensorFlow's GRU layer.</span>\n\n<span style=\"font-size: 14px;\">**Why zeros?** With $h_0 = \\mathbf{0}$, the first step simplifies: the reset gate acts on a zero vector ($r_1 \\odot h_0 = \\mathbf{0}$), so the candidate becomes $\\tilde{h}_1 = \\tanh(W_h x_1 + b_h)$, depending only on the first input. The update gate interpolates between $\\mathbf{0}$ and $\\tilde{h}_1$, meaning the first hidden state is determined entirely by the first input and learned biases.</span>\n\n<span style=\"font-size: 14px;\">**Alternatives.** Some architectures learn $h_0$ as a trainable parameter broadcast across the batch. Others initialize $h_0$ from an encoder's output, as in Cho et al.'s encoder-decoder where the encoder's final hidden state becomes the decoder's $h_0$. Here, $h_0 = \\mathbf{0}$ is used because the network is a standalone sequence processor.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">Cho et al. (2014) introduced the GRU in \"Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation.\" The paper proposes two contributions: the GRU as a simpler alternative to the LSTM, and the RNN Encoder-Decoder architecture for learning phrase representations useful for translation.</span>\n\n<span style=\"font-size: 14px;\">In the encoder-decoder framework, the encoder GRU processes the source sentence token by token, building a compressed representation in its hidden state. After the last source token, the encoder's final $h_T^{\\text{enc}}$ serves as a fixed-length context vector. The decoder GRU generates the target sentence conditioned on this context and previously generated tokens.</span>\n\n<span style=\"font-size: 14px;\">The paper states: \"The GRU is similar to the LSTM but without a separate memory cell.\" The design insight is that the LSTM's forget and input gates are redundant when combined. The GRU's update gate $z_t$ simultaneously controls what to forget ($1 - z_t$) and what to accept ($z_t$), reducing parameters by eliminating one gate and the separate cell state. Cho et al. evaluated on WMT'14 English-to-French, using learned phrase representations to rescore translation hypotheses, improving BLEU scores over the baseline.</span>\n\n<span style=\"font-size: 14px;\">The complete network in this problem corresponds to one half of the encoder-decoder. The output projection $y_t = W_y h_t + b_y$ would produce logits over the target vocabulary in translation. In the encoder, the projection might be omitted since only the final hidden state matters. This problem includes it to make the network a general-purpose sequence mapper.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Sequence Processing</span>\n\n<span style=\"font-size: 14px;\">Information flows forward through time. At step 1, $h_1$ encodes only $x_1$. At step 2, $h_2$ encodes both $x_1$ and $x_2$ because $h_1$ feeds into the cell alongside $x_2$. By step $T$, $h_T$ has been influenced by every input $x_1, \\ldots, x_T$.</span>\n\n<span style=\"font-size: 14px;\">The hidden state is the network's memory: a fixed-size vector of dimension $H$ regardless of sequence length. The GRU must compress all relevant information into this representation. The update gate decides how much old memory to retain versus overwrite, and the reset gate decides which parts of old memory are relevant for computing the new candidate.</span>\n\n<span style=\"font-size: 14px;\">In practice, the GRU is biased toward recent inputs. Information from $x_1$ must survive through $T{-}1$ gate operations to remain in $h_T$. While gating mitigates the vanishing gradient problem (gradients flow through the $(1 - z_t)$ pathway), the representational influence of early tokens still diminishes over long sequences. This motivates attention mechanisms, which allow direct access to any time step's hidden state without relying on the recurrent chain.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Trace a complete GRU network with $N=1$, $T=3$, $I=2$, $H=2$, $O=2$.</span>\n\n<span style=\"font-size: 14px;\">**GRU cell weights:**</span>\n\n$$\nW_z = \\begin{bmatrix} 0.1 & 0.2 \\\\ 0.3 & 0.4 \\end{bmatrix}, \\; U_z = \\begin{bmatrix} 0.1 & 0.0 \\\\ 0.0 & 0.1 \\end{bmatrix}, \\; b_z = \\begin{bmatrix} 0 \\\\ 0 \\end{bmatrix}\n$$\n\n$$\nW_r = \\begin{bmatrix} 0.2 & 0.1 \\\\ 0.4 & 0.3 \\end{bmatrix}, \\; U_r = \\begin{bmatrix} 0.1 & 0.0 \\\\ 0.0 & 0.1 \\end{bmatrix}, \\; b_r = \\begin{bmatrix} 0 \\\\ 0 \\end{bmatrix}\n$$\n\n$$\nW_h = \\begin{bmatrix} 0.3 & 0.1 \\\\ 0.1 & 0.3 \\end{bmatrix}, \\; U_h = \\begin{bmatrix} 0.2 & 0.0 \\\\ 0.0 & 0.2 \\end{bmatrix}, \\; b_h = \\begin{bmatrix} 0 \\\\ 0 \\end{bmatrix}\n$$\n\n<span style=\"font-size: 14px;\">**Output projection:**</span>\n\n$$\nW_y = \\begin{bmatrix} 1.0 & 0.5 \\\\ 0.5 & 1.0 \\end{bmatrix}, \\quad b_y = \\begin{bmatrix} 0.1 \\\\ 0.1 \\end{bmatrix}\n$$\n\n<span style=\"font-size: 14px;\">**Input:** $X = [[1.0, 0.5],\\; [0.5, 1.0],\\; [0.0, 0.5]]$ (shape $1 \\times 3 \\times 2$).</span>\n\n<span style=\"font-size: 14px;\">**Step 0 -- Initialize.** $h_0 = [0, 0]$.</span>\n\n<span style=\"font-size: 14px;\">**Step 1 ($x_1 = [1.0, 0.5]$):** $z_1 = \\sigma([0.20, 0.50]) = [0.5500, 0.6225]$. $r_1 = \\sigma([0.25, 0.55]) = [0.5622, 0.6341]$. Since $h_0 = \\mathbf{0}$, $\\tilde{h}_1 = \\tanh([0.35, 0.25]) = [0.3364, 0.2449]$. $h_1 = z_1 \\odot \\tilde{h}_1 = [0.1850, 0.1524]$. $y_1 = W_y h_1 + b_y = [0.3612, 0.3449]$.</span>\n\n<span style=\"font-size: 14px;\">**Step 2 ($x_2 = [0.5, 1.0]$):** $z_2 = \\sigma([0.2685, 0.5652]) = [0.5667, 0.6376]$. $r_2 = \\sigma([0.2185, 0.5152]) = [0.5544, 0.6260]$. $\\tilde{h}_2 = \\tanh([0.2705, 0.3691]) = [0.2638, 0.3539]$. $h_2 = (1{-}z_2) \\odot h_1 + z_2 \\odot \\tilde{h}_2 = [0.2297, 0.2809]$. $y_2 = [0.4702, 0.4958]$.</span>\n\n<span style=\"font-size: 14px;\">**Step 3 ($x_3 = [0.0, 0.5]$):** $z_3 = \\sigma([0.1230, 0.2281]) = [0.5307, 0.5568]$. $r_3 = \\sigma([0.0730, 0.1781]) = [0.5182, 0.5444]$. $\\tilde{h}_3 = \\tanh([0.0738, 0.1806]) = [0.0737, 0.1787]$. $h_3 = (1{-}z_3) \\odot h_2 + z_3 \\odot \\tilde{h}_3 = [0.1469, 0.2240]$. $y_3 = [0.3589, 0.3975]$.</span>\n\n<span style=\"font-size: 14px;\">**Final results:** $y = [[[0.3612, 0.3449],\\; [0.4702, 0.4958],\\; [0.3589, 0.3975]]]$ with shape $(1, 3, 2)$. $h_{\\text{last}} = [[0.1469, 0.2240]]$ with shape $(1, 2)$.</span>\n\n<span style=\"font-size: 14px;\">The hidden state evolves: $h_1$ reflects only $x_1$, $h_2$ blends $x_1$ and $x_2$, $h_3$ carries all three. Update gate values around 0.53-0.64 show roughly half old state and half new candidate at each step.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Bidirectional and Stacked GRUs</span>\n\n<span style=\"font-size: 14px;\">**Bidirectional GRU.** A bidirectional GRU runs two separate networks over the same input: one forward ($t = 1$ to $T$) and one backward ($t = T$ to $1$), each with its own parameters. At each step, the forward state $\\overrightarrow{h}_t$ captures past context and the backward state $\\overleftarrow{h}_t$ captures future context. These are concatenated: $h_t^{\\text{bi}} = [\\overrightarrow{h}_t ; \\overleftarrow{h}_t] \\in \\mathbb{R}^{2H}$, so $W_y$ must be $(2H, O)$. Bidirectional GRUs are standard for tasks where the full sequence is available, such as named entity recognition.</span>\n\n<span style=\"font-size: 14px;\">**Stacked GRU.** Stacking uses the hidden states of one GRU layer as input for the next. Layer 1 produces $h_t^{(1)}$, which becomes $x_t^{(2)}$ for layer 2. Each layer has its own parameters. The output projection applies to the top layer: $y_t = W_y h_t^{(L)} + b_y$. Lower layers capture local patterns; higher layers capture abstract ones. Cho et al. (2014) used single-layer GRUs, but deeper recurrent networks have since proved stronger on complex tasks.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n<span style=\"font-size: 14px;\">**1. Wrong loop direction.**</span>\n\n<span style=\"font-size: 14px;\">The loop must iterate $t = 1, 2, \\ldots, T$. Reversing the order makes $h_T$ depend only on $x_T$ and $h_1$ depend on all inputs, which is a backward GRU, not a forward one.</span>\n\n<span style=\"font-size: 14px;\">**2. Forgetting to save intermediate hidden states.**</span>\n\n<span style=\"font-size: 14px;\">Only keeping $h_T$ and discarding $h_1, \\ldots, h_{T-1}$ means the output projection cannot compute $y_1, \\ldots, y_{T-1}$. Append each $h_t$ to a list during the loop. Without this, the output has shape $(N, 1, O)$ instead of $(N, T, O)$.</span>\n\n<span style=\"font-size: 14px;\">**3. $h_{\\text{last}}$ is $h_T$, not $h_0$.**</span>\n\n<span style=\"font-size: 14px;\">The return value $h_{\\text{last}}$ is the hidden state after processing the entire sequence, not the zero initialization. It is easy to return a stale reference from before the loop.</span>\n\n<span style=\"font-size: 14px;\">**4. Dimension mismatch in output projection.**</span>\n\n<span style=\"font-size: 14px;\">$W_y$ must be $(H, O)$, not $(I, O)$ or $(O, H)$. The projection operates on hidden states, not inputs. $h_t$ is $(N, H)$ and $W_y$ must be $(H, O)$ to produce $(N, O)$.</span>\n\n<span style=\"font-size: 14px;\">**5. Not initializing $h_0$.**</span>\n\n<span style=\"font-size: 14px;\">If $h_0$ contains garbage values, every subsequent state is corrupted because GRU equations depend on $h_{t-1}$. Always set $h_0 = \\mathbf{0}$ with shape $(N, H)$. Using shape $(H,)$ without the batch dimension causes broadcasting errors.</span>\n\n<span style=\"font-size: 14px;\">**6. Applying output projection inside the GRU cell.**</span>\n\n<span style=\"font-size: 14px;\">The projection $y_t = W_y h_t + b_y$ is not part of the cell. Mixing it into the cell means $y_t$ participates in the recurrence, fundamentally changing the architecture. The recurrence operates on $h_t$; the projection is a separate read-out.</span>\n\n<span style=\"font-size: 14px;\">**7. Confusing $y_T$ with $h_{\\text{last}}$.**</span>\n\n<span style=\"font-size: 14px;\">$y_T \\in \\mathbb{R}^{N \\times O}$ and $h_T \\in \\mathbb{R}^{N \\times H}$ are different tensors with potentially different dimensions. The function returns $(Y, h_T)$, not $(Y, y_T)$.</span>\n\n---",
+  "hints": [
+    "Initialize hidden = np.zeros((batch, self.hidden_dim), dtype=np.float64).",
+    "At step t, read X[:, t, :] and append the projected hidden state.",
+    "np.stack(step_outputs, axis=1) restores the sequence axis."
+  ],
+  "constraints": "- X has shape $(N,T,D)$.\n- W_r, W_z, and W_h have shape $(H,H+D)$; their biases have shape $(H,)$.\n- W_y has shape $(O,H)$ and b_y has shape $(O,)$.\n- All arrays use float64.",
+  "difficulty": "Hard",
+  "starterCode": "import numpy as np\n\ndef sigmoid(x: np.ndarray) -> np.ndarray:\n    return 1.0 / (1.0 + np.exp(-np.clip(x, -500, 500)))\n\nclass GRU:\n    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int):\n        self.hidden_dim = hidden_dim\n        scale = np.sqrt(2.0 / (input_dim + hidden_dim))\n        self.W_r = np.random.randn(hidden_dim, hidden_dim + input_dim) * scale\n        self.W_z = np.random.randn(hidden_dim, hidden_dim + input_dim) * scale\n        self.W_h = np.random.randn(hidden_dim, hidden_dim + input_dim) * scale\n        self.b_r = np.zeros(hidden_dim)\n        self.b_z = np.zeros(hidden_dim)\n        self.b_h = np.zeros(hidden_dim)\n        self.W_y = np.random.randn(output_dim, hidden_dim) * np.sqrt(2.0 / (hidden_dim + output_dim))\n        self.b_y = np.zeros(output_dim)\n\n    def forward(self, X: np.ndarray) -> dict:\n        \"\"\"\n        Returns outputs and final_hidden_state as float64 arrays.\n        \"\"\"\n        pass",
+  "createdAt": "2026-01-11T16:51:24.990Z",
+  "updatedAt": "2026-04-15T23:24:35.023Z",
+  "topicId": "gru-full-network",
+  "paperSnippet": "\"The GRU is similar to the LSTM but without a separate memory cell. It has been shown to achieve similar performance to LSTM on various sequence modeling tasks with fewer parameters.\"",
+  "visualizationComponent": "GRUFullNetworkViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Complete GRU Network** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef sigmoid(x: np.ndarray) -> np.ndarray:\n    return 1.0 / (1.0 + np.exp(-np.clip(x, -500, 500)))\n\ndef gru_forward(X: np.ndarray, W_r: np.ndarray, W_z: np.ndarray,\n                W_h: np.ndarray, b_r: np.ndarray, b_z: np.ndarray,\n                b_h: np.ndarray, W_y: np.ndarray, b_y: np.ndarray) -> dict:\n    x_arr = np.asarray(X, dtype=float)\n    B, T, D = x_arr.shape\n    H = len(b_r)\n    cur_h = np.zeros((B, H), dtype=float)\n    \n    wr, br = np.asarray(W_r, dtype=float), np.asarray(b_r, dtype=float)\n    wz, bz = np.asarray(W_z, dtype=float), np.asarray(b_z, dtype=float)\n    wh, bh = np.asarray(W_h, dtype=float), np.asarray(b_h, dtype=float)\n    wy, by = np.asarray(W_y, dtype=float), np.asarray(b_y, dtype=float)\n    \n    outputs = []\n    for t in range(T):\n        xt = x_arr[:, t, :]\n        cat = np.concatenate([cur_h, xt], axis=-1)\n        rt = sigmoid(cat @ wr.T + br)\n        zt = sigmoid(cat @ wz.T + bz)\n        scaled_h = rt * cur_h\n        cat_h = np.concatenate([scaled_h, xt], axis=-1)\n        h_tilde = np.tanh(cat_h @ wh.T + bh)\n        cur_h = zt * cur_h + (1.0 - zt) * h_tilde\n        yt = cur_h @ wy.T + by\n        outputs.append(yt)\n    stacked_y = np.stack(outputs, axis=1)\n    return {\n        \"outputs\": np.round(stacked_y, 6).tolist(),\n        \"final_hidden_state\": np.round(cur_h, 6).tolist()\n    }\n\nclass GRU:\n    def __init__(self, input_dim: int, hidden_dim: int):\n        self.input_dim = input_dim\n        self.hidden_dim = hidden_dim\n\n    def forward(self, X: np.ndarray, W_r: np.ndarray, W_z: np.ndarray,\n                W_h: np.ndarray, b_r: np.ndarray, b_z: np.ndarray,\n                b_h: np.ndarray, W_y: np.ndarray, b_y: np.ndarray) -> dict:\n        return gru_forward(X, W_r, W_z, W_h, b_r, b_z, b_h, W_y, b_y)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Two steps and one output",
+      "inputs": {
+        "X": [
+          [
+            [
+              1,
+              0.5
+            ],
+            [
+              0.5,
+              1
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            0.3,
+            0.1,
+            0.2,
+            0.1
+          ],
+          [
+            0.1,
+            0.2,
+            0.1,
+            0.3
+          ]
+        ],
+        "W_r": [
+          [
+            0.2,
+            0.1,
+            0.1,
+            0.2
+          ],
+          [
+            0.1,
+            0.3,
+            0.2,
+            0.1
+          ]
+        ],
+        "W_y": [
+          [
+            0.3,
+            0.5
+          ]
+        ],
+        "W_z": [
+          [
+            0.1,
+            0.2,
+            0.3,
+            0.1
+          ],
+          [
+            0.2,
+            0.1,
+            0.1,
+            0.3
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "output": {
+        "outputs": [
+          [
+            [
+              0.083989
+            ],
+            [
+              0.148955
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.152178,
+            0.206602
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.083989
+            ],
+            [
+              0.148955
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.152178,
+            0.206602
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Biased network",
+      "inputs": {
+        "X": [
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            0.3,
+            0.1,
+            0.2,
+            0.1
+          ],
+          [
+            0.1,
+            0.2,
+            0.1,
+            0.3
+          ]
+        ],
+        "W_r": [
+          [
+            0.2,
+            0.1,
+            0.1,
+            0.2
+          ],
+          [
+            0.1,
+            0.3,
+            0.2,
+            0.1
+          ]
+        ],
+        "W_y": [
+          [
+            0.4,
+            0.6
+          ]
+        ],
+        "W_z": [
+          [
+            0.1,
+            0.2,
+            0.3,
+            0.1
+          ],
+          [
+            0.2,
+            0.1,
+            0.1,
+            0.3
+          ]
+        ],
+        "b_h": [
+          0.1,
+          0.1
+        ],
+        "b_r": [
+          0.1,
+          0
+        ],
+        "b_y": [
+          0.1
+        ],
+        "b_z": [
+          0,
+          -0.1
+        ]
+      },
+      "output": {
+        "outputs": [
+          [
+            [
+              0.208801
+            ],
+            [
+              0.305857
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.170286,
+            0.229571
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.208801
+            ],
+            [
+              0.305857
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.170286,
+            0.229571
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-3",
+      "name": "Two output features",
+      "inputs": {
+        "X": [
+          [
+            [
+              1,
+              0.5
+            ],
+            [
+              0.5,
+              1
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            0.3,
+            0.1,
+            0.2,
+            0.1
+          ],
+          [
+            0.1,
+            0.2,
+            0.1,
+            0.3
+          ]
+        ],
+        "W_r": [
+          [
+            0.2,
+            0.1,
+            0.1,
+            0.2
+          ],
+          [
+            0.1,
+            0.3,
+            0.2,
+            0.1
+          ]
+        ],
+        "W_y": [
+          [
+            0.3,
+            0.5
+          ],
+          [
+            0.2,
+            0.4
+          ]
+        ],
+        "W_z": [
+          [
+            0.1,
+            0.2,
+            0.3,
+            0.1
+          ],
+          [
+            0.2,
+            0.1,
+            0.1,
+            0.3
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0,
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "output": {
+        "outputs": [
+          [
+            [
+              0.083989,
+              0.063141
+            ],
+            [
+              0.148955,
+              0.113076
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.152178,
+            0.206602
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.083989,
+              0.063141
+            ],
+            [
+              0.148955,
+              0.113076
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.152178,
+            0.206602
+          ]
+        ]
+      }
+    },
+    {
+      "id": "gru-full-network-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            [
+              2,
+              1.0
+            ],
+            [
+              1.0,
+              2
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            0.6,
+            0.2,
+            0.4,
+            0.2
+          ],
+          [
+            0.2,
+            0.4,
+            0.2,
+            0.6
+          ]
+        ],
+        "W_r": [
+          [
+            0.4,
+            0.2,
+            0.2,
+            0.4
+          ],
+          [
+            0.2,
+            0.6,
+            0.4,
+            0.2
+          ]
+        ],
+        "W_y": [
+          [
+            0.6,
+            1.0
+          ]
+        ],
+        "W_z": [
+          [
+            0.2,
+            0.4,
+            0.6,
+            0.2
+          ],
+          [
+            0.4,
+            0.2,
+            0.2,
+            0.6
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.295218
+            ],
+            [
+              0.506041
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.290331,
+            0.331842
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          [
+            [
+              0,
+              0.25
+            ],
+            [
+              0.25,
+              0
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            0.15,
+            0.05,
+            0.1,
+            0.05
+          ],
+          [
+            0.05,
+            0.1,
+            0.05,
+            0.15
+          ]
+        ],
+        "W_r": [
+          [
+            0.1,
+            0.05,
+            0.05,
+            0.1
+          ],
+          [
+            0.05,
+            0.15,
+            0.1,
+            0.05
+          ]
+        ],
+        "W_y": [
+          [
+            0.15,
+            0.25
+          ]
+        ],
+        "W_z": [
+          [
+            0.05,
+            0.1,
+            0.15,
+            0.05
+          ],
+          [
+            0.1,
+            0.05,
+            0.05,
+            0.15
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.005529
+            ],
+            [
+              0.006383
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.015875,
+            0.016006
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            [
+              -1,
+              -0.5
+            ],
+            [
+              -0.5,
+              -1
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            -0.3,
+            -0.1,
+            -0.2,
+            -0.1
+          ],
+          [
+            -0.1,
+            -0.2,
+            -0.1,
+            -0.3
+          ]
+        ],
+        "W_r": [
+          [
+            -0.2,
+            -0.1,
+            -0.1,
+            -0.2
+          ],
+          [
+            -0.1,
+            -0.3,
+            -0.2,
+            -0.1
+          ]
+        ],
+        "W_y": [
+          [
+            -0.3,
+            -0.5
+          ]
+        ],
+        "W_z": [
+          [
+            -0.1,
+            -0.2,
+            -0.3,
+            -0.1
+          ],
+          [
+            -0.2,
+            -0.1,
+            -0.1,
+            -0.3
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              -0.083989
+            ],
+            [
+              -0.13892
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.13435,
+            0.197231
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          [
+            [
+              3,
+              1.5
+            ],
+            [
+              1.5,
+              3
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            0.9,
+            0.3,
+            0.6,
+            0.3
+          ],
+          [
+            0.3,
+            0.6,
+            0.3,
+            0.9
+          ]
+        ],
+        "W_r": [
+          [
+            0.6,
+            0.3,
+            0.3,
+            0.6
+          ],
+          [
+            0.3,
+            0.9,
+            0.6,
+            0.3
+          ]
+        ],
+        "W_y": [
+          [
+            0.9,
+            1.5
+          ]
+        ],
+        "W_z": [
+          [
+            0.3,
+            0.6,
+            0.9,
+            0.3
+          ],
+          [
+            0.6,
+            0.3,
+            0.3,
+            0.9
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.176051
+            ],
+            [
+              0.30262
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.121963,
+            0.128569
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            [
+              2.0,
+              1.5
+            ],
+            [
+              1.5,
+              2.0
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            1.3,
+            1.1,
+            1.2,
+            1.1
+          ],
+          [
+            1.1,
+            1.2,
+            1.1,
+            1.3
+          ]
+        ],
+        "W_r": [
+          [
+            1.2,
+            1.1,
+            1.1,
+            1.2
+          ],
+          [
+            1.1,
+            1.3,
+            1.2,
+            1.1
+          ]
+        ],
+        "W_y": [
+          [
+            1.3,
+            1.5
+          ]
+        ],
+        "W_z": [
+          [
+            1.1,
+            1.2,
+            1.3,
+            1.1
+          ],
+          [
+            1.2,
+            1.1,
+            1.1,
+            1.3
+          ]
+        ],
+        "b_h": [
+          1.0,
+          1.0
+        ],
+        "b_r": [
+          1.0,
+          1.0
+        ],
+        "b_y": [
+          1.0
+        ],
+        "b_z": [
+          1.0,
+          1.0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              1.015434
+            ],
+            [
+              1.030484
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.010883,
+            0.010891
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          [
+            [
+              -1.0,
+              -1.5
+            ],
+            [
+              -1.5,
+              -1.0
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            -1.7,
+            -1.9,
+            -1.8,
+            -1.9
+          ],
+          [
+            -1.9,
+            -1.8,
+            -1.9,
+            -1.7
+          ]
+        ],
+        "W_r": [
+          [
+            -1.8,
+            -1.9,
+            -1.9,
+            -1.8
+          ],
+          [
+            -1.9,
+            -1.7,
+            -1.8,
+            -1.9
+          ]
+        ],
+        "W_y": [
+          [
+            -1.7,
+            -1.5
+          ]
+        ],
+        "W_z": [
+          [
+            -1.9,
+            -1.8,
+            -1.7,
+            -1.9
+          ],
+          [
+            -1.8,
+            -1.9,
+            -1.9,
+            -1.7
+          ]
+        ],
+        "b_h": [
+          -2.0,
+          -2.0
+        ],
+        "b_r": [
+          -2.0,
+          -2.0
+        ],
+        "b_y": [
+          -2.0
+        ],
+        "b_z": [
+          -2.0,
+          -2.0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              -2.239298
+            ],
+            [
+              -2.523882
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.164758,
+            0.162529
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            [
+              0.5,
+              1
+            ],
+            [
+              1,
+              0.5
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            0.1,
+            0.2,
+            0.1,
+            0.3
+          ],
+          [
+            0.3,
+            0.1,
+            0.2,
+            0.1
+          ]
+        ],
+        "W_r": [
+          [
+            0.2,
+            0.1,
+            0.1,
+            0.2
+          ],
+          [
+            0.1,
+            0.2,
+            0.3,
+            0.1
+          ]
+        ],
+        "W_y": [
+          [
+            0.5,
+            0.3
+          ]
+        ],
+        "W_z": [
+          [
+            0.1,
+            0.3,
+            0.2,
+            0.1
+          ],
+          [
+            0.3,
+            0.1,
+            0.1,
+            0.2
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.101637
+            ],
+            [
+              0.149889
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.198918,
+            0.168101
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          [
+            [
+              -1,
+              -0.5
+            ],
+            [
+              -0.5,
+              -1
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            -0.3,
+            -0.1,
+            -0.2,
+            -0.1
+          ],
+          [
+            -0.1,
+            -0.2,
+            -0.1,
+            -0.3
+          ]
+        ],
+        "W_r": [
+          [
+            -0.2,
+            -0.1,
+            -0.1,
+            -0.2
+          ],
+          [
+            -0.1,
+            -0.3,
+            -0.2,
+            -0.1
+          ]
+        ],
+        "W_y": [
+          [
+            -0.3,
+            -0.5
+          ]
+        ],
+        "W_z": [
+          [
+            -0.1,
+            -0.2,
+            -0.3,
+            -0.1
+          ],
+          [
+            -0.2,
+            -0.1,
+            -0.1,
+            -0.3
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              -0.083989
+            ],
+            [
+              -0.13892
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.13435,
+            0.197231
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            [
+              10,
+              5.0
+            ],
+            [
+              5.0,
+              10
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            3.0,
+            1.0,
+            2.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0,
+            1.0,
+            3.0
+          ]
+        ],
+        "W_r": [
+          [
+            2.0,
+            1.0,
+            1.0,
+            2.0
+          ],
+          [
+            1.0,
+            3.0,
+            2.0,
+            1.0
+          ]
+        ],
+        "W_y": [
+          [
+            3.0,
+            5.0
+          ]
+        ],
+        "W_z": [
+          [
+            1.0,
+            2.0,
+            3.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0,
+            1.0,
+            3.0
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.0
+            ],
+            [
+              0.0
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          [
+            [
+              0,
+              0.05
+            ],
+            [
+              0.05,
+              0
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            0.03,
+            0.01,
+            0.02,
+            0.01
+          ],
+          [
+            0.01,
+            0.02,
+            0.01,
+            0.03
+          ]
+        ],
+        "W_r": [
+          [
+            0.02,
+            0.01,
+            0.01,
+            0.02
+          ],
+          [
+            0.01,
+            0.03,
+            0.02,
+            0.01
+          ]
+        ],
+        "W_y": [
+          [
+            0.03,
+            0.05
+          ]
+        ],
+        "W_z": [
+          [
+            0.01,
+            0.02,
+            0.03,
+            0.01
+          ],
+          [
+            0.02,
+            0.01,
+            0.01,
+            0.03
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              4.5e-05
+            ],
+            [
+              5e-05
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.000628,
+            0.000629
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            [
+              6.0,
+              5.5
+            ],
+            [
+              5.5,
+              6.0
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            5.3,
+            5.1,
+            5.2,
+            5.1
+          ],
+          [
+            5.1,
+            5.2,
+            5.1,
+            5.3
+          ]
+        ],
+        "W_r": [
+          [
+            5.2,
+            5.1,
+            5.1,
+            5.2
+          ],
+          [
+            5.1,
+            5.3,
+            5.2,
+            5.1
+          ]
+        ],
+        "W_y": [
+          [
+            5.3,
+            5.5
+          ]
+        ],
+        "W_z": [
+          [
+            5.1,
+            5.2,
+            5.3,
+            5.1
+          ],
+          [
+            5.2,
+            5.1,
+            5.1,
+            5.3
+          ]
+        ],
+        "b_h": [
+          5.0,
+          5.0
+        ],
+        "b_r": [
+          5.0,
+          5.0
+        ],
+        "b_y": [
+          5.0
+        ],
+        "b_z": [
+          5.0,
+          5.0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              5.0
+            ],
+            [
+              5.0
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          [
+            [
+              2,
+              0.75
+            ],
+            [
+              0.75,
+              2
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            0.45,
+            0.15,
+            0.3,
+            0.15
+          ],
+          [
+            0.15,
+            0.3,
+            0.15,
+            0.45
+          ]
+        ],
+        "W_r": [
+          [
+            0.3,
+            0.15,
+            0.15,
+            0.3
+          ],
+          [
+            0.15,
+            0.45,
+            0.3,
+            0.15
+          ]
+        ],
+        "W_y": [
+          [
+            0.45,
+            0.75
+          ]
+        ],
+        "W_z": [
+          [
+            0.15,
+            0.3,
+            0.45,
+            0.15
+          ],
+          [
+            0.3,
+            0.15,
+            0.15,
+            0.45
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.21949
+            ],
+            [
+              0.385993
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.284277,
+            0.344091
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            [
+              -2,
+              -1.0
+            ],
+            [
+              -1.0,
+              -2
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            -0.6,
+            -0.2,
+            -0.4,
+            -0.2
+          ],
+          [
+            -0.2,
+            -0.4,
+            -0.2,
+            -0.6
+          ]
+        ],
+        "W_r": [
+          [
+            -0.4,
+            -0.2,
+            -0.2,
+            -0.4
+          ],
+          [
+            -0.2,
+            -0.6,
+            -0.4,
+            -0.2
+          ]
+        ],
+        "W_y": [
+          [
+            -0.6,
+            -1.0
+          ]
+        ],
+        "W_z": [
+          [
+            -0.2,
+            -0.4,
+            -0.6,
+            -0.2
+          ],
+          [
+            -0.4,
+            -0.2,
+            -0.2,
+            -0.6
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              -0.295218
+            ],
+            [
+              -0.517722
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.284562,
+            0.346985
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          [
+            [
+              0,
+              0.125
+            ],
+            [
+              0.125,
+              0
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            0.075,
+            0.025,
+            0.05,
+            0.025
+          ],
+          [
+            0.025,
+            0.05,
+            0.025,
+            0.075
+          ]
+        ],
+        "W_r": [
+          [
+            0.05,
+            0.025,
+            0.025,
+            0.05
+          ],
+          [
+            0.025,
+            0.075,
+            0.05,
+            0.025
+          ]
+        ],
+        "W_y": [
+          [
+            0.075,
+            0.125
+          ]
+        ],
+        "W_z": [
+          [
+            0.025,
+            0.05,
+            0.075,
+            0.025
+          ],
+          [
+            0.05,
+            0.025,
+            0.025,
+            0.075
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.0007
+            ],
+            [
+              0.000792
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.003952,
+            0.003965
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            [
+              0.0,
+              -0.5
+            ],
+            [
+              -0.5,
+              0.0
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            -0.7,
+            -0.9,
+            -0.8,
+            -0.9
+          ],
+          [
+            -0.9,
+            -0.8,
+            -0.9,
+            -0.7
+          ]
+        ],
+        "W_r": [
+          [
+            -0.8,
+            -0.9,
+            -0.9,
+            -0.8
+          ],
+          [
+            -0.9,
+            -0.7,
+            -0.8,
+            -0.9
+          ]
+        ],
+        "W_y": [
+          [
+            -0.7,
+            -0.5
+          ]
+        ],
+        "W_z": [
+          [
+            -0.9,
+            -0.8,
+            -0.7,
+            -0.9
+          ],
+          [
+            -0.8,
+            -0.9,
+            -0.9,
+            -0.7
+          ]
+        ],
+        "b_h": [
+          -1.0,
+          -1.0
+        ],
+        "b_r": [
+          -1.0,
+          -1.0
+        ],
+        "b_y": [
+          -1.0
+        ],
+        "b_z": [
+          -1.0,
+          -1.0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              -0.590025
+            ],
+            [
+              -0.622444
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            -0.314216,
+            -0.315209
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          [
+            [
+              4,
+              2.0
+            ],
+            [
+              2.0,
+              4
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            1.2,
+            0.4,
+            0.8,
+            0.4
+          ],
+          [
+            0.4,
+            0.8,
+            0.4,
+            1.2
+          ]
+        ],
+        "W_r": [
+          [
+            0.8,
+            0.4,
+            0.4,
+            0.8
+          ],
+          [
+            0.4,
+            1.2,
+            0.8,
+            0.4
+          ]
+        ],
+        "W_y": [
+          [
+            1.2,
+            2.0
+          ]
+        ],
+        "W_z": [
+          [
+            0.4,
+            0.8,
+            1.2,
+            0.4
+          ],
+          [
+            0.8,
+            0.4,
+            0.4,
+            1.2
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.040366
+            ],
+            [
+              0.068632
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.021267,
+            0.021556
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gru-full-network-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            [
+              1,
+              0.375
+            ],
+            [
+              0.375,
+              1
+            ]
+          ]
+        ],
+        "W_h": [
+          [
+            0.225,
+            0.075,
+            0.15,
+            0.075
+          ],
+          [
+            0.075,
+            0.15,
+            0.075,
+            0.225
+          ]
+        ],
+        "W_r": [
+          [
+            0.15,
+            0.075,
+            0.075,
+            0.15
+          ],
+          [
+            0.075,
+            0.225,
+            0.15,
+            0.075
+          ]
+        ],
+        "W_y": [
+          [
+            0.225,
+            0.375
+          ]
+        ],
+        "W_z": [
+          [
+            0.075,
+            0.15,
+            0.225,
+            0.075
+          ],
+          [
+            0.15,
+            0.075,
+            0.075,
+            0.225
+          ]
+        ],
+        "b_h": [
+          0,
+          0
+        ],
+        "b_r": [
+          0,
+          0
+        ],
+        "b_y": [
+          0
+        ],
+        "b_z": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": {
+        "outputs": [
+          [
+            [
+              0.044609
+            ],
+            [
+              0.08115
+            ]
+          ]
+        ],
+        "final_hidden_state": [
+          [
+            0.106993,
+            0.152206
+          ]
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "gru_forward",
+    "parameters": [
+      {
+        "name": "X",
+        "type": "array",
+        "example": "[[[1,0.5],[0.5,1]]]",
+        "description": "X"
+      },
+      {
+        "name": "W_r",
+        "type": "array",
+        "example": "[[0.2,0.1,0.1,0.2],[0.1,0.3,0.2,0.1]]",
+        "description": "W r"
+      },
+      {
+        "name": "W_z",
+        "type": "array",
+        "example": "[[0.1,0.2,0.3,0.1],[0.2,0.1,0.1,0.3]]",
+        "description": "W z"
+      },
+      {
+        "name": "W_h",
+        "type": "array",
+        "example": "[[0.3,0.1,0.2,0.1],[0.1,0.2,0.1,0.3]]",
+        "description": "W h"
+      },
+      {
+        "name": "b_r",
+        "type": "array",
+        "example": "[0,0]",
+        "description": "b r"
+      },
+      {
+        "name": "b_z",
+        "type": "array",
+        "example": "[0,0]",
+        "description": "b z"
+      },
+      {
+        "name": "b_h",
+        "type": "array",
+        "example": "[0,0]",
+        "description": "b h"
+      },
+      {
+        "name": "W_y",
+        "type": "array",
+        "example": "[[0.3,0.5]]",
+        "description": "W y"
+      },
+      {
+        "name": "b_y",
+        "type": "array",
+        "example": "[0]",
+        "description": "b y"
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "gru-full-network",
+    "name": "Complete GRU",
+    "description": "Full GRU network implementation",
+    "color": "#ec4899"
+  },
+  "paper": {
+    "id": "gru",
+    "title": "Learning Phrase Representations using RNN Encoder-Decoder (GRU)",
+    "authors": "Cho et al., 2014",
+    "year": 2014,
+    "paperUrl": "https://arxiv.org/abs/1406.1078",
+    "visualizationComponent": "GRUArchViz"
+  },
+  "navigation": {
+    "index": 6,
+    "total": 6,
+    "prev": "gru-cell",
+    "next": null
+  },
+  "cleanTitle": ""
+}

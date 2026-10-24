@@ -1,0 +1,502 @@
+{
+  "id": "perplexity-computation",
+  "title": "Perplexity Computation",
+  "description": "Perplexity is the standard metric for evaluating language models. It measures how \"surprised\" a model is by a sequence of tokens. A lower perplexity means the model assigns higher probability to the observed sequence, indicating better predictions.\n\nGiven a list of probability distributions (one per position) and the actual token indices, compute the perplexity of the sequence.\n\n### Algorithm\n\n1. For each position i, extract the probability assigned to the actual token:\n\n$$\np_i = P_i[t_i]\n$$\n\n2. Compute the average negative log-probability (cross-entropy):\n\n$$\nH = -\\frac{1}{N} \\sum_{i=1}^{N} \\log p_i\n$$\n\n3. Perplexity is the exponential of the cross-entropy:\n\n$$\nPP = e^{H}\n$$\n\nReturn perplexity as a positive float rounded to four decimals.",
+  "seoDescription": "Compute language-model perplexity from token probability distributions and the observed token indices.",
+  "examples": [
+    "Input: prob_distributions = [[0.5, 0.5], [0.5, 0.5]], actual_tokens = [0, 1]\n\nOutput: 2.0\n\nExplanation: Both observed tokens have probability 0.5, so exponentiating the mean negative log probability gives 2.",
+    "Input: prob_distributions = [[1, 0], [0, 1]], actual_tokens = [0, 1]\n\nOutput: 1.0"
+  ],
+  "requirements": "* Extract the predicted probability for each actual token from the corresponding distribution\n* Compute cross-entropy as the negative mean of log-probabilities\n* Return perplexity as exp(cross-entropy)\n* Return a float\n* Round numeric outputs to 4 decimal places.",
+  "theory": "## Understanding the Theory: Perplexity Computation\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of variable-length sequences of discrete tokens with complex grammatical and long-range semantic dependencies. Modern Transformer architectures eliminate sequential recurrent bottlenecks by allowing every token to compute dynamic affinity scores with every other token. **Perplexity Computation** is an essential sequence modeling operation in modern large language models.\n\nIn this problem, the objective is to implement **Perplexity Computation** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\np_i = P_i[t_i]\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **All-to-All Self-Attention**: Dot-product attention computes contextualized representations dynamically, weighting relevant context tokens higher than uninformative tokens.\n* **Causal Masking**: In autoregressive decoder models (like GPT and LLaMA), upper-triangular masking ensures the model cannot look ahead at future tokens during generation.\n* **Positional Embeddings**: Because self-attention is permutation-invariant, positional encodings inject sequence order into the token representations.",
+  "hints": [
+    "Read the observed-token probability from each row before taking its logarithm.",
+    "Negate the mean log probability, exponentiate it, and round the result."
+  ],
+  "constraints": "* prob_distributions is a list of N probability distributions (each a list of positive floats summing to 1)\n* actual_tokens is a list of N valid indices into the corresponding distributions\n* All relevant probabilities are positive (no log(0) issues)\n* Return a positive float\n* Time limit: 300 ms",
+  "difficulty": "Easy",
+  "starterCode": "import math\n\ndef perplexity(prob_distributions: list, actual_tokens: list) -> float:\n    \"\"\"\n    Returns the sequence perplexity.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T20:21:30.805Z",
+  "updatedAt": "2026-10-12T07:47:35.464Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport math\nimport numpy as np\n\ndef perplexity(prob_distributions: list, actual_tokens: list) -> float:\n    P = np.array(prob_distributions, dtype=float)\n    log_sum = 0.0\n    N = len(actual_tokens)\n    for i, tok in enumerate(actual_tokens):\n        prob = P[i, tok]\n        log_sum += math.log(prob)\n    cross_entropy = -log_sum / N\n    return float(round(math.exp(cross_entropy), 6))\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "PerplexityComputationViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Uniform dist (Ex1)",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 2.0
+    },
+    {
+      "id": "test-2",
+      "name": "Perfect model (Ex2)",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 1.0
+    },
+    {
+      "id": "perplexity-computation-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 2.0
+    },
+    {
+      "id": "perplexity-computation-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 1.0
+    },
+    {
+      "id": "perplexity-computation-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 2.0
+    },
+    {
+      "id": "perplexity-computation-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 1.0
+    },
+    {
+      "id": "perplexity-computation-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 2.0
+    },
+    {
+      "id": "perplexity-computation-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 1.0
+    },
+    {
+      "id": "perplexity-computation-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 2.0
+    },
+    {
+      "id": "perplexity-computation-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 1.0
+    },
+    {
+      "id": "perplexity-computation-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 2.0
+    },
+    {
+      "id": "perplexity-computation-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 1.0
+    },
+    {
+      "id": "perplexity-computation-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 2.0
+    },
+    {
+      "id": "perplexity-computation-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 1.0
+    },
+    {
+      "id": "perplexity-computation-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 2.0
+    },
+    {
+      "id": "perplexity-computation-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 1.0
+    },
+    {
+      "id": "perplexity-computation-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 2.0
+    },
+    {
+      "id": "perplexity-computation-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 1.0
+    },
+    {
+      "id": "perplexity-computation-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 2.0
+    },
+    {
+      "id": "perplexity-computation-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "actual_tokens": [
+          0,
+          1
+        ],
+        "prob_distributions": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 1.0
+    }
+  ],
+  "functionMetadata": {
+    "name": "perplexity",
+    "parameters": [
+      {
+        "name": "prob_distributions",
+        "type": "array",
+        "example": "[[0.5, 0.5], [0.5, 0.5]]",
+        "description": "List of probability distributions, one per position"
+      },
+      {
+        "name": "actual_tokens",
+        "type": "array",
+        "example": "[0, 1]",
+        "description": "List of actual token indices"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "bigram-probabilities",
+    "cross-entropy-loss",
+    "word-count-dict",
+    "bag-of-words",
+    "bleu-score"
+  ],
+  "tags": [
+    "NLP"
+  ],
+  "prevId": "bleu-score",
+  "nextId": "max-pooling-2d",
+  "slug": "perplexity-computation",
+  "cleanTitle": "Perplexity Computation",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/perplexity-computation",
+  "localUrl": "http://localhost:3000/problems/perplexity-computation",
+  "studyPlan": null
+}

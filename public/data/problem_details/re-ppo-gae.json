@@ -1,0 +1,530 @@
+{
+  "id": "re-ppo-gae",
+  "slug": "re-ppo-gae",
+  "title": "Generalized Advantage Estimation",
+  "cleanTitle": "Generalized Advantage Estimation",
+  "type": "code",
+  "difficulty": "Hard",
+  "category": "Assessment",
+  "tags": [
+    "Assessment",
+    "CODE",
+    "Post-Training and Alignment"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Compute generalized advantage estimates backward through time from rewards, values, terminal masks, gamma, and lambda.",
+  "theory": "## Understanding the Theory: Generalized Advantage Estimation\n\n### Core Intuition: Why Do We Need This?\n**Generalized Advantage Estimation** forms a vital mathematical pillar within **Post-Training and Alignment**. In modern foundation models and frontier LLM architectures, computational efficiency, activation stability, and precise hardware memory alignment govern both pre-training scalability and low-latency autoregressive generation. Flaws in numerical precision or suboptimal tensor transformations can silently corrupt model weights or cause distributed training divergence.\n\nUnderstanding the core mechanics enables engineers to diagnose convergence anomalies, optimize memory layouts, and construct maintainable ML pipelines from first principles.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\hat{A}_t^{\\text{GAE}} = \\sum_{l=0}^\\infty (\\gamma \\lambda)^l \\delta_{t+l}^V, \\quad \\delta_t^V = r_t + \\gamma V(s_{t+1}) - V(s_t)\n$$\n\nIn this formulation:\n* The input features and parameters are projected, normalized, or aggregated according to established algorithmic invariants.\n* Dimensional consistency is preserved across all tensor or matrix axes, ensuring mathematical validity.\n* Intermediate accumulators maintain numerical dynamic range to protect against floating-point anomalies.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Validate input array dimensions, check for empty sequences or invalid bounds, and convert inputs into contiguous buffers.\n2. **Phase 2: Core Algorithmic Transformation**: Execute the foundational mathematical logic using vectorized SIMD array operations or optimized iteration.\n3. **Phase 3: Aggregation & Normalization**: Compute required sums, projections, or ranking reductions while guarding against division by zero.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Format outputs into required data types and verify that returned numerical estimates adhere to expected precision thresholds.\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth & Cache Hierarchy**: High-throughput transformer operators must saturate hardware cache lines and minimize redundant memory reads between DRAM and fast register buffers.\n* **Numerical Stability & Gradient Flow**: Preventing floating-point cancellation, underflow in softmax exponents, and division by zero ensures smooth loss descent across billions of tokens.\n* **Inference Throughput**: Idempotent, stateless tensor updates allow distributed inference engines to execute asynchronous prefill and decoding iterations without race conditions.\n* **Algorithmic Complexity**: Operates with optimal asymptotic time and space complexity, ensuring minimal compute overhead.",
+  "examples": [
+    {
+      "inputArgs": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          0.5,
+          0.2
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "output": [
+        1.4504000000000001,
+        0.8
+      ],
+      "explanation": "Illustrative small example for generalized advantage estimation."
+    }
+  ],
+  "requirements": [
+    "Implement the mathematical or algorithmic behavior described above.",
+    "Match the function signature and output structure in starterCode.",
+    "Handle boundary inputs and ties consistently with the supplied test cases."
+  ],
+  "hints": [
+    "Implement the small mathematical contract first; do not add production-only model machinery.",
+    "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+  ],
+  "constraints": [
+    "Inputs are small enough for a straightforward reference implementation.",
+    "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+    "Unless otherwise stated, dimensions must be consistent."
+  ],
+  "starterCode": "def solve(rewards, values, dones, gamma=0.99, lam=0.95):\n    pass",
+  "solution": "### 💡 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### ⚡ Implementation\n```python\ndef solve(rewards, values, dones, gamma=0.99, lam=0.95):\n    adv=[0.0]*len(rewards); gae=0.0\n    for t in range(len(rewards)-1,-1,-1):\n      next_v=values[t+1] if t+1<len(values) else 0.0\n      nonterminal=1-dones[t]\n      delta=rewards[t]+gamma*next_v*nonterminal-values[t]\n      gae=delta+gamma*lam*nonterminal*gae; adv[t]=gae\n    return adv\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
+  "testCases": [
+    {
+      "id": "case-1",
+      "name": "smoke test",
+      "inputs": {
+        "rewards": [
+          1.0,
+          1.0
+        ],
+        "values": [
+          0.5,
+          0.2
+        ],
+        "dones": [
+          0,
+          1
+        ]
+      },
+      "expectedOutput": [
+        1.4504000000000001,
+        0.8
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-2",
+      "name": "Case 2",
+      "inputs": {
+        "rewards": [
+          2.0,
+          2.0
+        ],
+        "values": [
+          1.0,
+          0.4
+        ],
+        "dones": [
+          0,
+          2
+        ]
+      },
+      "expectedOutput": [
+        2.9008000000000003,
+        1.6
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-3",
+      "name": "Case 3",
+      "inputs": {
+        "rewards": [
+          0.5,
+          0.5
+        ],
+        "values": [
+          0.25,
+          0.1
+        ],
+        "dones": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0.7252000000000001,
+        0.4
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-4",
+      "name": "Case 4",
+      "inputs": {
+        "rewards": [
+          -1.0,
+          -1.0
+        ],
+        "values": [
+          -0.5,
+          -0.2
+        ],
+        "dones": [
+          0,
+          -1
+        ]
+      },
+      "expectedOutput": [
+        -1.4504000000000001,
+        -0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-5",
+      "name": "Case 5",
+      "inputs": {
+        "rewards": [
+          3.0,
+          3.0
+        ],
+        "values": [
+          1.5,
+          0.6
+        ],
+        "dones": [
+          0,
+          3
+        ]
+      },
+      "expectedOutput": [
+        4.3512,
+        2.4
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-6",
+      "name": "Case 6",
+      "inputs": {
+        "rewards": [
+          2.0,
+          2.0
+        ],
+        "values": [
+          1.5,
+          1.2
+        ],
+        "dones": [
+          1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0.5,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-7",
+      "name": "Case 7",
+      "inputs": {
+        "rewards": [
+          -1.0,
+          -1.0
+        ],
+        "values": [
+          -1.5,
+          -1.8
+        ],
+        "dones": [
+          -2.0,
+          -1.0
+        ]
+      },
+      "expectedOutput": [
+        -2.5888,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-8",
+      "name": "Case 8",
+      "inputs": {
+        "rewards": [
+          1.0,
+          1.0
+        ],
+        "values": [
+          0.2,
+          0.5
+        ],
+        "dones": [
+          1,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0.8,
+        0.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-9",
+      "name": "Case 9",
+      "inputs": {
+        "rewards": [
+          -1.0,
+          -1.0
+        ],
+        "values": [
+          -0.5,
+          -0.2
+        ],
+        "dones": [
+          0,
+          -1
+        ]
+      },
+      "expectedOutput": [
+        -1.4504000000000001,
+        -0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-10",
+      "name": "Case 10",
+      "inputs": {
+        "rewards": [
+          10.0,
+          10.0
+        ],
+        "values": [
+          5.0,
+          2.0
+        ],
+        "dones": [
+          0,
+          10
+        ]
+      },
+      "expectedOutput": [
+        14.504000000000001,
+        8.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-11",
+      "name": "Case 11",
+      "inputs": {
+        "rewards": [
+          0.1,
+          0.1
+        ],
+        "values": [
+          0.05,
+          0.02
+        ],
+        "dones": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0.14504,
+        0.08
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-12",
+      "name": "Case 12",
+      "inputs": {
+        "rewards": [
+          6.0,
+          6.0
+        ],
+        "values": [
+          5.5,
+          5.2
+        ],
+        "dones": [
+          5.0,
+          6.0
+        ]
+      },
+      "expectedOutput": [
+        -23.101599999999998,
+        0.7999999999999998
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-13",
+      "name": "Case 13",
+      "inputs": {
+        "rewards": [
+          1.5,
+          1.5
+        ],
+        "values": [
+          0.75,
+          0.3
+        ],
+        "dones": [
+          0,
+          2
+        ]
+      },
+      "expectedOutput": [
+        2.1756,
+        1.2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-14",
+      "name": "Case 14",
+      "inputs": {
+        "rewards": [
+          -2.0,
+          -2.0
+        ],
+        "values": [
+          -1.0,
+          -0.4
+        ],
+        "dones": [
+          0,
+          -2
+        ]
+      },
+      "expectedOutput": [
+        -2.9008000000000003,
+        -1.6
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-15",
+      "name": "Case 15",
+      "inputs": {
+        "rewards": [
+          0.25,
+          0.25
+        ],
+        "values": [
+          0.125,
+          0.05
+        ],
+        "dones": [
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        0.36260000000000003,
+        0.2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-16",
+      "name": "Case 16",
+      "inputs": {
+        "rewards": [
+          0.0,
+          0.0
+        ],
+        "values": [
+          -0.5,
+          -0.8
+        ],
+        "dones": [
+          -1.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        0.42080000000000006,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-17",
+      "name": "Case 17",
+      "inputs": {
+        "rewards": [
+          4.0,
+          4.0
+        ],
+        "values": [
+          2.0,
+          0.8
+        ],
+        "dones": [
+          0,
+          4
+        ]
+      },
+      "expectedOutput": [
+        5.8016000000000005,
+        3.2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-18",
+      "name": "Case 18",
+      "inputs": {
+        "rewards": [
+          0.75,
+          0.75
+        ],
+        "values": [
+          0.375,
+          0.15
+        ],
+        "dones": [
+          0,
+          1
+        ]
+      },
+      "expectedOutput": [
+        1.0878,
+        0.6
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-19",
+      "name": "Case 19",
+      "inputs": {
+        "rewards": [
+          5.0,
+          5.0
+        ],
+        "values": [
+          2.5,
+          1.0
+        ],
+        "dones": [
+          0,
+          5
+        ]
+      },
+      "expectedOutput": [
+        7.252000000000001,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-20",
+      "name": "Case 20",
+      "inputs": {
+        "rewards": [
+          11.0,
+          11.0
+        ],
+        "values": [
+          10.5,
+          10.2
+        ],
+        "dones": [
+          10.0,
+          11.0
+        ]
+      },
+      "expectedOutput": [
+        -97.1536,
+        0.8000000000000007
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "solve",
+    "signature": "def solve(rewards, values, dones, gamma=0.99, lam=0.95):",
+    "returnType": "varies by problem; see example output"
+  },
+  "assessmentNames": [
+    "Post-Training and Alignment"
+  ],
+  "source": "assessment",
+  "sourceId": "assessment",
+  "updatedAt": "2026-03-01T00:00:00.000Z"
+}

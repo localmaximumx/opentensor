@@ -1,0 +1,565 @@
+{
+  "id": "bleu-score",
+  "title": "BLEU Score",
+  "description": "BLEU (Bilingual Evaluation Understudy) is the standard metric for evaluating machine translation quality. It measures how many n-grams in the candidate translation appear in the reference, with a penalty for translations that are too short.\n\nGiven a candidate translation, a reference translation (both as token lists), and a maximum n-gram order, compute the BLEU score.\n\n### Algorithm\n\n1. For each n-gram order from 1 to max_n, compute modified precision by clipping candidate n-gram counts by reference counts:\n\n$$\np_n = \\frac{\\sum_{ng} \\min(C_{ng},\\; R_{ng})}{\\sum_{ng} C_{ng}}\n$$\n\n2. Compute the brevity penalty to penalize short translations:\n\n$$\nBP = \\begin{cases} 1 & \\text{if } c \\ge r \\\\ e^{1 - r/c} & \\text{if } c < r \\end{cases}\n$$\n\n3. Combine into the BLEU score using the geometric mean of precisions:\n\n$$\n\\text{BLEU} = BP \\cdot \\exp\\left(\\frac{1}{N} \\sum_{n=1}^{N} \\log p_n\\right)\n$$\n\nIf any precision is zero, BLEU is zero.\n\nReturn the BLEU score as a float between zero and one.",
+  "seoDescription": "Calculate a BLEU translation score from candidate and reference tokens using clipped n-gram precision and brevity penalty.",
+  "examples": [
+    "Input: candidate = [\"the\", \"cat\", \"sat\", \"on\", \"the\", \"mat\"], reference = [\"the\", \"cat\", \"sat\", \"on\", \"the\", \"mat\"], max_n = 4\n\nOutput: 1.0\n\nExplanation: Every modified precision equals one and no brevity penalty applies.",
+    "Input: candidate = [\"the\", \"cat\", \"is\", \"here\"], reference = [\"the\", \"cat\", \"was\", \"here\"], max_n = 2\n\nOutput: 0.5"
+  ],
+  "requirements": "* Compute modified n-gram precision for each order from 1 to max_n, clipping counts by the reference\n* Apply the brevity penalty when the candidate is shorter than the reference\n* Combine precisions using a uniform-weight geometric mean\n* Return 0.0 if the candidate is empty or any precision is zero\n* Return the BLEU score as a float",
+  "theory": "## Understanding the Theory: BLEU Score\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of variable-length sequences of discrete tokens with complex grammatical and long-range semantic dependencies. Modern Transformer architectures eliminate sequential recurrent bottlenecks by allowing every token to compute dynamic affinity scores with every other token. **BLEU Score** is an essential sequence modeling operation in modern large language models.\n\nIn this problem, the objective is to implement **BLEU Score** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\np_n = \\frac{\\sum_{ng} \\min(C_{ng},\\; R_{ng})}{\\sum_{ng} C_{ng}}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **All-to-All Self-Attention**: Dot-product attention computes contextualized representations dynamically, weighting relevant context tokens higher than uninformative tokens.\n* **Causal Masking**: In autoregressive decoder models (like GPT and LLaMA), upper-triangular masking ensures the model cannot look ahead at future tokens during generation.\n* **Positional Embeddings**: Because self-attention is permutation-invariant, positional encodings inject sequence order into the token representations.",
+  "hints": [
+    "Use tuples as n-gram keys and clip each candidate count by its reference count.",
+    "Return zero for any zero precision; otherwise combine log precisions and the brevity penalty."
+  ],
+  "constraints": "* candidate and reference are lists of string tokens\n* max_n >= 1\n* Return a float between 0.0 and 1.0\n* Time limit: 300 ms",
+  "difficulty": "Hard",
+  "starterCode": "import math\nfrom collections import Counter\n\ndef bleu_score(candidate: list, reference: list, max_n: int) -> float:\n    \"\"\"\n    Returns the unsmoothed BLEU score.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T20:21:26.719Z",
+  "updatedAt": "2026-08-23T20:57:07.421Z",
+  "solution": "### 💡 Intuition & Approach\nBLEU measures machine translation precision using geometric mean of modified n-gram matches scaled by brevity penalty.\n\n### ⚡ Python Reference Implementation\n```python\nimport math\nfrom collections import Counter\n\ndef bleu_score(candidate: list, reference: list, max_n: int = 4) -> float:\n    if not candidate or not reference:\n        return 0.0\n    c_len = len(candidate)\n    r_len = len(reference)\n    bp = 1.0 if c_len > r_len else math.exp(1.0 - r_len / c_len)\n\n    precisions = []\n    for n in range(1, max_n + 1):\n        if len(candidate) < n:\n            continue\n        c_ng = Counter(tuple(candidate[i:i+n]) for i in range(len(candidate) - n + 1))\n        r_ng = Counter(tuple(reference[i:i+n]) for i in range(len(reference) - n + 1))\n        clipped = sum(min(c, r_ng[ng]) for ng, c in c_ng.items())\n        total = sum(c_ng.values())\n        if clipped == 0:\n            return 0.0\n        precisions.append(clipped / total)\n\n    if not precisions:\n        return 0.0\n    geo_mean = math.exp(sum(math.log(p) for p in precisions) / len(precisions))\n    return float(round(bp * geo_mean, 4))\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "BleuScoreViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Perfect match",
+      "inputs": {
+        "max_n": 4,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 1.0
+    },
+    {
+      "id": "test-2",
+      "name": "Partial match",
+      "inputs": {
+        "max_n": 2,
+        "candidate": [
+          "the",
+          "cat",
+          "is",
+          "here"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "was",
+          "here"
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 0.5
+    },
+    {
+      "id": "bleu-score-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "max_n": 8,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "max_n": 2,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "max_n": -4,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "max_n": 12,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "max_n": 5.0,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "max_n": 2.0,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "max_n": 4,
+        "candidate": [
+          "mat",
+          "the",
+          "on",
+          "sat",
+          "cat",
+          "the"
+        ],
+        "reference": [
+          "mat",
+          "the",
+          "on",
+          "sat",
+          "cat",
+          "the"
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "max_n": -4,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "max_n": 40,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "max_n": 0,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "max_n": 9.0,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "max_n": 6,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "max_n": -8,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "max_n": 1,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "max_n": 3.0,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "max_n": 16,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "max_n": 3,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "bleu-score-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "max_n": 20,
+        "candidate": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ],
+        "reference": [
+          "the",
+          "cat",
+          "sat",
+          "on",
+          "the",
+          "mat"
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "bleu_score",
+    "parameters": [
+      {
+        "name": "candidate",
+        "type": "array",
+        "example": "[\"the\", \"cat\", \"sat\"]",
+        "description": "List of tokens in candidate translation"
+      },
+      {
+        "name": "reference",
+        "type": "array",
+        "example": "[\"the\", \"cat\", \"sat\"]",
+        "description": "List of tokens in reference translation"
+      },
+      {
+        "name": "max_n",
+        "type": "number",
+        "example": "4",
+        "description": "Maximum n-gram size to consider"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "bag-of-words",
+    "tfidf-vectorizer",
+    "perplexity-computation",
+    "edit-distance",
+    "bigram-probabilities"
+  ],
+  "tags": [
+    "NLP",
+    "Metrics & Evaluation"
+  ],
+  "prevId": "text-chunking",
+  "nextId": "perplexity-computation",
+  "slug": "bleu-score",
+  "cleanTitle": "BLEU Score",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/bleu-score",
+  "localUrl": "http://localhost:3000/problems/bleu-score",
+  "studyPlan": null
+}

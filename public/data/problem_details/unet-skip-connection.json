@@ -1,0 +1,1927 @@
+{
+  "id": "unet-skip-connection",
+  "title": "U-Net Skip Connections",
+  "description": "Implement U-Net crop and concatenate in NHWC layout. Center-crop encoder_features to the decoder height and width, then concatenate the cropped encoder features before decoder_features along the channel axis. When a spatial difference is odd, discard the extra row or column from the bottom or right. Return the merged result as a float64 NumPy array with shape (B, H_decoder, W_decoder, C_encoder + C_decoder).",
+  "seoDescription": "Implement U-Net skip connections by center-cropping encoder features and concatenating them with decoder features.",
+  "examples": [
+    "Input: encoder_features = [[[[1],[2],[3],[4]],[[5],[6],[7],[8]],[[9],[10],[11],[12]],[[13],[14],[15],[16]]]], decoder_features = [[[[20,21],[22,23]],[[24,25],[26,27]]]]\n\nOutput: [[[[6,20,21],[7,22,23]],[[10,24,25],[11,26,27]]]]\n\nExplanation: The centered encoder region is selected before its channels are joined with the decoder channels.",
+    "Input: encoder_features = [[[[1,2],[3,4]],[[5,6],[7,8]]]], decoder_features = [[[[9],[10]],[[11],[12]]]]\n\nOutput: [[[[1,2,9],[3,4,10]],[[5,6,11],[7,8,12]]]]",
+    "Input: encoder_features = [[[[1],[2],[3],[4]],[[5],[6],[7],[8]]]], decoder_features = [[[[9],[10]]]]\n\nOutput: [[[[2,9],[3,10]]]]"
+  ],
+  "requirements": "- Use NumPy.\n- Compute the centered spatial crop from the shape difference.\n- Preserve batch order and all channels.\n- Concatenate encoder channels before decoder channels.\n- Return a float64 NumPy array.",
+  "theory": "# <span style=\"font-size: 20px;\">Skip Connection (Crop and Concatenate)</span>\n\n<span style=\"font-size: 14px;\">The skip connection in U-Net is a crop-and-concatenate operation that fuses high-resolution spatial features from the encoder with upsampled contextual features from the decoder. Introduced by Ronneberger, Fischer, and Brox (2015), this mechanism is the key innovation enabling U-Net to produce pixel-precise segmentation maps, combining coarse \"what\" information from the decoder with fine-grained \"where\" information from the encoder.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">At each level of the U-Net decoder, the upsampled feature map from the level below is combined with the corresponding encoder feature map from the same level of the contracting path. The combination is performed by concatenation along the channel axis, not addition. Because the original U-Net uses unpadded (valid) convolutions throughout, the encoder feature maps are spatially larger than their decoder counterparts at the same level. Before concatenation can proceed, the encoder features must be center-cropped to match the decoder's spatial dimensions exactly.</span>\n\n<span style=\"font-size: 14px;\">The skip connection consists of two operations in sequence: a symmetric center crop of the encoder feature map to match the decoder's height and width, followed by concatenation of the cropped encoder features and the decoder features along the channel dimension. The result is a tensor with the decoder's spatial dimensions and a channel count equal to the sum of encoder and decoder channels.</span>\n\n<span style=\"font-size: 14px;\">This operation is repeated at every level of the expansive path. In the original U-Net, there are four skip connections, one for each resolution level, bridging the contracting path and the expansive path so the decoder can recover spatial detail lost during downsampling.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">Let $x_{\\text{enc}} \\in \\mathbb{R}^{C_e \\times H_e \\times W_e}$ denote the encoder feature map and $x_{\\text{dec}} \\in \\mathbb{R}^{C_d \\times H_d \\times W_d}$ denote the decoder feature map at the same level. Because of unpadded convolutions, $H_e > H_d$ and $W_e > W_d$.</span>\n\n<span style=\"font-size: 14px;\">**Center crop offsets.** The number of pixels to remove from each border:</span>\n\n$$\n\\delta_h = \\frac{H_e - H_d}{2}, \\quad \\delta_w = \\frac{W_e - W_d}{2}\n$$\n\n<span style=\"font-size: 14px;\">**Cropping operation.** The center-cropped encoder feature map is extracted by slicing symmetrically:</span>\n\n$$\nx_{\\text{crop}} = x_{\\text{enc}}\\left[:, \\; \\delta_h : H_e - \\delta_h, \\; \\delta_w : W_e - \\delta_w\\right]\n$$\n\n<span style=\"font-size: 14px;\">After cropping, $x_{\\text{crop}} \\in \\mathbb{R}^{C_e \\times H_d \\times W_d}$, matching the decoder's spatial dimensions.</span>\n\n<span style=\"font-size: 14px;\">**Concatenation along channel axis:**</span>\n\n$$\nx_{\\text{skip}} = \\text{Concat}(x_{\\text{crop}},\\; x_{\\text{dec}}) \\in \\mathbb{R}^{(C_e + C_d) \\times H_d \\times W_d}\n$$\n\n<span style=\"font-size: 14px;\">The output channel count is the sum of encoder and decoder channels. In the original U-Net, $C_e = C_d$ at each level, so concatenation doubles the channel count.</span>\n\n* <span style=\"font-size: 14px;\">**$x_{\\text{enc}}$:** Feature map from the contracting path, stored before the max-pooling operation.</span>\n* <span style=\"font-size: 14px;\">**$x_{\\text{dec}}$:** Upsampled feature map from the decoder, produced by the up-convolution from the level below.</span>\n* <span style=\"font-size: 14px;\">**$\\delta_h, \\delta_w$:** Crop offsets, always non-negative integers representing border pixels removed from each side.</span>\n* <span style=\"font-size: 14px;\">**$C_e + C_d$:** Output channel count. Subsequent convolutions reduce this to the target channel count.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why Crop Is Necessary</span>\n\n<span style=\"font-size: 14px;\">In the original U-Net, every convolution uses valid padding (no padding), meaning the output spatial dimensions shrink by $k - 1$ pixels per convolution, where $k$ is the kernel size. With $3 \\times 3$ kernels, each convolution reduces height and width by 2 pixels. The architecture applies two convolutions per resolution level, shrinking spatial dimensions by 4 pixels total per level.</span>\n\n<span style=\"font-size: 14px;\">This shrinkage accumulates along both the contracting and expansive paths. The encoder features stored for the skip connection have undergone two valid convolutions at their level. The decoder features have accumulated additional shrinkage from valid convolutions at all deeper levels plus the current upsampling path. By the time the decoder feature map reaches a given level, it has accumulated more total shrinkage than the encoder feature map at that same level.</span>\n\n<span style=\"font-size: 14px;\">For example, in the original U-Net with a 572x572 input, the encoder feature map at the first level is 568x568, while the corresponding decoder feature map is 392x392. The difference of 176 pixels on each axis requires cropping 88 pixels from each border.</span>\n\n<span style=\"font-size: 14px;\">Without cropping, the tensors have incompatible spatial dimensions and cannot be concatenated. Modern U-Net implementations often use padded convolutions to eliminate this mismatch, but the original architecture uses valid convolutions deliberately to avoid border artifacts.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Center Cropping</span>\n\n<span style=\"font-size: 14px;\">Center cropping removes an equal number of pixels from all four borders of the encoder feature map. This symmetric removal ensures the remaining region is exactly centered, corresponding to the same spatial region the decoder feature map covers.</span>\n\n<span style=\"font-size: 14px;\">Given encoder spatial size $(H_e, W_e)$ and decoder spatial size $(H_d, W_d)$, the crop offset is $\\delta_h = (H_e - H_d) / 2$, and similarly for width. The cropped tensor is:</span>\n\n$$\nx_{\\text{crop}} = x_{\\text{enc}}[\\;:\\;,\\; \\delta_h : \\delta_h + H_d\\;,\\; \\delta_w : \\delta_w + W_d\\;]\n$$\n\n<span style=\"font-size: 14px;\">Center cropping is preferred because valid convolutions lose border information symmetrically. Each $3 \\times 3$ convolution removes one pixel from each border. After multiple convolutions, the remaining valid region is centered within the original spatial extent. The center crop aligns encoder and decoder features to the same spatial receptive field.</span>\n\n<span style=\"font-size: 14px;\">In code, the crop is a simple tensor slice with no learned parameters and negligible computational cost. During backpropagation, the gradient flows through the crop by zero-padding the upstream gradient back to the original encoder size.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why Concatenate, Not Add</span>\n\n<span style=\"font-size: 14px;\">U-Net concatenates encoder and decoder features rather than adding them. This is a deliberate design choice with important consequences.</span>\n\n<span style=\"font-size: 14px;\">**Concatenation preserves both signals independently.** When two feature maps are concatenated along the channel axis, every channel from both sources appears in the output. The subsequent convolution layers receive the full, unmodified information and can learn independently how to weight and combine them.</span>\n\n<span style=\"font-size: 14px;\">**Addition mixes the signals irreversibly.** Element-wise addition produces a single set of channels where encoder and decoder contributions are already combined. If an encoder channel value is +3 and a decoder channel value is -3, the sum is 0 and subsequent layers cannot recover either original value. Addition constrains the combination to a fixed 1:1 ratio with no learnable weighting.</span>\n\n<span style=\"font-size: 14px;\">**Concatenation increases channel count, addition does not.** After concatenation, the channel count doubles (when $C_e = C_d$), giving the subsequent convolution more input channels and more parameters to learn the fusion. After addition, the channel count stays the same, limiting capacity for combining the two sources.</span>\n\n<span style=\"font-size: 14px;\">This contrasts with ResNet, where addition is appropriate because the skip and main path carry the same type of information within a single processing stage. In U-Net, encoder and decoder carry fundamentally different information (spatial detail versus semantic context), and concatenation preserves both.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">Ronneberger, Fischer, and Brox introduced the skip connection architecture in \"U-Net: Convolutional Networks for Biomedical Image Segmentation\" (2015). The paper states: \"The high resolution features from the contracting path are combined with the upsampled output. A successive convolution layer can then learn to assemble a more precise output based on this information.\"</span>\n\n<span style=\"font-size: 14px;\">The skip connection distinguishes U-Net from prior fully convolutional networks. Long, Shelhamer, and Darrell (2015) had proposed FCN for dense prediction, but their skip connections used addition and connected only a few selected layers. U-Net's contribution was to systematically concatenate encoder features at every resolution level, creating a symmetric encoder-decoder architecture with direct access to all scales.</span>\n\n<span style=\"font-size: 14px;\">The authors designed this for biomedical image segmentation, where precise localization is critical. In cell segmentation, boundaries between adjacent cells may be only one or two pixels wide. The decoder captures rough location and class, but lacks pixel-level precision for exact boundaries. Encoder features, having undergone fewer transformations, provide the fine-grained edge and texture information needed.</span>\n\n<span style=\"font-size: 14px;\">The paper uses valid convolutions throughout, meaning the output segmentation is smaller than the input image. Large images are handled via an overlap-tile strategy with mirror padding. The architecture diagram shows cropping arrows connecting encoder to decoder, with spatial dimensions labeled at every stage.</span>\n\n<span style=\"font-size: 14px;\">U-Net won the ISBI 2015 cell tracking challenge by a large margin, demonstrating that skip connections with an encoder-decoder structure enable accurate segmentation even with very limited training data (only 30 annotated images). Skip connections provide a strong inductive bias that spatial structure should be preserved, reducing what the network must learn from scratch.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Consider a skip connection where the encoder feature map is $256 \\times 64 \\times 64$ and the decoder feature map is $256 \\times 56 \\times 56$.</span>\n\n<span style=\"font-size: 14px;\">**Step 1: Compute crop offsets.**</span>\n\n$$\n\\delta_h = \\frac{64 - 56}{2} = 4, \\quad \\delta_w = \\frac{64 - 56}{2} = 4\n$$\n\n<span style=\"font-size: 14px;\">Four pixels removed from each border: top 4, bottom 4, left 4, right 4.</span>\n\n<span style=\"font-size: 14px;\">**Step 2: Apply center crop.**</span>\n\n$$\nx_{\\text{crop}} = x_{\\text{enc}}[\\;:\\;,\\; 4:60\\;,\\; 4:60\\;] \\in \\mathbb{R}^{256 \\times 56 \\times 56}\n$$\n\n<span style=\"font-size: 14px;\">The slice $4:60$ selects 56 elements (indices 4 through 59). Spatial dimensions now match the decoder.</span>\n\n<span style=\"font-size: 14px;\">**Step 3: Concatenate along channel axis.**</span>\n\n$$\nx_{\\text{skip}} = \\text{Concat}(x_{\\text{crop}},\\; x_{\\text{dec}}) \\in \\mathbb{R}^{512 \\times 56 \\times 56}\n$$\n\n<span style=\"font-size: 14px;\">The first 256 channels contain cropped encoder features (fine spatial detail), the last 256 contain decoder features (semantic context). Subsequent $3 \\times 3$ convolutions process this 512-channel tensor.</span>\n\n<span style=\"font-size: 14px;\">**A smaller example with concrete values.** Encoder ($1 \\times 4 \\times 4$) and decoder ($1 \\times 2 \\times 2$), each with 1 channel:</span>\n\n$$\nx_{\\text{enc}} = \\begin{pmatrix} 1 & 2 & 3 & 4 \\\\ 5 & 6 & 7 & 8 \\\\ 9 & 10 & 11 & 12 \\\\ 13 & 14 & 15 & 16 \\end{pmatrix}, \\quad x_{\\text{dec}} = \\begin{pmatrix} 50 & 60 \\\\ 70 & 80 \\end{pmatrix}\n$$\n\n<span style=\"font-size: 14px;\">Crop offsets: $\\delta_h = (4 - 2)/2 = 1$, $\\delta_w = 1$. Center crop: $x_{\\text{enc}}[:, 1:3, 1:3]$:</span>\n\n$$\nx_{\\text{crop}} = \\begin{pmatrix} 6 & 7 \\\\ 10 & 11 \\end{pmatrix}\n$$\n\n<span style=\"font-size: 14px;\">The border ring (values 1-5, 8-9, 12-16) is discarded. Only the center $2 \\times 2$ remains. Concatenation along the channel axis produces a $2 \\times 2 \\times 2$ tensor: channel 0 is $(6, 7; 10, 11)$ from the encoder, channel 1 is $(50, 60; 70, 80)$ from the decoder.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">U-Net vs ResNet Skip Connections</span>\n\n<span style=\"font-size: 14px;\">Both U-Net and ResNet use skip connections, but they serve fundamentally different purposes.</span>\n\n<span style=\"font-size: 14px;\">**U-Net skip connections bridge encoder to decoder.** They connect two different processing stages: the contracting path (extracting features at progressively lower resolutions) and the expansive path (upsampling back). Encoder features preserve fine spatial structure. Decoder features carry coarse semantic information. Concatenation preserves both signal types for subsequent convolutions to combine.</span>\n\n<span style=\"font-size: 14px;\">**ResNet skip connections operate within the same path.** A residual block connects input to output via addition: $y = F(x) + x$. Both tensors are at the same resolution and carry the same type of information. The skip enables gradient flow through the identity path, solving the degradation problem in very deep networks.</span>\n\n* <span style=\"font-size: 14px;\">**Operation:** U-Net uses concatenation. ResNet uses addition.</span>\n* <span style=\"font-size: 14px;\">**Direction:** U-Net connects across the encoder-decoder boundary (horizontal in the U-shape). ResNet connects within the same sequential path.</span>\n* <span style=\"font-size: 14px;\">**Channel count:** U-Net doubles channels. ResNet keeps channels unchanged (or uses $1 \\times 1$ projection).</span>\n* <span style=\"font-size: 14px;\">**Purpose:** U-Net fuses multi-scale features for spatial precision. ResNet enables gradient flow for training depth.</span>\n* <span style=\"font-size: 14px;\">**Crop requirement:** U-Net requires spatial cropping with valid convolutions. ResNet never requires cropping.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n* <span style=\"font-size: 14px;\">**Cropping the decoder instead of the encoder.** The encoder feature map is always the larger tensor at each level. Cropping the decoder would make it even smaller, leaving a size mismatch. Always crop the larger tensor (encoder) to match the smaller one (decoder).</span>\n* <span style=\"font-size: 14px;\">**Off-center cropping.** Computing the offset as $H_e - H_d$ instead of $(H_e - H_d) / 2$ removes all excess pixels from one side only, producing a misaligned spatial region. Encoder and decoder features would correspond to different spatial locations, degrading segmentation quality.</span>\n* <span style=\"font-size: 14px;\">**Concatenating along the wrong axis.** Concatenation must be along the channel axis (dimension 1 in NCHW, dimension 0 in CHW). Concatenating along a spatial axis doubles the height or width instead of channels, producing wrong dimensions that crash subsequent convolutions.</span>\n* <span style=\"font-size: 14px;\">**Forgetting that cropping discards border information.** Cropped encoder pixels are permanently lost. The output segmentation is smaller than the input. Implementations assuming same-size input and output will produce artifacts or missing predictions at image borders.</span>\n* <span style=\"font-size: 14px;\">**Assuming encoder and decoder always have equal channels.** The original U-Net has $C_e = C_d$, but variants may use asymmetric channel counts. The subsequent convolution must be configured for the actual $C_e + C_d$, not hardcoded to $2 \\times C_d$.</span>\n* <span style=\"font-size: 14px;\">**Odd size differences causing non-integer crop offsets.** If $(H_e - H_d)$ is odd, integer division truncates, introducing a half-pixel spatial misalignment. The original U-Net ensures even differences by construction, but arbitrary input sizes may not.</span>\n* <span style=\"font-size: 14px;\">**Using padded convolutions but still cropping.** Modern U-Net implementations use same-padding, eliminating the spatial mismatch. Applying a crop with same-padding incorrectly discards valid encoder border information.</span>\n\n---",
+  "hints": [
+    "Use half the spatial shape difference as each starting offset.",
+    "Slice to the decoder size before np.concatenate along axis -1."
+  ],
+  "constraints": "- Both inputs use NHWC layout and dtype float64.\n- Batch sizes are equal.\n- Encoder height and width are at least the decoder height and width.\n- Channel counts are positive.",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef crop_and_concat(encoder_features: np.ndarray,\n                    decoder_features: np.ndarray) -> np.ndarray:\n    \"\"\"\n    Returns the centered encoder crop concatenated with decoder features.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-03T21:31:42.316Z",
+  "updatedAt": "2026-02-21T17:14:53.389Z",
+  "topicId": "unet-skip-connection",
+  "paperSnippet": "\"To allow a seamless tiling of the output segmentation map, it is important to select the input tile size such that all 2Ã2 max-pooling operations are applied to a layer with an even x- and y-size. The high resolution features from the contracting path are combined with the upsampled output.\"",
+  "visualizationComponent": "UNetSkipConnectionViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **U-Net Skip Connections** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef crop_and_concat(encoder_features: np.ndarray, decoder_features: np.ndarray) -> np.ndarray:\n    enc = np.asarray(encoder_features, dtype=float)\n    dec = np.asarray(decoder_features, dtype=float)\n    H, W = enc.shape[1], enc.shape[2]\n    target_h, target_w = dec.shape[1], dec.shape[2]\n    start_h = (H - target_h) // 2\n    start_w = (W - target_w) // 2\n    cropped_enc = enc[:, start_h:start_h+target_h, start_w:start_w+target_w, :]\n    merged = np.concatenate([cropped_enc, dec], axis=-1)\n    return np.round(merged, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "public-1",
+      "name": "Centered crop",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                20,
+                21
+              ],
+              [
+                22,
+                23
+              ]
+            ],
+            [
+              [
+                24,
+                25
+              ],
+              [
+                26,
+                27
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              20.0,
+              21.0
+            ],
+            [
+              7.0,
+              22.0,
+              23.0
+            ]
+          ],
+          [
+            [
+              10.0,
+              24.0,
+              25.0
+            ],
+            [
+              11.0,
+              26.0,
+              27.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "public-2",
+      "name": "Equal spatial size",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                9
+              ],
+              [
+                10
+              ]
+            ],
+            [
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1,
+                2
+              ],
+              [
+                3,
+                4
+              ]
+            ],
+            [
+              [
+                5,
+                6
+              ],
+              [
+                7,
+                8
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.0,
+              2.0,
+              9.0
+            ],
+            [
+              3.0,
+              4.0,
+              10.0
+            ]
+          ],
+          [
+            [
+              5.0,
+              6.0,
+              11.0
+            ],
+            [
+              7.0,
+              8.0,
+              12.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "public-3",
+      "name": "Rectangular crop",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                9
+              ],
+              [
+                10
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.0,
+              9.0
+            ],
+            [
+              3.0,
+              10.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                20,
+                21
+              ],
+              [
+                22,
+                23
+              ]
+            ],
+            [
+              [
+                24,
+                25
+              ],
+              [
+                26,
+                27
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              20.0,
+              21.0
+            ],
+            [
+              7.0,
+              22.0,
+              23.0
+            ]
+          ],
+          [
+            [
+              10.0,
+              24.0,
+              25.0
+            ],
+            [
+              11.0,
+              26.0,
+              27.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                9
+              ],
+              [
+                10
+              ]
+            ],
+            [
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1,
+                2
+              ],
+              [
+                3,
+                4
+              ]
+            ],
+            [
+              [
+                5,
+                6
+              ],
+              [
+                7,
+                8
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.0,
+              2.0,
+              9.0
+            ],
+            [
+              3.0,
+              4.0,
+              10.0
+            ]
+          ],
+          [
+            [
+              5.0,
+              6.0,
+              11.0
+            ],
+            [
+              7.0,
+              8.0,
+              12.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                9
+              ],
+              [
+                10
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.0,
+              9.0
+            ],
+            [
+              3.0,
+              10.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                20,
+                21
+              ],
+              [
+                22,
+                23
+              ]
+            ],
+            [
+              [
+                24,
+                25
+              ],
+              [
+                26,
+                27
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              20.0,
+              21.0
+            ],
+            [
+              7.0,
+              22.0,
+              23.0
+            ]
+          ],
+          [
+            [
+              10.0,
+              24.0,
+              25.0
+            ],
+            [
+              11.0,
+              26.0,
+              27.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                9
+              ],
+              [
+                10
+              ]
+            ],
+            [
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1,
+                2
+              ],
+              [
+                3,
+                4
+              ]
+            ],
+            [
+              [
+                5,
+                6
+              ],
+              [
+                7,
+                8
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.0,
+              2.0,
+              9.0
+            ],
+            [
+              3.0,
+              4.0,
+              10.0
+            ]
+          ],
+          [
+            [
+              5.0,
+              6.0,
+              11.0
+            ],
+            [
+              7.0,
+              8.0,
+              12.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                9
+              ],
+              [
+                10
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.0,
+              9.0
+            ],
+            [
+              3.0,
+              10.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                20,
+                21
+              ],
+              [
+                22,
+                23
+              ]
+            ],
+            [
+              [
+                24,
+                25
+              ],
+              [
+                26,
+                27
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              20.0,
+              21.0
+            ],
+            [
+              7.0,
+              22.0,
+              23.0
+            ]
+          ],
+          [
+            [
+              10.0,
+              24.0,
+              25.0
+            ],
+            [
+              11.0,
+              26.0,
+              27.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                9
+              ],
+              [
+                10
+              ]
+            ],
+            [
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1,
+                2
+              ],
+              [
+                3,
+                4
+              ]
+            ],
+            [
+              [
+                5,
+                6
+              ],
+              [
+                7,
+                8
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.0,
+              2.0,
+              9.0
+            ],
+            [
+              3.0,
+              4.0,
+              10.0
+            ]
+          ],
+          [
+            [
+              5.0,
+              6.0,
+              11.0
+            ],
+            [
+              7.0,
+              8.0,
+              12.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                9
+              ],
+              [
+                10
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.0,
+              9.0
+            ],
+            [
+              3.0,
+              10.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                20,
+                21
+              ],
+              [
+                22,
+                23
+              ]
+            ],
+            [
+              [
+                24,
+                25
+              ],
+              [
+                26,
+                27
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              20.0,
+              21.0
+            ],
+            [
+              7.0,
+              22.0,
+              23.0
+            ]
+          ],
+          [
+            [
+              10.0,
+              24.0,
+              25.0
+            ],
+            [
+              11.0,
+              26.0,
+              27.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                9
+              ],
+              [
+                10
+              ]
+            ],
+            [
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1,
+                2
+              ],
+              [
+                3,
+                4
+              ]
+            ],
+            [
+              [
+                5,
+                6
+              ],
+              [
+                7,
+                8
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.0,
+              2.0,
+              9.0
+            ],
+            [
+              3.0,
+              4.0,
+              10.0
+            ]
+          ],
+          [
+            [
+              5.0,
+              6.0,
+              11.0
+            ],
+            [
+              7.0,
+              8.0,
+              12.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                9
+              ],
+              [
+                10
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.0,
+              9.0
+            ],
+            [
+              3.0,
+              10.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                20,
+                21
+              ],
+              [
+                22,
+                23
+              ]
+            ],
+            [
+              [
+                24,
+                25
+              ],
+              [
+                26,
+                27
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              20.0,
+              21.0
+            ],
+            [
+              7.0,
+              22.0,
+              23.0
+            ]
+          ],
+          [
+            [
+              10.0,
+              24.0,
+              25.0
+            ],
+            [
+              11.0,
+              26.0,
+              27.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                9
+              ],
+              [
+                10
+              ]
+            ],
+            [
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1,
+                2
+              ],
+              [
+                3,
+                4
+              ]
+            ],
+            [
+              [
+                5,
+                6
+              ],
+              [
+                7,
+                8
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.0,
+              2.0,
+              9.0
+            ],
+            [
+              3.0,
+              4.0,
+              10.0
+            ]
+          ],
+          [
+            [
+              5.0,
+              6.0,
+              11.0
+            ],
+            [
+              7.0,
+              8.0,
+              12.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                9
+              ],
+              [
+                10
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              2.0,
+              9.0
+            ],
+            [
+              3.0,
+              10.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                20,
+                21
+              ],
+              [
+                22,
+                23
+              ]
+            ],
+            [
+              [
+                24,
+                25
+              ],
+              [
+                26,
+                27
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              6.0,
+              20.0,
+              21.0
+            ],
+            [
+              7.0,
+              22.0,
+              23.0
+            ]
+          ],
+          [
+            [
+              10.0,
+              24.0,
+              25.0
+            ],
+            [
+              11.0,
+              26.0,
+              27.0
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "unet-skip-connection-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "decoder_features": [
+          [
+            [
+              [
+                9
+              ],
+              [
+                10
+              ]
+            ],
+            [
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ]
+          ]
+        ],
+        "encoder_features": [
+          [
+            [
+              [
+                1,
+                2
+              ],
+              [
+                3,
+                4
+              ]
+            ],
+            [
+              [
+                5,
+                6
+              ],
+              [
+                7,
+                8
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              1.0,
+              2.0,
+              9.0
+            ],
+            [
+              3.0,
+              4.0,
+              10.0
+            ]
+          ],
+          [
+            [
+              5.0,
+              6.0,
+              11.0
+            ],
+            [
+              7.0,
+              8.0,
+              12.0
+            ]
+          ]
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "crop_and_concat",
+    "runtime": "numpy",
+    "parameters": [
+      {
+        "name": "encoder_features",
+        "type": "array",
+        "example": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ],
+        "description": "Float64 encoder features in NHWC layout."
+      },
+      {
+        "name": "decoder_features",
+        "type": "array",
+        "example": [
+          [
+            [
+              [
+                20,
+                21
+              ],
+              [
+                22,
+                23
+              ]
+            ],
+            [
+              [
+                24,
+                25
+              ],
+              [
+                26,
+                27
+              ]
+            ]
+          ]
+        ],
+        "description": "Float64 decoder features in NHWC layout."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "unet-skip-connection",
+    "name": "U-Net Skip Connections",
+    "description": "Center crop + concatenate",
+    "color": "#06b6d4"
+  },
+  "paper": {
+    "id": "unet",
+    "title": "U-Net: Convolutional Networks for Biomedical Image Segmentation",
+    "authors": "Ronneberger et al., 2015",
+    "year": 2015,
+    "paperUrl": "https://arxiv.org/abs/1505.04597",
+    "visualizationComponent": "UnetArchViz"
+  },
+  "navigation": {
+    "index": 3,
+    "total": 6,
+    "prev": "unet-decoder-block",
+    "next": "unet-bottleneck"
+  },
+  "cleanTitle": ""
+}

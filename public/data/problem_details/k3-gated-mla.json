@@ -1,0 +1,1337 @@
+{
+  "id": "k3-gated-mla",
+  "title": "Gated MLA",
+  "description": "Gated Multi-head Latent Attention compresses each hidden token once and reconstructs keys and values when attention runs. Let hidden states $X$ have shape $(B,S,D)$, let $H$ be the number of heads, let $D_h=D/H$, and let $L$ be the latent width. The projections produce\n\n$$\nQ=XW_q^{\\mathsf T}\\in\\mathbb{R}^{B\\times S\\times D}.\n$$\n\n$$\nC=XW_c^{\\mathsf T}\\in\\mathbb{R}^{B\\times S\\times L}.\n$$\n\n$$\nK=CW_k^{\\mathsf T},\\qquad V=CW_v^{\\mathsf T},\n$$\n\nwhere both $K$ and $V$ have shape $(B,S,D)$. Split $Q$, $K$, and $V$ into $H$ heads of width $D_h$. For each head, compute\n\n$$\nA=\\operatorname{softmax}\\left(\\frac{QK^{\\mathsf T}}{\\sqrt{D_h}}+M\\right),\n$$\n\nwhere $M$ masks later sequence positions when causal mode is enabled and is zero otherwise. These layers use no positional encoding. Concatenate the head contexts into $\\widetilde{O}\\in\\mathbb{R}^{B\\times S\\times D}$, then apply the channel gate and output projection:\n\n$$\nY=\\left[\\operatorname{sigmoid}(XW_g^{\\mathsf T})\\odot\\widetilde{O}\\right]W_o^{\\mathsf T}.\n$$\n\nReturn a dictionary with output and latent_cache. The output has shape $(B,S,D)$, and the cache has shape $(B,S,L)$; both preserve the input floating-point dtype and device.",
+  "seoDescription": "Build Kimi K3 Gated MLA with low-rank query and KV projections, per-head gating, RoPE inputs, and latent caching.",
+  "examples": [
+    "Input: hidden_states = [[[2]]], query_projection = [[1]], latent_down_projection = [[1]], key_up_projection = [[1]], value_up_projection = [[1]], output_gate_projection = [[0]], output_projection = [[1]], num_heads = 1, causal = true\n\nOutput: {\"output\": tensor([[[1.0]]]), \"latent_cache\": tensor([[[2.0]]])}\n\nExplanation: The token is cached as the scalar latent value 2. Single-token attention reads that value, and the output gate scales it by 0.5.",
+    "Input: hidden states shape (1, 2, 2), latent width = 1, number of heads = 1, causal = True\n\nOutput: {\"output\": tensor of shape (1, 2, 2), \"latent_cache\": tensor of shape (1, 2, 1)}",
+    "Input: hidden states shape (1, 3, 2), latent width = 1, number of heads = 2, causal = False\n\nOutput: {\"output\": tensor of shape (1, 3, 2), \"latent_cache\": tensor of shape (1, 3, 1)}"
+  ],
+  "requirements": "- Return a dictionary with exactly output and latent_cache.\n- The output has the same shape, dtype, and device as the hidden states.\n- The cache shape is (batch, sequence, latent width).\n- Do not mutate any input tensor.",
+  "theory": "# Gated MLA\n\nGated Multi-head Latent Attention is ordinary global attention with a compact storage path and a learned output gate. Each token is compressed into one latent vector. Keys and values are reconstructed from that latent representation when attention runs, so the model does not need separate full-width cached content for every head.\n\n## Start from familiar attention\n\nAttention still follows the usual story. A query describes what a token wants, keys describe what can be matched, and values contain the information returned. For each head, scaled dot-product attention computes\n\n$$\nA = \\operatorname{softmax}\\left(\\frac{QK^{\\mathsf T}}{\\sqrt{D_h}} + M\\right)\n$$\n\nand the head context is $AV$. The mask $M$ blocks later positions in causal mode. Softmax is taken over key positions so every query gets a distribution over the tokens it may read.\n\nWhat changes is how keys and values are produced. Queries come directly from the hidden states, while each token first creates a latent representation\n\n$$\nC = XW_c^{\\mathsf T}\n$$\n\nThe latent vector is then expanded in two different ways:\n\n$$\nK=CW_k^{\\mathsf T}, \\qquad V=CW_v^{\\mathsf T}\n$$\n\nOne compressed vector therefore carries the source information needed to reconstruct both keys and values. The function returns this latent sequence as the cache.\n\n## Why the latent representation helps\n\nWithout compression, storing keys and values means retaining a larger set of features for every earlier token. MLA stores the smaller latent vector instead. The key and value up-projections can recover the representations needed by attention.\n\nFor this problem, do not confuse compression with averaging. Every token keeps its own latent vector, and the sequence length remains unchanged. Only the feature width is reduced.\n\nKimi K3 periodically uses Gated MLA for unrestricted global content interaction. These layers use no explicit positional encoding. The exercise therefore does not add rotary embeddings, learned position vectors, or any other position transformation. Causal order is enforced only by the mask when causal mode is enabled.\n\n## Split attention into heads\n\nThe projected query, key, and value tensors each have model width. Divide that width evenly across the requested number of heads. Each head performs its own attention calculation using feature width $D_h$.\n\nThe heads must remain independent until their context vectors have been computed. Afterward, place their features back beside each token to recover model width. This is a reshape and transpose operation, not a sum across heads.\n\n## The channel-wise output gate\n\nThe ungated attention context is multiplied by a gate derived from the original hidden state:\n\n$$\nY = \\left[\\operatorname{sigmoid}(XW_g^{\\mathsf T})\\odot\\widetilde{O}\\right]W_o^{\\mathsf T}\n$$\n\nSigmoid gives one number between zero and one for each token channel. A channel with a gate near zero is suppressed, while a gate near one passes through almost unchanged. Because the gate has full model width, different channels of the same token can be controlled differently.\n\nApply this gate before the final output projection. The projection then mixes the gated channels into the final representation.\n\n## A small causal example\n\nConsider three tokens. In causal mode, the first query may attend only to token 1. The second may attend to tokens 1 and 2. The third may attend to all three. Each head produces a lower-triangular attention pattern because later key positions are blocked before softmax.\n\nSuppose one channel of the joined attention context for token 2 is $1.6$, and its gate logit is zero. Sigmoid of zero is $0.5$, so that channel becomes $0.8$ before the output projection. The gate changes what is passed onward without changing the attention probabilities themselves.\n\nIn non-causal mode, all three queries may use all three keys. The latent cache is identical in both cases because the cache depends on the hidden states and latent down-projection, not on the mask.\n\n## Implementation order\n\n- Project the hidden states into queries and latent vectors.\n- Expand the latent vectors into keys and values.\n- Split query, key, and value features into heads.\n- Compute scaled scores, apply a causal mask only when requested, and normalize over key positions.\n- Combine values, join the head outputs, and restore model width.\n- Compute the channel gate from the original hidden states, multiply it with the joined context, and apply the output projection.\n- Return the output followed by the latent cache.\n\n## Common mistakes to avoid\n\n- **Caching reconstructed keys and values.** This task returns the compact latent tensor $C$.\n- **Adding positional encoding.** The problem specifically implements the NoPE form used here.\n- **Masking after softmax.** Blocked positions must be removed before normalization.\n- **Applying one gate per token.** The gate is channel-wise and has model width.\n- **Gating after the output projection.** Follow the stated order: context, gate, then output projection.\n",
+  "hints": [
+    "Reshape projected tensors to batch, heads, sequence, head width before computing attention.",
+    "A causal mask excludes positions above the main diagonal before softmax.",
+    "Merge the head outputs back to model width before applying the channel gate and output projection."
+  ],
+  "constraints": "- Model width is divisible by the positive head count.\n- Projection matrices have compatible input and output widths.\n- The causal flag is a Boolean value.\n- All tensor inputs share a floating-point dtype and device.",
+  "difficulty": "Hard",
+  "starterCode": "import math\nimport torch\n\ndef gated_mla(hidden_states: torch.Tensor, query_projection: torch.Tensor, latent_down_projection: torch.Tensor, key_up_projection: torch.Tensor, value_up_projection: torch.Tensor, output_gate_projection: torch.Tensor, output_projection: torch.Tensor, num_heads: int, causal: bool = True) -> dict[str, torch.Tensor]:\n    \"\"\"\n    Returns a dictionary containing gated attention output and the latent key-value cache.\n    \"\"\"\n    pass",
+  "createdAt": "2026-07-29T07:43:16.647Z",
+  "updatedAt": "2026-09-03T19:22:49.691Z",
+  "topicId": "k3-gated-mla",
+  "paperSnippet": "\"channel-wise full-rank output gate\"",
+  "visualizationComponent": "K3GatedMLAViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Gated MLA** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport math\nimport torch\n\ndef gated_mla(hidden_states: torch.Tensor, query_projection: torch.Tensor, latent_down_projection: torch.Tensor, key_up_projection: torch.Tensor, value_up_projection: torch.Tensor, output_gate_projection: torch.Tensor, output_projection: torch.Tensor, num_heads: int, causal: bool = True) -> dict[str, torch.Tensor]:\n    X = hidden_states if isinstance(hidden_states, torch.Tensor) else torch.tensor(hidden_states, dtype=torch.float64)\n    Wq = query_projection if isinstance(query_projection, torch.Tensor) else torch.tensor(query_projection, dtype=torch.float64)\n    Wc = latent_down_projection if isinstance(latent_down_projection, torch.Tensor) else torch.tensor(latent_down_projection, dtype=torch.float64)\n    Wk = key_up_projection if isinstance(key_up_projection, torch.Tensor) else torch.tensor(key_up_projection, dtype=torch.float64)\n    Wv = value_up_projection if isinstance(value_up_projection, torch.Tensor) else torch.tensor(value_up_projection, dtype=torch.float64)\n    Wg = output_gate_projection if isinstance(output_gate_projection, torch.Tensor) else torch.tensor(output_gate_projection, dtype=torch.float64)\n    Wo = output_projection if isinstance(output_projection, torch.Tensor) else torch.tensor(output_projection, dtype=torch.float64)\n    H = int(num_heads)\n    \n    B, S, D = X.shape\n    Dh = D // H\n    \n    Q = X @ Wq.T\n    C = X @ Wc.T\n    K = C @ Wk.T\n    V = C @ Wv.T\n    \n    Q_h = Q.view(B, S, H, Dh).transpose(1, 2)\n    K_h = K.view(B, S, H, Dh).transpose(1, 2)\n    V_h = V.view(B, S, H, Dh).transpose(1, 2)\n    \n    scores = (Q_h @ K_h.transpose(-1, -2)) / math.sqrt(Dh)\n    if causal:\n        i = torch.arange(S).unsqueeze(1)\n        j = torch.arange(S).unsqueeze(0)\n        mask = torch.where(j > i, float('-inf'), 0.0)\n        scores = scores + mask\n        \n    A = torch.softmax(scores, dim=-1)\n    head_out = A @ V_h\n    O_tilde = head_out.transpose(1, 2).reshape(B, S, D)\n    \n    gate = torch.sigmoid(X @ Wg.T)\n    Y = (gate * O_tilde) @ Wo.T\n    return {\n        \"output\": torch.round(Y * 1e6) / 1e6,\n        \"latent_cache\": torch.round(C * 1e6) / 1e6\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Single token latent cache",
+      "inputs": {
+        "causal": true,
+        "num_heads": 1,
+        "hidden_states": [
+          [
+            [
+              2
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            1
+          ]
+        ],
+        "key_up_projection": [
+          [
+            1
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "value_up_projection": [
+          [
+            1
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            0
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0
+            ]
+          ]
+        ],
+        "latent_cache": [
+          [
+            [
+              2.0
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Causal two-token attention",
+      "inputs": {
+        "causal": true,
+        "num_heads": 1,
+        "hidden_states": [
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "key_up_projection": [
+          [
+            1
+          ],
+          [
+            0.5
+          ]
+        ],
+        "output_projection": [
+          [
+            1,
+            0.2
+          ],
+          [
+            -0.3,
+            0.8
+          ]
+        ],
+        "value_up_projection": [
+          [
+            0.5
+          ],
+          [
+            1
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            1,
+            0.5
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            0.5,
+            -0.5
+          ],
+          [
+            0.25,
+            0.75
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              0.423665,
+              0.356372
+            ],
+            [
+              0.250609,
+              0.375761
+            ]
+          ]
+        ],
+        "latent_cache": [
+          [
+            [
+              1.0
+            ],
+            [
+              0.5
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-3",
+      "name": "Two heads without causal masking",
+      "inputs": {
+        "causal": false,
+        "num_heads": 2,
+        "hidden_states": [
+          [
+            [
+              1,
+              -0.5
+            ],
+            [
+              0.25,
+              1.5
+            ],
+            [
+              -0.75,
+              0.5
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            0.8,
+            0.1
+          ],
+          [
+            -0.2,
+            1
+          ]
+        ],
+        "key_up_projection": [
+          [
+            1
+          ],
+          [
+            -0.5
+          ]
+        ],
+        "output_projection": [
+          [
+            0.9,
+            -0.2
+          ],
+          [
+            0.3,
+            0.7
+          ]
+        ],
+        "value_up_projection": [
+          [
+            0.75
+          ],
+          [
+            1.25
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            0.5,
+            0.25
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            0.4,
+            0.2
+          ],
+          [
+            -0.1,
+            0.6
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              0.084742,
+              0.122291
+            ],
+            [
+              0.076633,
+              0.110587
+            ],
+            [
+              0.018931,
+              0.104162
+            ]
+          ]
+        ],
+        "latent_cache": [
+          [
+            [
+              0.375
+            ],
+            [
+              0.5
+            ],
+            [
+              -0.25
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "k3-gated-mla-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "causal": 2,
+        "num_heads": 2,
+        "hidden_states": [
+          [
+            [
+              4
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            2
+          ]
+        ],
+        "key_up_projection": [
+          [
+            2
+          ]
+        ],
+        "output_projection": [
+          [
+            2
+          ]
+        ],
+        "value_up_projection": [
+          [
+            2
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            2
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0
+            ]
+          ]
+        ],
+        "latent_cache": [
+          [
+            [
+              2.0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "causal": 0,
+        "num_heads": 1,
+        "hidden_states": [
+          [
+            [
+              1
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            1
+          ]
+        ],
+        "key_up_projection": [
+          [
+            1
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "value_up_projection": [
+          [
+            1
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": "tensor([[[0.7311]]], dtype=torch.float64)",
+        "latent_cache": "tensor([[[1.]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "causal": 2,
+        "num_heads": 1,
+        "hidden_states": [
+          [
+            [
+              2
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            1
+          ]
+        ],
+        "key_up_projection": [
+          [
+            1
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "value_up_projection": [
+          [
+            1
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": "tensor([[[1.7616]]], dtype=torch.float64)",
+        "latent_cache": "tensor([[[2.]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "causal": 2,
+        "num_heads": 2,
+        "hidden_states": [
+          [
+            [
+              3
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            2
+          ]
+        ],
+        "key_up_projection": [
+          [
+            2
+          ]
+        ],
+        "output_projection": [
+          [
+            2
+          ]
+        ],
+        "value_up_projection": [
+          [
+            2
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            2
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0
+            ]
+          ]
+        ],
+        "latent_cache": [
+          [
+            [
+              2.0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "causal": 3,
+        "num_heads": 3,
+        "hidden_states": [
+          [
+            [
+              6
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            3
+          ]
+        ],
+        "key_up_projection": [
+          [
+            3
+          ]
+        ],
+        "output_projection": [
+          [
+            3
+          ]
+        ],
+        "value_up_projection": [
+          [
+            3
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            3
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0
+            ]
+          ]
+        ],
+        "latent_cache": [
+          [
+            [
+              2.0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "causal": 0,
+        "num_heads": 1,
+        "hidden_states": [
+          [
+            [
+              1
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            1
+          ]
+        ],
+        "key_up_projection": [
+          [
+            1
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "value_up_projection": [
+          [
+            1
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": "tensor([[[0.7311]]], dtype=torch.float64)",
+        "latent_cache": "tensor([[[1.]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "causal": 3,
+        "num_heads": 2,
+        "hidden_states": [
+          [
+            [
+              4
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            2
+          ]
+        ],
+        "key_up_projection": [
+          [
+            2
+          ]
+        ],
+        "output_projection": [
+          [
+            2
+          ]
+        ],
+        "value_up_projection": [
+          [
+            2
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            2
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0
+            ]
+          ]
+        ],
+        "latent_cache": [
+          [
+            [
+              2.0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "causal": 4,
+        "num_heads": 4,
+        "hidden_states": [
+          [
+            [
+              8
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            4
+          ]
+        ],
+        "key_up_projection": [
+          [
+            4
+          ]
+        ],
+        "output_projection": [
+          [
+            4
+          ]
+        ],
+        "value_up_projection": [
+          [
+            4
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            4
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0
+            ]
+          ]
+        ],
+        "latent_cache": [
+          [
+            [
+              2.0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "causal": 1,
+        "num_heads": 1,
+        "hidden_states": [
+          [
+            [
+              2
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            1
+          ]
+        ],
+        "key_up_projection": [
+          [
+            1
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "value_up_projection": [
+          [
+            1
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": "tensor([[[1.]]], dtype=torch.float64)",
+        "latent_cache": "tensor([[[2.]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "causal": 1,
+        "num_heads": 1,
+        "hidden_states": [
+          [
+            [
+              2
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            1
+          ]
+        ],
+        "key_up_projection": [
+          [
+            1
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "value_up_projection": [
+          [
+            1
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": "tensor([[[1.7616]]], dtype=torch.float64)",
+        "latent_cache": "tensor([[[2.]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "causal": 5,
+        "num_heads": 5,
+        "hidden_states": [
+          [
+            [
+              10
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            5
+          ]
+        ],
+        "key_up_projection": [
+          [
+            5
+          ]
+        ],
+        "output_projection": [
+          [
+            5
+          ]
+        ],
+        "value_up_projection": [
+          [
+            5
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            5
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0
+            ]
+          ]
+        ],
+        "latent_cache": [
+          [
+            [
+              2.0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "causal": 4,
+        "num_heads": 3,
+        "hidden_states": [
+          [
+            [
+              6
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            3
+          ]
+        ],
+        "key_up_projection": [
+          [
+            3
+          ]
+        ],
+        "output_projection": [
+          [
+            3
+          ]
+        ],
+        "value_up_projection": [
+          [
+            3
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            3
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0
+            ]
+          ]
+        ],
+        "latent_cache": [
+          [
+            [
+              2.0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "causal": 1,
+        "num_heads": 1,
+        "hidden_states": [
+          [
+            [
+              2
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            1
+          ]
+        ],
+        "key_up_projection": [
+          [
+            1
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "value_up_projection": [
+          [
+            1
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": "tensor([[[1.7616]]], dtype=torch.float64)",
+        "latent_cache": "tensor([[[2.]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "causal": 6,
+        "num_heads": 6,
+        "hidden_states": [
+          [
+            [
+              12
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            6
+          ]
+        ],
+        "key_up_projection": [
+          [
+            6
+          ]
+        ],
+        "output_projection": [
+          [
+            6
+          ]
+        ],
+        "value_up_projection": [
+          [
+            6
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            6
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0
+            ]
+          ]
+        ],
+        "latent_cache": [
+          [
+            [
+              2.0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "causal": 5,
+        "num_heads": 4,
+        "hidden_states": [
+          [
+            [
+              8
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            4
+          ]
+        ],
+        "key_up_projection": [
+          [
+            4
+          ]
+        ],
+        "output_projection": [
+          [
+            4
+          ]
+        ],
+        "value_up_projection": [
+          [
+            4
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            4
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0
+            ]
+          ]
+        ],
+        "latent_cache": [
+          [
+            [
+              2.0
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "causal": 1,
+        "num_heads": 1,
+        "hidden_states": [
+          [
+            [
+              2
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            1
+          ]
+        ],
+        "key_up_projection": [
+          [
+            1
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "value_up_projection": [
+          [
+            1
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": "tensor([[[1.7616]]], dtype=torch.float64)",
+        "latent_cache": "tensor([[[2.]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    },
+    {
+      "id": "k3-gated-mla-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "causal": 0,
+        "num_heads": 1,
+        "hidden_states": [
+          [
+            [
+              1
+            ]
+          ]
+        ],
+        "query_projection": [
+          [
+            1
+          ]
+        ],
+        "key_up_projection": [
+          [
+            1
+          ]
+        ],
+        "output_projection": [
+          [
+            1
+          ]
+        ],
+        "value_up_projection": [
+          [
+            1
+          ]
+        ],
+        "latent_down_projection": [
+          [
+            1
+          ]
+        ],
+        "output_gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": "tensor([[[0.7311]]], dtype=torch.float64)",
+        "latent_cache": "tensor([[[1.]]], dtype=torch.float64)"
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "gated_mla",
+    "runtime": "pytorch",
+    "parameters": [
+      {
+        "name": "hidden_states",
+        "type": "array",
+        "example": "[[[2]]]",
+        "description": "Input token representations."
+      },
+      {
+        "name": "query_projection",
+        "type": "array",
+        "example": "[[1]]",
+        "description": "Query projection matrix."
+      },
+      {
+        "name": "latent_down_projection",
+        "type": "array",
+        "example": "[[1]]",
+        "description": "Latent cache projection."
+      },
+      {
+        "name": "key_up_projection",
+        "type": "array",
+        "example": "[[1]]",
+        "description": "Content-key reconstruction matrix."
+      },
+      {
+        "name": "value_up_projection",
+        "type": "array",
+        "example": "[[1]]",
+        "description": "Value reconstruction matrix."
+      },
+      {
+        "name": "output_gate_projection",
+        "type": "array",
+        "example": "[[0]]",
+        "description": "Channel gate projection."
+      },
+      {
+        "name": "output_projection",
+        "type": "array",
+        "example": "[[1]]",
+        "description": "Final output projection."
+      },
+      {
+        "name": "num_heads",
+        "type": "number",
+        "example": "1",
+        "description": "Attention head count."
+      },
+      {
+        "name": "causal",
+        "type": "boolean",
+        "example": "true",
+        "description": "Whether future positions are masked."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "k3-gated-mla",
+    "name": "Gated MLA",
+    "description": "Build latent global attention with no positional encoding and a channel-wise output gate.",
+    "color": "#3b82f6"
+  },
+  "paper": {
+    "id": "kimik3",
+    "title": "Kimi K3",
+    "authors": "Kimi Team",
+    "year": 2026,
+    "paperUrl": "https://github.com/MoonshotAI/Kimi-K3/blob/main/k3_tech_report.pdf",
+    "visualizationComponent": "KimiK3ArchViz"
+  },
+  "navigation": {
+    "index": 2,
+    "total": 11,
+    "prev": "k3-kda-recurrence",
+    "next": "k3-full-attnres"
+  },
+  "cleanTitle": ""
+}

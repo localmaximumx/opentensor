@@ -1,0 +1,491 @@
+{
+  "id": "bootstrap-mean",
+  "title": "Bootstrap Mean & Confidence Interval",
+  "description": "Estimate a dataset mean and a percentile confidence interval by bootstrap resampling. For each of $B$ resamples, draw $N$ observations with replacement and compute:\n\n$$\n\\bar{x}^{*(b)}=\\frac{1}{N}\\sum_{i=1}^{N}x_i^{*(b)}\n$$\n\nFor confidence level $c$, set $\\alpha=(1-c)/2$ and use the $\\alpha$ and $1-\\alpha$ quantiles of the bootstrap means. Here, $N$ is the dataset size and $b$ indexes a resample. Use seed to initialize np.random.default_rng. Return bootstrap_mean, lower, and upper as Python floats in a dictionary.",
+  "seoDescription": "Estimate a sample mean and confidence interval through reproducible bootstrap resampling of numeric observations.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0, 4.0], n_bootstrap = 1000, ci = 0.9, seed = 42\n\nOutput: {\"bootstrap_mean\": 2.497, \"lower\": 1.5, \"upper\": 3.5}\n\nExplanation: The seeded resamples form a reproducible distribution of 1,000 sample means.",
+    "Input: x = [5.0], n_bootstrap = 100, ci = 0.95, seed = 123\n\nOutput: {\"bootstrap_mean\": 5, \"lower\": 5, \"upper\": 5}"
+  ],
+  "requirements": "* Draw every bootstrap sample with replacement\n* Generate all resample indices from np.random.default_rng(seed)\n* Compute percentile bounds for the requested confidence level\n* Return exactly bootstrap_mean, lower, and upper in a dictionary",
+  "theory": "## Understanding the Theory: Bootstrap Mean & Confidence Interval\n\n### Core Intuition: Why Do We Need This?\nReal-world data is inherently stochastic and incomplete. Probability theory and statistics provide principled methods to quantify uncertainty, model data-generating distributions, and evaluate confidence in empirical predictions. **Bootstrap Mean & Confidence Interval** computes statistical moments, likelihoods, or uncertainty metrics across observation samples.\n\nIn this problem, the objective is to implement **Bootstrap Mean & Confidence Interval** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\bar{x}^{*(b)}=\\frac{1}{N}\\sum_{i=1}^{N}x_i^{*(b)}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Log-Space Calculations**: Probabilities can be extremely small; computing log-likelihoods prevents floating-point underflow when multiplying many probability densities.\n* **Maximum Likelihood Estimation**: Many machine learning loss functions (like Cross-Entropy and Mean Squared Error) directly derive from minimizing negative log-likelihood under specific distributional assumptions.\n* **Outlier Sensitivity**: High-order moments (skewness and kurtosis) reveal distribution heavy-tails, signaling when robust statistics or clipping are necessary.",
+  "hints": [
+    "Create an index matrix with rng.integers(0, x.size, size=(n_bootstrap, x.size)).",
+    "Take x[indices].mean(axis=1) before applying np.quantile."
+  ],
+  "constraints": "* x is a nonempty one-dimensional numeric list\n* n_bootstrap is positive and 0 < ci < 1\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef bootstrap_mean(x: list, n_bootstrap: int = 1000, ci: float = 0.95, seed: int = 0) -> dict:\n    \"\"\"\n    Returns a dictionary with bootstrap_mean, lower, and upper.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-15T16:17:00.276Z",
+  "updatedAt": "2026-08-23T10:06:15.807Z",
+  "solution": "### 💡 Intuition & Approach\nGenerates empirical sampling distributions via resampling with replacement to estimate confidence bounds.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef bootstrap_mean(x: list, n_bootstrap: int = 1000, ci: float = 0.95, seed: int = 42) -> dict:\n    arr = np.array(x, dtype=float)\n    rng = np.random.default_rng(seed)\n    n = len(arr)\n    boot_means = [np.mean(rng.choice(arr, size=n, replace=True)) for _ in range(n_bootstrap)]\n    alpha = (1.0 - ci) / 2.0\n    lower = float(np.percentile(boot_means, alpha * 100))\n    upper = float(np.percentile(boot_means, (1.0 - alpha) * 100))\n    return {\n        \"bootstrap_mean\": float(round(np.mean(boot_means), 3)),\n        \"lower\": float(round(lower, 4)),\n        \"upper\": float(round(upper, 4))\n    }\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "BootstrapMeanViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Basic array (4 elements)",
+      "inputs": {
+        "x": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "ci": 0.9,
+        "seed": 42,
+        "n_bootstrap": 1000
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "bootstrap_mean": 2.497,
+        "lower": 1.5,
+        "upper": 3.5
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Single element",
+      "inputs": {
+        "x": [
+          5
+        ],
+        "ci": 0.95,
+        "seed": 123,
+        "n_bootstrap": 100
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "bootstrap_mean": 5,
+        "lower": 5,
+        "upper": 5
+      }
+    },
+    {
+      "id": "bootstrap-mean-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          2,
+          4,
+          6,
+          8
+        ],
+        "ci": 1.8,
+        "seed": 84,
+        "n_bootstrap": 2000
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.497,
+        "lower": 1.5,
+        "upper": 3.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          0,
+          1,
+          2,
+          2
+        ],
+        "ci": 0.45,
+        "seed": 21,
+        "n_bootstrap": 500
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 1.267,
+        "lower": 1.0,
+        "upper": 1.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          -1,
+          -2,
+          -3,
+          -4
+        ],
+        "ci": -0.9,
+        "seed": -42,
+        "n_bootstrap": -1000
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.497,
+        "lower": 1.5,
+        "upper": 3.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          3,
+          6,
+          9,
+          12
+        ],
+        "ci": 2.7,
+        "seed": 126,
+        "n_bootstrap": 3000
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.497,
+        "lower": 1.5,
+        "upper": 3.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          2.0,
+          3.0,
+          4.0,
+          5.0
+        ],
+        "ci": 1.9,
+        "seed": 43.0,
+        "n_bootstrap": 1001.0
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.497,
+        "lower": 1.5,
+        "upper": 3.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          -1.0,
+          0.0,
+          1.0,
+          2.0
+        ],
+        "ci": -1.1,
+        "seed": 40.0,
+        "n_bootstrap": 998.0
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.497,
+        "lower": 1.5,
+        "upper": 3.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          4,
+          3,
+          2,
+          1
+        ],
+        "ci": 0.9,
+        "seed": 42,
+        "n_bootstrap": 1000
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.503,
+        "lower": 1.5,
+        "upper": 3.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          -1,
+          -2,
+          -3,
+          -4
+        ],
+        "ci": -0.9,
+        "seed": -42,
+        "n_bootstrap": -1000
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.497,
+        "lower": 1.5,
+        "upper": 3.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          10,
+          20,
+          30,
+          40
+        ],
+        "ci": 9.0,
+        "seed": 420,
+        "n_bootstrap": 10000
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.497,
+        "lower": 1.5,
+        "upper": 3.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ci": 0.09,
+        "seed": 4,
+        "n_bootstrap": 100
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 0.0,
+        "lower": 0.0,
+        "upper": 0.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          6.0,
+          7.0,
+          8.0,
+          9.0
+        ],
+        "ci": 5.9,
+        "seed": 47.0,
+        "n_bootstrap": 1005.0
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.497,
+        "lower": 1.5,
+        "upper": 3.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          2,
+          3,
+          4,
+          6
+        ],
+        "ci": 1.35,
+        "seed": 63,
+        "n_bootstrap": 1500
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.497,
+        "lower": 1.5,
+        "upper": 3.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          -2,
+          -4,
+          -6,
+          -8
+        ],
+        "ci": -1.8,
+        "seed": -84,
+        "n_bootstrap": -2000
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.497,
+        "lower": 1.5,
+        "upper": 3.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "ci": 0.225,
+        "seed": 10,
+        "n_bootstrap": 250
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 0.484,
+        "lower": 0.5,
+        "upper": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0,
+          2.0,
+          3.0
+        ],
+        "ci": -0.09999999999999998,
+        "seed": 41.0,
+        "n_bootstrap": 999.0
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.497,
+        "lower": 1.5,
+        "upper": 3.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          4,
+          8,
+          12,
+          16
+        ],
+        "ci": 3.6,
+        "seed": 168,
+        "n_bootstrap": 4000
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.497,
+        "lower": 1.5,
+        "upper": 3.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          1,
+          2,
+          2,
+          3
+        ],
+        "ci": 0.675,
+        "seed": 32,
+        "n_bootstrap": 750
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.019,
+        "lower": 1.75,
+        "upper": 2.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bootstrap-mean-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          5,
+          10,
+          15,
+          20
+        ],
+        "ci": 4.5,
+        "seed": 210,
+        "n_bootstrap": 5000
+      },
+      "expectedOutput": {
+        "bootstrap_mean": 2.497,
+        "lower": 1.5,
+        "upper": 3.5
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "bootstrap_mean",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": "[1, 2, 3, 4]",
+        "description": "Observed values"
+      },
+      {
+        "name": "n_bootstrap",
+        "type": "number",
+        "example": "1000",
+        "description": "Number of resamples"
+      },
+      {
+        "name": "ci",
+        "type": "number",
+        "example": "0.9",
+        "description": "Confidence level"
+      },
+      {
+        "name": "seed",
+        "type": "number",
+        "example": "42",
+        "description": "Random seed"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "sample-var-std",
+    "mean-median-mode",
+    "percentiles",
+    "t-test-one-sample",
+    "chi2-independence"
+  ],
+  "tags": [
+    "Probability and Statistics"
+  ],
+  "prevId": "matrix-trace",
+  "nextId": "rnn-step-forward",
+  "slug": "bootstrap-mean",
+  "cleanTitle": "Bootstrap Mean & Confidence Interval",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/bootstrap-mean",
+  "localUrl": "http://localhost:3000/problems/bootstrap-mean",
+  "studyPlan": null
+}

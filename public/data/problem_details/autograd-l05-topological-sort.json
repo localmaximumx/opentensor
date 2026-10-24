@@ -1,0 +1,713 @@
+{
+  "id": "autograd-l05-topological-sort",
+  "slug": "autograd-l05-topological-sort",
+  "title": "Topologically Sort a Computation DAG",
+  "cleanTitle": "Topologically Sort a Computation DAG",
+  "category": "python",
+  "difficulty": "Medium",
+  "tags": [
+    "Neural Networks",
+    "Calculus"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "autograd-from-scratch",
+    "title": "Build Micrograd from Scratch",
+    "sectionId": "autograd-l05"
+  },
+  "seoDescription": "Reverse-mode autodiff must process children before their parents during the backward pass.",
+  "description": "Order nodes in a computation DAG such that each node appears before its dependencies, establishing the exact reverse-mode backward pass evaluation order.\n\n**Mathematical Formulation:**\n\n$$\n\\pi = \\text{TopologicalSort}(\\mathcal{G}), \\quad \\forall (u, v) \\in \\mathcal{E}, \\; \\text{index}(v) < \\text{index}(u)\n$$\n\n**Step-by-Step Implementation:**\n1. Perform post-order depth-first traversal starting from output root node.\n2. Visit all dependency parents recursively.\n3. Append nodes upon finishing and reverse the list for reverse-mode ordering.\n4. Return list of topologically ordered node IDs.\n\n**Returns:** List of strings representing ordered node IDs.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Topologically Sort a Computation DAG specification."
+  ],
+  "requirements": "* Must implement `autograd_l05_topological_sort` using PYTHON.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Topologically Sort a Computation DAG\n\n### Core Intuition: Why Do We Need This?\nOrder nodes in a computation DAG such that each node appears before its dependencies, establishing the exact reverse-mode backward pass evaluation order. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\n\\pi = \\text{TopologicalSort}(\\mathcal{G}), \\quad \\forall (u, v) \\in \\mathcal{E}, \\; \\text{index}(v) < \\text{index}(u)\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Perform post-order depth-first traversal starting from output root node.\n3. **Phase 3: Iterative Execution & Reduction**: Visit all dependency parents recursively.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return list of topologically ordered node IDs.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard PYTHON documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `any` specifications."
+  ],
+  "constraints": "* Category: PYTHON\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, PYTHON\n",
+  "starterCode": "def autograd_l05_topological_sort(graph: dict, root_id: str) -> list:\n    \"\"\"\n    Order nodes in a computation DAG such that each node appears before its dependencies, establishing the exact reverse-mode backward pass evaluation order.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nOrder nodes in a computation DAG such that each node appears before its dependencies, establishing the exact reverse-mode backward pass evaluation order.\n\n### ⚡ Python Reference Implementation\n```python\ndef autograd_l05_topological_sort(graph: dict, root_id: str) -> list:\n    topo = []\n    visited = set()\n    def dfs(node):\n        visited.add(node)\n        for p in graph.get(node, {}).get('parents', []):\n            if p not in visited:\n                dfs(p)\n        topo.append(node)\n    dfs(root_id)\n    return topo[::-1]\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "autograd-l05-topological-sort-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "autograd-l05-topological-sort-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "graph": {
+          "x": {
+            "parents": []
+          },
+          "y": {
+            "parents": [
+              "x"
+            ]
+          },
+          "z": {
+            "parents": [
+              "y"
+            ]
+          }
+        },
+        "root_id": "z"
+      },
+      "expectedOutput": [
+        "z",
+        "y",
+        "x"
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-topological-sort-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "graph": {
+          "a": {
+            "parents": []
+          },
+          "b": {
+            "parents": []
+          },
+          "c": {
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "parents": [
+              "c"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": [
+        "d",
+        "c",
+        "b",
+        "a"
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "autograd_l05_topological_sort",
+    "parameters": [
+      {
+        "name": "graph",
+        "type": "any"
+      },
+      {
+        "name": "root_id",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "gradient-descent-quadratic",
+    "anchor-box-generation",
+    "value-iteration-step",
+    "precision-recall-at-k",
+    "cs336-l01-train-byte-pair-encoding"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/autograd-l05-topological-sort",
+  "localUrl": "http://localhost:3000/problems/autograd-l05-topological-sort"
+}

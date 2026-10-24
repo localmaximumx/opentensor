@@ -1,0 +1,1183 @@
+{
+  "id": "batch-generator",
+  "title": "Batch Shuffling & Mini-Batch Generator",
+  "description": "Shuffle matching feature and label arrays once, then yield consecutive mini-batches. Use np.random.default_rng(seed) to shuffle one index array and apply it to both inputs. Each yield must be a tuple (X_batch, y_batch) containing NumPy arrays. If drop_last is true, omit a final batch smaller than batch_size.",
+  "seoDescription": "Create shuffled mini-batches from NumPy feature and target arrays with reproducible ordering and final-batch handling.",
+  "examples": [
+    "Input: X = [0, 1, 2, 3, 4, 5, 6], y = [0, 1, 2, 3, 4, 5, 6], batch_size = 3, seed = 42, drop_last = False\n\nOutput: [[[3, 2, 6], [3, 2, 6]], [[4, 1, 5], [4, 1, 5]], [[0], [0]]]\n\nExplanation: One seeded permutation is sliced into batches of three, with the final single sample retained.",
+    "Input: X = [0, 1, 2, 3, 4, 5, 6], y = [0, 1, 2, 3, 4, 5, 6], batch_size = 3, seed = 42, drop_last = True\n\nOutput: [[[3, 2, 6], [3, 2, 6]], [[4, 1, 5], [4, 1, 5]]]"
+  ],
+  "requirements": "* Return a Python generator\n* Apply one seeded permutation to both X and y\n* Yield tuples of NumPy arrays\n* Respect drop_last without modifying the inputs",
+  "theory": "## Understanding the Theory: Batch Shuffling & Mini-Batch Generator\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **Batch Shuffling & Mini-Batch Generator** implements a core computational routine.\n\nIn this problem, the objective is to implement **Batch Shuffling & Mini-Batch Generator** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\mathcal{F}(x) = \\mathrm{transform}(x)\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "Shuffle np.arange(len(X)) with np.random.default_rng(seed).",
+    "Slice the shuffled indices inside range(0, len(indices), batch_size)."
+  ],
+  "constraints": "* X and y contain the same positive number of samples\n* batch_size is a positive integer\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef batch_generator(X: list, y: list, batch_size: int, seed: int = 42, drop_last: bool = False):\n    \"\"\"\n    Returns a generator of (X_batch, y_batch) tuples.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-09T14:33:44.196Z",
+  "updatedAt": "2026-03-05T16:57:37.777Z",
+  "solution": "### 💡 Intuition & Approach\nPermutes indices deterministically with a random seed and slices consecutive mini-batches of size $B$.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef batch_generator(X: list, y: list, batch_size: int, seed: int = 42, drop_last: bool = False):\n    rng = np.random.default_rng(seed)\n    n = len(X)\n    indices = np.arange(n)\n    rng.shuffle(indices)\n\n    batches = []\n    for i in range(0, n, batch_size):\n        batch_idx = indices[i:i + batch_size]\n        if drop_last and len(batch_idx) < batch_size:\n            continue\n        batch_x = [X[j] for j in batch_idx]\n        batch_y = [y[j] for j in batch_idx]\n        batches.append([batch_x, batch_y])\n    return batches\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "BatchGeneratorViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "drop_last=False (keeps incomplete)",
+      "inputs": {
+        "X": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "y": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "seed": 42,
+        "drop_last": false,
+        "batch_size": 3
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            3,
+            2,
+            6
+          ],
+          [
+            3,
+            2,
+            6
+          ]
+        ],
+        [
+          [
+            4,
+            1,
+            5
+          ],
+          [
+            4,
+            1,
+            5
+          ]
+        ],
+        [
+          [
+            0
+          ],
+          [
+            0
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "drop_last=True (drops incomplete)",
+      "inputs": {
+        "X": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "y": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "seed": 42,
+        "drop_last": true,
+        "batch_size": 3
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            3,
+            2,
+            6
+          ],
+          [
+            3,
+            2,
+            6
+          ]
+        ],
+        [
+          [
+            4,
+            1,
+            5
+          ],
+          [
+            4,
+            1,
+            5
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "batch-generator-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X": [
+          0,
+          2,
+          4,
+          6,
+          8,
+          10,
+          12
+        ],
+        "y": [
+          0,
+          2,
+          4,
+          6,
+          8,
+          10,
+          12
+        ],
+        "seed": 84,
+        "drop_last": 0,
+        "batch_size": 6
+      },
+      "expectedOutput": [
+        [
+          [
+            0,
+            10,
+            4,
+            8,
+            6,
+            2
+          ],
+          [
+            0,
+            10,
+            4,
+            8,
+            6,
+            2
+          ]
+        ],
+        [
+          [
+            12
+          ],
+          [
+            12
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          0,
+          0,
+          1,
+          2,
+          2,
+          2,
+          3
+        ],
+        "y": [
+          0,
+          0,
+          1,
+          2,
+          2,
+          2,
+          3
+        ],
+        "seed": 21,
+        "drop_last": 0,
+        "batch_size": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            2
+          ]
+        ],
+        [
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            2
+          ]
+        ],
+        [
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            3
+          ]
+        ],
+        [
+          [
+            1
+          ],
+          [
+            1
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          0,
+          -1,
+          -2,
+          -3,
+          -4,
+          -5,
+          -6
+        ],
+        "y": [
+          0,
+          -1,
+          -2,
+          -3,
+          -4,
+          -5,
+          -6
+        ],
+        "seed": -42,
+        "drop_last": 0,
+        "batch_size": -3
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          0,
+          3,
+          6,
+          9,
+          12,
+          15,
+          18
+        ],
+        "y": [
+          0,
+          3,
+          6,
+          9,
+          12,
+          15,
+          18
+        ],
+        "seed": 126,
+        "drop_last": 0,
+        "batch_size": 9
+      },
+      "expectedOutput": [
+        [
+          [
+            18,
+            6,
+            9,
+            0,
+            3,
+            12,
+            15
+          ],
+          [
+            18,
+            6,
+            9,
+            0,
+            3,
+            12,
+            15
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          1.0,
+          2.0,
+          3.0,
+          4.0,
+          5.0,
+          6.0,
+          7.0
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0,
+          4.0,
+          5.0,
+          6.0,
+          7.0
+        ],
+        "seed": 43.0,
+        "drop_last": 1.0,
+        "batch_size": 4.0
+      },
+      "expectedOutput": [
+        [
+          [
+            3,
+            2,
+            6
+          ],
+          [
+            3,
+            2,
+            6
+          ]
+        ],
+        [
+          [
+            4,
+            1,
+            5
+          ],
+          [
+            4,
+            1,
+            5
+          ]
+        ],
+        [
+          [
+            0
+          ],
+          [
+            0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          -2.0,
+          -1.0,
+          0.0,
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "y": [
+          -2.0,
+          -1.0,
+          0.0,
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "seed": 40.0,
+        "drop_last": -2.0,
+        "batch_size": 1.0
+      },
+      "expectedOutput": [
+        [
+          [
+            3,
+            2,
+            6
+          ],
+          [
+            3,
+            2,
+            6
+          ]
+        ],
+        [
+          [
+            4,
+            1,
+            5
+          ],
+          [
+            4,
+            1,
+            5
+          ]
+        ],
+        [
+          [
+            0
+          ],
+          [
+            0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          6,
+          5,
+          4,
+          3,
+          2,
+          1,
+          0
+        ],
+        "y": [
+          6,
+          5,
+          4,
+          3,
+          2,
+          1,
+          0
+        ],
+        "seed": 42,
+        "drop_last": 0,
+        "batch_size": 3
+      },
+      "expectedOutput": [
+        [
+          [
+            3,
+            4,
+            0
+          ],
+          [
+            3,
+            4,
+            0
+          ]
+        ],
+        [
+          [
+            2,
+            5,
+            1
+          ],
+          [
+            2,
+            5,
+            1
+          ]
+        ],
+        [
+          [
+            6
+          ],
+          [
+            6
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          0,
+          -1,
+          -2,
+          -3,
+          -4,
+          -5,
+          -6
+        ],
+        "y": [
+          0,
+          -1,
+          -2,
+          -3,
+          -4,
+          -5,
+          -6
+        ],
+        "seed": -42,
+        "drop_last": 0,
+        "batch_size": -3
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          0,
+          10,
+          20,
+          30,
+          40,
+          50,
+          60
+        ],
+        "y": [
+          0,
+          10,
+          20,
+          30,
+          40,
+          50,
+          60
+        ],
+        "seed": 420,
+        "drop_last": 0,
+        "batch_size": 30
+      },
+      "expectedOutput": [
+        [
+          [
+            50,
+            40,
+            30,
+            60,
+            10,
+            20,
+            0
+          ],
+          [
+            50,
+            40,
+            30,
+            60,
+            10,
+            20,
+            0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        "seed": 4,
+        "drop_last": 0,
+        "batch_size": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            1
+          ]
+        ],
+        [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          5.0,
+          6.0,
+          7.0,
+          8.0,
+          9.0,
+          10.0,
+          11.0
+        ],
+        "y": [
+          5.0,
+          6.0,
+          7.0,
+          8.0,
+          9.0,
+          10.0,
+          11.0
+        ],
+        "seed": 47.0,
+        "drop_last": 5.0,
+        "batch_size": 8.0
+      },
+      "expectedOutput": [
+        [
+          [
+            3,
+            2,
+            6
+          ],
+          [
+            3,
+            2,
+            6
+          ]
+        ],
+        [
+          [
+            4,
+            1,
+            5
+          ],
+          [
+            4,
+            1,
+            5
+          ]
+        ],
+        [
+          [
+            0
+          ],
+          [
+            0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          0,
+          2,
+          3,
+          4,
+          6,
+          8,
+          9
+        ],
+        "y": [
+          0,
+          2,
+          3,
+          4,
+          6,
+          8,
+          9
+        ],
+        "seed": 63,
+        "drop_last": 0,
+        "batch_size": 4
+      },
+      "expectedOutput": [
+        [
+          [
+            3,
+            4,
+            8,
+            6
+          ],
+          [
+            3,
+            4,
+            8,
+            6
+          ]
+        ],
+        [
+          [
+            9,
+            2,
+            0
+          ],
+          [
+            9,
+            2,
+            0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          0,
+          -2,
+          -4,
+          -6,
+          -8,
+          -10,
+          -12
+        ],
+        "y": [
+          0,
+          -2,
+          -4,
+          -6,
+          -8,
+          -10,
+          -12
+        ],
+        "seed": -84,
+        "drop_last": 0,
+        "batch_size": -6
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          2
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          2
+        ],
+        "seed": 10,
+        "drop_last": 0,
+        "batch_size": 1
+      },
+      "expectedOutput": [
+        [
+          [
+            1
+          ],
+          [
+            1
+          ]
+        ],
+        [
+          [
+            1
+          ],
+          [
+            1
+          ]
+        ],
+        [
+          [
+            0
+          ],
+          [
+            0
+          ]
+        ],
+        [
+          [
+            0
+          ],
+          [
+            0
+          ]
+        ],
+        [
+          [
+            2
+          ],
+          [
+            2
+          ]
+        ],
+        [
+          [
+            1
+          ],
+          [
+            1
+          ]
+        ],
+        [
+          [
+            0
+          ],
+          [
+            0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          -1.0,
+          0.0,
+          1.0,
+          2.0,
+          3.0,
+          4.0,
+          5.0
+        ],
+        "y": [
+          -1.0,
+          0.0,
+          1.0,
+          2.0,
+          3.0,
+          4.0,
+          5.0
+        ],
+        "seed": 41.0,
+        "drop_last": -1.0,
+        "batch_size": 2.0
+      },
+      "expectedOutput": [
+        [
+          [
+            3,
+            2,
+            6
+          ],
+          [
+            3,
+            2,
+            6
+          ]
+        ],
+        [
+          [
+            4,
+            1,
+            5
+          ],
+          [
+            4,
+            1,
+            5
+          ]
+        ],
+        [
+          [
+            0
+          ],
+          [
+            0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          0,
+          4,
+          8,
+          12,
+          16,
+          20,
+          24
+        ],
+        "y": [
+          0,
+          4,
+          8,
+          12,
+          16,
+          20,
+          24
+        ],
+        "seed": 168,
+        "drop_last": 0,
+        "batch_size": 12
+      },
+      "expectedOutput": [
+        [
+          [
+            12,
+            16,
+            20,
+            4,
+            8,
+            0,
+            24
+          ],
+          [
+            12,
+            16,
+            20,
+            4,
+            8,
+            0,
+            24
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          0,
+          1,
+          2,
+          2,
+          3,
+          4,
+          4
+        ],
+        "y": [
+          0,
+          1,
+          2,
+          2,
+          3,
+          4,
+          4
+        ],
+        "seed": 32,
+        "drop_last": 0,
+        "batch_size": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            4,
+            1
+          ],
+          [
+            4,
+            1
+          ]
+        ],
+        [
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            2
+          ]
+        ],
+        [
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            2
+          ]
+        ],
+        [
+          [
+            3
+          ],
+          [
+            3
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "batch-generator-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          0,
+          5,
+          10,
+          15,
+          20,
+          25,
+          30
+        ],
+        "y": [
+          0,
+          5,
+          10,
+          15,
+          20,
+          25,
+          30
+        ],
+        "seed": 210,
+        "drop_last": 0,
+        "batch_size": 15
+      },
+      "expectedOutput": [
+        [
+          [
+            10,
+            5,
+            20,
+            25,
+            30,
+            15,
+            0
+          ],
+          [
+            10,
+            5,
+            20,
+            25,
+            30,
+            15,
+            0
+          ]
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "batch_generator",
+    "parameters": [
+      {
+        "name": "X",
+        "type": "array",
+        "example": "[0,1,2,3,4,5,6]",
+        "description": "Features with one row per sample"
+      },
+      {
+        "name": "y",
+        "type": "array",
+        "example": "[0,1,2,3,4,5,6]",
+        "description": "Label for each sample"
+      },
+      {
+        "name": "batch_size",
+        "type": "number",
+        "example": "3",
+        "description": "Maximum samples per yielded batch"
+      },
+      {
+        "name": "seed",
+        "type": "number",
+        "example": "42",
+        "description": "Seed for the shared shuffle permutation"
+      },
+      {
+        "name": "drop_last",
+        "type": "boolean",
+        "example": "False",
+        "description": "Whether to discard a final incomplete batch"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "kfold-split",
+    "stratified-split",
+    "pad-sequences",
+    "impute-missing",
+    "dropout-training"
+  ],
+  "tags": [
+    "Data Processing"
+  ],
+  "prevId": "stratified-split",
+  "nextId": "impute-missing",
+  "slug": "batch-generator",
+  "cleanTitle": "Batch Shuffling & Mini-Batch Generator",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/batch-generator",
+  "localUrl": "http://localhost:3000/problems/batch-generator",
+  "studyPlan": null
+}

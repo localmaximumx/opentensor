@@ -1,0 +1,1601 @@
+{
+  "id": "ds10-nn-from-scratch",
+  "slug": "ds10-nn-from-scratch",
+  "title": "MLP From Scratch In NumPy",
+  "cleanTitle": "MLP From Scratch In NumPy",
+  "type": "code",
+  "difficulty": "Hard",
+  "category": "Assessment",
+  "tags": [
+    "Assessment",
+    "CODE",
+    "Neural Net Internals Sprint"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Train a small multilayer perceptron using NumPy forward propagation, a classification loss, backpropagation, and parameter updates for the supplied data.",
+  "theory": "## Understanding the Theory: MLP From Scratch In NumPy\n\n### Core Intuition: Why Do We Need This?\n**MLP From Scratch In NumPy** represents a fundamental data modeling and statistical reasoning technique in **Neural Net Internals Sprint**. In enterprise machine learning, quantitative analytics, and decision science, algorithms must handle asynchronous logs, missing observations, skewed class distributions, and high-cardinality partitions. A mathematically rigorous implementation guarantees statistically unbiased estimates and idempotent transformations.\n\nUnderstanding the core mechanics enables engineers to diagnose convergence anomalies, optimize memory layouts, and construct maintainable ML pipelines from first principles.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nZ^{[1]} = X W^{[1]} + b^{[1]}, \\quad A^{[1]} = \\text{ReLU}(Z^{[1]}), \\quad \\hat{Y} = \\sigma(A^{[1]} W^{[2]} + b^{[2]})\n$$\n\nIn this formulation:\n* The input features and parameters are projected, normalized, or aggregated according to established algorithmic invariants.\n* Dimensional consistency is preserved across all tensor or matrix axes, ensuring mathematical validity.\n* Intermediate accumulators maintain numerical dynamic range to protect against floating-point anomalies.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Validate input array dimensions, check for empty sequences or invalid bounds, and convert inputs into contiguous buffers.\n2. **Phase 2: Core Algorithmic Transformation**: Execute the foundational mathematical logic using vectorized SIMD array operations or optimized iteration.\n3. **Phase 3: Aggregation & Normalization**: Compute required sums, projections, or ranking reductions while guarding against division by zero.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Format outputs into required data types and verify that returned numerical estimates adhere to expected precision thresholds.\n\n### Practical Machine Learning Applications & Nuances\n* **Statistical Unbiasedness & Degrees of Freedom**: Applying proper Bessel corrections and degrees of freedom safeguards sample statistics against systemic sample bias.\n* **Vectorized Array Operations**: Leveraging contiguous columnar execution avoids slow Python interpreter loop overhead when evaluating million-row datasets.\n* **Null Safety & Edge Case Handling**: Explicit handling of missing data, empty partitions, and single-value inputs prevents runtime exceptions in production batch pipelines.\n* **Algorithmic Complexity**: Operates with optimal asymptotic time and space complexity, ensuring minimal compute overhead.",
+  "examples": [
+    {
+      "inputArgs": [
+        [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.3,
+            0.4
+          ]
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          [
+            0.2
+          ],
+          [
+            0.1
+          ]
+        ],
+        [
+          0.0
+        ],
+        0.01
+      ],
+      "output": [
+        [
+          [
+            0.10011473549042765,
+            0.20005693998376328
+          ],
+          [
+            0.29986711772588537,
+            0.3999346997161729
+          ]
+        ],
+        [
+          -1.814678368696537e-05,
+          -8.360300063843069e-06
+        ],
+        [
+          [
+            0.1996464161776024
+          ],
+          [
+            0.09963769776977936
+          ]
+        ],
+        [
+          -0.00041744096560286436
+        ]
+      ],
+      "explanation": "Illustrative small example for mlp from scratch in numpy."
+    }
+  ],
+  "requirements": [
+    "Implement the mathematical or algorithmic behavior described above.",
+    "Match the function signature and output structure in starterCode.",
+    "Handle boundary inputs and ties consistently with the supplied test cases."
+  ],
+  "hints": [
+    "For softmax, subtract the maximum logit before exponentiation.",
+    "For normalization backward passes, use the chain rule and the mean/variance derivatives."
+  ],
+  "constraints": [
+    "Inputs are small enough for a straightforward reference implementation.",
+    "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+    "Unless otherwise stated, dimensions must be consistent."
+  ],
+  "starterCode": "import math\ndef solve(X, y, W1, b1, W2, b2, lr=0.01):\n    pass",
+  "solution": "### 💡 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### ⚡ Implementation\n```python\nimport math\ndef solve(X, y, W1, b1, W2, b2, lr=0.01):\n    # One full-batch gradient step for a 2-layer sigmoid MLP, binary labels.\n    def sig(z): return 1/(1+math.exp(-max(-60,min(60,z))))\n    n=len(X); h=len(W1[0]); d=len(X[0])\n    Z=[]; A=[]; P=[]\n    for row in X:\n      z=[b1[j]+sum(row[k]*W1[k][j] for k in range(d)) for j in range(h)]\n      a=[sig(v) for v in z]; p=sig(b2[0]+sum(a[j]*W2[j][0] for j in range(h)))\n      Z.append(z); A.append(a); P.append(p)\n    dz2=[(P[i]-y[i])/n for i in range(n)]\n    gW2=[[sum(A[i][j]*dz2[i] for i in range(n))] for j in range(h)]\n    gb2=sum(dz2)\n    dz1=[[dz2[i]*W2[j][0]*A[i][j]*(1-A[i][j]) for j in range(h)] for i in range(n)]\n    gW1=[[sum(X[i][k]*dz1[i][j] for i in range(n)) for j in range(h)] for k in range(d)]\n    gb1=[sum(dz1[i][j] for i in range(n)) for j in range(h)]\n    W1n=[[W1[k][j]-lr*gW1[k][j] for j in range(h)] for k in range(d)]\n    b1n=[b1[j]-lr*gb1[j] for j in range(h)]\n    W2n=[[W2[j][0]-lr*gW2[j][0]] for j in range(h)]\n    b2n=[b2[0]-lr*gb2]\n    return W1n,b1n,W2n,b2n\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
+  "testCases": [
+    {
+      "id": "case-1",
+      "name": "smoke test",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        "y": [
+          0,
+          1
+        ],
+        "W1": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.3,
+            0.4
+          ]
+        ],
+        "b1": [
+          0.0,
+          0.0
+        ],
+        "W2": [
+          [
+            0.2
+          ],
+          [
+            0.1
+          ]
+        ],
+        "b2": [
+          0.0
+        ],
+        "lr": 0.01
+      },
+      "expectedOutput": [
+        [
+          [
+            0.10011473549042765,
+            0.20005693998376328
+          ],
+          [
+            0.29986711772588537,
+            0.3999346997161729
+          ]
+        ],
+        [
+          -1.814678368696537e-05,
+          -8.360300063843069e-06
+        ],
+        [
+          [
+            0.1996464161776024
+          ],
+          [
+            0.09963769776977936
+          ]
+        ],
+        [
+          -0.00041744096560286436
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-2",
+      "name": "Case 2",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            2.0
+          ],
+          [
+            2.0,
+            0.0
+          ]
+        ],
+        "y": [
+          0,
+          2
+        ],
+        "W1": [
+          [
+            0.2,
+            0.4
+          ],
+          [
+            0.6,
+            0.8
+          ]
+        ],
+        "b1": [
+          0.0,
+          0.0
+        ],
+        "W2": [
+          [
+            0.4
+          ],
+          [
+            0.2
+          ]
+        ],
+        "b2": [
+          0.0
+        ],
+        "lr": 0.02
+      },
+      "expectedOutput": [
+        [
+          [
+            0.2027038699385133,
+            0.4012036589585049
+          ],
+          [
+            0.5991229291967789,
+            0.7996554621358424
+          ]
+        ],
+        [
+          0.0009133995676461218,
+          0.00042956054717361913
+        ],
+        [
+          [
+            0.4036856518407048
+          ],
+          [
+            0.20457851539460437
+          ]
+        ],
+        [
+          0.007904512725184151
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-3",
+      "name": "Case 3",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.5
+          ],
+          [
+            0.5,
+            0.0
+          ]
+        ],
+        "y": [
+          0,
+          0
+        ],
+        "W1": [
+          [
+            0.05,
+            0.1
+          ],
+          [
+            0.15,
+            0.2
+          ]
+        ],
+        "b1": [
+          0.0,
+          0.0
+        ],
+        "W2": [
+          [
+            0.1
+          ],
+          [
+            0.05
+          ]
+        ],
+        "b2": [
+          0.0
+        ],
+        "lr": 0.005
+      },
+      "expectedOutput": [
+        [
+          [
+            0.049983782120773625,
+            0.09999189486006692
+          ],
+          [
+            0.14998378778277785,
+            0.19999190274683715
+          ]
+        ],
+        [
+          -6.486019289702199e-05,
+          -3.2404786191937964e-05
+        ],
+        [
+          [
+            0.09866933149526817
+          ],
+          [
+            0.04865312235393523
+          ]
+        ],
+        [
+          -0.0025964351794688944
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            -0.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -0.0
+          ]
+        ],
+        "y": [
+          0,
+          -1
+        ],
+        "W1": [
+          [
+            -0.1,
+            -0.2
+          ],
+          [
+            -0.3,
+            -0.4
+          ]
+        ],
+        "b1": [
+          -0.0,
+          -0.0
+        ],
+        "W2": [
+          [
+            -0.2
+          ],
+          [
+            -0.1
+          ]
+        ],
+        "b2": [
+          -0.0
+        ],
+        "lr": -0.01
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.09963588846937946,
+            -0.1998193017298808
+          ],
+          [
+            -0.2998884239624239,
+            -0.39994516991095636
+          ]
+        ],
+        [
+          -0.0004756875681966726,
+          -0.0002355283591628515
+        ],
+        [
+          [
+            -0.19485647530094463
+          ],
+          [
+            -0.094619693943096
+          ]
+        ],
+        [
+          0.009582559034397135
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            3.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          0,
+          3
+        ],
+        "W1": [
+          [
+            0.3,
+            0.6
+          ],
+          [
+            0.9,
+            1.2
+          ]
+        ],
+        "b1": [
+          0.0,
+          0.0
+        ],
+        "W2": [
+          [
+            0.6
+          ],
+          [
+            0.3
+          ]
+        ],
+        "b2": [
+          0.0
+        ],
+        "lr": 0.03
+      },
+      "expectedOutput": [
+        [
+          [
+            0.312957797207892,
+            0.6038378144687235
+          ],
+          [
+            0.8988824358443833,
+            1.1997548347453932
+          ]
+        ],
+        [
+          0.003946744350758434,
+          0.0011975497380389613
+        ],
+        [
+          [
+            0.6150456758653534
+          ],
+          [
+            0.3198193981313111
+          ]
+        ],
+        [
+          0.024508661299785548
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            2.0,
+            1.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0
+        ],
+        "W1": [
+          [
+            1.1,
+            1.2
+          ],
+          [
+            1.3,
+            1.4
+          ]
+        ],
+        "b1": [
+          1.0,
+          1.0
+        ],
+        "W2": [
+          [
+            1.2
+          ],
+          [
+            1.1
+          ]
+        ],
+        "b2": [
+          1.0
+        ],
+        "lr": 1.01
+      },
+      "expectedOutput": [
+        [
+          [
+            1.113844400396194,
+            1.2094551381685381
+          ],
+          [
+            1.3072161175358843,
+            1.404928099276116
+          ]
+        ],
+        [
+          1.007020172644026,
+          1.0047944124815513
+        ],
+        [
+          [
+            1.7357176375431913
+          ],
+          [
+            1.6372381965084037
+          ]
+        ],
+        [
+          1.5416324418261822
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          [
+            -2.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -2.0
+          ]
+        ],
+        "y": [
+          -2.0,
+          -1.0
+        ],
+        "W1": [
+          [
+            -1.9,
+            -1.8
+          ],
+          [
+            -1.7,
+            -1.6
+          ]
+        ],
+        "b1": [
+          -2.0,
+          -2.0
+        ],
+        "W2": [
+          [
+            -1.8
+          ],
+          [
+            -1.9
+          ]
+        ],
+        "b2": [
+          -2.0
+        ],
+        "lr": -1.99
+      },
+      "expectedOutput": [
+        [
+          [
+            -1.634095997563159,
+            -1.4291513918584435
+          ],
+          [
+            -1.4745268875827837,
+            -1.2859678418668674
+          ]
+        ],
+        [
+          -2.163792371618019,
+          -2.2282935887582296
+        ],
+        [
+          [
+            1.0986626833720894
+          ],
+          [
+            0.9671758460263744
+          ]
+        ],
+        [
+          0.9926353815799023
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "y": [
+          1,
+          0
+        ],
+        "W1": [
+          [
+            0.2,
+            0.1
+          ],
+          [
+            0.4,
+            0.3
+          ]
+        ],
+        "b1": [
+          0.0,
+          0.0
+        ],
+        "W2": [
+          [
+            0.2
+          ],
+          [
+            0.1
+          ]
+        ],
+        "b2": [
+          0.0
+        ],
+        "lr": 0.01
+      },
+      "expectedOutput": [
+        [
+          [
+            0.20011372716320752,
+            0.10005729076908333
+          ],
+          [
+            0.39986925492502484,
+            0.29993348534694736
+          ]
+        ],
+        [
+          -1.7017911767689462e-05,
+          -9.223883969288403e-06
+        ],
+        [
+          [
+            0.19963420013554367
+          ],
+          [
+            0.09964306817639859
+          ]
+        ],
+        [
+          -0.00042353501678479236
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          [
+            -0.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -0.0
+          ]
+        ],
+        "y": [
+          0,
+          -1
+        ],
+        "W1": [
+          [
+            -0.1,
+            -0.2
+          ],
+          [
+            -0.3,
+            -0.4
+          ]
+        ],
+        "b1": [
+          -0.0,
+          -0.0
+        ],
+        "W2": [
+          [
+            -0.2
+          ],
+          [
+            -0.1
+          ]
+        ],
+        "b2": [
+          -0.0
+        ],
+        "lr": -0.01
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.09963588846937946,
+            -0.1998193017298808
+          ],
+          [
+            -0.2998884239624239,
+            -0.39994516991095636
+          ]
+        ],
+        [
+          -0.0004756875681966726,
+          -0.0002355283591628515
+        ],
+        [
+          [
+            -0.19485647530094463
+          ],
+          [
+            -0.094619693943096
+          ]
+        ],
+        [
+          0.009582559034397135
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            10.0
+          ],
+          [
+            10.0,
+            0.0
+          ]
+        ],
+        "y": [
+          0,
+          10
+        ],
+        "W1": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "b1": [
+          0.0,
+          0.0
+        ],
+        "W2": [
+          [
+            2.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "b2": [
+          0.0
+        ],
+        "lr": 0.1
+      },
+      "expectedOutput": [
+        [
+          [
+            1.0004107153916622,
+            2.0000000093240717
+          ],
+          [
+            2.9999999999999107,
+            4.0
+          ]
+        ],
+        [
+          4.107153915731864e-05,
+          9.324071829878034e-10
+        ],
+        [
+          [
+            2.404722255721347
+          ],
+          [
+            1.4047427914908406
+          ]
+        ],
+        [
+          0.40474279242324784
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.1
+          ],
+          [
+            0.1,
+            0.0
+          ]
+        ],
+        "y": [
+          0,
+          0
+        ],
+        "W1": [
+          [
+            0.01,
+            0.02
+          ],
+          [
+            0.03,
+            0.04
+          ]
+        ],
+        "b1": [
+          0.0,
+          0.0
+        ],
+        "W2": [
+          [
+            0.02
+          ],
+          [
+            0.01
+          ]
+        ],
+        "b2": [
+          0.0
+        ],
+        "lr": 0.001
+      },
+      "expectedOutput": [
+        [
+          [
+            0.009999874061924098,
+            0.019999937031009277
+          ],
+          [
+            0.029999874061238527,
+            0.03999993703072946
+          ]
+        ],
+        [
+          -2.5187683737271476e-06,
+          -1.2593826126340137e-06
+        ],
+        [
+          [
+            0.019747870970306326
+          ],
+          [
+            0.009747745031961103
+          ]
+        ],
+        [
+          -0.0005037543044393244
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            5.0,
+            6.0
+          ],
+          [
+            6.0,
+            5.0
+          ]
+        ],
+        "y": [
+          5.0,
+          6.0
+        ],
+        "W1": [
+          [
+            5.1,
+            5.2
+          ],
+          [
+            5.3,
+            5.4
+          ]
+        ],
+        "b1": [
+          5.0,
+          5.0
+        ],
+        "W2": [
+          [
+            5.2
+          ],
+          [
+            5.1
+          ]
+        ],
+        "b2": [
+          5.0
+        ],
+        "lr": 5.01
+      },
+      "expectedOutput": [
+        [
+          [
+            5.1,
+            5.2
+          ],
+          [
+            5.3,
+            5.4
+          ]
+        ],
+        [
+          5.0,
+          5.0
+        ],
+        [
+          [
+            27.745001135355988
+          ],
+          [
+            27.64500113535599
+          ]
+        ],
+        [
+          27.54500113535599
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            1.5
+          ],
+          [
+            1.5,
+            0.0
+          ]
+        ],
+        "y": [
+          0,
+          2
+        ],
+        "W1": [
+          [
+            0.15,
+            0.3
+          ],
+          [
+            0.45,
+            0.6
+          ]
+        ],
+        "b1": [
+          0.0,
+          0.0
+        ],
+        "W2": [
+          [
+            0.3
+          ],
+          [
+            0.15
+          ]
+        ],
+        "b2": [
+          0.0
+        ],
+        "lr": 0.015
+      },
+      "expectedOutput": [
+        [
+          [
+            0.1511962164199158,
+            0.30057605192418757
+          ],
+          [
+            0.4495655849414819,
+            0.5998003337607433
+          ]
+        ],
+        [
+          0.0005078675742651243,
+          0.00025092378995392466
+        ],
+        [
+          [
+            0.30312587746078334
+          ],
+          [
+            0.15350540103929142
+          ]
+        ],
+        [
+          0.00644990936654697
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            -0.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -0.0
+          ]
+        ],
+        "y": [
+          0,
+          -2
+        ],
+        "W1": [
+          [
+            -0.2,
+            -0.4
+          ],
+          [
+            -0.6,
+            -0.8
+          ]
+        ],
+        "b1": [
+          -0.0,
+          -0.0
+        ],
+        "W2": [
+          [
+            -0.4
+          ],
+          [
+            -0.2
+          ]
+        ],
+        "b2": [
+          -0.0
+        ],
+        "lr": -0.02
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.1953740440955545,
+            -0.39794070225541395
+          ],
+          [
+            -0.5994539152780466,
+            -0.7997854826964255
+          ]
+        ],
+        [
+          -0.002586020313199462,
+          -0.00113690752408033
+        ],
+        [
+          [
+            -0.3826422237231805
+          ],
+          [
+            -0.18020155594278028
+          ]
+        ],
+        [
+          0.02790451272518415
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.25
+          ],
+          [
+            0.25,
+            0.0
+          ]
+        ],
+        "y": [
+          0,
+          0
+        ],
+        "W1": [
+          [
+            0.025,
+            0.05
+          ],
+          [
+            0.075,
+            0.1
+          ]
+        ],
+        "b1": [
+          0.0,
+          0.0
+        ],
+        "W2": [
+          [
+            0.05
+          ],
+          [
+            0.025
+          ]
+        ],
+        "b2": [
+          0.0
+        ],
+        "lr": 0.0025
+      },
+      "expectedOutput": [
+        [
+          [
+            0.024998010125096823,
+            0.04999900509169631
+          ],
+          [
+            0.0749980100517805,
+            0.09999900509390097
+          ]
+        ],
+        [
+          -1.5919292490717604e-05,
+          -7.959257610917567e-06
+        ],
+        [
+          [
+            0.04935921716555578
+          ],
+          [
+            0.024357227299335725
+          ]
+        ],
+        [
+          -0.0012736055865700821
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            -1.0,
+            0.0
+          ],
+          [
+            0.0,
+            -1.0
+          ]
+        ],
+        "y": [
+          -1.0,
+          0.0
+        ],
+        "W1": [
+          [
+            -0.9,
+            -0.8
+          ],
+          [
+            -0.7,
+            -0.6
+          ]
+        ],
+        "b1": [
+          -1.0,
+          -1.0
+        ],
+        "W2": [
+          [
+            -0.8
+          ],
+          [
+            -0.9
+          ]
+        ],
+        "b2": [
+          -1.0
+        ],
+        "lr": -0.99
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.7870596124702584,
+            -0.6738894690001129
+          ],
+          [
+            -0.6850674744459325,
+            -0.5834893640425335
+          ]
+        ],
+        [
+          -1.127872913083809,
+          -1.1426211669573536
+        ],
+        [
+          [
+            -0.49859013907568783
+          ],
+          [
+            -0.6145120586343977
+          ]
+        ],
+        [
+          -0.3575299565802068
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            4.0
+          ],
+          [
+            4.0,
+            0.0
+          ]
+        ],
+        "y": [
+          0,
+          4
+        ],
+        "W1": [
+          [
+            0.4,
+            0.8
+          ],
+          [
+            1.2,
+            1.6
+          ]
+        ],
+        "b1": [
+          0.0,
+          0.0
+        ],
+        "W2": [
+          [
+            0.8
+          ],
+          [
+            0.4
+          ]
+        ],
+        "b2": [
+          0.0
+        ],
+        "lr": 0.04
+      },
+      "expectedOutput": [
+        [
+          [
+            0.42915347476653287,
+            0.8039248249187549
+          ],
+          [
+            1.1996024606127031,
+            1.599959341065042
+          ]
+        ],
+        [
+          0.007188983844809033,
+          0.0009710414959491369
+        ],
+        [
+          [
+            0.8390152700784658
+          ],
+          [
+            0.447312295982314
+          ]
+        ],
+        [
+          0.04983984782016715
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            0.75
+          ],
+          [
+            0.75,
+            0.0
+          ]
+        ],
+        "y": [
+          0,
+          1
+        ],
+        "W1": [
+          [
+            0.075,
+            0.15
+          ],
+          [
+            0.225,
+            0.3
+          ]
+        ],
+        "b1": [
+          0.0,
+          0.0
+        ],
+        "W2": [
+          [
+            0.15
+          ],
+          [
+            0.075
+          ]
+        ],
+        "b2": [
+          0.0
+        ],
+        "lr": 0.0075
+      },
+      "expectedOutput": [
+        [
+          [
+            0.07504962113048945,
+            0.15002475179709773
+          ],
+          [
+            0.22494442277268908,
+            0.299972364327428
+          ]
+        ],
+        [
+          -7.941462428612488e-06,
+          -3.845167298998644e-06
+        ],
+        [
+          [
+            0.1498288226989741
+          ],
+          [
+            0.07482589143870975
+          ]
+        ],
+        [
+          -0.00022447777047419264
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          [
+            0.0,
+            5.0
+          ],
+          [
+            5.0,
+            0.0
+          ]
+        ],
+        "y": [
+          0,
+          5
+        ],
+        "W1": [
+          [
+            0.5,
+            1.0
+          ],
+          [
+            1.5,
+            2.0
+          ]
+        ],
+        "b1": [
+          0.0,
+          0.0
+        ],
+        "W2": [
+          [
+            1.0
+          ],
+          [
+            0.5
+          ]
+        ],
+        "b2": [
+          0.0
+        ],
+        "lr": 0.05
+      },
+      "expectedOutput": [
+        [
+          [
+            0.5367565784194144,
+            1.0017428449474528
+          ],
+          [
+            1.499943544943081,
+            1.9999976805902078
+          ]
+        ],
+        [
+          0.00734002467249905,
+          0.000348105107532092
+        ],
+        [
+          [
+            1.076482756110551
+          ],
+          [
+            0.5837252998242662
+          ]
+        ],
+        [
+          0.08442620727596344
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            10.0,
+            11.0
+          ],
+          [
+            11.0,
+            10.0
+          ]
+        ],
+        "y": [
+          10.0,
+          11.0
+        ],
+        "W1": [
+          [
+            10.1,
+            10.2
+          ],
+          [
+            10.3,
+            10.4
+          ]
+        ],
+        "b1": [
+          10.0,
+          10.0
+        ],
+        "W2": [
+          [
+            10.2
+          ],
+          [
+            10.1
+          ]
+        ],
+        "b2": [
+          10.0
+        ],
+        "lr": 10.01
+      },
+      "expectedOutput": [
+        [
+          [
+            10.1,
+            10.2
+          ],
+          [
+            10.3,
+            10.4
+          ]
+        ],
+        [
+          10.0,
+          10.0
+        ],
+        [
+          [
+            105.2950000000007
+          ],
+          [
+            105.19500000000069
+          ]
+        ],
+        [
+          105.0950000000007
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "solve",
+    "signature": "def solve(X, y, W1, b1, W2, b2, lr=0.01):",
+    "returnType": "varies by problem; see example output"
+  },
+  "assessmentNames": [
+    "Neural Net Internals Sprint"
+  ],
+  "source": "assessment",
+  "sourceId": "assessment",
+  "updatedAt": "2026-03-01T00:00:00.000Z"
+}

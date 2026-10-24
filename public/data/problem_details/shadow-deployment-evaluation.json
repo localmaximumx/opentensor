@@ -1,0 +1,1548 @@
+{
+  "id": "shadow-deployment-evaluation",
+  "title": "Shadow Deployment Evaluation",
+  "description": "A shadow model runs beside the production model on the same ordered requests, but its predictions are not served. Compare both logs and decide whether the shadow model satisfies every promotion criterion.\n\n$$\n\\mathrm{accuracy}=\\frac{\\text{correct predictions}}{n}\n$$\n\n$$\n\\mathrm{accuracy\\ gain}=\\mathrm{shadow\\ accuracy}-\\mathrm{production\\ accuracy}\n$$\n\nFor shadow latency, sort latencies and use nearest-rank P95 at index $\\lceil0.95n\\rceil-1$. Agreement rate is the fraction of positions where both models predict the same value. Promote only when accuracy gain is at least min_accuracy_gain, P95 latency is at most max_latency_p95, and agreement rate is at least min_agreement_rate. Return {\"promote\": bool, \"metrics\": {...}} with all five named metrics shown in the examples.",
+  "seoDescription": "Compare shadow and production model outcomes using the evaluation criteria defined by the problem.",
+  "examples": [
+    "Input: production_log = [{\"input_id\": 1, \"prediction\": 1, \"actual\": 1, \"latency_ms\": 15}, {\"input_id\": 2, \"prediction\": 0, \"actual\": 1, \"latency_ms\": 20}, {\"input_id\": 3, \"prediction\": 1, \"actual\": 1, \"latency_ms\": 18}, {\"input_id\": 4, \"prediction\": 0, \"actual\": 0, \"latency_ms\": 22}], shadow_log = [{\"input_id\": 1, \"prediction\": 1, \"actual\": 1, \"latency_ms\": 10}, {\"input_id\": 2, \"prediction\": 1, \"actual\": 1, \"latency_ms\": 25}, {\"input_id\": 3, \"prediction\": 1, \"actual\": 1, \"latency_ms\": 20}, {\"input_id\": 4, \"prediction\": 0, \"actual\": 0, \"latency_ms\": 30}], criteria = {\"min_accuracy_gain\": 0, \"max_latency_p95\": 50, \"min_agreement_rate\": 0.5}\n\nOutput: {\"promote\": true, \"metrics\": {\"shadow_accuracy\": 1, \"production_accuracy\": 0.75, \"accuracy_gain\": 0.25, \"shadow_latency_p95\": 30, \"agreement_rate\": 0.75}}\n\nExplanation: The shadow model satisfies the gain, latency, and agreement thresholds.",
+    "Input: production_log = [{\"input_id\": 1, \"prediction\": 1, \"actual\": 1, \"latency_ms\": 15}, {\"input_id\": 2, \"prediction\": 0, \"actual\": 1, \"latency_ms\": 20}, {\"input_id\": 3, \"prediction\": 1, \"actual\": 1, \"latency_ms\": 18}, {\"input_id\": 4, \"prediction\": 0, \"actual\": 0, \"latency_ms\": 22}], shadow_log = [{\"input_id\": 1, \"prediction\": 1, \"actual\": 1, \"latency_ms\": 40}, {\"input_id\": 2, \"prediction\": 1, \"actual\": 1, \"latency_ms\": 45}, {\"input_id\": 3, \"prediction\": 1, \"actual\": 1, \"latency_ms\": 50}, {\"input_id\": 4, \"prediction\": 0, \"actual\": 0, \"latency_ms\": 200}], criteria = {\"min_accuracy_gain\": 0, \"max_latency_p95\": 100, \"min_agreement_rate\": 0.5}\n\nOutput: {\"promote\": false, \"metrics\": {\"shadow_accuracy\": 1, \"production_accuracy\": 0.75, \"accuracy_gain\": 0.25, \"shadow_latency_p95\": 200, \"agreement_rate\": 0.75}}"
+  ],
+  "requirements": "* Compute production and shadow accuracy\n* Compute accuracy gain, nearest-rank shadow P95 latency, and agreement rate\n* Require all three criteria for promotion\n* Return promote and the five named metrics",
+  "theory": "## Understanding the Theory: Shadow Deployment Evaluation\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **Shadow Deployment Evaluation** implements a core computational routine.\n\nIn this problem, the objective is to implement **Shadow Deployment Evaluation** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\mathrm{accuracy}=\\frac{\\text{correct predictions}}{n}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "Use math.ceil(0.95 * n) - 1 after sorting shadow latencies.",
+    "Build promote by joining all three threshold comparisons with and."
+  ],
+  "constraints": "* Both logs have equal nonzero length and matching order\n* Corresponding entries describe the same input_id and actual value\n* Latencies are nonnegative numbers",
+  "difficulty": "Medium",
+  "starterCode": "import math\n\ndef evaluate_shadow(production_log: list, shadow_log: list, criteria: dict) -> dict:\n    \"\"\"\n    Returns a dictionary with the promotion decision and metrics.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-29T20:25:47.215Z",
+  "updatedAt": "2026-08-23T11:59:44.127Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef evaluate_shadow(production_log: list, shadow_log: list, criteria: dict) -> dict:\n    prod_acc = np.mean([1 if r['actual'] == r['prediction'] else 0 for r in production_log])\n    shad_acc = np.mean([1 if r['actual'] == r['prediction'] else 0 for r in shadow_log])\n    gain = shad_acc - prod_acc\n    lats = [r['latency_ms'] for r in shadow_log]\n    lat_p95 = float(np.percentile(lats, 95, method='nearest'))\n    agreed = np.mean([1 if p['prediction'] == s['prediction'] else 0 for p, s in zip(production_log, shadow_log)])\n    promote = (\n        lat_p95 <= criteria.get('max_latency_p95', 1e9) and\n        gain >= criteria.get('min_accuracy_gain', 0.0) and\n        agreed >= criteria.get('min_agreement_rate', 0.0)\n    )\n    return {\n        'promote': bool(promote),\n        'metrics': {\n            'shadow_accuracy': round(float(shad_acc), 4) if not float(shad_acc).is_integer() else int(shad_acc),\n            'production_accuracy': round(float(prod_acc), 4),\n            'accuracy_gain': round(float(gain), 4),\n            'shadow_latency_p95': round(float(lat_p95), 4) if not float(lat_p95).is_integer() else int(lat_p95),\n            'agreement_rate': round(float(agreed), 4)\n        }\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "ShadowDeploymentViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Shadow clearly better - promote",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 50,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 10,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 25,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 20,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 30,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "promote": true,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 30,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Shadow too slow - no promote",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 100,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 40,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 45,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 50,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 200,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "promote": false,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 200,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 50,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 10,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 25,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 20,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 30,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": true,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 30,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 100,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 40,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 45,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 50,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 200,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": false,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 200,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 50,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 10,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 25,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 20,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 30,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": true,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 30,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 100,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 40,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 45,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 50,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 200,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": false,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 200,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 50,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 10,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 25,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 20,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 30,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": true,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 30,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 100,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 40,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 45,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 50,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 200,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": false,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 200,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 50,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 10,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 25,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 20,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 30,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": true,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 30,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 100,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 40,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 45,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 50,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 200,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": false,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 200,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 50,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 10,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 25,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 20,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 30,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": true,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 30,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 100,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 40,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 45,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 50,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 200,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": false,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 200,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 50,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 10,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 25,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 20,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 30,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": true,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 30,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 100,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 40,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 45,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 50,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 200,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": false,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 200,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 50,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 10,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 25,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 20,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 30,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": true,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 30,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 100,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 40,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 45,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 50,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 200,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": false,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 200,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 50,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 10,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 25,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 20,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 30,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": true,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 30,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 100,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 40,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 45,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 50,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 200,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": false,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 200,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 50,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 10,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 25,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 20,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 30,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": true,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 30,
+          "agreement_rate": 0.75
+        }
+      }
+    },
+    {
+      "id": "shadow-deployment-evaluation-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "criteria": {
+          "max_latency_p95": 100,
+          "min_accuracy_gain": 0,
+          "min_agreement_rate": 0.5
+        },
+        "shadow_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 40,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 45,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 50,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 200,
+            "prediction": 0
+          }
+        ],
+        "production_log": [
+          {
+            "actual": 1,
+            "input_id": 1,
+            "latency_ms": 15,
+            "prediction": 1
+          },
+          {
+            "actual": 1,
+            "input_id": 2,
+            "latency_ms": 20,
+            "prediction": 0
+          },
+          {
+            "actual": 1,
+            "input_id": 3,
+            "latency_ms": 18,
+            "prediction": 1
+          },
+          {
+            "actual": 0,
+            "input_id": 4,
+            "latency_ms": 22,
+            "prediction": 0
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "promote": false,
+        "metrics": {
+          "shadow_accuracy": 1,
+          "production_accuracy": 0.75,
+          "accuracy_gain": 0.25,
+          "shadow_latency_p95": 200,
+          "agreement_rate": 0.75
+        }
+      }
+    }
+  ],
+  "functionMetadata": {
+    "name": "evaluate_shadow",
+    "parameters": [
+      {
+        "name": "production_log",
+        "type": "array",
+        "example": "[{\"input_id\": 1, \"prediction\": 1, \"actual\": 1, \"latency_ms\": 15}]",
+        "description": "List of dicts with input_id, prediction, actual, latency_ms for production model"
+      },
+      {
+        "name": "shadow_log",
+        "type": "array",
+        "example": "[{\"input_id\": 1, \"prediction\": 1, \"actual\": 1, \"latency_ms\": 10}]",
+        "description": "List of dicts with input_id, prediction, actual, latency_ms for shadow model"
+      },
+      {
+        "name": "criteria",
+        "type": "any",
+        "example": "{\"min_accuracy_gain\": 0.0, \"max_latency_p95\": 50.0, \"min_agreement_rate\": 0.5}",
+        "description": "Dict with min_accuracy_gain, max_latency_p95, min_agreement_rate"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "monitoring-metrics-selection",
+    "data-drift-detection",
+    "train-serving-skew",
+    "model-versioning-basics",
+    "retraining-trigger-design"
+  ],
+  "tags": [
+    "MLOps"
+  ],
+  "prevId": "retraining-trigger-design",
+  "nextId": "etl-schema-validation",
+  "slug": "shadow-deployment-evaluation",
+  "cleanTitle": "Shadow Deployment Evaluation",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/shadow-deployment-evaluation",
+  "localUrl": "http://localhost:3000/problems/shadow-deployment-evaluation",
+  "studyPlan": null
+}

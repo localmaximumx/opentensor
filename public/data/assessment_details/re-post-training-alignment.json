@@ -1,0 +1,991 @@
+{
+  "id": "re-post-training-alignment",
+  "name": "Post-Training and Alignment",
+  "description": "GRPO, PPO, DPO, and RLHF foundations: losses, advantages, and reward modeling primitives.",
+  "durationMin": 30,
+  "categoryId": "research-engineer",
+  "isFree": false,
+  "sets": [
+    {
+      "id": "re-post-training-alignment-set-1",
+      "name": "Set 1",
+      "sortOrder": 0,
+      "problems": [
+        {
+          "slug": "re-dpo-logprob-ratio",
+          "type": "code",
+          "title": "Sequence Log Probability",
+          "difficulty": "easy",
+          "challenge": {
+            "problemStatement": "Implement `Sequence Log Probability` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "import math\ndef solve(policy_logprobs, reference_logprobs):\n    pass",
+            "solution": "import math\ndef solve(policy_logprobs, reference_logprobs):\n    return math.exp(sum(policy_logprobs)-sum(reference_logprobs))",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    -1.0,
+                    -2.0
+                  ],
+                  [
+                    -1.5,
+                    -2.5
+                  ]
+                ],
+                "expected": 2.718281828459045,
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    -1.0,
+                    -2.0
+                  ],
+                  [
+                    -1.5,
+                    -2.5
+                  ]
+                ],
+                "output": 2.718281828459045,
+                "explanation": "Illustrative small example for sequence log probability."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-grpo-loss",
+          "type": "code",
+          "title": "GRPO Clipped Surrogate Loss",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `GRPO Clipped Surrogate Loss` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "def solve(advantages, ratios, eps=0.2):\n    pass",
+            "solution": "def solve(advantages, ratios, eps=0.2):\n    return -sum(min(r*a, max(1-eps,min(1+eps,r))*a) for a,r in zip(advantages,ratios))/len(advantages)",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    1.0,
+                    -1.0
+                  ],
+                  [
+                    1.2,
+                    0.8
+                  ]
+                ],
+                "expected": -0.19999999999999996,
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    1.0,
+                    -1.0
+                  ],
+                  [
+                    1.2,
+                    0.8
+                  ]
+                ],
+                "output": -0.19999999999999996,
+                "explanation": "Illustrative small example for grpo clipped surrogate loss."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-ppo-value-loss",
+          "type": "code",
+          "title": "PPO Value Function Loss",
+          "difficulty": "easy",
+          "challenge": {
+            "problemStatement": "Implement `PPO Value Function Loss` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "def solve(values, returns):\n    pass",
+            "solution": "def solve(values, returns):\n    return 0.5*sum((v-r)**2 for v,r in zip(values,returns))/len(values)",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    1.0,
+                    2.0
+                  ],
+                  [
+                    2.0,
+                    2.0
+                  ]
+                ],
+                "expected": 0.25,
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    1.0,
+                    2.0
+                  ],
+                  [
+                    2.0,
+                    2.0
+                  ]
+                ],
+                "output": 0.25,
+                "explanation": "Illustrative small example for ppo value function loss."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        }
+      ],
+      "totalCount": 3,
+      "completed": false
+    },
+    {
+      "id": "re-post-training-alignment-set-2",
+      "name": "Set 2",
+      "sortOrder": 1,
+      "problems": [
+        {
+          "slug": "re-ppo-clipped-loss",
+          "type": "code",
+          "title": "PPO Clipped Surrogate Loss",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `PPO Clipped Surrogate Loss` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "def solve(advantages, ratios, eps=0.2):\n    pass",
+            "solution": "def solve(advantages, ratios, eps=0.2):\n    vals=[min(r*a, max(1-eps,min(1+eps,r))*a) for a,r in zip(advantages,ratios)]\n    return -sum(vals)/len(vals)",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    1.0,
+                    -1.0
+                  ],
+                  [
+                    1.2,
+                    0.8
+                  ]
+                ],
+                "expected": -0.19999999999999996,
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    1.0,
+                    -1.0
+                  ],
+                  [
+                    1.2,
+                    0.8
+                  ]
+                ],
+                "output": -0.19999999999999996,
+                "explanation": "Illustrative small example for ppo clipped surrogate loss."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-rlhf-logprob",
+          "type": "code",
+          "title": "Token Log-Probability Gather",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `Token Log-Probability Gather` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "def solve(logits, token_ids):\n    pass",
+            "solution": "def solve(logits, token_ids):\n    import math\n    out=[]\n    for row,idx in zip(logits,token_ids):\n      m=max(row); logz=m+math.log(sum(math.exp(v-m) for v in row))\n      out.append(row[idx]-logz)\n    return out",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    [
+                      1.0,
+                      2.0,
+                      3.0
+                    ],
+                    [
+                      2.0,
+                      1.0,
+                      0.0
+                    ]
+                  ],
+                  [
+                    2,
+                    0
+                  ]
+                ],
+                "expected": [
+                  -0.4076059644443806,
+                  -0.4076059644443806
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    [
+                      1.0,
+                      2.0,
+                      3.0
+                    ],
+                    [
+                      2.0,
+                      1.0,
+                      0.0
+                    ]
+                  ],
+                  [
+                    2,
+                    0
+                  ]
+                ],
+                "output": [
+                  -0.4076059644443806,
+                  -0.4076059644443806
+                ],
+                "explanation": "Illustrative small example for token log-probability gather."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-grpo-group-advantage",
+          "type": "code",
+          "title": "GRPO Group Advantage Normalization",
+          "difficulty": "easy",
+          "challenge": {
+            "problemStatement": "Implement `GRPO Group Advantage Normalization` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "import math\ndef solve(rewards, eps=1e-8):\n    pass",
+            "solution": "import math\ndef solve(rewards, eps=1e-8):\n    mu=sum(rewards)/len(rewards); sd=math.sqrt(sum((r-mu)**2 for r in rewards)/len(rewards))\n    return [(r-mu)/(sd+eps) for r in rewards]",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    1.0,
+                    2.0,
+                    3.0
+                  ]
+                ],
+                "expected": [
+                  -1.2247448563915893,
+                  0.0,
+                  1.2247448563915893
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    1.0,
+                    2.0,
+                    3.0
+                  ]
+                ],
+                "output": [
+                  -1.2247448563915893,
+                  0.0,
+                  1.2247448563915893
+                ],
+                "explanation": "Illustrative small example for grpo group advantage normalization."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        }
+      ],
+      "totalCount": 3,
+      "completed": false
+    },
+    {
+      "id": "re-post-training-alignment-set-3",
+      "name": "Set 3",
+      "sortOrder": 2,
+      "problems": [
+        {
+          "slug": "re-rlhf-reward-model-loss",
+          "type": "code",
+          "title": "Reward Model Pairwise Loss",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `Reward Model Pairwise Loss` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "import math\ndef solve(chosen_scores, rejected_scores):\n    pass",
+            "solution": "import math\ndef solve(chosen_scores, rejected_scores):\n    losses=[]\n    for c,r in zip(chosen_scores,rejected_scores):\n      z=max(-60,min(60,r-c)); losses.append(math.log1p(math.exp(z)))\n    return sum(losses)/len(losses)",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    2.0,
+                    1.0
+                  ],
+                  [
+                    1.0,
+                    2.0
+                  ]
+                ],
+                "expected": 0.8132616875182228,
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    2.0,
+                    1.0
+                  ],
+                  [
+                    1.0,
+                    2.0
+                  ]
+                ],
+                "output": 0.8132616875182228,
+                "explanation": "Illustrative small example for reward model pairwise loss."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-dpo-implicit-reward",
+          "type": "code",
+          "title": "DPO Implicit Reward",
+          "difficulty": "easy",
+          "challenge": {
+            "problemStatement": "Implement `DPO Implicit Reward` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "def solve(policy_logp, reference_logp, beta=0.1):\n    pass",
+            "solution": "def solve(policy_logp, reference_logp, beta=0.1):\n    return beta*(policy_logp-reference_logp)",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  -2.0,
+                  -3.0,
+                  0.1
+                ],
+                "expected": 0.1,
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  -2.0,
+                  -3.0,
+                  0.1
+                ],
+                "output": 0.1,
+                "explanation": "Illustrative small example for dpo implicit reward."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-grpo-kl-estimator",
+          "type": "code",
+          "title": "GRPO k3 KL Estimator",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `GRPO k3 KL Estimator` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "def solve(logp, logq):\n    pass",
+            "solution": "def solve(logp, logq):\n    # k3 estimator: exp(logq-logp) - (logq-logp) - 1, with p as policy and q as reference\n    out=[]\n    import math\n    for lp,lq in zip(logp,logq):\n      d=lq-lp; out.append(math.exp(min(60,d))-d-1)\n    return out",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    -1.0,
+                    -2.0
+                  ],
+                  [
+                    -1.2,
+                    -2.1
+                  ]
+                ],
+                "expected": [
+                  0.018730753077981888,
+                  0.004837418035959606
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    -1.0,
+                    -2.0
+                  ],
+                  [
+                    -1.2,
+                    -2.1
+                  ]
+                ],
+                "output": [
+                  0.018730753077981888,
+                  0.004837418035959606
+                ],
+                "explanation": "Illustrative small example for grpo k3 kl estimator."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        }
+      ],
+      "totalCount": 3,
+      "completed": false
+    },
+    {
+      "id": "re-post-training-alignment-set-4",
+      "name": "Set 4",
+      "sortOrder": 3,
+      "problems": [
+        {
+          "slug": "re-dpo-loss",
+          "type": "code",
+          "title": "DPO Loss",
+          "difficulty": "medium",
+          "challenge": {
+            "problemStatement": "Implement `DPO Loss` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "import math\ndef solve(pi_chosen, pi_rejected, ref_chosen, ref_rejected, beta=0.1):\n    pass",
+            "solution": "import math\ndef solve(pi_chosen, pi_rejected, ref_chosen, ref_rejected, beta=0.1):\n    x=beta*((pi_chosen-pi_rejected)-(ref_chosen-ref_rejected))\n    return math.log1p(math.exp(-max(-60,min(60,x))))",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  -1.0,
+                  -2.0,
+                  -1.5,
+                  -2.5,
+                  0.1
+                ],
+                "expected": 0.6931471805599453,
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  -1.0,
+                  -2.0,
+                  -1.5,
+                  -2.5,
+                  0.1
+                ],
+                "output": 0.6931471805599453,
+                "explanation": "Illustrative small example for dpo loss."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-ppo-gae",
+          "type": "code",
+          "title": "Generalized Advantage Estimation",
+          "difficulty": "hard",
+          "challenge": {
+            "problemStatement": "Implement `Generalized Advantage Estimation` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "def solve(rewards, values, dones, gamma=0.99, lam=0.95):\n    pass",
+            "solution": "def solve(rewards, values, dones, gamma=0.99, lam=0.95):\n    adv=[0.0]*len(rewards); gae=0.0\n    for t in range(len(rewards)-1,-1,-1):\n      next_v=values[t+1] if t+1<len(values) else 0.0\n      nonterminal=1-dones[t]\n      delta=rewards[t]+gamma*next_v*nonterminal-values[t]\n      gae=delta+gamma*lam*nonterminal*gae; adv[t]=gae\n    return adv",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    1.0,
+                    1.0
+                  ],
+                  [
+                    0.5,
+                    0.2
+                  ],
+                  [
+                    0,
+                    1
+                  ]
+                ],
+                "expected": [
+                  1.4504000000000001,
+                  0.8
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    1.0,
+                    1.0
+                  ],
+                  [
+                    0.5,
+                    0.2
+                  ],
+                  [
+                    0,
+                    1
+                  ]
+                ],
+                "output": [
+                  1.4504000000000001,
+                  0.8
+                ],
+                "explanation": "Illustrative small example for generalized advantage estimation."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        },
+        {
+          "slug": "re-rlhf-kl-penalty",
+          "type": "code",
+          "title": "RLHF KL Penalty Reward",
+          "difficulty": "easy",
+          "challenge": {
+            "problemStatement": "Implement `RLHF KL Penalty Reward` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+            "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+            "requirements": [
+              "Implement a function named `solve` with the signature shown in the reference solution.",
+              "Return the value described by the function contract; do not print it.",
+              "Keep output deterministic for the same input."
+            ],
+            "constraints": [
+              "Inputs are small enough for a straightforward reference implementation.",
+              "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+              "Unless otherwise stated, dimensions must be consistent."
+            ],
+            "hints": [
+              "Implement the small mathematical contract first; do not add production-only model machinery.",
+              "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+            ],
+            "starterCode": "def solve(rewards, kl, coefficient):\n    pass",
+            "solution": "def solve(rewards, kl, coefficient):\n    return [r-coefficient*k for r,k in zip(rewards,kl)]",
+            "testCases": [
+              {
+                "name": "smoke test",
+                "args": [
+                  [
+                    1.0,
+                    2.0
+                  ],
+                  [
+                    0.1,
+                    0.2
+                  ],
+                  0.5
+                ],
+                "expected": [
+                  0.95,
+                  1.9
+                ],
+                "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+              }
+            ],
+            "examples": [
+              {
+                "inputArgs": [
+                  [
+                    1.0,
+                    2.0
+                  ],
+                  [
+                    0.1,
+                    0.2
+                  ],
+                  0.5
+                ],
+                "output": [
+                  0.95,
+                  1.9
+                ],
+                "explanation": "Illustrative small example for rlhf kl penalty reward."
+              }
+            ],
+            "reconstructionStatus": "authored_reconstruction"
+          }
+        }
+      ],
+      "totalCount": 3,
+      "completed": false
+    }
+  ],
+  "currentSet": {
+    "id": "re-post-training-alignment-set-1",
+    "name": "Set 1",
+    "sortOrder": 0,
+    "problems": [
+      {
+        "slug": "re-dpo-logprob-ratio",
+        "type": "code",
+        "title": "Sequence Log Probability",
+        "difficulty": "easy",
+        "challenge": {
+          "problemStatement": "Implement `Sequence Log Probability` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+          "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+          "requirements": [
+            "Implement a function named `solve` with the signature shown in the reference solution.",
+            "Return the value described by the function contract; do not print it.",
+            "Keep output deterministic for the same input."
+          ],
+          "constraints": [
+            "Inputs are small enough for a straightforward reference implementation.",
+            "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+            "Unless otherwise stated, dimensions must be consistent."
+          ],
+          "hints": [
+            "Implement the small mathematical contract first; do not add production-only model machinery.",
+            "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+          ],
+          "starterCode": "import math\ndef solve(policy_logprobs, reference_logprobs):\n    pass",
+          "solution": "import math\ndef solve(policy_logprobs, reference_logprobs):\n    return math.exp(sum(policy_logprobs)-sum(reference_logprobs))",
+          "testCases": [
+            {
+              "name": "smoke test",
+              "args": [
+                [
+                  -1.0,
+                  -2.0
+                ],
+                [
+                  -1.5,
+                  -2.5
+                ]
+              ],
+              "expected": 2.718281828459045,
+              "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+            }
+          ],
+          "examples": [
+            {
+              "inputArgs": [
+                [
+                  -1.0,
+                  -2.0
+                ],
+                [
+                  -1.5,
+                  -2.5
+                ]
+              ],
+              "output": 2.718281828459045,
+              "explanation": "Illustrative small example for sequence log probability."
+            }
+          ],
+          "reconstructionStatus": "authored_reconstruction"
+        }
+      },
+      {
+        "slug": "re-grpo-loss",
+        "type": "code",
+        "title": "GRPO Clipped Surrogate Loss",
+        "difficulty": "medium",
+        "challenge": {
+          "problemStatement": "Implement `GRPO Clipped Surrogate Loss` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+          "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+          "requirements": [
+            "Implement a function named `solve` with the signature shown in the reference solution.",
+            "Return the value described by the function contract; do not print it.",
+            "Keep output deterministic for the same input."
+          ],
+          "constraints": [
+            "Inputs are small enough for a straightforward reference implementation.",
+            "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+            "Unless otherwise stated, dimensions must be consistent."
+          ],
+          "hints": [
+            "Implement the small mathematical contract first; do not add production-only model machinery.",
+            "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+          ],
+          "starterCode": "def solve(advantages, ratios, eps=0.2):\n    pass",
+          "solution": "def solve(advantages, ratios, eps=0.2):\n    return -sum(min(r*a, max(1-eps,min(1+eps,r))*a) for a,r in zip(advantages,ratios))/len(advantages)",
+          "testCases": [
+            {
+              "name": "smoke test",
+              "args": [
+                [
+                  1.0,
+                  -1.0
+                ],
+                [
+                  1.2,
+                  0.8
+                ]
+              ],
+              "expected": -0.19999999999999996,
+              "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+            }
+          ],
+          "examples": [
+            {
+              "inputArgs": [
+                [
+                  1.0,
+                  -1.0
+                ],
+                [
+                  1.2,
+                  0.8
+                ]
+              ],
+              "output": -0.19999999999999996,
+              "explanation": "Illustrative small example for grpo clipped surrogate loss."
+            }
+          ],
+          "reconstructionStatus": "authored_reconstruction"
+        }
+      },
+      {
+        "slug": "re-ppo-value-loss",
+        "type": "code",
+        "title": "PPO Value Function Loss",
+        "difficulty": "easy",
+        "challenge": {
+          "problemStatement": "Implement `PPO Value Function Loss` as a small reference component for model training, decoding, reinforcement learning, or transformer math. Follow the explicit `solve` signature and use the stated tensor/list layout.",
+          "theory": "This is a compact reference formulation of a transformer, decoding, optimization, or RLHF/RL objective. It is intentionally simplified to a small self-contained input contract, not a full production model.",
+          "requirements": [
+            "Implement a function named `solve` with the signature shown in the reference solution.",
+            "Return the value described by the function contract; do not print it.",
+            "Keep output deterministic for the same input."
+          ],
+          "constraints": [
+            "Inputs are small enough for a straightforward reference implementation.",
+            "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+            "Unless otherwise stated, dimensions must be consistent."
+          ],
+          "hints": [
+            "Implement the small mathematical contract first; do not add production-only model machinery.",
+            "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+          ],
+          "starterCode": "def solve(values, returns):\n    pass",
+          "solution": "def solve(values, returns):\n    return 0.5*sum((v-r)**2 for v,r in zip(values,returns))/len(values)",
+          "testCases": [
+            {
+              "name": "smoke test",
+              "args": [
+                [
+                  1.0,
+                  2.0
+                ],
+                [
+                  2.0,
+                  2.0
+                ]
+              ],
+              "expected": 0.25,
+              "comparison": "exact for discrete outputs; use absolute/relative tolerance 1e-6 for floating-point outputs"
+            }
+          ],
+          "examples": [
+            {
+              "inputArgs": [
+                [
+                  1.0,
+                  2.0
+                ],
+                [
+                  2.0,
+                  2.0
+                ]
+              ],
+              "output": 0.25,
+              "explanation": "Illustrative small example for ppo value function loss."
+            }
+          ],
+          "reconstructionStatus": "authored_reconstruction"
+        }
+      }
+    ],
+    "totalCount": 3,
+    "completed": false
+  }
+}

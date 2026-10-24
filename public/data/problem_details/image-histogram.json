@@ -1,0 +1,648 @@
+{
+  "id": "image-histogram",
+  "title": "Image Histogram",
+  "description": "Count grayscale pixel intensities and return a compact sparse histogram. Scan every pixel, count each intensity, then return only intensities that appear. Each output entry is a two-element list containing the intensity followed by its count. Sort entries by increasing intensity.",
+  "seoDescription": "Count grayscale image pixels into intensity bins and return the histogram in ascending intensity order.",
+  "examples": [
+    "Input: image = [[0, 1], [1, 2]]\n\nOutput: [[0, 1], [1, 2], [2, 1]]\n\nExplanation: Intensities zero and two occur once, while intensity one occurs twice.",
+    "Input: image = [[128, 128], [128, 128]]\n\nOutput: [[128, 4]]"
+  ],
+  "requirements": "* Count every pixel exactly once\n* Omit intensities whose count is zero\n* Sort entries by increasing intensity\n* Return a list of two-element intensity and count lists",
+  "theory": "## Understanding the Theory: Image Histogram\n\n### Core Intuition: Why Do We Need This?\nImages possess rich spatial structure: nearby pixels are correlated, and visual patterns (edges, textures, object parts) are translation invariant. Computer vision models apply local receptive fields and weight sharing to process high-resolution visual inputs with minimal parameter overhead. **Image Histogram** extracts localized visual features, pools spatial maps, or reconciles geometric bounding boxes.\n\nIn this problem, the objective is to implement **Image Histogram** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\np[i] = \\frac{\\text{histogram}[i]}{\\text{total pixels}}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Receptive Field Growth**: Stacking convolutional layers with strides or pooling progressively expands the effective field of view, enabling deep layers to capture global semantic context.\n* **Boundary Padding & Strides**: Padding controls spatial dimension retention, while strides downsample feature resolutions efficiently without extra parameters.\n* **Vectorized im2col**: High-performance vision libraries transform sliding window convolutions into matrix multiplications (`GEMM`) via im2col operations.",
+  "hints": [
+    "Use a 256-element count list or a dictionary while scanning the pixels.",
+    "Build the result in increasing intensity order and skip zero counts."
+  ],
+  "constraints": "* The image is a nonempty rectangular list\n* Every pixel is an integer between zero and 255",
+  "difficulty": "Easy",
+  "starterCode": "def image_histogram(image: list) -> list:\n    \"\"\"\n    Returns a list of intensity and count pairs.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T11:39:31.985Z",
+  "updatedAt": "2026-08-23T18:55:49.113Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nfrom collections import Counter\nimport numpy as np\n\ndef image_histogram(image: list) -> list:\n    arr = np.array(image, dtype=int).flatten()\n    counts = Counter(arr)\n    return [[int(k), int(counts[k])] for k in sorted(counts.keys())]\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "ImageHistogramViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Simple",
+      "inputs": {
+        "image": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            2
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "All same",
+      "inputs": {
+        "image": [
+          [
+            128,
+            128
+          ],
+          [
+            128,
+            128
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          128,
+          4
+        ]
+      ]
+    },
+    {
+      "id": "image-histogram-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "image": [
+          [
+            0,
+            2
+          ],
+          [
+            2,
+            4
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          4,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "image": [
+          [
+            0,
+            -1
+          ],
+          [
+            -1,
+            -2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -2,
+          1
+        ],
+        [
+          -1,
+          2
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "image": [
+          [
+            0,
+            3
+          ],
+          [
+            3,
+            6
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          6,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "image": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            2.0,
+            3.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          3,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "image": [
+          [
+            -2.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            0.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -2,
+          1
+        ],
+        [
+          -1,
+          2
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "image": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            1
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "image": [
+          [
+            0,
+            -1
+          ],
+          [
+            -1,
+            -2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -2,
+          1
+        ],
+        [
+          -1,
+          2
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "image": [
+          [
+            0,
+            10
+          ],
+          [
+            10,
+            20
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1
+        ],
+        [
+          10,
+          2
+        ],
+        [
+          20,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          4
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "image": [
+          [
+            5.0,
+            6.0
+          ],
+          [
+            6.0,
+            7.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          5,
+          1
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          7,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "image": [
+          [
+            0,
+            2
+          ],
+          [
+            2,
+            3
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          3,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "image": [
+          [
+            0,
+            -2
+          ],
+          [
+            -2,
+            -4
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -4,
+          1
+        ],
+        [
+          -2,
+          2
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          4
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "image": [
+          [
+            -1.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "image": [
+          [
+            0,
+            4
+          ],
+          [
+            4,
+            8
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          8,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "image": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-histogram-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "image": [
+          [
+            0,
+            5
+          ],
+          [
+            5,
+            10
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          1
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          10,
+          1
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "image_histogram",
+    "parameters": [
+      {
+        "name": "image",
+        "type": "array",
+        "example": "[[0, 1], [1, 2]]",
+        "description": "2D grayscale image with values in [0, 255]"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "histogram-equalization",
+    "color-to-grayscale",
+    "gaussian-blur-kernel",
+    "conv2d-image-filtering",
+    "sobel-edge-detection"
+  ],
+  "tags": [
+    "Computer Vision"
+  ],
+  "prevId": "roi-pooling",
+  "nextId": "gaussian-blur-kernel",
+  "slug": "image-histogram",
+  "cleanTitle": "Image Histogram",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/image-histogram",
+  "localUrl": "http://localhost:3000/problems/image-histogram",
+  "studyPlan": null
+}

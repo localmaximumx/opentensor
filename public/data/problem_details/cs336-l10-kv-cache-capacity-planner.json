@@ -1,0 +1,454 @@
+{
+  "id": "cs336-l10-kv-cache-capacity-planner",
+  "slug": "cs336-l10-kv-cache-capacity-planner",
+  "title": "LLM KV Cache Capacity Planner",
+  "cleanTitle": "LLM KV Cache Capacity Planner",
+  "category": "python",
+  "difficulty": "Medium",
+  "tags": [
+    "Language Models",
+    "Inference"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "language-modeling-from-scratch",
+    "title": "Language Modeling from Scratch",
+    "sectionId": "cs336-l10"
+  },
+  "seoDescription": "Calculate model storage, per-request KV storage, maximum fitting batch size, and bandwidth-limited decode throughput.",
+  "description": "Calculate per-token and per-request KV cache memory footprints to determine maximum serving concurrency on available GPU memory.\n\n**Mathematical Formulation:**\n\n$$\nM_{\\text{request}} = 2 \\cdot L \\cdot H_{KV} \\cdot d \\cdot S \\cdot \\text{bytes}, \\quad B_{\\max} = \\left\\lfloor \\frac{M_{\\text{GPU}} - M_{\\text{model}}}{M_{\\text{request}}} \\right\\rfloor\n$$\n\n**Step-by-Step Implementation:**\n1. Compute key and value tensor memory per token across all layers.\n2. Multiply by maximum sequence length S to obtain per-request memory allocation.\n3. Subtract model weights from total GPU VRAM to determine memory budget for KV cache.\n4. Compute maximum supported concurrent batch size.\n\n**Returns:** Dictionary with keys 'bytes_per_token', 'bytes_per_request', 'available_kv_memory_bytes', and 'max_batch_size'.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Plan KV-Cache Capacity specification."
+  ],
+  "requirements": "* Must implement `cs336_l10_kv_cache_capacity_planner` using PYTHON.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: LLM KV Cache Capacity Planner\n\n### Core Intuition: Why Do We Need This?\nCalculate per-token and per-request KV cache memory footprints to determine maximum serving concurrency on available GPU memory. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\nM_{\\text{request}} = 2 \\cdot L \\cdot H_{KV} \\cdot d \\cdot S \\cdot \\text{bytes}, \\quad B_{\\max} = \\left\\lfloor \\frac{M_{\\text{GPU}} - M_{\\text{model}}}{M_{\\text{request}}} \\right\\rfloor\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Compute key and value tensor memory per token across all layers.\n3. **Phase 3: Iterative Execution & Reduction**: Multiply by maximum sequence length S to obtain per-request memory allocation.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Compute maximum supported concurrent batch size.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard PYTHON documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `any` specifications."
+  ],
+  "constraints": "* Category: PYTHON\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, PYTHON\n",
+  "starterCode": "def cs336_l10_kv_cache_capacity_planner(num_layers: int, num_kv_heads: int, head_dim: int, max_seq_len: int, total_gpu_mem_bytes: int, model_param_bytes: int, bytes_per_elem: int = 2) -> dict:\n    \"\"\"\n    Calculate per-token and per-request KV cache memory footprints to determine maximum serving concurrency on available GPU memory.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nCalculate per-token and per-request KV cache memory footprints to determine maximum serving concurrency on available GPU memory.\n\n### ⚡ Python Reference Implementation\n```python\ndef cs336_l10_kv_cache_capacity_planner(num_layers: int, num_kv_heads: int, head_dim: int, max_seq_len: int, total_gpu_mem_bytes: int, model_param_bytes: int, bytes_per_elem: int = 2) -> dict:\n    b_tok = 2 * num_layers * num_kv_heads * head_dim * bytes_per_elem\n    b_req = b_tok * max_seq_len\n    avail = total_gpu_mem_bytes - model_param_bytes\n    return {'bytes_per_token': b_tok, 'bytes_per_request': b_req, 'available_kv_memory_bytes': avail, 'max_batch_size': max(0, avail // b_req) if b_req else 0}\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "num_layers": 32,
+        "num_kv_heads": 8,
+        "head_dim": 128,
+        "max_seq_len": 4096,
+        "total_gpu_mem_bytes": 80000000000,
+        "model_param_bytes": 14000000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": 131072,
+        "bytes_per_request": 536870912,
+        "available_kv_memory_bytes": 66000000000,
+        "max_batch_size": 122
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "num_layers": 12,
+        "num_kv_heads": 4,
+        "head_dim": 64,
+        "max_seq_len": 2048,
+        "total_gpu_mem_bytes": 24000000000,
+        "model_param_bytes": 6000000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": 12288,
+        "bytes_per_request": 25165824,
+        "available_kv_memory_bytes": 18000000000,
+        "max_batch_size": 715
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "num_layers": 64,
+        "num_kv_heads": 16,
+        "head_dim": 256,
+        "max_seq_len": 8192,
+        "total_gpu_mem_bytes": 160000000000,
+        "model_param_bytes": 28000000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": 1048576,
+        "bytes_per_request": 8589934592,
+        "available_kv_memory_bytes": 132000000000,
+        "max_batch_size": 15
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "num_layers": 16,
+        "num_kv_heads": 4,
+        "head_dim": 64,
+        "max_seq_len": 2048,
+        "total_gpu_mem_bytes": 40000000000,
+        "model_param_bytes": 7000000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": 16384,
+        "bytes_per_request": 33554432,
+        "available_kv_memory_bytes": 33000000000,
+        "max_batch_size": 983
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "num_layers": -32,
+        "num_kv_heads": -8,
+        "head_dim": -128,
+        "max_seq_len": -4096,
+        "total_gpu_mem_bytes": -80000000000,
+        "model_param_bytes": -14000000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": -131072,
+        "bytes_per_request": 536870912,
+        "available_kv_memory_bytes": -66000000000,
+        "max_batch_size": 0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "num_layers": 96,
+        "num_kv_heads": 24,
+        "head_dim": 384,
+        "max_seq_len": 12288,
+        "total_gpu_mem_bytes": 240000000000,
+        "model_param_bytes": 42000000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": 3538944,
+        "bytes_per_request": 43486543872,
+        "available_kv_memory_bytes": 198000000000,
+        "max_batch_size": 4
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "num_layers": 33.0,
+        "num_kv_heads": 9.0,
+        "head_dim": 129.0,
+        "max_seq_len": 4097.0,
+        "total_gpu_mem_bytes": 80000000001.0,
+        "model_param_bytes": 14000000001.0
+      },
+      "expectedOutput": {
+        "bytes_per_token": 153252.0,
+        "bytes_per_request": 627873444.0,
+        "available_kv_memory_bytes": 66000000000.0,
+        "max_batch_size": 105.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "num_layers": 30.0,
+        "num_kv_heads": 6.0,
+        "head_dim": 126.0,
+        "max_seq_len": 4094.0,
+        "total_gpu_mem_bytes": 79999999998.0,
+        "model_param_bytes": 13999999998.0
+      },
+      "expectedOutput": {
+        "bytes_per_token": 90720.0,
+        "bytes_per_request": 371407680.0,
+        "available_kv_memory_bytes": 66000000000.0,
+        "max_batch_size": 177.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "num_layers": 32,
+        "num_kv_heads": 8,
+        "head_dim": 128,
+        "max_seq_len": 4096,
+        "total_gpu_mem_bytes": 80000000000,
+        "model_param_bytes": 14000000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": 131072,
+        "bytes_per_request": 536870912,
+        "available_kv_memory_bytes": 66000000000,
+        "max_batch_size": 122
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "num_layers": -32,
+        "num_kv_heads": -8,
+        "head_dim": -128,
+        "max_seq_len": -4096,
+        "total_gpu_mem_bytes": -80000000000,
+        "model_param_bytes": -14000000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": -131072,
+        "bytes_per_request": 536870912,
+        "available_kv_memory_bytes": -66000000000,
+        "max_batch_size": 0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "num_layers": 320,
+        "num_kv_heads": 80,
+        "head_dim": 1280,
+        "max_seq_len": 40960,
+        "total_gpu_mem_bytes": 800000000000,
+        "model_param_bytes": 140000000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": 131072000,
+        "bytes_per_request": 5368709120000,
+        "available_kv_memory_bytes": 660000000000,
+        "max_batch_size": 0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "num_layers": 3,
+        "num_kv_heads": 1,
+        "head_dim": 13,
+        "max_seq_len": 410,
+        "total_gpu_mem_bytes": 8000000000,
+        "model_param_bytes": 1400000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": 156,
+        "bytes_per_request": 63960,
+        "available_kv_memory_bytes": 6600000000,
+        "max_batch_size": 103189
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "num_layers": 37.0,
+        "num_kv_heads": 13.0,
+        "head_dim": 133.0,
+        "max_seq_len": 4101.0,
+        "total_gpu_mem_bytes": 80000000005.0,
+        "model_param_bytes": 14000000005.0
+      },
+      "expectedOutput": {
+        "bytes_per_token": 255892.0,
+        "bytes_per_request": 1049413092.0,
+        "available_kv_memory_bytes": 66000000000.0,
+        "max_batch_size": 62.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "num_layers": 48,
+        "num_kv_heads": 12,
+        "head_dim": 192,
+        "max_seq_len": 6144,
+        "total_gpu_mem_bytes": 120000000000,
+        "model_param_bytes": 21000000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": 442368,
+        "bytes_per_request": 2717908992,
+        "available_kv_memory_bytes": 99000000000,
+        "max_batch_size": 36
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "num_layers": -64,
+        "num_kv_heads": -16,
+        "head_dim": -256,
+        "max_seq_len": -8192,
+        "total_gpu_mem_bytes": -160000000000,
+        "model_param_bytes": -28000000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": -1048576,
+        "bytes_per_request": 8589934592,
+        "available_kv_memory_bytes": -132000000000,
+        "max_batch_size": 0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "num_layers": 8,
+        "num_kv_heads": 2,
+        "head_dim": 32,
+        "max_seq_len": 1024,
+        "total_gpu_mem_bytes": 20000000000,
+        "model_param_bytes": 3500000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": 2048,
+        "bytes_per_request": 2097152,
+        "available_kv_memory_bytes": 16500000000,
+        "max_batch_size": 7867
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "num_layers": 31.0,
+        "num_kv_heads": 7.0,
+        "head_dim": 127.0,
+        "max_seq_len": 4095.0,
+        "total_gpu_mem_bytes": 79999999999.0,
+        "model_param_bytes": 13999999999.0
+      },
+      "expectedOutput": {
+        "bytes_per_token": 110236.0,
+        "bytes_per_request": 451416420.0,
+        "available_kv_memory_bytes": 66000000000.0,
+        "max_batch_size": 146.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "num_layers": 128,
+        "num_kv_heads": 32,
+        "head_dim": 512,
+        "max_seq_len": 16384,
+        "total_gpu_mem_bytes": 320000000000,
+        "model_param_bytes": 56000000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": 8388608,
+        "bytes_per_request": 137438953472,
+        "available_kv_memory_bytes": 264000000000,
+        "max_batch_size": 1
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "num_layers": 24,
+        "num_kv_heads": 6,
+        "head_dim": 96,
+        "max_seq_len": 3072,
+        "total_gpu_mem_bytes": 60000000000,
+        "model_param_bytes": 10500000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": 55296,
+        "bytes_per_request": 169869312,
+        "available_kv_memory_bytes": 49500000000,
+        "max_batch_size": 291
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l10-kv-cache-capacity-planner-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "num_layers": 160,
+        "num_kv_heads": 40,
+        "head_dim": 640,
+        "max_seq_len": 20480,
+        "total_gpu_mem_bytes": 400000000000,
+        "model_param_bytes": 70000000000
+      },
+      "expectedOutput": {
+        "bytes_per_token": 16384000,
+        "bytes_per_request": 335544320000,
+        "available_kv_memory_bytes": 330000000000,
+        "max_batch_size": 0
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cs336_l10_kv_cache_capacity_planner",
+    "parameters": [
+      {
+        "name": "num_layers",
+        "type": "any"
+      },
+      {
+        "name": "num_kv_heads",
+        "type": "any"
+      },
+      {
+        "name": "head_dim",
+        "type": "any"
+      },
+      {
+        "name": "max_seq_len",
+        "type": "any"
+      },
+      {
+        "name": "total_gpu_mem_bytes",
+        "type": "any"
+      },
+      {
+        "name": "model_param_bytes",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "gradient-descent-quadratic",
+    "anchor-box-generation",
+    "value-iteration-step",
+    "precision-recall-at-k",
+    "cs336-l01-train-byte-pair-encoding"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/cs336-l10-kv-cache-capacity-planner",
+  "localUrl": "http://localhost:3000/problems/cs336-l10-kv-cache-capacity-planner"
+}

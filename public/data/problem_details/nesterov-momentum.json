@@ -1,0 +1,671 @@
+{
+  "id": "nesterov-momentum",
+  "title": "Implement Nesterov Momentum (NAG)",
+  "description": "Perform one Nesterov momentum update using a gradient already evaluated at the look-ahead position.\n\n$$\nv_t = \\mu v_{t-1} + \\eta g_t\n$$\n\n$$\nw_t = w_{t-1} - v_t\n$$\n\nHere, $w_{t-1}$ is the current parameter array, $v_{t-1}$ is the previous velocity, $g_t$ is the supplied look-ahead gradient, $\\eta$ is lr, and $\\mu$ is momentum. Return a dictionary containing new_w and new_v as NumPy arrays.",
+  "seoDescription": "Implement a Nesterov accelerated-gradient update using lookahead momentum and the current gradient.",
+  "examples": [
+    "Input: w = [1.0, -1.0], v = [0.0, 0.0], grad = [0.5, -0.25], lr = 0.1, momentum = 0.9\n\nOutput: {\"new_w\": [0.95, -0.975], \"new_v\": [0.05, -0.025]}\n\nExplanation: With no previous velocity, the first update is the learning-rate-scaled gradient.",
+    "Input: w = [1.0, 2.0], v = [0.5, -0.3], grad = [0.1, 0.2], lr = 0.1, momentum = 0.9\n\nOutput: {\"new_w\": [0.54, 2.25], \"new_v\": [0.46, -0.25]}",
+    "Input: w = [2.0], v = [0.0], grad = [0.0], lr = 0.1, momentum = 0.9\n\nOutput: {\"new_w\": [2.0], \"new_v\": [0.0]}"
+  ],
+  "requirements": "* Apply the stated velocity update before updating the parameters\n* Return exactly new_w and new_v in a dictionary\n* Both returned values must be NumPy arrays with the input shape",
+  "theory": "## Understanding the Theory: Implement Nesterov Momentum (NAG)\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization challenge across highly non-convex loss surfaces filled with saddle points, ravines, and plateaus. Naive gradient descent often oscillates wildly in steep directions while crawling along flat regions. **Implement Nesterov Momentum (NAG)** accelerates convergence, dampens oscillations, and stabilizes weight trajectories during training.\n\nIn this problem, the objective is to implement **Implement Nesterov Momentum (NAG)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nv_t = \\mu v_{t-1} + \\eta g_t\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Momentum Accumulation**: Smoothing velocity vectors across successive mini-batches enables optimizers to escape shallow local minima and push through ill-conditioned ravines.\n* **Adaptive Scaling**: Tracking running second moments scales learning rates inversely with gradient variance, preventing rare features from vanishing and frequent features from exploding.\n* **Gradient Regularization**: Gradient clipping enforces hard norm bounds, preventing runaway parameter updates during training instability.",
+  "hints": [
+    "Compute new_v = momentum * v + lr * grad first.",
+    "Subtract new_v from the current parameters to obtain new_w."
+  ],
+  "constraints": "* w, v, and grad have the same nonempty numeric shape\n* lr is positive\n* momentum is at least 0 and less than 1\n* Use NumPy only",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef nesterov_momentum_step(w: list, v: list, grad: list, lr: float = 0.01, momentum: float = 0.9) -> dict:\n    \"\"\"\n    Returns a dictionary with new_w and new_v.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-05T19:02:26.422Z",
+  "updatedAt": "2026-03-05T20:21:07.087Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef nesterov_momentum_step(w: list, v: list, grad: list, lr: float = 0.01, momentum: float = 0.9) -> dict:\n    w_arr = np.array(w, dtype=float)\n    v_arr = np.array(v, dtype=float)\n    g_arr = np.array(grad, dtype=float)\n    new_v = momentum * v_arr + lr * g_arr\n    new_w = w_arr - new_v\n    return {'new_w': np.round(new_w, 6).tolist(), 'new_v': np.round(new_v, 6).tolist()}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "NesterovMomentumViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "First step (Ex1)",
+      "inputs": {
+        "v": [
+          0,
+          0
+        ],
+        "w": [
+          1,
+          -1
+        ],
+        "lr": 0.1,
+        "grad": [
+          0.5,
+          -0.25
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "new_w": [
+          0.95,
+          -0.975
+        ],
+        "new_v": [
+          0.05,
+          -0.025
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "With existing velocity (Ex2)",
+      "inputs": {
+        "v": [
+          0.5,
+          -0.3
+        ],
+        "w": [
+          1,
+          2
+        ],
+        "lr": 0.1,
+        "grad": [
+          0.1,
+          0.2
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "new_w": [
+          0.54,
+          2.25
+        ],
+        "new_v": [
+          0.46,
+          -0.25
+        ]
+      }
+    },
+    {
+      "id": "test-3",
+      "name": "Zero gradient (Ex3)",
+      "inputs": {
+        "v": [
+          0
+        ],
+        "w": [
+          2
+        ],
+        "lr": 0.1,
+        "grad": [
+          0
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          2.0
+        ],
+        "new_v": [
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "v": [
+          0,
+          0
+        ],
+        "w": [
+          1,
+          -1
+        ],
+        "lr": 0.1,
+        "grad": [
+          0.5,
+          -0.25
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          0.95,
+          -0.975
+        ],
+        "new_v": [
+          0.05,
+          -0.025
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "v": [
+          0.5,
+          -0.3
+        ],
+        "w": [
+          1,
+          2
+        ],
+        "lr": 0.1,
+        "grad": [
+          0.1,
+          0.2
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          0.54,
+          2.25
+        ],
+        "new_v": [
+          0.46,
+          -0.25
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "v": [
+          0
+        ],
+        "w": [
+          2
+        ],
+        "lr": 0.1,
+        "grad": [
+          0
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          2.0
+        ],
+        "new_v": [
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "v": [
+          0,
+          0
+        ],
+        "w": [
+          1,
+          -1
+        ],
+        "lr": 0.1,
+        "grad": [
+          0.5,
+          -0.25
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          0.95,
+          -0.975
+        ],
+        "new_v": [
+          0.05,
+          -0.025
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "v": [
+          0.5,
+          -0.3
+        ],
+        "w": [
+          1,
+          2
+        ],
+        "lr": 0.1,
+        "grad": [
+          0.1,
+          0.2
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          0.54,
+          2.25
+        ],
+        "new_v": [
+          0.46,
+          -0.25
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "v": [
+          0
+        ],
+        "w": [
+          2
+        ],
+        "lr": 0.1,
+        "grad": [
+          0
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          2.0
+        ],
+        "new_v": [
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "v": [
+          0,
+          0
+        ],
+        "w": [
+          1,
+          -1
+        ],
+        "lr": 0.1,
+        "grad": [
+          0.5,
+          -0.25
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          0.95,
+          -0.975
+        ],
+        "new_v": [
+          0.05,
+          -0.025
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "v": [
+          0.5,
+          -0.3
+        ],
+        "w": [
+          1,
+          2
+        ],
+        "lr": 0.1,
+        "grad": [
+          0.1,
+          0.2
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          0.54,
+          2.25
+        ],
+        "new_v": [
+          0.46,
+          -0.25
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "v": [
+          0
+        ],
+        "w": [
+          2
+        ],
+        "lr": 0.1,
+        "grad": [
+          0
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          2.0
+        ],
+        "new_v": [
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "v": [
+          0,
+          0
+        ],
+        "w": [
+          1,
+          -1
+        ],
+        "lr": 0.1,
+        "grad": [
+          0.5,
+          -0.25
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          0.95,
+          -0.975
+        ],
+        "new_v": [
+          0.05,
+          -0.025
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "v": [
+          0.5,
+          -0.3
+        ],
+        "w": [
+          1,
+          2
+        ],
+        "lr": 0.1,
+        "grad": [
+          0.1,
+          0.2
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          0.54,
+          2.25
+        ],
+        "new_v": [
+          0.46,
+          -0.25
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "v": [
+          0
+        ],
+        "w": [
+          2
+        ],
+        "lr": 0.1,
+        "grad": [
+          0
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          2.0
+        ],
+        "new_v": [
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "v": [
+          0,
+          0
+        ],
+        "w": [
+          1,
+          -1
+        ],
+        "lr": 0.1,
+        "grad": [
+          0.5,
+          -0.25
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          0.95,
+          -0.975
+        ],
+        "new_v": [
+          0.05,
+          -0.025
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "v": [
+          0.5,
+          -0.3
+        ],
+        "w": [
+          1,
+          2
+        ],
+        "lr": 0.1,
+        "grad": [
+          0.1,
+          0.2
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          0.54,
+          2.25
+        ],
+        "new_v": [
+          0.46,
+          -0.25
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "v": [
+          0
+        ],
+        "w": [
+          2
+        ],
+        "lr": 0.1,
+        "grad": [
+          0
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          2.0
+        ],
+        "new_v": [
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "v": [
+          0,
+          0
+        ],
+        "w": [
+          1,
+          -1
+        ],
+        "lr": 0.1,
+        "grad": [
+          0.5,
+          -0.25
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          0.95,
+          -0.975
+        ],
+        "new_v": [
+          0.05,
+          -0.025
+        ]
+      }
+    },
+    {
+      "id": "nesterov-momentum-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "v": [
+          0.5,
+          -0.3
+        ],
+        "w": [
+          1,
+          2
+        ],
+        "lr": 0.1,
+        "grad": [
+          0.1,
+          0.2
+        ],
+        "momentum": 0.9
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "new_w": [
+          0.54,
+          2.25
+        ],
+        "new_v": [
+          0.46,
+          -0.25
+        ]
+      }
+    }
+  ],
+  "functionMetadata": {
+    "name": "nesterov_momentum_step",
+    "parameters": [
+      {
+        "name": "w",
+        "type": "array",
+        "example": "[1.0, -1.0]",
+        "description": "Current parameters"
+      },
+      {
+        "name": "v",
+        "type": "array",
+        "example": "[0.0, 0.0]",
+        "description": "Current velocity (same shape as w)"
+      },
+      {
+        "name": "grad",
+        "type": "array",
+        "example": "[0.5, -0.25]",
+        "description": "Gradients at look-ahead position"
+      },
+      {
+        "name": "lr",
+        "type": "number",
+        "example": "0.1",
+        "description": "Learning rate"
+      },
+      {
+        "name": "momentum",
+        "type": "number",
+        "example": "0.9",
+        "description": "Momentum factor"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "adam-optimizer",
+    "adamw-optimizer",
+    "nadam-optimizer",
+    "rmsprop-optimizer",
+    "gradient-descent-quadratic"
+  ],
+  "tags": [
+    "Optimization"
+  ],
+  "prevId": "adagrad-optimizer",
+  "nextId": "adamw-optimizer",
+  "slug": "nesterov-momentum",
+  "cleanTitle": "Implement Nesterov Momentum (NAG)",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/nesterov-momentum",
+  "localUrl": "http://localhost:3000/problems/nesterov-momentum",
+  "studyPlan": null
+}

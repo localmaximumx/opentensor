@@ -1,0 +1,1763 @@
+{
+  "id": "alexnet-pooling",
+  "title": "Overlapping Max Pooling",
+  "description": "Implement two-dimensional max pooling for an NHWC tensor. A square window of width $K$ moves by stride $s$, and each output keeps the largest value independently in every batch item and channel.\n\n$$\nY_{n,i,j,c}=\\max_{0\\le u,v<K}X_{n,is+u,js+v,c}.\n$$\n\nHere, $n$ is the batch index, $(i,j)$ is the output location, and $c$ is the channel. AlexNet used windows larger than their stride, so neighboring windows overlap. Return the pooled values as a float64 NumPy array with shape $(B,H_{out},W_{out},C)$.",
+  "seoDescription": "Implement AlexNet overlapping max pooling with a 3x3 window and stride two across spatial dimensions.",
+  "examples": [
+    "Input: x = [[[[1],[2],[3],[4]],[[5],[6],[7],[8]],[[9],[10],[11],[12]],[[13],[14],[15],[16]]]], kernel_size = 3, stride = 1\n\nOutput: [[[[11],[12]],[[15],[16]]]]\n\nExplanation: Each three-by-three window contributes its maximum value, and stride one makes adjacent windows overlap.",
+    "Input: x = [[[[1,8],[2,7]],[[3,6],[4,5]]]], kernel_size = 2, stride = 1\n\nOutput: [[[[4,8]]]]",
+    "Input: x = [[[[1],[5],[2],[4]],[[3],[0],[7],[6]],[[8],[2],[9],[1]],[[4],[3],[5],[0]]]], kernel_size = 2, stride = 2\n\nOutput: [[[[5],[7]],[[8],[9]]]]"
+  ],
+  "requirements": "- Compute the maximum value in every valid spatial window.\n- Pool each batch item and channel independently.\n- Do not pad the input.\n- Return a new float64 NumPy array.",
+  "theory": "# <span style=\"font-size: 20px;\">Overlapping Max Pooling</span>\n\n<span style=\"font-size: 14px;\">Pooling is a downsampling operation in CNNs that reduces spatial dimensions of feature maps by summarizing local regions into single values. In AlexNet (Krizhevsky, Sutskever, and Hinton, 2012), overlapping max pooling was a deliberate architectural choice that contributed to the network's landmark top-5 error rate of 15.3% on ILSVRC-2012.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What Pooling Does</span>\n\n<span style=\"font-size: 14px;\">Pooling slides a fixed-size window across an input feature map and computes a single summary value per position, producing a smaller output that retains the most important information while discarding fine-grained spatial detail.</span>\n\n<span style=\"font-size: 14px;\">Key purposes:</span>\n\n* <span style=\"font-size: 14px;\">**Spatial downsampling:** Reduces height and width, decreasing activations for subsequent layers. In AlexNet, pooling reduces dimensions from 55x55 to 6x6.</span>\n* <span style=\"font-size: 14px;\">**Translation invariance:** Small spatial shifts produce similar pooled outputs, helping generalization.</span>\n* <span style=\"font-size: 14px;\">**Reducing computational cost:** Smaller feature maps mean fewer operations in subsequent layers.</span>\n* <span style=\"font-size: 14px;\">**Controlling overfitting:** Summarizing local regions acts as regularization. The AlexNet paper notes overlapping pooling made the model \"slightly more difficult to overfit.\"</span>\n\n<span style=\"font-size: 14px;\">Pooling operates independently per channel, so channel count is unchanged. Only spatial dimensions (height and width) are reduced.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Max Pooling vs Average Pooling</span>\n\n### <span style=\"font-size: 14px;\">Max Pooling</span>\n\n<span style=\"font-size: 14px;\">Selects the largest value from each $k \\times k$ window:</span>\n\n$$\ny_{i,j} = \\max_{0 \\leq m < k, \\; 0 \\leq n < k} x_{i+m, \\; j+n}\n$$\n\n<span style=\"font-size: 14px;\">During backpropagation, the gradient flows only to the position that held the maximum; all others receive zero gradient.</span>\n\n### <span style=\"font-size: 14px;\">Average Pooling</span>\n\n<span style=\"font-size: 14px;\">Computes the arithmetic mean of all values within each window:</span>\n\n$$\ny_{i,j} = \\frac{1}{k^2} \\sum_{m=0}^{k-1} \\sum_{n=0}^{k-1} x_{i+m, \\; j+n}\n$$\n\n<span style=\"font-size: 14px;\">Distributes gradient equally to all positions during backpropagation.</span>\n\n### <span style=\"font-size: 14px;\">Why AlexNet Used Max Pooling</span>\n\n* <span style=\"font-size: 14px;\">**Preserves strongest activations:** After ReLU, the most informative signal is the magnitude of the strongest activation. Average pooling dilutes it by blending in weaker or zero activations.</span>\n* <span style=\"font-size: 14px;\">**Better gradient flow:** Gradients flow only through the max position, strengthening the most discriminative features.</span>\n* <span style=\"font-size: 14px;\">**Robustness to sparse activations:** After ReLU, many activations are zero. Max pooling ignores zeros; average pooling is dragged down by them.</span>\n* <span style=\"font-size: 14px;\">**Empirical performance:** Max pooling consistently outperformed average pooling on image classification benchmarks of that era.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n### <span style=\"font-size: 14px;\">Output Dimension Formula</span>\n\n<span style=\"font-size: 14px;\">For input size $H_{in} \\times W_{in}$, kernel size $k$, and stride $s$ with no padding:</span>\n\n$$\nH_{out} = \\left\\lfloor \\frac{H_{in} - k}{s} \\right\\rfloor + 1\n$$\n\n$$\nW_{out} = \\left\\lfloor \\frac{W_{in} - k}{s} \\right\\rfloor + 1\n$$\n\n<span style=\"font-size: 14px;\">AlexNet pooling always uses $p = 0$. The convolution formula includes a $+2p$ term in the numerator; do not confuse the two.</span>\n\n### <span style=\"font-size: 14px;\">Max Pooling Operation</span>\n\n<span style=\"font-size: 14px;\">For input $X$ with $C$ channels, the output at position $(i, j)$ for channel $c$:</span>\n\n$$\nY(c, i, j) = \\max_{0 \\leq m < k, \\; 0 \\leq n < k} X(c, \\; i \\cdot s + m, \\; j \\cdot s + n)\n$$\n\n<span style=\"font-size: 14px;\">The channel index $c$ is the same in input and output since pooling operates per channel independently.</span>\n\n### <span style=\"font-size: 14px;\">Full Output Shape</span>\n\n<span style=\"font-size: 14px;\">Input $(N, C, H_{in}, W_{in})$ produces output:</span>\n\n$$\n(N, \\; C, \\; H_{out}, \\; W_{out})\n$$\n\n<span style=\"font-size: 14px;\">Batch size $N$ and channel count $C$ are unchanged. Only spatial dimensions $H$ and $W$ are reduced -- a key distinction from convolutional layers, which can change channel count via number of filters.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Overlapping vs Non-Overlapping Pooling</span>\n\n### <span style=\"font-size: 14px;\">Non-Overlapping Pooling</span>\n\n<span style=\"font-size: 14px;\">When $s = k$, adjacent windows tile the input without sharing pixels. Common: $k = 2, s = 2$ (halves dimensions). Each input pixel contributes to exactly one output value.</span>\n\n### <span style=\"font-size: 14px;\">Overlapping Pooling</span>\n\n<span style=\"font-size: 14px;\">When $s < k$, adjacent windows share pixels. The overlap is $k - s$ pixels along each axis. AlexNet uses $k = 3, s = 2$, giving 1 pixel of overlap.</span>\n\n<span style=\"font-size: 14px;\">1D example with input $[0, 1, 2, 3, 4]$, $k=3$, $s=2$:</span>\n\n* <span style=\"font-size: 14px;\">**Window 1:** positions $[0, 1, 2]$</span>\n* <span style=\"font-size: 14px;\">**Window 2:** positions $[2, 3, 4]$</span>\n\n<span style=\"font-size: 14px;\">Position 2 is shared -- this is the overlapping pixel.</span>\n\n### <span style=\"font-size: 14px;\">Why Overlapping Pooling Helps</span>\n\n<span style=\"font-size: 14px;\">Shared pixels create information redundancy, acting as a mild regularizer that produces a smoother representation and makes it harder to memorize exact spatial configurations.</span>\n\n<span style=\"font-size: 14px;\">It also provides gentler downsampling: $k=3, s=3$ turns 27x27 into 9x9, while $k=3, s=2$ yields 13x13, preserving more spatial resolution.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context and Design Decisions</span>\n\n### <span style=\"font-size: 14px;\">What the Paper Says</span>\n\n<span style=\"font-size: 14px;\">Krizhevsky et al. (2012) state: \"We generally observe that models with overlapping pooling find it slightly more difficult to overfit.\" This was significant because overfitting was a major concern for AlexNet's ~60 million parameters trained on only 1.2 million images.</span>\n\n### <span style=\"font-size: 14px;\">Measured Error Reduction</span>\n\n<span style=\"font-size: 14px;\">Switching from non-overlapping ($k=2, s=2$) to overlapping ($k=3, s=2$) reduced top-1 error by 0.4% and top-5 error by 0.3%. These fractions mattered in ILSVRC where top entries were separated by less than 1%.</span>\n\n### <span style=\"font-size: 14px;\">Where Pooling Is Applied in AlexNet</span>\n\n<span style=\"font-size: 14px;\">Pooling is applied selectively, not after every conv layer:</span>\n\n* <span style=\"font-size: 14px;\">**After Conv1:** Pool1 applied</span>\n* <span style=\"font-size: 14px;\">**After Conv2:** Pool2 applied</span>\n* <span style=\"font-size: 14px;\">**After Conv3:** No pooling</span>\n* <span style=\"font-size: 14px;\">**After Conv4:** No pooling</span>\n* <span style=\"font-size: 14px;\">**After Conv5:** Pool5 applied</span>\n\n<span style=\"font-size: 14px;\">Pooling is omitted after Conv3/Conv4 because spatial dimensions are already small (13x13); further pooling would shrink feature maps too aggressively.</span>\n\n### <span style=\"font-size: 14px;\">Regularization Role</span>\n\n<span style=\"font-size: 14px;\">Overlapping pooling was one of several regularization techniques in AlexNet, alongside data augmentation (random crops, flips, PCA color augmentation) and dropout in FC layers. Each contributed a small but additive improvement.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Where Pooling Fits in the AlexNet Pipeline</span>\n\n<span style=\"font-size: 14px;\">Each convolutional block follows: **Conv -> ReLU -> (optional LRN) -> (optional Pool)**. LRN is applied after Conv1 and Conv2; pooling after Conv1, Conv2, and Conv5.</span>\n\n### <span style=\"font-size: 14px;\">Full Spatial Dimension Trace</span>\n\n<span style=\"font-size: 14px;\">All pooling layers use $k = 3, s = 2$.</span>\n\n<span style=\"font-size: 14px;\">**Input:** $224 \\times 224 \\times 3$</span>\n\n<span style=\"font-size: 14px;\">**Conv1:** 96 filters, $11 \\times 11$, stride 4, no padding.</span>\n\n$$\nH_{out} = \\left\\lfloor \\frac{224 - 11}{4} \\right\\rfloor + 1 = 54\n$$\n\n<span style=\"font-size: 14px;\">Some implementations use 227x227 to get exactly 55x55. Following paper convention: $55 \\times 55 \\times 96$.</span>\n\n<span style=\"font-size: 14px;\">**Pool1:** $k = 3, s = 2$</span>\n\n$$\nH_{out} = \\left\\lfloor \\frac{55 - 3}{2} \\right\\rfloor + 1 = 27\n$$\n\n<span style=\"font-size: 14px;\">**After Pool1:** $27 \\times 27 \\times 96$</span>\n\n<span style=\"font-size: 14px;\">**Conv2:** 256 filters, $5 \\times 5$, stride 1, padding 2. Output: $27 \\times 27 \\times 256$</span>\n\n<span style=\"font-size: 14px;\">**Pool2:** $k = 3, s = 2$</span>\n\n$$\nH_{out} = \\left\\lfloor \\frac{27 - 3}{2} \\right\\rfloor + 1 = 13\n$$\n\n<span style=\"font-size: 14px;\">**After Pool2:** $13 \\times 13 \\times 256$</span>\n\n<span style=\"font-size: 14px;\">**Conv3:** 384 filters, $3 \\times 3$, stride 1, padding 1. Output: $13 \\times 13 \\times 384$ (no pooling)</span>\n\n<span style=\"font-size: 14px;\">**Conv4:** 384 filters, $3 \\times 3$, stride 1, padding 1. Output: $13 \\times 13 \\times 384$ (no pooling)</span>\n\n<span style=\"font-size: 14px;\">**Conv5:** 256 filters, $3 \\times 3$, stride 1, padding 1. Output: $13 \\times 13 \\times 256$</span>\n\n<span style=\"font-size: 14px;\">**Pool5:** $k = 3, s = 2$</span>\n\n$$\nH_{out} = \\left\\lfloor \\frac{13 - 3}{2} \\right\\rfloor + 1 = 6\n$$\n\n<span style=\"font-size: 14px;\">**After Pool5:** $6 \\times 6 \\times 256$</span>\n\n<span style=\"font-size: 14px;\">Flattened to $6 \\times 6 \\times 256 = 9216$, feeding FC6 (4096) -> FC7 (4096) -> FC8 (1000 classes) with softmax.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Overlapping max pooling with $k = 3, s = 2$ on a 5x5 single-channel feature map.</span>\n\n### <span style=\"font-size: 14px;\">Input Feature Map (5x5)</span>\n\n$$\nX = \\begin{bmatrix} 1 & 3 & 2 & 7 & 4 \\\\ 5 & 6 & 8 & 1 & 3 \\\\ 2 & 9 & 4 & 6 & 5 \\\\ 3 & 1 & 7 & 2 & 8 \\\\ 4 & 5 & 3 & 9 & 1 \\end{bmatrix}\n$$\n\n### <span style=\"font-size: 14px;\">Output Dimensions</span>\n\n$$\nH_{out} = \\left\\lfloor \\frac{5 - 3}{2} \\right\\rfloor + 1 = 2\n$$\n\n<span style=\"font-size: 14px;\">Output is $2 \\times 2$ with 4 pooling windows.</span>\n\n### <span style=\"font-size: 14px;\">Window Positions and Their Contents</span>\n\n<span style=\"font-size: 14px;\">**Window (0, 0):** rows 0-2, columns 0-2</span>\n\n$$\nW_{0,0} = \\begin{bmatrix} 1 & 3 & 2 \\\\ 5 & 6 & 8 \\\\ 2 & 9 & 4 \\end{bmatrix}\n$$\n\n<span style=\"font-size: 14px;\">$\\max(W_{0,0}) = 9$</span>\n\n<span style=\"font-size: 14px;\">**Window (0, 1):** rows 0-2, columns 2-4</span>\n\n$$\nW_{0,1} = \\begin{bmatrix} 2 & 7 & 4 \\\\ 8 & 1 & 3 \\\\ 4 & 6 & 5 \\end{bmatrix}\n$$\n\n<span style=\"font-size: 14px;\">$\\max(W_{0,1}) = 8$</span>\n\n<span style=\"font-size: 14px;\">**Window (1, 0):** rows 2-4, columns 0-2</span>\n\n$$\nW_{1,0} = \\begin{bmatrix} 2 & 9 & 4 \\\\ 3 & 1 & 7 \\\\ 4 & 5 & 3 \\end{bmatrix}\n$$\n\n<span style=\"font-size: 14px;\">$\\max(W_{1,0}) = 9$</span>\n\n<span style=\"font-size: 14px;\">**Window (1, 1):** rows 2-4, columns 2-4</span>\n\n$$\nW_{1,1} = \\begin{bmatrix} 4 & 6 & 5 \\\\ 7 & 2 & 8 \\\\ 3 & 9 & 1 \\end{bmatrix}\n$$\n\n<span style=\"font-size: 14px;\">$\\max(W_{1,1}) = 9$</span>\n\n### <span style=\"font-size: 14px;\">Output Feature Map (2x2)</span>\n\n$$\nY = \\begin{bmatrix} 9 & 8 \\\\ 9 & 9 \\end{bmatrix}\n$$\n\n### <span style=\"font-size: 14px;\">Identifying the Overlap Regions</span>\n\n* <span style=\"font-size: 14px;\">**Horizontal overlap (0,0)-(0,1):** Column 2 (rows 0-2), values $(0,2)=2$, $(1,2)=8$, $(2,2)=4$ shared.</span>\n* <span style=\"font-size: 14px;\">**Vertical overlap (0,0)-(1,0):** Row 2 (cols 0-2), values $(2,0)=2$, $(2,1)=9$, $(2,2)=4$ shared.</span>\n* <span style=\"font-size: 14px;\">**Horizontal overlap (1,0)-(1,1):** Column 2 (rows 2-4), values $(2,2)=4$, $(3,2)=7$, $(4,2)=3$ shared.</span>\n* <span style=\"font-size: 14px;\">**Vertical overlap (0,1)-(1,1):** Row 2 (cols 2-4), values $(2,2)=4$, $(2,3)=6$, $(2,4)=5$ shared.</span>\n* <span style=\"font-size: 14px;\">**Corner overlap:** Pixel $(2,2)=4$ is shared by all four windows.</span>\n\n<span style=\"font-size: 14px;\">With non-overlapping $k = 2, s = 2$, no pixel would appear in more than one window.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pooling in Modern Architectures</span>\n\n### <span style=\"font-size: 14px;\">Strided Convolutions Replacing Pooling</span>\n\n<span style=\"font-size: 14px;\">Springenberg et al. (2015) showed max pooling can be replaced by stride-2 convolutions without accuracy loss. ResNet (He et al., 2015) adopted this. The advantage: downsampling becomes learnable rather than fixed.</span>\n\n### <span style=\"font-size: 14px;\">Global Average Pooling</span>\n\n<span style=\"font-size: 14px;\">Lin et al. (2014) introduced GAP as a replacement for FC layers. It computes the spatial average per channel, outputting a vector of length $C$ from a $C \\times H \\times W$ feature map. This dramatically reduces parameters and was adopted by GoogLeNet (Szegedy et al., 2015) and ResNet.</span>\n\n### <span style=\"font-size: 14px;\">Adaptive Pooling in PyTorch</span>\n\n<span style=\"font-size: 14px;\">PyTorch's `nn.AdaptiveMaxPool2d` and `nn.AdaptiveAvgPool2d` let you specify desired output size rather than kernel/stride. For example, `nn.AdaptiveAvgPool2d((1, 1))` implements GAP regardless of input size.</span>\n\n### <span style=\"font-size: 14px;\">Why Pooling Is Less Common in Modern Designs</span>\n\n* <span style=\"font-size: 14px;\">**Information loss:** Max pooling permanently discards spatial info, harming tasks requiring fine-grained detail (detection, segmentation).</span>\n* <span style=\"font-size: 14px;\">**Learnable alternatives:** Strided convolutions achieve the same reduction while learning optimal downsampling via backpropagation.</span>\n* <span style=\"font-size: 14px;\">**Architectural simplicity:** Modern architectures favor uniform building blocks.</span>\n* <span style=\"font-size: 14px;\">**Attention mechanisms:** Transformer-based vision models use patch merging rather than pooling.</span>\n\n<span style=\"font-size: 14px;\">Despite these trends, GAP before the final classifier remains common, and max pooling persists in lightweight edge models.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n### <span style=\"font-size: 14px;\">Confusing the Pooling Output Formula with the Convolution Output Formula</span>\n\n<span style=\"font-size: 14px;\">AlexNet pooling uses zero padding. The correct formula is:</span>\n\n$$\nH_{out} = \\left\\lfloor \\frac{H_{in} - k}{s} \\right\\rfloor + 1\n$$\n\n<span style=\"font-size: 14px;\">Do not add a $+2p$ term as for convolution. This error propagates through the network, causing dimension mismatches.</span>\n\n### <span style=\"font-size: 14px;\">Forgetting That Pooling Preserves the Channel Count</span>\n\n<span style=\"font-size: 14px;\">Pooling operates per channel and does not change channel count. Input $96 \\times 27 \\times 27$ with $k=3, s=2$ produces $96 \\times 13 \\times 13$. Unlike convolution, where output channels equal number of filters.</span>\n\n### <span style=\"font-size: 14px;\">Off-by-One Errors with Overlapping Windows</span>\n\n<span style=\"font-size: 14px;\">The floor operation and $+1$ are easy to forget. Example: $H_{in}=13, k=3, s=2$:</span>\n\n$$\nH_{out} = \\left\\lfloor \\frac{13 - 3}{2} \\right\\rfloor + 1 = 6\n$$\n\n<span style=\"font-size: 14px;\">Forgetting $+1$ gives 5 instead of 6. Also, overlap width is $k - s$ pixels (1 pixel for $k=3, s=2$), not 2.</span>\n\n### <span style=\"font-size: 14px;\">Assuming Pooling Has Learnable Parameters</span>\n\n<span style=\"font-size: 14px;\">Max and average pooling have zero learnable parameters. When counting AlexNet's ~60M parameters, pooling contributes zero. Behavior is fixed once $k$ and $s$ are chosen.</span>\n\n### <span style=\"font-size: 14px;\">Ignoring That Pooling Discards Spatial Information Permanently</span>\n\n<span style=\"font-size: 14px;\">Max pooling is not invertible -- the locations and values of non-max elements are permanently lost.</span>\n\n* <span style=\"font-size: 14px;\">**For classification:** Acceptable, since final prediction only needs to know what is in the image.</span>\n* <span style=\"font-size: 14px;\">**For segmentation/detection:** Problematic. Architectures like U-Net and FPN use skip connections to recover discarded spatial info.</span>\n* <span style=\"font-size: 14px;\">**For unpooling:** Requires storing max indices during forward pass, adding memory overhead.</span>\n\n---",
+  "hints": [
+    "Slice each window with row * stride and column * stride as its top-left corner.",
+    "np.max(window, axis=(1, 2)) preserves the batch and channel axes."
+  ],
+  "constraints": "- x has shape $(B,H,W,C)$.\n- kernel_size and stride are positive integers.\n- kernel_size is no larger than the input height or width.\n- Output sizes are $H_{out}=\\lfloor(H-K)/s\\rfloor+1$ and $W_{out}=\\lfloor(W-K)/s\\rfloor+1$.",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef max_pool2d(x: np.ndarray, kernel_size: int, stride: int) -> np.ndarray:\n    \"\"\"\n    Returns the float64 NHWC max-pooled tensor.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-23T18:46:10.445Z",
+  "updatedAt": "2026-04-04T12:04:49.963Z",
+  "topicId": "alexnet-pooling",
+  "paperSnippet": "\"Pooling layers in CNNs summarize the outputs of neighboring groups of neurons in the same kernel map. We generally observe that models with overlapping pooling find it slightly more difficult to overfit.\"",
+  "visualizationComponent": "OverlappingPoolViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Overlapping Max Pooling** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef max_pool2d(x: np.ndarray, kernel_size: int, stride: int) -> np.ndarray:\n    x_arr = np.asarray(x, dtype=float)\n    k_size = int(kernel_size)\n    s = int(stride)\n    \n    N, H, W, C = x_arr.shape\n    out_h = (H - k_size) // s + 1\n    out_w = (W - k_size) // s + 1\n    \n    out = np.zeros((N, out_h, out_w, C), dtype=float)\n    for n in range(N):\n        for oh in range(out_h):\n            for ow in range(out_w):\n                ih = oh * s\n                iw = ow * s\n                patch = x_arr[n, ih:ih+k_size, iw:iw+k_size, :]\n                out[n, oh, ow, :] = np.max(patch, axis=(0, 1))\n    return np.round(out, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Overlapping three-by-three pooling",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ],
+        "stride": 1,
+        "kernel_size": 3
+      },
+      "output": [
+        [
+          [
+            [
+              11
+            ],
+            [
+              12
+            ]
+          ],
+          [
+            [
+              15
+            ],
+            [
+              16
+            ]
+          ]
+        ]
+      ],
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            [
+              11
+            ],
+            [
+              12
+            ]
+          ],
+          [
+            [
+              15
+            ],
+            [
+              16
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Two channels",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                8
+              ],
+              [
+                2,
+                7
+              ]
+            ],
+            [
+              [
+                3,
+                6
+              ],
+              [
+                4,
+                5
+              ]
+            ]
+          ]
+        ],
+        "stride": 1,
+        "kernel_size": 2
+      },
+      "output": [
+        [
+          [
+            [
+              4,
+              8
+            ]
+          ]
+        ]
+      ],
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            [
+              4,
+              8
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "test-3",
+      "name": "Non-overlapping windows",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                5
+              ],
+              [
+                2
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                3
+              ],
+              [
+                0
+              ],
+              [
+                7
+              ],
+              [
+                6
+              ]
+            ],
+            [
+              [
+                8
+              ],
+              [
+                2
+              ],
+              [
+                9
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                4
+              ],
+              [
+                3
+              ],
+              [
+                5
+              ],
+              [
+                0
+              ]
+            ]
+          ]
+        ],
+        "stride": 2,
+        "kernel_size": 2
+      },
+      "output": [
+        [
+          [
+            [
+              5
+            ],
+            [
+              7
+            ]
+          ],
+          [
+            [
+              8
+            ],
+            [
+              9
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            [
+              5
+            ],
+            [
+              7
+            ]
+          ],
+          [
+            [
+              8
+            ],
+            [
+              9
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "alexnet-pooling-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                2
+              ],
+              [
+                4
+              ],
+              [
+                6
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                10
+              ],
+              [
+                12
+              ],
+              [
+                14
+              ],
+              [
+                16
+              ]
+            ],
+            [
+              [
+                18
+              ],
+              [
+                20
+              ],
+              [
+                22
+              ],
+              [
+                24
+              ]
+            ],
+            [
+              [
+                26
+              ],
+              [
+                28
+              ],
+              [
+                30
+              ],
+              [
+                32
+              ]
+            ]
+          ]
+        ],
+        "stride": 2,
+        "kernel_size": 6
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0
+              ],
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                2
+              ]
+            ],
+            [
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                4
+              ],
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                6
+              ]
+            ],
+            [
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ],
+              [
+                8
+              ]
+            ]
+          ]
+        ],
+        "stride": 0,
+        "kernel_size": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              11
+            ],
+            [
+              12
+            ]
+          ],
+          [
+            [
+              15
+            ],
+            [
+              16
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -1
+              ],
+              [
+                -2
+              ],
+              [
+                -3
+              ],
+              [
+                -4
+              ]
+            ],
+            [
+              [
+                -5
+              ],
+              [
+                -6
+              ],
+              [
+                -7
+              ],
+              [
+                -8
+              ]
+            ],
+            [
+              [
+                -9
+              ],
+              [
+                -10
+              ],
+              [
+                -11
+              ],
+              [
+                -12
+              ]
+            ],
+            [
+              [
+                -13
+              ],
+              [
+                -14
+              ],
+              [
+                -15
+              ],
+              [
+                -16
+              ]
+            ]
+          ]
+        ],
+        "stride": -1,
+        "kernel_size": -3
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              11
+            ],
+            [
+              12
+            ]
+          ],
+          [
+            [
+              15
+            ],
+            [
+              16
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                3
+              ],
+              [
+                6
+              ],
+              [
+                9
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                15
+              ],
+              [
+                18
+              ],
+              [
+                21
+              ],
+              [
+                24
+              ]
+            ],
+            [
+              [
+                27
+              ],
+              [
+                30
+              ],
+              [
+                33
+              ],
+              [
+                36
+              ]
+            ],
+            [
+              [
+                39
+              ],
+              [
+                42
+              ],
+              [
+                45
+              ],
+              [
+                48
+              ]
+            ]
+          ]
+        ],
+        "stride": 3,
+        "kernel_size": 9
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              33.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                2.0
+              ],
+              [
+                3.0
+              ],
+              [
+                4.0
+              ],
+              [
+                5.0
+              ]
+            ],
+            [
+              [
+                6.0
+              ],
+              [
+                7.0
+              ],
+              [
+                8.0
+              ],
+              [
+                9.0
+              ]
+            ],
+            [
+              [
+                10.0
+              ],
+              [
+                11.0
+              ],
+              [
+                12.0
+              ],
+              [
+                13.0
+              ]
+            ],
+            [
+              [
+                14.0
+              ],
+              [
+                15.0
+              ],
+              [
+                16.0
+              ],
+              [
+                17.0
+              ]
+            ]
+          ]
+        ],
+        "stride": 2.0,
+        "kernel_size": 4.0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              17.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -1.0
+              ],
+              [
+                0.0
+              ],
+              [
+                1.0
+              ],
+              [
+                2.0
+              ]
+            ],
+            [
+              [
+                3.0
+              ],
+              [
+                4.0
+              ],
+              [
+                5.0
+              ],
+              [
+                6.0
+              ]
+            ],
+            [
+              [
+                7.0
+              ],
+              [
+                8.0
+              ],
+              [
+                9.0
+              ],
+              [
+                10.0
+              ]
+            ],
+            [
+              [
+                11.0
+              ],
+              [
+                12.0
+              ],
+              [
+                13.0
+              ],
+              [
+                14.0
+              ]
+            ]
+          ]
+        ],
+        "stride": -1.0,
+        "kernel_size": 1.0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              11
+            ],
+            [
+              12
+            ]
+          ],
+          [
+            [
+              15
+            ],
+            [
+              16
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ]
+            ],
+            [
+              [
+                5
+              ],
+              [
+                6
+              ],
+              [
+                7
+              ],
+              [
+                8
+              ]
+            ],
+            [
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                13
+              ],
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ]
+            ]
+          ]
+        ],
+        "stride": 1,
+        "kernel_size": 3
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              11.0
+            ],
+            [
+              12.0
+            ]
+          ],
+          [
+            [
+              15.0
+            ],
+            [
+              16.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -1
+              ],
+              [
+                -2
+              ],
+              [
+                -3
+              ],
+              [
+                -4
+              ]
+            ],
+            [
+              [
+                -5
+              ],
+              [
+                -6
+              ],
+              [
+                -7
+              ],
+              [
+                -8
+              ]
+            ],
+            [
+              [
+                -9
+              ],
+              [
+                -10
+              ],
+              [
+                -11
+              ],
+              [
+                -12
+              ]
+            ],
+            [
+              [
+                -13
+              ],
+              [
+                -14
+              ],
+              [
+                -15
+              ],
+              [
+                -16
+              ]
+            ]
+          ]
+        ],
+        "stride": -1,
+        "kernel_size": -3
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              11
+            ],
+            [
+              12
+            ]
+          ],
+          [
+            [
+              15
+            ],
+            [
+              16
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                10
+              ],
+              [
+                20
+              ],
+              [
+                30
+              ],
+              [
+                40
+              ]
+            ],
+            [
+              [
+                50
+              ],
+              [
+                60
+              ],
+              [
+                70
+              ],
+              [
+                80
+              ]
+            ],
+            [
+              [
+                90
+              ],
+              [
+                100
+              ],
+              [
+                110
+              ],
+              [
+                120
+              ]
+            ],
+            [
+              [
+                130
+              ],
+              [
+                140
+              ],
+              [
+                150
+              ],
+              [
+                160
+              ]
+            ]
+          ]
+        ],
+        "stride": 10,
+        "kernel_size": 30
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0
+              ],
+              [
+                0
+              ],
+              [
+                0
+              ],
+              [
+                0
+              ]
+            ],
+            [
+              [
+                0
+              ],
+              [
+                1
+              ],
+              [
+                1
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                1
+              ],
+              [
+                1
+              ],
+              [
+                1
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                1
+              ],
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                2
+              ]
+            ]
+          ]
+        ],
+        "stride": 0,
+        "kernel_size": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              11
+            ],
+            [
+              12
+            ]
+          ],
+          [
+            [
+              15
+            ],
+            [
+              16
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                6.0
+              ],
+              [
+                7.0
+              ],
+              [
+                8.0
+              ],
+              [
+                9.0
+              ]
+            ],
+            [
+              [
+                10.0
+              ],
+              [
+                11.0
+              ],
+              [
+                12.0
+              ],
+              [
+                13.0
+              ]
+            ],
+            [
+              [
+                14.0
+              ],
+              [
+                15.0
+              ],
+              [
+                16.0
+              ],
+              [
+                17.0
+              ]
+            ],
+            [
+              [
+                18.0
+              ],
+              [
+                19.0
+              ],
+              [
+                20.0
+              ],
+              [
+                21.0
+              ]
+            ]
+          ]
+        ],
+        "stride": 6.0,
+        "kernel_size": 8.0
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                4
+              ],
+              [
+                6
+              ]
+            ],
+            [
+              [
+                8
+              ],
+              [
+                9
+              ],
+              [
+                10
+              ],
+              [
+                12
+              ]
+            ],
+            [
+              [
+                14
+              ],
+              [
+                15
+              ],
+              [
+                16
+              ],
+              [
+                18
+              ]
+            ],
+            [
+              [
+                20
+              ],
+              [
+                21
+              ],
+              [
+                22
+              ],
+              [
+                24
+              ]
+            ]
+          ]
+        ],
+        "stride": 2,
+        "kernel_size": 4
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              24.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -2
+              ],
+              [
+                -4
+              ],
+              [
+                -6
+              ],
+              [
+                -8
+              ]
+            ],
+            [
+              [
+                -10
+              ],
+              [
+                -12
+              ],
+              [
+                -14
+              ],
+              [
+                -16
+              ]
+            ],
+            [
+              [
+                -18
+              ],
+              [
+                -20
+              ],
+              [
+                -22
+              ],
+              [
+                -24
+              ]
+            ],
+            [
+              [
+                -26
+              ],
+              [
+                -28
+              ],
+              [
+                -30
+              ],
+              [
+                -32
+              ]
+            ]
+          ]
+        ],
+        "stride": -2,
+        "kernel_size": -6
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0
+              ],
+              [
+                0
+              ],
+              [
+                1
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                2
+              ],
+              [
+                2
+              ]
+            ],
+            [
+              [
+                2
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ],
+              [
+                3
+              ]
+            ],
+            [
+              [
+                3
+              ],
+              [
+                4
+              ],
+              [
+                4
+              ],
+              [
+                4
+              ]
+            ]
+          ]
+        ],
+        "stride": 0,
+        "kernel_size": 1
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              11
+            ],
+            [
+              12
+            ]
+          ],
+          [
+            [
+              15
+            ],
+            [
+              16
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.0
+              ],
+              [
+                1.0
+              ],
+              [
+                2.0
+              ],
+              [
+                3.0
+              ]
+            ],
+            [
+              [
+                4.0
+              ],
+              [
+                5.0
+              ],
+              [
+                6.0
+              ],
+              [
+                7.0
+              ]
+            ],
+            [
+              [
+                8.0
+              ],
+              [
+                9.0
+              ],
+              [
+                10.0
+              ],
+              [
+                11.0
+              ]
+            ],
+            [
+              [
+                12.0
+              ],
+              [
+                13.0
+              ],
+              [
+                14.0
+              ],
+              [
+                15.0
+              ]
+            ]
+          ]
+        ],
+        "stride": 0.0,
+        "kernel_size": 2.0
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              11
+            ],
+            [
+              12
+            ]
+          ],
+          [
+            [
+              15
+            ],
+            [
+              16
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                4
+              ],
+              [
+                8
+              ],
+              [
+                12
+              ],
+              [
+                16
+              ]
+            ],
+            [
+              [
+                20
+              ],
+              [
+                24
+              ],
+              [
+                28
+              ],
+              [
+                32
+              ]
+            ],
+            [
+              [
+                36
+              ],
+              [
+                40
+              ],
+              [
+                44
+              ],
+              [
+                48
+              ]
+            ],
+            [
+              [
+                52
+              ],
+              [
+                56
+              ],
+              [
+                60
+              ],
+              [
+                64
+              ]
+            ]
+          ]
+        ],
+        "stride": 4,
+        "kernel_size": 12
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              64.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-pooling-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ],
+              [
+                2
+              ],
+              [
+                3
+              ]
+            ],
+            [
+              [
+                4
+              ],
+              [
+                4
+              ],
+              [
+                5
+              ],
+              [
+                6
+              ]
+            ],
+            [
+              [
+                7
+              ],
+              [
+                8
+              ],
+              [
+                8
+              ],
+              [
+                9
+              ]
+            ],
+            [
+              [
+                10
+              ],
+              [
+                10
+              ],
+              [
+                11
+              ],
+              [
+                12
+              ]
+            ]
+          ]
+        ],
+        "stride": 1,
+        "kernel_size": 2
+      },
+      "expectedOutput": [
+        [
+          [
+            [
+              4.0
+            ],
+            [
+              5.0
+            ],
+            [
+              6.0
+            ]
+          ],
+          [
+            [
+              8.0
+            ],
+            [
+              8.0
+            ],
+            [
+              9.0
+            ]
+          ],
+          [
+            [
+              10.0
+            ],
+            [
+              11.0
+            ],
+            [
+              12.0
+            ]
+          ]
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "max_pool2d",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": "[[[[1],[2],[3],[4]],[[5],[6],[7],[8]],[[9],[10],[11],[12]],[[13],[14],[15],[16]]]]",
+        "description": "NHWC input tensor"
+      },
+      {
+        "name": "kernel_size",
+        "type": "number",
+        "example": "3",
+        "description": "Square window size"
+      },
+      {
+        "name": "stride",
+        "type": "number",
+        "example": "1",
+        "description": "Spatial stride"
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "alexnet-pooling",
+    "name": "Overlapping Max Pooling",
+    "description": "3Ã3 pooling with stride 2",
+    "color": "#ec4899"
+  },
+  "paper": {
+    "id": "alexnet",
+    "title": "ImageNet Classification with Deep Convolutional Neural Networks",
+    "authors": "Krizhevsky, Sutskever & Hinton, 2012",
+    "year": 2012,
+    "paperUrl": "https://papers.nips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf",
+    "visualizationComponent": "AlexNetArchViz"
+  },
+  "navigation": {
+    "index": 5,
+    "total": 6,
+    "prev": "alexnet-lrn",
+    "next": "alexnet-augmentation"
+  },
+  "cleanTitle": ""
+}

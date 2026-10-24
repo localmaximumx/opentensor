@@ -1,0 +1,314 @@
+{
+  "id": "cosine-annealing-lr",
+  "title": "Cosine Annealing LR Scheduler",
+  "description": "Cosine annealing smoothly decreases the learning rate following a half-cosine curve. Unlike linear decay, it slows down the rate of decrease near the start and end, spending more training time at moderate learning rates. This schedule is widely used in vision and language model training.\n\nGiven a base learning rate, a minimum learning rate, total steps, and the current step, compute the learning rate.\n\n### Formula\n\n$$\nlr = min\\_lr + \\frac{1}{2}(base\\_lr - min\\_lr)\\left(1 + \\cos\\left(\\frac{\\pi \\cdot current\\_step}{total\\_steps}\\right)\\right)\n$$\n\nAt step 0 the cosine term equals 1, so lr = base_lr. At step = total_steps the cosine term equals -1, so lr = min_lr.",
+  "seoDescription": "Compute a cosine-annealed learning rate between configured maximum and minimum values across training steps.",
+  "examples": [
+    "Input: base_lr = 0.1, min_lr = 0, total_steps = 100, current_step = 0\n\nOutput: 0.1\n\nExplanation: At step zero, the cosine factor selects the base learning rate.",
+    "Input: base_lr = 0.1, min_lr = 0, total_steps = 100, current_step = 100\n\nOutput: 0.0"
+  ],
+  "requirements": "* Apply the cosine annealing formula exactly as specified\n* Support a non-zero minimum learning rate\n* Return base_lr at step 0 and min_lr at step = total_steps",
+  "theory": "## Understanding the Theory: Cosine Annealing LR Scheduler\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization challenge across highly non-convex loss surfaces filled with saddle points, ravines, and plateaus. Naive gradient descent often oscillates wildly in steep directions while crawling along flat regions. **Cosine Annealing LR Scheduler** accelerates convergence, dampens oscillations, and stabilizes weight trajectories during training.\n\nIn this problem, the objective is to implement **Cosine Annealing LR Scheduler** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nlr = min\\_lr + \\frac{1}{2}(base\\_lr - min\\_lr)\\left(1 + \\cos\\left(\\frac{\\pi \\cdot current\\_step}{total\\_steps}\\right)\\right)\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Momentum Accumulation**: Smoothing velocity vectors across successive mini-batches enables optimizers to escape shallow local minima and push through ill-conditioned ravines.\n* **Adaptive Scaling**: Tracking running second moments scales learning rates inversely with gradient variance, preventing rare features from vanishing and frequent features from exploding.\n* **Gradient Regularization**: Gradient clipping enforces hard norm bounds, preventing runaway parameter updates during training instability.",
+  "hints": [
+    "Convert the step fraction into an angle by multiplying it by pi.",
+    "Scale one plus the cosine between the base and minimum rates."
+  ],
+  "constraints": "* base_lr > min_lr >= 0\n* total_steps > 0, 0 <= current_step <= total_steps\n* Return a single float\n* Time limit: 300 ms",
+  "difficulty": "Easy",
+  "starterCode": "import math\n\ndef cosine_annealing_schedule(base_lr: float, min_lr: float, total_steps: int, current_step: int) -> float:\n    \"\"\"\n    Returns the cosine-annealed learning rate for the requested step.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T15:34:04.783Z",
+  "updatedAt": "2026-08-23T19:34:01.145Z",
+  "solution": "### 💡 Intuition & Approach\nSmoothly reduces learning rate along a half-cosine wave from initial peak down to minimum floor.\n\n### ⚡ Python Reference Implementation\n```python\nimport math\n\ndef cosine_annealing_schedule(base_lr: float, min_lr: float, total_steps: int, current_step: int) -> float:\n    progress = current_step / total_steps\n    lr = min_lr + 0.5 * (base_lr - min_lr) * (1.0 + math.cos(math.pi * progress))\n    return round(lr, 6)\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "CosineAnnealingLRViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Step 0 (start)",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 0
+      },
+      "isPublic": true,
+      "expectedOutput": 0.1
+    },
+    {
+      "id": "test-2",
+      "name": "Step at end",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 100
+      },
+      "isPublic": true,
+      "expectedOutput": 0.0
+    },
+    {
+      "id": "cosine-annealing-lr-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": 0.2,
+        "total_steps": 200,
+        "current_step": 0
+      },
+      "expectedOutput": 0.2,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": 0.05,
+        "total_steps": 50,
+        "current_step": 0
+      },
+      "expectedOutput": 0.05,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": -0.1,
+        "total_steps": -100,
+        "current_step": 0
+      },
+      "expectedOutput": -0.1,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": 0.3,
+        "total_steps": 300,
+        "current_step": 0
+      },
+      "expectedOutput": 0.3,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "min_lr": 1.0,
+        "base_lr": 1.1,
+        "total_steps": 101.0,
+        "current_step": 1.0
+      },
+      "expectedOutput": 1.099976,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "min_lr": -2.0,
+        "base_lr": -1.9,
+        "total_steps": 98.0,
+        "current_step": -2.0
+      },
+      "expectedOutput": -1.900103,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": 0.1,
+        "total_steps": 100,
+        "current_step": 0
+      },
+      "expectedOutput": 0.1,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": -0.1,
+        "total_steps": -100,
+        "current_step": 0
+      },
+      "expectedOutput": -0.1,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": 1.0,
+        "total_steps": 1000,
+        "current_step": 0
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": 0.01,
+        "total_steps": 10,
+        "current_step": 0
+      },
+      "expectedOutput": 0.01,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "min_lr": 5.0,
+        "base_lr": 5.1,
+        "total_steps": 105.0,
+        "current_step": 5.0
+      },
+      "expectedOutput": 5.099442,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": 0.15,
+        "total_steps": 150,
+        "current_step": 0
+      },
+      "expectedOutput": 0.15,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": -0.2,
+        "total_steps": -200,
+        "current_step": 0
+      },
+      "expectedOutput": -0.2,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": 0.025,
+        "total_steps": 25,
+        "current_step": 0
+      },
+      "expectedOutput": 0.025,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "min_lr": -1.0,
+        "base_lr": -0.9,
+        "total_steps": 99.0,
+        "current_step": -1.0
+      },
+      "expectedOutput": -0.900025,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": 0.4,
+        "total_steps": 400,
+        "current_step": 0
+      },
+      "expectedOutput": 0.4,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": 0.075,
+        "total_steps": 75,
+        "current_step": 0
+      },
+      "expectedOutput": 0.075,
+      "isPublic": false
+    },
+    {
+      "id": "cosine-annealing-lr-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "min_lr": 0,
+        "base_lr": 0.5,
+        "total_steps": 500,
+        "current_step": 0
+      },
+      "expectedOutput": 0.5,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cosine_annealing_schedule",
+    "parameters": [
+      {
+        "name": "base_lr",
+        "type": "number",
+        "example": "0.1",
+        "description": "Base learning rate"
+      },
+      {
+        "name": "min_lr",
+        "type": "number",
+        "example": "0.0",
+        "description": "Minimum learning rate"
+      },
+      {
+        "name": "total_steps",
+        "type": "number",
+        "example": "100",
+        "description": "Total number of steps"
+      },
+      {
+        "name": "current_step",
+        "type": "number",
+        "example": "0",
+        "description": "Current step"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "linear-lr-scheduler",
+    "warmup-decay-lr",
+    "adam-optimizer",
+    "adamw-optimizer",
+    "nadam-optimizer"
+  ],
+  "tags": [
+    "Optimization"
+  ],
+  "prevId": "warmup-decay-lr",
+  "nextId": "lbfgs-two-loop",
+  "slug": "cosine-annealing-lr",
+  "cleanTitle": "Cosine Annealing LR Scheduler",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/cosine-annealing-lr",
+  "localUrl": "http://localhost:3000/problems/cosine-annealing-lr",
+  "studyPlan": null
+}

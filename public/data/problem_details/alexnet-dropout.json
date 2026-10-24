@@ -1,0 +1,651 @@
+{
+  "id": "alexnet-dropout",
+  "title": "Dropout Regularization",
+  "description": "Implement inverted dropout using a supplied binary mask. During training, retained values are divided by $1-p$ so their expected scale is unchanged:\n\n$$\ny=\\frac{x\\odot m}{1-p}.\n$$\n\nHere, $p$ is the drop probability and $m$ is the supplied mask. During evaluation, return x unchanged. Return a new float64 NumPy array.",
+  "seoDescription": "Implement inverted dropout for AlexNet with seeded masks and training-versus-inference behavior.",
+  "examples": [
+    "Input: x = [1,2,3,4], p = 0.5, training = true, mask = [0,1,1,0]\n\nOutput: [0,4,6,0]\n\nExplanation: The retained values are multiplied by two because 1 / (1 - 0.5) = 2.",
+    "Input: x = [1,-2,3], p = 0.5, training = false, mask = [0,0,0]\n\nOutput: [1,-2,3]",
+    "Input: x = [[1,2],[3,4]], p = 0.25, training = true, mask = [[1,0],[1,1]]\n\nOutput: [[1.333333,0],[4,5.333333]]"
+  ],
+  "requirements": "- In training mode, multiply x by mask and divide by $1-p$.\n- In evaluation mode, return an unchanged copy of x.\n- Do not modify the supplied arrays.\n- Return a float64 NumPy array with the same shape as x.",
+  "theory": "# <span style=\"font-size: 20px;\">Dropout Regularization</span>\n\n<span style=\"font-size: 14px;\">Dropout randomly deactivates neurons during training, forcing a network to learn redundant, generalizable representations. Introduced by Hinton et al. (2012) and popularized by AlexNet (Krizhevsky, Sutskever, and Hinton, 2012), it enabled AlexNet's 60M-parameter network to win the 2012 ILSVRC without catastrophic overfitting.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is / What It Does</span>\n\n<span style=\"font-size: 14px;\">At each training iteration, every neuron in a dropout-enabled layer has probability $p$ of being \"dropped out\" (output set to zero). The surviving neurons (probability $1 - p$) carry the full load. A different random subset is active at each step.</span>\n\n<span style=\"font-size: 14px;\">Dropout prevents overfitting by breaking co-adaptations among neurons. Each neuron must learn independently useful features rather than relying on specific partners, producing more robust representations.</span>\n\n<span style=\"font-size: 14px;\">During inference, dropout is disabled and all neurons are active. With inverted dropout (the modern standard), no test-time scaling is needed.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n### <span style=\"font-size: 14px;\">Training Mode (Inverted Dropout)</span>\n\n<span style=\"font-size: 14px;\">For a layer with input vector $\\mathbf{h}$, sample a binary mask:</span>\n\n$$\nm_i \\sim \\text{Bernoulli}(1 - p)\n$$\n\n<span style=\"font-size: 14px;\">Each $m_i$ is 1 with probability $(1 - p)$ and 0 with probability $p$. Apply the mask and scale:</span>\n\n$$\n\\tilde{\\mathbf{h}} = \\frac{\\mathbf{m} \\odot \\mathbf{h}}{1 - p}\n$$\n\n<span style=\"font-size: 14px;\">where $\\odot$ is the element-wise (Hadamard) product.</span>\n\n### <span style=\"font-size: 14px;\">Inference Mode</span>\n\n<span style=\"font-size: 14px;\">No dropout applied; the output is the identity:</span>\n\n$$\n\\tilde{\\mathbf{h}} = \\mathbf{h}\n$$\n\n### <span style=\"font-size: 14px;\">Expected Value Proof (Inverted Scaling Preserves Expectations)</span>\n\n$$\n\\mathbb{E}[\\tilde{h}_i] = \\mathbb{E}\\left[\\frac{m_i \\cdot h_i}{1 - p}\\right] = \\frac{h_i}{1 - p} \\cdot \\mathbb{E}[m_i]\n$$\n\n<span style=\"font-size: 14px;\">Since $m_i \\sim \\text{Bernoulli}(1 - p)$, $\\mathbb{E}[m_i] = 1 - p$:</span>\n\n$$\n\\mathbb{E}[\\tilde{h}_i] = \\frac{h_i}{1 - p} \\cdot (1 - p) = h_i\n$$\n\n<span style=\"font-size: 14px;\">The expected training output equals the inference output. No test-time modification needed.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Mechanics / How It Works</span>\n\n### <span style=\"font-size: 14px;\">Training Phase (Step-by-Step)</span>\n\n* <span style=\"font-size: 14px;\">**Step 1 -- Generate Mask:** Sample $n$ independent values from $\\text{Bernoulli}(1 - p)$, producing binary vector $\\mathbf{m} \\in \\{0, 1\\}^n$.</span>\n\n* <span style=\"font-size: 14px;\">**Step 2 -- Apply Mask:** Multiply $\\mathbf{h} \\odot \\mathbf{m}$ element-wise. Dropped neurons output zero and receive no gradient updates.</span>\n\n* <span style=\"font-size: 14px;\">**Step 3 -- Scale:** Divide by $(1 - p)$ so the expected output magnitude stays consistent.</span>\n\n* <span style=\"font-size: 14px;\">**Step 4 -- Forward:** The scaled, masked output $\\tilde{\\mathbf{h}}$ passes to the next layer.</span>\n\n* <span style=\"font-size: 14px;\">**Step 5 -- Backward:** Gradients flow only through kept neurons ($m_i = 1$). Dropped neurons get zero gradient.</span>\n\n* <span style=\"font-size: 14px;\">**Step 6 -- New Mask:** A fresh random mask is generated each iteration, ensuring all weights are trained over time.</span>\n\n### <span style=\"font-size: 14px;\">Inference Phase</span>\n\n<span style=\"font-size: 14px;\">Dropout is fully disabled. All neurons participate with no masking or scaling. Inverted dropout already corrected scale during training, so inference matches a standard network.</span>\n\n### <span style=\"font-size: 14px;\">Training vs. Inference Summary</span>\n\n* <span style=\"font-size: 14px;\">**Training:** Random mask per iteration, activations zeroed and scaled by $\\frac{1}{1-p}$, gradients only through surviving neurons.</span>\n* <span style=\"font-size: 14px;\">**Inference:** No mask, no scaling, all neurons active.</span>\n* <span style=\"font-size: 14px;\">**Critical:** The model must be switched between train/eval mode explicitly. Forgetting this is one of the most common dropout bugs.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context / Design Decisions</span>\n\n<span style=\"font-size: 14px;\">AlexNet (Krizhevsky, Sutskever, and Hinton, 2012) contained ~60M parameters across five conv layers and three FC layers, trained on ~1.2M images. Overfitting was a serious concern at this scale.</span>\n\n### <span style=\"font-size: 14px;\">Why They Used Dropout</span>\n\n<span style=\"font-size: 14px;\">The authors state: \"Without dropout, our network exhibits substantial overfitting. Dropout roughly doubles the number of iterations required to converge.\" Even with data augmentation and weight decay, the network could not generalize without it.</span>\n\n### <span style=\"font-size: 14px;\">Where Dropout Was Applied</span>\n\n<span style=\"font-size: 14px;\">Only to FC6 and FC7, which held >53M of 60M total parameters (FC6: ~37M, FC7: ~16M). Conv layers had far fewer parameters due to weight sharing and were less prone to overfitting.</span>\n\n### <span style=\"font-size: 14px;\">The Dropout Rate</span>\n\n<span style=\"font-size: 14px;\">$p = 0.5$, giving each neuron a 50% chance of being zeroed. This maximizes possible subnetworks ($\\binom{n}{n/2}$ is maximal) and remains a common FC layer default.</span>\n\n### <span style=\"font-size: 14px;\">The Convergence Tradeoff</span>\n\n<span style=\"font-size: 14px;\">Dropout roughly doubled training iterations since each neuron receives updates ~50% of the time. Despite this, AlexNet achieved 15.3% top-5 error vs. 26.2% for the runner-up.</span>\n\n### <span style=\"font-size: 14px;\">Other Regularization in AlexNet</span>\n\n<span style=\"font-size: 14px;\">AlexNet also used data augmentation (random crops, flips, PCA color jitter) and L2 weight decay (0.0005). Even with both, the network overfit without dropout.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why Dropout Works as Regularization</span>\n\n### <span style=\"font-size: 14px;\">Ensemble Interpretation</span>\n\n<span style=\"font-size: 14px;\">A layer with $n$ neurons implicitly defines $2^n$ subnetworks. Each mini-batch trains a different one. At inference, using all neurons approximates the geometric mean of all subnetworks' predictions. For FC6 (4096 neurons), this is $2^{4096}$ implicit subnetworks.</span>\n\n### <span style=\"font-size: 14px;\">Prevention of Co-adaptation</span>\n\n<span style=\"font-size: 14px;\">Without dropout, neurons form brittle co-dependencies that fit training artifacts but fail to generalize. Making each neuron's presence unreliable forces individually useful features and distributed representations.</span>\n\n### <span style=\"font-size: 14px;\">Connection to Bayesian Model Averaging</span>\n\n<span style=\"font-size: 14px;\">Gal and Ghahramani (2016) showed dropout before every weight layer approximates a deep Gaussian process. Test-time dropout (Monte Carlo dropout) approximates Bayesian inference. Standard inference uses the mean of this approximate posterior.</span>\n\n### <span style=\"font-size: 14px;\">Adding Noise as Regularization</span>\n\n<span style=\"font-size: 14px;\">Dropout injects multiplicative Bernoulli noise proportional to activation magnitude, providing signal-adaptive regularization distinct from additive Gaussian noise.</span>\n\n### <span style=\"font-size: 14px;\">Comparison with Other Regularization</span>\n\n* <span style=\"font-size: 14px;\">**L2 Weight Decay:** Deterministic, acts on weights, encourages small weights. Dropout is stochastic, acts on activations, encourages redundancy. Complementary; AlexNet used both.</span>\n\n* <span style=\"font-size: 14px;\">**Data Augmentation:** Increases effective dataset size; domain-specific. Dropout is architecture-level, domain-agnostic. Complementary.</span>\n\n* <span style=\"font-size: 14px;\">**Batch Normalization:** (Ioffe and Szegedy, 2015) Normalizes via mini-batch statistics with implicit regularization. Can reduce the need for dropout.</span>\n\n* <span style=\"font-size: 14px;\">**Early Stopping:** Limits capacity by restricting optimization trajectory. Dropout allows full training while constraining representations.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Standard vs. Inverted Dropout</span>\n\n### <span style=\"font-size: 14px;\">Standard (Vanilla) Dropout</span>\n\n<span style=\"font-size: 14px;\">The original formulation applies the mask without scaling during training:</span>\n\n$$\n\\tilde{h}_i^{\\text{train}} = m_i \\cdot h_i \\quad \\text{where } m_i \\sim \\text{Bernoulli}(1-p)\n$$\n\n<span style=\"font-size: 14px;\">To compensate, activations are scaled down at test time:</span>\n\n$$\n\\tilde{h}_i^{\\text{test}} = (1 - p) \\cdot h_i\n$$\n\n### <span style=\"font-size: 14px;\">Inverted Dropout</span>\n\n<span style=\"font-size: 14px;\">Moves scaling to training time:</span>\n\n$$\n\\tilde{h}_i^{\\text{train}} = \\frac{m_i \\cdot h_i}{1 - p}\n$$\n\n<span style=\"font-size: 14px;\">Inference needs no scaling: $\\tilde{h}_i^{\\text{test}} = h_i$.</span>\n\n### <span style=\"font-size: 14px;\">Mathematical Equivalence Proof</span>\n\n<span style=\"font-size: 14px;\">Standard dropout -- expected training output:</span>\n\n$$\n\\mathbb{E}[\\tilde{h}_i^{\\text{train}}] = h_i \\cdot (1-p) = \\tilde{h}_i^{\\text{test}}\n$$\n\n<span style=\"font-size: 14px;\">Inverted dropout -- expected training output:</span>\n\n$$\n\\mathbb{E}\\left[\\frac{m_i \\cdot h_i}{1-p}\\right] = \\frac{h_i(1-p)}{1-p} = h_i = \\tilde{h}_i^{\\text{test}}\n$$\n\n<span style=\"font-size: 14px;\">Both are equivalent. Downstream weights absorb the different scaling conventions.</span>\n\n### <span style=\"font-size: 14px;\">Why Inverted Dropout Is Preferred</span>\n\n* <span style=\"font-size: 14px;\">**No test-time modification:** Deploy as-is without knowing dropout configuration.</span>\n* <span style=\"font-size: 14px;\">**Flexibility:** Changing dropout rates during training does not affect inference code.</span>\n* <span style=\"font-size: 14px;\">**Framework default:** PyTorch `nn.Dropout(p)` and TensorFlow `tf.nn.dropout` both use inverted dropout.</span>\n* <span style=\"font-size: 14px;\">**Checkpoint compatibility:** Saved models can be loaded for inference without knowing training-time dropout rates.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n### <span style=\"font-size: 14px;\">Setup</span>\n\n<span style=\"font-size: 14px;\">FC layer with 8 neurons, $p = 0.5$ (same as AlexNet). Input activations:</span>\n\n$$\n\\mathbf{h} = [0.8, \\; -0.3, \\; 1.5, \\; 0.0, \\; -1.2, \\; 0.6, \\; 2.1, \\; -0.9]\n$$\n\n### <span style=\"font-size: 14px;\">Training Mode (Step-by-Step)</span>\n\n<span style=\"font-size: 14px;\">**Step 1 -- Generate mask** from $\\text{Bernoulli}(0.5)$:</span>\n\n$$\n\\mathbf{m} = [1, \\; 0, \\; 1, \\; 0, \\; 1, \\; 0, \\; 1, \\; 0]\n$$\n\n<span style=\"font-size: 14px;\">Neurons at indices 0, 2, 4, 6 survive; indices 1, 3, 5, 7 are dropped.</span>\n\n<span style=\"font-size: 14px;\">**Step 2 -- Apply mask** element-wise:</span>\n\n$$\n\\mathbf{m} \\odot \\mathbf{h} = [0.8, \\; 0.0, \\; 1.5, \\; 0.0, \\; -1.2, \\; 0.0, \\; 2.1, \\; 0.0]\n$$\n\n<span style=\"font-size: 14px;\">**Step 3 -- Scale** by $\\frac{1}{1-p} = 2$:</span>\n\n$$\n\\tilde{\\mathbf{h}} = [1.6, \\; 0.0, \\; 3.0, \\; 0.0, \\; -2.4, \\; 0.0, \\; 4.2, \\; 0.0]\n$$\n\n<span style=\"font-size: 14px;\">**Verification:** Original sum = 3.6. This realization = 6.4, but over many realizations the expected sum is 3.6.</span>\n\n### <span style=\"font-size: 14px;\">Inference Mode (Same Input)</span>\n\n$$\n\\tilde{\\mathbf{h}} = \\mathbf{h} = [0.8, \\; -0.3, \\; 1.5, \\; 0.0, \\; -1.2, \\; 0.6, \\; 2.1, \\; -0.9]\n$$\n\n<span style=\"font-size: 14px;\">All 8 neurons active, no mask, no scaling. Sum = 3.6, matching the expected training sum.</span>\n\n### <span style=\"font-size: 14px;\">Contrast with Standard Dropout on the Same Input</span>\n\n<span style=\"font-size: 14px;\">Standard dropout training (no scaling): $[0.8, 0.0, 1.5, 0.0, -1.2, 0.0, 2.1, 0.0]$. Inference scales by $0.5$: $[0.4, -0.15, 0.75, 0.0, -0.6, 0.3, 1.05, -0.45]$. Equivalent networks; inverted dropout keeps inference clean.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Variants and Modern Context</span>\n\n### <span style=\"font-size: 14px;\">DropConnect (Wan et al., 2013)</span>\n\n<span style=\"font-size: 14px;\">Zeros individual weights rather than activations: $\\mathbf{y} = (\\mathbf{M} \\odot \\mathbf{W})\\mathbf{x}$. A strict generalization of dropout (dropout = entire columns zeroed in $\\mathbf{M}$). Finer-grained but more expensive.</span>\n\n### <span style=\"font-size: 14px;\">Spatial Dropout (Tompson et al., 2015)</span>\n\n<span style=\"font-size: 14px;\">Drops entire feature maps (channels) instead of individual elements. Standard element-wise dropout is ineffective for conv layers because adjacent elements share overlapping receptive fields and can reconstruct dropped neighbors.</span>\n\n### <span style=\"font-size: 14px;\">DropBlock (Ghiasi et al., 2018)</span>\n\n<span style=\"font-size: 14px;\">Drops contiguous rectangular regions across all channels. More effective than standard dropout for detection and segmentation where spatial structure matters.</span>\n\n### <span style=\"font-size: 14px;\">Dropout in Transformers</span>\n\n<span style=\"font-size: 14px;\">The Transformer (Vaswani et al., 2017) uses dropout in several places:</span>\n\n* <span style=\"font-size: 14px;\">**Attention Dropout:** On attention weights after softmax, forcing the model not to over-rely on single token relationships.</span>\n* <span style=\"font-size: 14px;\">**Residual Dropout:** On sub-layer outputs before the residual addition.</span>\n* <span style=\"font-size: 14px;\">**Feed-Forward Dropout:** Between the two linear layers in the FFN block.</span>\n\n<span style=\"font-size: 14px;\">Typical rates are 0.1-0.2. Very large models (GPT-3+) reduce or eliminate dropout, relying on massive data for implicit regularization.</span>\n\n### <span style=\"font-size: 14px;\">Modern Usage Patterns</span>\n\n<span style=\"font-size: 14px;\">For CNNs, batch normalization has largely replaced dropout. For Transformers, dropout remains standard at low rates. Variants like DropEdge exist for GNNs. The core principle of structured stochastic noise for generalization remains widely applicable.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n### <span style=\"font-size: 14px;\">Forgetting to Switch Between Train and Test Modes</span>\n\n<span style=\"font-size: 14px;\">The most common dropout bug. PyTorch requires `model.train()` / `model.eval()`; TensorFlow/Keras needs the `training` flag. Dropout active at inference gives noisy, non-deterministic predictions. Dropout disabled during training removes regularization. Both cases still produce outputs, making the bug insidious.</span>\n\n### <span style=\"font-size: 14px;\">Applying Dropout to Convolutional Layers Naively</span>\n\n<span style=\"font-size: 14px;\">Element-wise dropout on conv feature maps is ineffective because spatially adjacent elements can reconstruct dropped neighbors. Use Spatial Dropout or DropBlock instead. AlexNet applied dropout only to FC layers for this reason.</span>\n\n### <span style=\"font-size: 14px;\">Incorrect Scaling Factor</span>\n\n<span style=\"font-size: 14px;\">Correct inverted scaling is $\\frac{1}{1-p}$, not $\\frac{1}{p}$. With $p=0.5$ both equal 2, hiding the bug. With $p=0.3$: correct = $\\frac{1}{0.7} \\approx 1.43$, wrong = $\\frac{1}{0.3} \\approx 3.33$. Also beware: some frameworks define $p$ as keep probability, others as drop probability.</span>\n\n### <span style=\"font-size: 14px;\">Dropout Rate Too High</span>\n\n<span style=\"font-size: 14px;\">At $p = 0.9$, only 10% of neurons survive with 10x scaling, causing extreme gradient noise. Defaults: $p = 0.5$ for FC layers, $p = 0.2$-$0.3$ near the input, $p = 0.1$ for Transformers. If both train and val performance are poor, $p$ may be too high.</span>\n\n### <span style=\"font-size: 14px;\">Interaction with Batch Normalization</span>\n\n<span style=\"font-size: 14px;\">Dropout's $\\frac{1}{1-p}$ scaling shifts activation variance. BN captures these shifted statistics during training, but at test time dropout is off, creating a \"variance shift\" mismatch. Solutions: place dropout after BN, lower dropout rates, or drop dropout entirely when using BN.</span>\n\n### <span style=\"font-size: 14px;\">Dropout with Small Datasets</span>\n\n<span style=\"font-size: 14px;\">With very limited data, dropout noise can overwhelm the weak training signal. Data augmentation, transfer learning, or Bayesian methods may be more effective.</span>\n\n### <span style=\"font-size: 14px;\">Dropout During Fine-tuning</span>\n\n<span style=\"font-size: 14px;\">The optimal dropout rate for fine-tuning often differs from pretraining. Small datasets may need higher $p$; well-matched features may need lower $p$. Treat as a hyperparameter.</span>\n\n---",
+  "hints": [
+    "Training mode uses x * mask / (1 - p).",
+    "Evaluation mode should return x.copy()."
+  ],
+  "constraints": "- x and mask have the same nonempty shape.\n- mask contains only 0 and 1.\n- $0\\le p<1$.\n- training is a Boolean.",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef dropout(x: np.ndarray, p: float, training: bool,\n            mask: np.ndarray) -> np.ndarray:\n    \"\"\"\n    Returns the float64 inverted-dropout output.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-23T18:46:10.333Z",
+  "updatedAt": "2026-04-04T12:04:49.613Z",
+  "topicId": "alexnet-dropout",
+  "paperSnippet": "\"We use dropout in the first two fully-connected layers. Without dropout, our network exhibits substantial overfitting. Dropout roughly doubles the number of iterations required to converge.\"",
+  "visualizationComponent": "DropoutViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Dropout Regularization** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef dropout(x: np.ndarray, p: float, training: bool, mask: np.ndarray) -> np.ndarray:\n    x_arr = np.asarray(x, dtype=float)\n    if not training or p == 0:\n        return x_arr\n    m = np.asarray(mask, dtype=float)\n    return (x_arr * m) / (1.0 - float(p))\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Half dropout",
+      "inputs": {
+        "p": 0.5,
+        "x": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "mask": [
+          0,
+          1,
+          1,
+          0
+        ],
+        "training": true
+      },
+      "output": [
+        0,
+        4,
+        6,
+        0
+      ],
+      "isPublic": true,
+      "explanation": "The retained values are multiplied by two because 1 / (1 - 0.5) = 2.",
+      "expectedOutput": [
+        0,
+        4,
+        6,
+        0
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Evaluation mode",
+      "inputs": {
+        "p": 0.5,
+        "x": [
+          1,
+          -2,
+          3
+        ],
+        "mask": [
+          0,
+          0,
+          0
+        ],
+        "training": false
+      },
+      "output": [
+        1,
+        -2,
+        3
+      ],
+      "isPublic": true,
+      "expectedOutput": [
+        1,
+        -2,
+        3
+      ]
+    },
+    {
+      "id": "test-3",
+      "name": "Matrix mask",
+      "inputs": {
+        "p": 0.25,
+        "x": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "mask": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "training": true
+      },
+      "output": [
+        [
+          1.333333,
+          0
+        ],
+        [
+          4,
+          5.333333
+        ]
+      ],
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.333333,
+          0
+        ],
+        [
+          4,
+          5.333333
+        ]
+      ]
+    },
+    {
+      "id": "alexnet-dropout-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "p": 1.0,
+        "x": [
+          2,
+          4,
+          6,
+          8
+        ],
+        "mask": [
+          0,
+          2,
+          2,
+          0
+        ],
+        "training": 2
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "p": 0.25,
+        "x": [
+          0,
+          1,
+          2,
+          2
+        ],
+        "mask": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "training": 0
+      },
+      "expectedOutput": [
+        0.0,
+        1.0,
+        2.0,
+        2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "p": -0.5,
+        "x": [
+          -1,
+          -2,
+          -3,
+          -4
+        ],
+        "mask": [
+          0,
+          -1,
+          -1,
+          0
+        ],
+        "training": -1
+      },
+      "expectedOutput": [
+        -0.0,
+        1.3333333333333333,
+        2.0,
+        -0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "p": 1.5,
+        "x": [
+          3,
+          6,
+          9,
+          12
+        ],
+        "mask": [
+          0,
+          3,
+          3,
+          0
+        ],
+        "training": 3
+      },
+      "expectedOutput": [
+        -0.0,
+        -36.0,
+        -54.0,
+        -0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "p": 1.5,
+        "x": [
+          2.0,
+          3.0,
+          4.0,
+          5.0
+        ],
+        "mask": [
+          1.0,
+          2.0,
+          2.0,
+          1.0
+        ],
+        "training": 2.0
+      },
+      "expectedOutput": [
+        -4.0,
+        -12.0,
+        -16.0,
+        -10.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "p": -1.5,
+        "x": [
+          -1.0,
+          0.0,
+          1.0,
+          2.0
+        ],
+        "mask": [
+          -2.0,
+          -1.0,
+          -1.0,
+          -2.0
+        ],
+        "training": -1.0
+      },
+      "expectedOutput": [
+        0.8,
+        -0.0,
+        -0.4,
+        -1.6
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "p": 0.5,
+        "x": [
+          4,
+          3,
+          2,
+          1
+        ],
+        "mask": [
+          0,
+          1,
+          1,
+          0
+        ],
+        "training": 1
+      },
+      "expectedOutput": [
+        0.0,
+        6.0,
+        4.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "p": -0.5,
+        "x": [
+          -1,
+          -2,
+          -3,
+          -4
+        ],
+        "mask": [
+          0,
+          -1,
+          -1,
+          0
+        ],
+        "training": -1
+      },
+      "expectedOutput": [
+        -0.0,
+        1.3333333333333333,
+        2.0,
+        -0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "p": 5.0,
+        "x": [
+          10,
+          20,
+          30,
+          40
+        ],
+        "mask": [
+          0,
+          10,
+          10,
+          0
+        ],
+        "training": 10
+      },
+      "expectedOutput": [
+        -0.0,
+        -50.0,
+        -75.0,
+        -0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "p": 0.05,
+        "x": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "mask": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "training": 0
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "p": 5.5,
+        "x": [
+          6.0,
+          7.0,
+          8.0,
+          9.0
+        ],
+        "mask": [
+          5.0,
+          6.0,
+          6.0,
+          5.0
+        ],
+        "training": 6.0
+      },
+      "expectedOutput": [
+        -6.666666666666667,
+        -9.333333333333334,
+        -10.666666666666666,
+        -10.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "p": 0.75,
+        "x": [
+          2,
+          3,
+          4,
+          6
+        ],
+        "mask": [
+          0,
+          2,
+          2,
+          0
+        ],
+        "training": 2
+      },
+      "expectedOutput": [
+        0.0,
+        24.0,
+        32.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "p": -1.0,
+        "x": [
+          -2,
+          -4,
+          -6,
+          -8
+        ],
+        "mask": [
+          0,
+          -2,
+          -2,
+          0
+        ],
+        "training": -2
+      },
+      "expectedOutput": [
+        -0.0,
+        4.0,
+        6.0,
+        -0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "p": 0.125,
+        "x": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "mask": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "training": 0
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "p": -0.5,
+        "x": [
+          0.0,
+          1.0,
+          2.0,
+          3.0
+        ],
+        "mask": [
+          -1.0,
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "training": 0.0
+      },
+      "expectedOutput": [
+        0.0,
+        1.0,
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "p": 2.0,
+        "x": [
+          4,
+          8,
+          12,
+          16
+        ],
+        "mask": [
+          0,
+          4,
+          4,
+          0
+        ],
+        "training": 4
+      },
+      "expectedOutput": [
+        -0.0,
+        -32.0,
+        -48.0,
+        -0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alexnet-dropout-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "p": 0.375,
+        "x": [
+          1,
+          2,
+          2,
+          3
+        ],
+        "mask": [
+          0,
+          1,
+          1,
+          0
+        ],
+        "training": 1
+      },
+      "expectedOutput": [
+        0.0,
+        3.2,
+        3.2,
+        0.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "dropout",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": "[1,2,3,4]",
+        "description": "Input activations"
+      },
+      {
+        "name": "p",
+        "type": "number",
+        "example": "0.5",
+        "description": "Drop probability"
+      },
+      {
+        "name": "training",
+        "type": "boolean",
+        "example": "true",
+        "description": "Whether dropout is active"
+      },
+      {
+        "name": "mask",
+        "type": "array",
+        "example": "[0,1,1,0]",
+        "description": "Supplied binary mask"
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "alexnet-dropout",
+    "name": "Dropout Regularization",
+    "description": "Prevent overfitting with p=0.5",
+    "color": "#f59e0b"
+  },
+  "paper": {
+    "id": "alexnet",
+    "title": "ImageNet Classification with Deep Convolutional Neural Networks",
+    "authors": "Krizhevsky, Sutskever & Hinton, 2012",
+    "year": 2012,
+    "paperUrl": "https://papers.nips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf",
+    "visualizationComponent": "AlexNetArchViz"
+  },
+  "navigation": {
+    "index": 3,
+    "total": 6,
+    "prev": "alexnet-relu",
+    "next": "alexnet-lrn"
+  },
+  "cleanTitle": ""
+}

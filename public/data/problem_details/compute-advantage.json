@@ -1,0 +1,637 @@
+{
+  "id": "compute-advantage",
+  "title": "Advantage Computation",
+  "description": "Compute the Monte Carlo advantage at every time step of a completed episode. First compute each discounted return backward:\n\n$$\nG_t=r_t+\\gamma G_{t+1},\\qquad G_T=0\n$$\n\nThen subtract the value baseline for the visited state:\n\n$$\nA_t=G_t-V(s_t)\n$$\n\nHere, $r_t$ is the reward at time $t$, $\\gamma$ is the discount factor, and $V(s_t)$ is the estimated value of the current state. Do not bootstrap beyond the final reward. Return the advantages as a NumPy array rounded to four decimals.",
+  "seoDescription": "Compute reinforcement-learning advantages by subtracting value estimates from observed returns at each timestep.",
+  "examples": [
+    "Input: states = [0, 1, 2], rewards = [1, 2, 3], V = [0.5, 1, 1.5], gamma = 1\n\nOutput: [5.5, 4, 1.5]\n\nExplanation: The returns are [6, 5, 3], and subtracting the three state baselines gives the advantages.",
+    "Input: states = [0, 1, 2], rewards = [1, 2, 3], V = [0, 0, 0], gamma = 0\n\nOutput: [1, 2, 3]"
+  ],
+  "requirements": "* Compute all returns in one backward pass\n* Subtract the value associated with each visited state\n* Do not add a value estimate after the final reward\n* Return a NumPy array rounded to four decimals",
+  "theory": "## Understanding the Theory: Advantage Computation\n\n### Core Intuition: Why Do We Need This?\nIn reinforcement learning, an agent learns optimal decision policies through environmental trial-and-error without explicit target labels. The agent must balance exploiting known high-value actions against exploring uncertain actions that may yield higher cumulative discounted rewards. **Advantage Computation** provides the algorithmic rule for updating state values, policy distributions, or Q-tables.\n\nIn this problem, the objective is to implement **Advantage Computation** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nG_t=r_t+\\gamma G_{t+1},\\qquad G_T=0\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Bellman Optimality**: Dynamic programming in RL computes value functions iteratively: current value equals immediate reward plus discounted expectation of subsequent state values.\n* **Exploration Strategies**: Techniques like $\\\\epsilon$-greedy and entropy regularization prevent the policy from collapsing prematurely into sub-optimal actions.\n* **Credit Assignment**: Temporal difference learning allows agents to update value estimates after every step rather than waiting until the end of an episode.",
+  "hints": [
+    "Fill a return array backward with running = rewards[index] + gamma * running.",
+    "Index the baseline vector with values[np.asarray(states, dtype=int)]."
+  ],
+  "constraints": "* states and rewards are nonempty lists of equal length\n* Every state index is valid for V\n* 0 <= gamma <= 1\n* Use NumPy only",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef compute_advantage(states: list, rewards: list, V: list, gamma: float) -> np.ndarray:\n    \"\"\"\n    Returns the advantages as a NumPy array.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-15T16:17:01.997Z",
+  "updatedAt": "2026-08-23T10:37:25.159Z",
+  "solution": "### 💡 Intuition & Approach\nMonte Carlo advantage function $A(s, a) = G_t - V(s_t)$ representing reward difference over baseline expectation.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef compute_advantage(states: list, rewards: list, V: list, gamma: float) -> list:\n    n = len(rewards)\n    returns = np.zeros(n)\n    G = 0.0\n    for t in reversed(range(n)):\n        G = rewards[t] + gamma * G\n        returns[t] = G\n    V_arr = np.array(V, dtype=float)\n    adv = returns - V_arr\n    return adv.tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "ComputeAdvantageViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "public_basic",
+      "inputs": {
+        "V": [
+          0.5,
+          1,
+          1.5
+        ],
+        "gamma": 1,
+        "states": [
+          0,
+          1,
+          2
+        ],
+        "rewards": [
+          1,
+          2,
+          3
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        5.5,
+        4,
+        1.5
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "hidden_zero_gamma",
+      "inputs": {
+        "V": [
+          0,
+          0,
+          0
+        ],
+        "gamma": 0,
+        "states": [
+          0,
+          1,
+          2
+        ],
+        "rewards": [
+          1,
+          2,
+          3
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "compute-advantage-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "V": [
+          1.0,
+          2,
+          3.0
+        ],
+        "gamma": 2,
+        "states": [
+          0,
+          2,
+          4
+        ],
+        "rewards": [
+          2,
+          4,
+          6
+        ]
+      },
+      "expectedOutput": [
+        33.0,
+        14.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "V": [
+          0.25,
+          0,
+          0.75
+        ],
+        "gamma": 0,
+        "states": [
+          0,
+          0,
+          1
+        ],
+        "rewards": [
+          0,
+          1,
+          2
+        ]
+      },
+      "expectedOutput": [
+        -0.25,
+        1.0,
+        1.25
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "V": [
+          -0.5,
+          -1,
+          -1.5
+        ],
+        "gamma": -1,
+        "states": [
+          0,
+          -1,
+          -2
+        ],
+        "rewards": [
+          -1,
+          -2,
+          -3
+        ]
+      },
+      "expectedOutput": [
+        -1.5,
+        2.0,
+        -1.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "V": [
+          1.5,
+          3,
+          4.5
+        ],
+        "gamma": 3,
+        "states": [
+          0,
+          3,
+          6
+        ],
+        "rewards": [
+          3,
+          6,
+          9
+        ]
+      },
+      "expectedOutput": [
+        100.5,
+        30.0,
+        4.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "V": [
+          1.5,
+          2.0,
+          2.5
+        ],
+        "gamma": 2.0,
+        "states": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "rewards": [
+          2.0,
+          3.0,
+          4.0
+        ]
+      },
+      "expectedOutput": [
+        22.5,
+        9.0,
+        1.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "V": [
+          -1.5,
+          -1.0,
+          -0.5
+        ],
+        "gamma": -1.0,
+        "states": [
+          -2.0,
+          -1.0,
+          0.0
+        ],
+        "rewards": [
+          -1.0,
+          0.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "V": [
+          1.5,
+          1,
+          0.5
+        ],
+        "gamma": 1,
+        "states": [
+          2,
+          1,
+          0
+        ],
+        "rewards": [
+          3,
+          2,
+          1
+        ]
+      },
+      "expectedOutput": [
+        4.5,
+        2.0,
+        0.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "V": [
+          -0.5,
+          -1,
+          -1.5
+        ],
+        "gamma": -1,
+        "states": [
+          0,
+          -1,
+          -2
+        ],
+        "rewards": [
+          -1,
+          -2,
+          -3
+        ]
+      },
+      "expectedOutput": [
+        -1.5,
+        2.0,
+        -1.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "V": [
+          5.0,
+          10,
+          15.0
+        ],
+        "gamma": 10,
+        "states": [
+          0,
+          10,
+          20
+        ],
+        "rewards": [
+          10,
+          20,
+          30
+        ]
+      },
+      "expectedOutput": [
+        3205.0,
+        310.0,
+        15.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "V": [
+          0.05,
+          0,
+          0.15
+        ],
+        "gamma": 0,
+        "states": [
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          0,
+          0,
+          0
+        ]
+      },
+      "expectedOutput": [
+        -0.05,
+        0.0,
+        -0.15
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "V": [
+          5.5,
+          6.0,
+          6.5
+        ],
+        "gamma": 6.0,
+        "states": [
+          5.0,
+          6.0,
+          7.0
+        ],
+        "rewards": [
+          6.0,
+          7.0,
+          8.0
+        ]
+      },
+      "expectedOutput": [
+        330.5,
+        49.0,
+        1.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "V": [
+          0.75,
+          2,
+          2.25
+        ],
+        "gamma": 2,
+        "states": [
+          0,
+          2,
+          3
+        ],
+        "rewards": [
+          2,
+          3,
+          4
+        ]
+      },
+      "expectedOutput": [
+        23.25,
+        9.0,
+        1.75
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "V": [
+          -1.0,
+          -2,
+          -3.0
+        ],
+        "gamma": -2,
+        "states": [
+          0,
+          -2,
+          -4
+        ],
+        "rewards": [
+          -2,
+          -4,
+          -6
+        ]
+      },
+      "expectedOutput": [
+        -17.0,
+        10.0,
+        -3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "V": [
+          0.125,
+          0,
+          0.375
+        ],
+        "gamma": 0,
+        "states": [
+          0,
+          0,
+          0
+        ],
+        "rewards": [
+          0,
+          0,
+          1
+        ]
+      },
+      "expectedOutput": [
+        -0.125,
+        0.0,
+        0.625
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "V": [
+          -0.5,
+          0.0,
+          0.5
+        ],
+        "gamma": 0.0,
+        "states": [
+          -1.0,
+          0.0,
+          1.0
+        ],
+        "rewards": [
+          0.0,
+          1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        0.5,
+        1.0,
+        1.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "V": [
+          2.0,
+          4,
+          6.0
+        ],
+        "gamma": 4,
+        "states": [
+          0,
+          4,
+          8
+        ],
+        "rewards": [
+          4,
+          8,
+          12
+        ]
+      },
+      "expectedOutput": [
+        226.0,
+        52.0,
+        6.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "V": [
+          0.375,
+          1,
+          1.125
+        ],
+        "gamma": 1,
+        "states": [
+          0,
+          1,
+          2
+        ],
+        "rewards": [
+          1,
+          2,
+          2
+        ]
+      },
+      "expectedOutput": [
+        4.625,
+        3.0,
+        0.875
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "compute-advantage-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "V": [
+          2.5,
+          5,
+          7.5
+        ],
+        "gamma": 5,
+        "states": [
+          0,
+          5,
+          10
+        ],
+        "rewards": [
+          5,
+          10,
+          15
+        ]
+      },
+      "expectedOutput": [
+        427.5,
+        80.0,
+        7.5
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "compute_advantage",
+    "returns": {
+      "type": "array"
+    },
+    "parameters": [
+      {
+        "name": "states",
+        "type": "array",
+        "example": "[0, 1, 2]",
+        "description": "Sequence of visited state indices"
+      },
+      {
+        "name": "rewards",
+        "type": "array",
+        "example": "[1, 2, 3]",
+        "description": "Rewards received at each step"
+      },
+      {
+        "name": "V",
+        "type": "array",
+        "example": "[0.5, 1, 1.5]",
+        "description": "Value estimates for each state"
+      },
+      {
+        "name": "gamma",
+        "type": "number",
+        "example": "1.0",
+        "description": "Discount factor (0 to 1)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "gae-computation",
+    "policy-gradient-loss",
+    "discount-returns",
+    "td-value-update",
+    "q-learning-update"
+  ],
+  "tags": [
+    "Reinforcement Learning"
+  ],
+  "prevId": "mc-policy-evaluation",
+  "nextId": "vector-norm-3d",
+  "slug": "compute-advantage",
+  "cleanTitle": "Advantage Computation",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/compute-advantage",
+  "localUrl": "http://localhost:3000/problems/compute-advantage",
+  "studyPlan": null
+}

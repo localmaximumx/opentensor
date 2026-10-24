@@ -1,0 +1,874 @@
+{
+  "catalogId": "sql:sql-subqueries",
+  "id": "sql-subqueries",
+  "sourceId": "sql-subqueries",
+  "slug": "sql-subqueries",
+  "source": "sql",
+  "category": "sql",
+  "title": "Subqueries",
+  "difficulty": "Medium",
+  "tags": [
+    "Data Processing"
+  ],
+  "isFree": false,
+  "planId": "sql-basics",
+  "planTitle": "SQL Sheet",
+  "sectionId": "sql-basics-advanced-queries",
+  "sortOrder": 63,
+  "seoDescription": "Use SQL subqueries to compare product prices with the overall average and include only products with recorded sales.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Identify products whose unit price exceeds the catalog average and have recorded at least one sale.\n\nCorrelated and scalar subqueries allow dynamic filtering against aggregated database statistics.\n\n### Query Logic & Formulation\n$$\n\\text{price} > \\operatorname{AVG}(\\text{price}) \\quad \\land \\quad \\text{product\\_id} \\in \\text{Sales}\n$$\n\n### Relational Execution Steps\n1. Compute the overall catalog average product price\n2. Filter products with price strictly exceeding the average\n3. Filter for products existing in the sales table and sort by price descending\n\n### Expected Query Output\nList of records containing 'product_id', 'product_name', and 'price'.",
+  "theory": "## Understanding the Theory: Subqueries\n\n### Core Intuition: Why Do We Need This?\nRelational databases structure data into normalized tables with strict schemas and foreign-key relationships. SQL allows data engineers and analysts to write declarative queries describing what data is needed, while the database query engine optimizes the underlying execution plan. **Subqueries** combines, aggregates, or transforms records across tables.\n\nCorrelated and scalar subqueries allow dynamic filtering against aggregated database statistics. In this problem, the goal is to: identify products whose unit price exceeds the catalog average and have recorded at least one sale.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\text{price} > \\operatorname{AVG}(\\text{price}) \\quad \\land \\quad \\text{product\\_id} \\in \\text{Sales}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute the overall catalog average product price\n2. **Phase 2**: Filter products with price strictly exceeding the average\n3. **Phase 3**: Filter for products existing in the sales table and sort by price descending\n\n### Practical Machine Learning Applications & Nuances\n* **Join Mechanics**: Inner joins filter for matching records across tables, while outer joins preserve all rows from one table even when no matches exist.\n* **Window Functions**: Functions like `ROW_NUMBER()` and `RANK()` allow computing partitioned running totals and top-K ranks without requiring self-joins.\n* **Index Optimization**: Proper indexing on join keys and filter conditions ensures queries run in milliseconds rather than doing full table scans.",
+  "examples": [
+    "Input: products = [{\"product_id\": 1, \"product_name\": \"Laptop\", \"price\": 1200.0}, {\"product_id\": 2, \"product_name\": \"Mouse\", \"price\": 25.0}, {\"product_id\": 3, \"product_name\": \"Monitor\", \"price\": 400.0}], sales = [{\"sale_id\": 101, \"product_id\": 1}, {\"sale_id\": 102, \"product_id\": 2}]\n\nOutput: [{\"product_id\": 1, \"product_name\": \"Laptop\", \"price\": 1200.0}]\n\nExplanation: Evaluated sql_subqueries under standard test conditions."
+  ],
+  "requirements": "* Function must be named `sql_subqueries`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `sql_subqueries`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "-- SQL Subqueries\nSELECT product_id, product_name, price\nFROM products\nWHERE price > (SELECT AVG(price) FROM products)\n  AND product_id IN (SELECT DISTINCT product_id FROM sales)\nORDER BY price DESC;",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Subqueries** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef sql_subqueries(products: list, sales: list) -> list:\n    if not products:\n        return []\n    avg_price = sum(p['price'] for p in products) / len(products)\n    sales_ids = {s['product_id'] for s in sales}\n    res = [p for p in products if p['price'] > avg_price and p['product_id'] in sales_ids]\n    res.sort(key=lambda x: -x['price'])\n    return [{'product_id': p['product_id'], 'product_name': p['product_name'], 'price': round(float(p['price']), 2)} for p in res]\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Basic products and sales",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "sql-subqueries-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-subqueries-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "products": [
+          {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "price": 1200.0
+          },
+          {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "price": 25.0
+          },
+          {
+            "product_id": 3,
+            "product_name": "Monitor",
+            "price": 400.0
+          }
+        ],
+        "sales": [
+          {
+            "sale_id": 101,
+            "product_id": 1
+          },
+          {
+            "sale_id": 102,
+            "product_id": 2
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "product_id": 1,
+          "product_name": "Laptop",
+          "price": 1200.0
+        }
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "sql_subqueries",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sql-multiple-joins",
+    "sql-distinct-values",
+    "sql-row-number",
+    "sql-inner-join",
+    "sql-conditional-aggregation"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "sql",
+    "placeholderType": "sql_dummy_select (SELECT * FROM main_table)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

@@ -1,0 +1,1887 @@
+{
+  "id": "bert-segment-embedding",
+  "title": "Segment Embeddings",
+  "description": "Build BERT input embeddings by summing the token, position, and segment vectors at every sequence position.\n\n$$\nE_{b,s} = E_{\\mathrm{token}}[t_{b,s}] + E_{\\mathrm{position}}[s] + E_{\\mathrm{segment}}[g_{b,s}]\n$$\n\nHere, $b$ indexes the batch, $s$ indexes sequence position, $t_{b,s}$ is a token ID, and $g_{b,s}$ is either zero for sentence A or one for sentence B. The supplied embedding tables contain the vectors to look up. Return $E$ as a float64 NumPy array with shape $(B,S,H)$.",
+  "seoDescription": "Build BERT input embeddings by summing learned token, position, and sentence-segment embedding vectors.",
+  "examples": [
+    "Input: token_ids = [[0,1,2,3]], segment_ids = [[0,0,1,1]], token_embeddings = [[0.1,0.2],[0.3,-0.1],[-0.2,0.4],[0.5,0]], position_embeddings = [[0,0.1],[0.1,0],[0.2,-0.1],[-0.1,0.2]], segment_embeddings = [[0.01,0.02],[-0.03,0.04]]\n\nOutput: [[[0.11,0.32],[0.41,-0.08],[-0.03,0.34],[0.37,0.24]]]\n\nExplanation: Each output vector is the sum of one row from each supplied embedding table.",
+    "Input: token_ids = [[1,0],[2,1]], segment_ids = [[0,0],[1,1]], token_embeddings = [[1,0,-1],[0.5,0.5,0.5],[-0.2,0.3,0.4]], position_embeddings = [[0.1,0.2,0.3],[-0.1,0,0.1]], segment_embeddings = [[0,0,0],[0.2,-0.2,0.1]]\n\nOutput: [[[0.6,0.7,0.8],[0.9,0,-0.9]],[[0.1,0.3,0.8],[0.6,0.3,0.7]]]",
+    "Input: token_ids = [[0]], segment_ids = [[1]], token_embeddings = [[0.4,-0.5]], position_embeddings = [[0.1,0.2]], segment_embeddings = [[0,0],[-0.2,0.3]]\n\nOutput: [[[0.3,0]]]"
+  ],
+  "requirements": "- Use NumPy.\n- Look up token embeddings from token_ids.\n- Use positions from zero through S minus one for every batch row.\n- Look up segment embeddings from segment_ids.\n- Return the elementwise sum as a float64 NumPy array.",
+  "theory": "# <span style=\"font-size: 20px;\">Segment Embeddings</span>\n\n<span style=\"font-size: 14px;\">Segment embeddings are one of three embedding components that BERT (Devlin et al., 2019) sums to produce each token's input representation. While token embeddings encode word identity and position embeddings encode sequential order, segment embeddings tell the model which sentence a token belongs to. This is essential because many NLP tasks -- natural language inference, question answering, paraphrase detection -- require reasoning about pairs of sentences simultaneously.</span>\n\n<span style=\"font-size: 14px;\">The segment embedding is the simplest of the three: a lookup table with just two rows, one for sentence A (segment 0) and one for sentence B (segment 1). Every token receives one of these two vectors based on which sentence it belongs to.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is / What It Does</span>\n\n<span style=\"font-size: 14px;\">BERT constructs each token's input representation by summing three separate embeddings:</span>\n\n* <span style=\"font-size: 14px;\">**Token embedding:** Maps the token's vocabulary index to a dense vector. Lookup table shape: (vocab_size, hidden_size).</span>\n* <span style=\"font-size: 14px;\">**Position embedding:** Maps the token's absolute position in the sequence to a dense vector. Lookup table shape: (max_position_embeddings, hidden_size). These are learned, not sinusoidal.</span>\n* <span style=\"font-size: 14px;\">**Segment embedding:** Maps a binary indicator (0 or 1) to a dense vector. Lookup table shape: (2, hidden_size). Sentence A tokens get segment 0, sentence B tokens get segment 1.</span>\n\n<span style=\"font-size: 14px;\">The final input to the Transformer encoder stack is the element-wise sum of all three vectors. This sum is then passed through LayerNorm and dropout before entering the first Transformer block.</span>\n\n<span style=\"font-size: 14px;\">Segment embeddings exist because BERT was designed from the start for sentence-pair tasks. Tasks like natural language inference require the model to compare two sentences, so the model needs a mechanism to distinguish which tokens belong to which sentence. The segment embedding provides this signal at the embedding level, before any self-attention computation occurs.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">For a token at position $p$ with vocabulary index $t$ and segment label $s \\in \\{0, 1\\}$, the input representation $E$ is:</span>\n\n$$\nE = E_{\\text{token}}[t] + E_{\\text{position}}[p] + E_{\\text{segment}}[s]\n$$\n\n<span style=\"font-size: 14px;\">Each term is a lookup into a learned embedding table:</span>\n\n* <span style=\"font-size: 14px;\">**$E_{\\text{token}} \\in \\mathbb{R}^{V \\times H}$:** Token embedding table, where $V$ is the vocabulary size (30,522 for BERT-base with WordPiece) and $H$ is the hidden size (768 for BERT-base). The lookup $E_{\\text{token}}[t]$ returns a vector in $\\mathbb{R}^H$.</span>\n* <span style=\"font-size: 14px;\">**$E_{\\text{position}} \\in \\mathbb{R}^{L \\times H}$:** Position embedding table, where $L$ is the maximum sequence length (512 for BERT). The lookup $E_{\\text{position}}[p]$ returns a vector in $\\mathbb{R}^H$.</span>\n* <span style=\"font-size: 14px;\">**$E_{\\text{segment}} \\in \\mathbb{R}^{2 \\times H}$:** Segment embedding table with exactly two rows. The lookup $E_{\\text{segment}}[s]$ returns a vector in $\\mathbb{R}^H$.</span>\n\n<span style=\"font-size: 14px;\">The segment label $s$ is determined by the token's membership:</span>\n\n$$\ns_i = \\begin{cases} 0 & \\text{if token } i \\text{ belongs to sentence A (including [CLS] and first [SEP])} \\\\ 1 & \\text{if token } i \\text{ belongs to sentence B (including second [SEP])} \\end{cases}\n$$\n\n<span style=\"font-size: 14px;\">All three embeddings must have the same dimensionality $H$ because they are summed element-wise, not concatenated. Concatenation would triple the hidden dimension, which is not what BERT does.</span>\n\n<span style=\"font-size: 14px;\">The total number of learnable parameters in the segment embedding table is $2 \\times H$. For BERT-base ($H = 768$), this is just 1,536 parameters -- trivial compared to the token embedding table's $30{,}522 \\times 768 = 23{,}440{,}896$ parameters.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why BERT Needs Segment Embeddings</span>\n\n<span style=\"font-size: 14px;\">Many important NLP tasks are inherently about relationships between two text sequences:</span>\n\n* <span style=\"font-size: 14px;\">**Natural language inference (NLI):** Given a premise and a hypothesis, classify as entailment, contradiction, or neutral. The model must know which sentence is the premise and which is the hypothesis.</span>\n* <span style=\"font-size: 14px;\">**Question answering (QA):** Given a question and a passage, find the answer span in the passage. The model must distinguish question tokens from passage tokens.</span>\n* <span style=\"font-size: 14px;\">**Paraphrase detection:** Given two sentences, determine if they express the same meaning. The model must compare one sentence against the other.</span>\n* <span style=\"font-size: 14px;\">**Sentence similarity:** Given two sentences, compute a similarity score. Again, the model needs to know which tokens belong to which sentence.</span>\n\n<span style=\"font-size: 14px;\">Without segment embeddings, the model would rely solely on the [SEP] token to infer sentence boundaries. But [SEP] only marks a boundary at one position -- it does not propagate sentence membership to every token. Segment embeddings solve this by injecting membership directly into every token's representation at the input level, giving the Transformer a clean, unambiguous signal from the very first layer.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Input Format</span>\n\n<span style=\"font-size: 14px;\">BERT's input for a sentence pair follows a strict format:</span>\n\n$$\n[\\text{CLS}] \\; w_1^A \\; w_2^A \\; \\ldots \\; w_m^A \\; [\\text{SEP}] \\; w_1^B \\; w_2^B \\; \\ldots \\; w_n^B \\; [\\text{SEP}]\n$$\n\n<span style=\"font-size: 14px;\">The corresponding segment IDs are:</span>\n\n$$\n\\underbrace{0 \\; 0 \\; 0 \\; \\ldots \\; 0 \\; 0}_{\\text{[CLS] + sentence A + [SEP]}} \\; \\underbrace{1 \\; 1 \\; 1 \\; \\ldots \\; 1 \\; 1}_{\\text{sentence B + [SEP]}}\n$$\n\n<span style=\"font-size: 14px;\">Key details about the input format:</span>\n\n* <span style=\"font-size: 14px;\">**[CLS] gets segment 0.** It is always part of sentence A's segment. Its final hidden state is used as the aggregate sequence representation for classification tasks.</span>\n* <span style=\"font-size: 14px;\">**First [SEP] gets segment 0.** The separator after sentence A belongs to sentence A's segment.</span>\n* <span style=\"font-size: 14px;\">**Second [SEP] gets segment 1.** The separator after sentence B belongs to sentence B's segment.</span>\n* <span style=\"font-size: 14px;\">**Position IDs are global.** Positions run from 0 to $m + n + 2$ (total tokens minus 1), spanning both sentences continuously. They do not reset at the sentence boundary.</span>\n\n<span style=\"font-size: 14px;\">For single-sentence tasks (sentiment analysis, named entity recognition), only sentence A is used:</span>\n\n$$\n[\\text{CLS}] \\; w_1 \\; w_2 \\; \\ldots \\; w_m \\; [\\text{SEP}]\n$$\n\n<span style=\"font-size: 14px;\">All segment IDs are 0 in the single-sentence case. The segment B embedding row ($E_{\\text{segment}}[1]$) is simply never accessed.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">Devlin et al. describe the input representation in Section 3 of \"BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding\" (2019). The paper states: \"We differentiate the sentences in two ways. First, we separate them with a special token ([SEP]). Second, we add a learned embedding to every token indicating whether it belongs to sentence A or sentence B.\"</span>\n\n<span style=\"font-size: 14px;\">The segment embedding was motivated by BERT's Next Sentence Prediction (NSP) pre-training objective. BERT receives sentence pairs and predicts whether sentence B actually follows sentence A in the corpus, or is randomly sampled. This binary classification uses the [CLS] token's final representation, so the model needs segment embeddings to distinguish the two sentences.</span>\n\n<span style=\"font-size: 14px;\">BERT uses learned position embeddings, not the sinusoidal encodings from the original Transformer (Vaswani et al., 2017). The original Transformer defined $\\text{PE}(pos, 2i) = \\sin(pos / 10000^{2i/d})$ and $\\text{PE}(pos, 2i+1) = \\cos(pos / 10000^{2i/d})$. BERT replaces these with a fully learned position embedding table, trading extrapolation ability for a representation optimized during pre-training. This limits BERT to sequences of at most 512 tokens.</span>\n\n<span style=\"font-size: 14px;\">The paper notes that \"sentence\" in BERT's context is a misnomer -- a \"sentence\" can be any contiguous span of text, not necessarily a linguistic sentence. Each pre-training input consists of two \"segments\" that may contain multiple actual sentences. This is why \"segment embedding\" is more accurate than \"sentence embedding.\"</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Consider the sentence pair: \"The cat sat\" (sentence A) and \"It slept\" (sentence B). After WordPiece tokenization, assume the tokens and their vocabulary indices are:</span>\n\n* <span style=\"font-size: 14px;\">**[CLS]:** token_id = 101</span>\n* <span style=\"font-size: 14px;\">**The:** token_id = 1996</span>\n* <span style=\"font-size: 14px;\">**cat:** token_id = 4937</span>\n* <span style=\"font-size: 14px;\">**sat:** token_id = 2938</span>\n* <span style=\"font-size: 14px;\">**[SEP]:** token_id = 102</span>\n* <span style=\"font-size: 14px;\">**It:** token_id = 2009</span>\n* <span style=\"font-size: 14px;\">**slept:** token_id = 14195</span>\n* <span style=\"font-size: 14px;\">**[SEP]:** token_id = 102</span>\n\n<span style=\"font-size: 14px;\">The three ID sequences for this input are:</span>\n\n* <span style=\"font-size: 14px;\">**token_ids:** [101, 1996, 4937, 2938, 102, 2009, 14195, 102]</span>\n* <span style=\"font-size: 14px;\">**position_ids:** [0, 1, 2, 3, 4, 5, 6, 7]</span>\n* <span style=\"font-size: 14px;\">**segment_ids:** [0, 0, 0, 0, 0, 1, 1, 1]</span>\n\n<span style=\"font-size: 14px;\">Now consider the embedding lookups for the token \"cat\" at position 2 (segment A) and the token \"slept\" at position 6 (segment B). Assume a tiny hidden_size $H = 4$ for illustration.</span>\n\n<span style=\"font-size: 14px;\">For \"cat\" (token_id=4937, position=2, segment=0):</span>\n\n$$\nE_{\\text{token}}[4937] = [0.12, -0.45, 0.78, 0.33]\n$$\n\n$$\nE_{\\text{position}}[2] = [0.05, 0.11, -0.03, 0.22]\n$$\n\n$$\nE_{\\text{segment}}[0] = [0.08, -0.14, 0.06, 0.19]\n$$\n\n$$\nE_{\\text{cat}} = [0.12 + 0.05 + 0.08, \\; -0.45 + 0.11 + (-0.14), \\; 0.78 + (-0.03) + 0.06, \\; 0.33 + 0.22 + 0.19]\n$$\n\n$$\nE_{\\text{cat}} = [0.25, \\; -0.48, \\; 0.81, \\; 0.74]\n$$\n\n<span style=\"font-size: 14px;\">For \"slept\" (token_id=14195, position=6, segment=1):</span>\n\n$$\nE_{\\text{token}}[14195] = [-0.31, 0.56, 0.14, -0.27]\n$$\n\n$$\nE_{\\text{position}}[6] = [0.18, -0.07, 0.29, 0.03]\n$$\n\n$$\nE_{\\text{segment}}[1] = [-0.11, 0.22, -0.09, 0.15]\n$$\n\n$$\nE_{\\text{slept}} = [-0.31 + 0.18 + (-0.11), \\; 0.56 + (-0.07) + 0.22, \\; 0.14 + 0.29 + (-0.09), \\; -0.27 + 0.03 + 0.15]\n$$\n\n$$\nE_{\\text{slept}} = [-0.24, \\; 0.71, \\; 0.34, \\; -0.09]\n$$\n\n<span style=\"font-size: 14px;\">\"cat\" received $E_{\\text{segment}}[0] = [0.08, -0.14, 0.06, 0.19]$ while \"slept\" received $E_{\\text{segment}}[1] = [-0.11, 0.22, -0.09, 0.15]$. These differ, so even before self-attention begins, the model has a signal that these tokens belong to different sentences.</span>\n\n<span style=\"font-size: 14px;\">Every sentence A token gets the same $E_{\\text{segment}}[0]$ added; every sentence B token gets $E_{\\text{segment}}[1]$. This uniform additive signal is what the Transformer uses to learn sentence-aware representations.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Modern Context</span>\n\n<span style=\"font-size: 14px;\">Since BERT's publication, several architectural decisions around embeddings have evolved significantly.</span>\n\n<span style=\"font-size: 14px;\">**Position embeddings: learned to rotary.** Modern models like LLaMA and Mistral use Rotary Position Embeddings (RoPE, Su et al., 2021), which encode relative position by rotating query and key vectors. RoPE captures relative distances between tokens and can extrapolate to unseen sequence lengths. BERT's learned positions are limited to max_position_embeddings = 512.</span>\n\n<span style=\"font-size: 14px;\">**Segment embeddings: sometimes unnecessary.** RoBERTa (Liu et al., 2019) demonstrated that the Next Sentence Prediction objective -- the primary reason segment embeddings exist -- actually hurts downstream performance. RoBERTa removed NSP and set all segment IDs to 0 during pre-training, making the segment embedding a constant additive bias absorbed by other parameters. This showed that sentence membership can be learned implicitly through other mechanisms.</span>\n\n<span style=\"font-size: 14px;\">**Decoder-only models do not use segment embeddings.** GPT-2, GPT-3, LLaMA, Mistral, and other autoregressive models process a single continuous token sequence with no concept of sentence A vs B. Multi-turn distinctions are encoded through special tokens and formatting in the text itself, not a separate embedding table.</span>\n\n<span style=\"font-size: 14px;\">**ALBERT's factored embeddings.** ALBERT (Lan et al., 2020) factored the token embedding into two smaller matrices ($V \\times E$ then $E \\times H$ with $E \\ll H$), reducing parameters dramatically. It retained segment embeddings.</span>\n\n<span style=\"font-size: 14px;\">**XLNet's relative segments.** XLNet (Yang et al., 2019) replaced BERT-style absolute segment embeddings with relative segment encodings, computing attention biases based on whether two tokens are in the same or different segments rather than assigning a fixed vector per segment.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n### <span style=\"font-size: 14px;\">Wrong Segment IDs for Single-Sentence Input</span>\n\n<span style=\"font-size: 14px;\">When fine-tuning on single-sentence tasks, all segment IDs must be 0. Using segment 1 would add an unexpected bias vector to every token, degrading performance. Most tokenizer implementations default to all-zeros, but custom preprocessing pipelines may not.</span>\n\n### <span style=\"font-size: 14px;\">Forgetting That [CLS] Gets Segment 0</span>\n\n<span style=\"font-size: 14px;\">The [CLS] token always receives segment ID 0. During pre-training, the [CLS] representation feeds the NSP classification head. If [CLS] were given segment 1, the pre-trained head would see an input distribution it was never trained on, and downstream fine-tuning on classification tasks would start from a poor initialization.</span>\n\n### <span style=\"font-size: 14px;\">Position ID Off-by-One Errors</span>\n\n<span style=\"font-size: 14px;\">Position IDs run continuously from 0 across both sentences. They do not reset at sentence B's start. [CLS] is position 0, sentence A occupies 1 to $m$, first [SEP] is $m+1$, sentence B starts at $m+2$, second [SEP] at $m+n+2$. Resetting positions at the boundary would reuse embeddings and confuse the model.</span>\n\n### <span style=\"font-size: 14px;\">Mixing Up Embedding Table Dimensions</span>\n\n<span style=\"font-size: 14px;\">The three embedding tables have very different first dimensions but identical second dimensions:</span>\n\n* <span style=\"font-size: 14px;\">**Token:** (30522, 768) -- 30,522 vocabulary entries</span>\n* <span style=\"font-size: 14px;\">**Position:** (512, 768) -- 512 possible positions</span>\n* <span style=\"font-size: 14px;\">**Segment:** (2, 768) -- 2 possible segments</span>\n\n<span style=\"font-size: 14px;\">A common confusion is stating the shape as (768, 2). In PyTorch's nn.Embedding, the convention is (num_embeddings, embedding_dim), so the first dimension is always the number of discrete entries. Transposing would produce incorrect lookups.</span>\n\n### <span style=\"font-size: 14px;\">Concatenating Instead of Summing</span>\n\n<span style=\"font-size: 14px;\">BERT sums the three embeddings element-wise, producing a vector of dimension $H$. It does not concatenate them into a vector of dimension $3H$. Summing preserves the hidden dimension expected by the Transformer layers, while concatenation would produce an input three times too wide and fail at the first attention layer.</span>\n\n### <span style=\"font-size: 14px;\">Assuming More Than Two Segments</span>\n\n<span style=\"font-size: 14px;\">BERT's segment embedding table has exactly 2 rows. It cannot handle three or more segments without modification. Workarounds include concatenating extra text into one segment, adding rows (requires re-training), or using separator tokens without segment distinction.</span>\n\n---",
+  "hints": [
+    "Index token_embeddings and segment_embeddings with the two ID arrays.",
+    "Create sequence positions with np.arange(token_ids.shape[1])."
+  ],
+  "constraints": "- token_ids and segment_ids have shape (B, S) and dtype int64.\n- Every segment ID is zero or one.\n- token_embeddings has shape (V, H).\n- position_embeddings has at least S rows and shape (P, H).\n- segment_embeddings has shape (2, H).\n- All embedding tables have dtype float64.",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef bert_embeddings(token_ids: np.ndarray, segment_ids: np.ndarray,\n                    token_embeddings: np.ndarray, position_embeddings: np.ndarray,\n                    segment_embeddings: np.ndarray) -> np.ndarray:\n    \"\"\"\n    Returns the float64 BERT input embeddings with shape (B, S, H).\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-03T18:27:22.385Z",
+  "updatedAt": "2026-02-21T17:14:46.304Z",
+  "topicId": "bert-segment-embedding",
+  "paperSnippet": "\"We differentiate the sentences in two ways. First, we separate them with a special token ([SEP]). Second, we add a learned embedding to every token indicating whether it belongs to sentence A or sentence B.\"",
+  "visualizationComponent": "SegmentEmbeddingViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Segment Embeddings** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef bert_embeddings(token_ids: np.ndarray, segment_ids: np.ndarray,\n                    token_embeddings: np.ndarray, position_embeddings: np.ndarray,\n                    segment_embeddings: np.ndarray) -> np.ndarray:\n    tok_ids = np.asarray(token_ids, dtype=int)\n    seg_ids = np.asarray(segment_ids, dtype=int)\n    tok_tab = np.asarray(token_embeddings, dtype=float)\n    pos_tab = np.asarray(position_embeddings, dtype=float)\n    seg_tab = np.asarray(segment_embeddings, dtype=float)\n    \n    B, S = tok_ids.shape\n    pos_indices = np.arange(S)\n    \n    tok_vecs = tok_tab[tok_ids]\n    seg_vecs = seg_tab[seg_ids]\n    pos_vecs = pos_tab[pos_indices]\n    \n    out = tok_vecs + seg_vecs + pos_vecs[np.newaxis, :, :]\n    return np.round(out, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "public-1",
+      "name": "Two segments",
+      "inputs": {
+        "token_ids": [
+          [
+            0,
+            1,
+            2,
+            3
+          ]
+        ],
+        "segment_ids": [
+          [
+            0,
+            0,
+            1,
+            1
+          ]
+        ],
+        "token_embeddings": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.3,
+            -0.1
+          ],
+          [
+            -0.2,
+            0.4
+          ],
+          [
+            0.5,
+            0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            0.01,
+            0.02
+          ],
+          [
+            -0.03,
+            0.04
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0,
+            0.1
+          ],
+          [
+            0.1,
+            0
+          ],
+          [
+            0.2,
+            -0.1
+          ],
+          [
+            -0.1,
+            0.2
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            0.11,
+            0.32
+          ],
+          [
+            0.41,
+            -0.08
+          ],
+          [
+            -0.03,
+            0.34
+          ],
+          [
+            0.37,
+            0.24
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "public-2",
+      "name": "Batch broadcasting",
+      "inputs": {
+        "token_ids": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            1
+          ]
+        ],
+        "segment_ids": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "token_embeddings": [
+          [
+            1,
+            0,
+            -1
+          ],
+          [
+            0.5,
+            0.5,
+            0.5
+          ],
+          [
+            -0.2,
+            0.3,
+            0.4
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0.2,
+            -0.2,
+            0.1
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0.1,
+            0.2,
+            0.3
+          ],
+          [
+            -0.1,
+            0,
+            0.1
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            0.6,
+            0.7,
+            0.8
+          ],
+          [
+            0.9,
+            0.0,
+            -0.9
+          ]
+        ],
+        [
+          [
+            0.1,
+            0.3,
+            0.8
+          ],
+          [
+            0.6,
+            0.3,
+            0.7
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "public-3",
+      "name": "Single token",
+      "inputs": {
+        "token_ids": [
+          [
+            0
+          ]
+        ],
+        "segment_ids": [
+          [
+            1
+          ]
+        ],
+        "token_embeddings": [
+          [
+            0.4,
+            -0.5
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            0,
+            0
+          ],
+          [
+            -0.2,
+            0.3
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0.1,
+            0.2
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            0.3,
+            0.0
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "bert-segment-embedding-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "token_ids": [
+          [
+            0,
+            2,
+            4,
+            6
+          ]
+        ],
+        "segment_ids": [
+          [
+            0,
+            0,
+            2,
+            2
+          ]
+        ],
+        "token_embeddings": [
+          [
+            0.2,
+            0.4
+          ],
+          [
+            0.6,
+            -0.2
+          ],
+          [
+            -0.4,
+            0.8
+          ],
+          [
+            1.0,
+            0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            0.02,
+            0.04
+          ],
+          [
+            -0.06,
+            0.08
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0,
+            0.2
+          ],
+          [
+            0.2,
+            0
+          ],
+          [
+            0.4,
+            -0.2
+          ],
+          [
+            -0.2,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.11,
+            0.32
+          ],
+          [
+            0.41,
+            -0.08
+          ],
+          [
+            -0.03,
+            0.34
+          ],
+          [
+            0.37,
+            0.24
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "token_ids": [
+          [
+            0,
+            0,
+            1,
+            2
+          ]
+        ],
+        "segment_ids": [
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "token_embeddings": [
+          [
+            0.05,
+            0.1
+          ],
+          [
+            0.15,
+            -0.05
+          ],
+          [
+            -0.1,
+            0.2
+          ],
+          [
+            0.25,
+            0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            0.005,
+            0.01
+          ],
+          [
+            -0.015,
+            0.02
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0,
+            0.05
+          ],
+          [
+            0.05,
+            0
+          ],
+          [
+            0.1,
+            -0.05
+          ],
+          [
+            -0.05,
+            0.1
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.055,
+            0.16
+          ],
+          [
+            0.105,
+            0.11
+          ],
+          [
+            0.255,
+            -0.09
+          ],
+          [
+            -0.145,
+            0.31
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "token_ids": [
+          [
+            0,
+            -1,
+            -2,
+            -3
+          ]
+        ],
+        "segment_ids": [
+          [
+            0,
+            0,
+            -1,
+            -1
+          ]
+        ],
+        "token_embeddings": [
+          [
+            -0.1,
+            -0.2
+          ],
+          [
+            -0.3,
+            0.1
+          ],
+          [
+            0.2,
+            -0.4
+          ],
+          [
+            -0.5,
+            0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            -0.01,
+            -0.02
+          ],
+          [
+            0.03,
+            -0.04
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0,
+            -0.1
+          ],
+          [
+            -0.1,
+            0
+          ],
+          [
+            -0.2,
+            0.1
+          ],
+          [
+            0.1,
+            -0.2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.11,
+            -0.32
+          ],
+          [
+            -0.61,
+            -0.02
+          ],
+          [
+            0.03,
+            -0.34
+          ],
+          [
+            -0.17,
+            -0.14
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "token_ids": [
+          [
+            0,
+            3,
+            6,
+            9
+          ]
+        ],
+        "segment_ids": [
+          [
+            0,
+            0,
+            3,
+            3
+          ]
+        ],
+        "token_embeddings": [
+          [
+            0.3,
+            0.6
+          ],
+          [
+            0.9,
+            -0.3
+          ],
+          [
+            -0.6,
+            1.2
+          ],
+          [
+            1.5,
+            0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            0.03,
+            0.06
+          ],
+          [
+            -0.09,
+            0.12
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0,
+            0.3
+          ],
+          [
+            0.3,
+            0
+          ],
+          [
+            0.6,
+            -0.3
+          ],
+          [
+            -0.3,
+            0.6
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.11,
+            0.32
+          ],
+          [
+            0.41,
+            -0.08
+          ],
+          [
+            -0.03,
+            0.34
+          ],
+          [
+            0.37,
+            0.24
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "token_ids": [
+          [
+            1.0,
+            2.0,
+            3.0,
+            4.0
+          ]
+        ],
+        "segment_ids": [
+          [
+            1.0,
+            1.0,
+            2.0,
+            2.0
+          ]
+        ],
+        "token_embeddings": [
+          [
+            1.1,
+            1.2
+          ],
+          [
+            1.3,
+            0.9
+          ],
+          [
+            0.8,
+            1.4
+          ],
+          [
+            1.5,
+            1.0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            1.01,
+            1.02
+          ],
+          [
+            0.97,
+            1.04
+          ]
+        ],
+        "position_embeddings": [
+          [
+            1.0,
+            1.1
+          ],
+          [
+            1.1,
+            1.0
+          ],
+          [
+            1.2,
+            0.9
+          ],
+          [
+            0.9,
+            1.2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.11,
+            0.32
+          ],
+          [
+            0.41,
+            -0.08
+          ],
+          [
+            -0.03,
+            0.34
+          ],
+          [
+            0.37,
+            0.24
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "token_ids": [
+          [
+            -2.0,
+            -1.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "segment_ids": [
+          [
+            -2.0,
+            -2.0,
+            -1.0,
+            -1.0
+          ]
+        ],
+        "token_embeddings": [
+          [
+            -1.9,
+            -1.8
+          ],
+          [
+            -1.7,
+            -2.1
+          ],
+          [
+            -2.2,
+            -1.6
+          ],
+          [
+            -1.5,
+            -2.0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            -1.99,
+            -1.98
+          ],
+          [
+            -2.03,
+            -1.96
+          ]
+        ],
+        "position_embeddings": [
+          [
+            -2.0,
+            -1.9
+          ],
+          [
+            -1.9,
+            -2.0
+          ],
+          [
+            -1.8,
+            -2.1
+          ],
+          [
+            -2.1,
+            -1.8
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -6.19,
+            -5.48
+          ],
+          [
+            -5.39,
+            -5.98
+          ],
+          [
+            -5.73,
+            -5.86
+          ],
+          [
+            -5.83,
+            -5.86
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "token_ids": [
+          [
+            3,
+            2,
+            1,
+            0
+          ]
+        ],
+        "segment_ids": [
+          [
+            1,
+            1,
+            0,
+            0
+          ]
+        ],
+        "token_embeddings": [
+          [
+            0.2,
+            0.1
+          ],
+          [
+            -0.1,
+            0.3
+          ],
+          [
+            0.4,
+            -0.2
+          ],
+          [
+            0,
+            0.5
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            0.02,
+            0.01
+          ],
+          [
+            0.04,
+            -0.03
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0.1,
+            0
+          ],
+          [
+            0,
+            0.1
+          ],
+          [
+            -0.1,
+            0.2
+          ],
+          [
+            0.2,
+            -0.1
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.14,
+            0.47
+          ],
+          [
+            0.44,
+            -0.13
+          ],
+          [
+            -0.18,
+            0.51
+          ],
+          [
+            0.42,
+            0.01
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "token_ids": [
+          [
+            0,
+            -1,
+            -2,
+            -3
+          ]
+        ],
+        "segment_ids": [
+          [
+            0,
+            0,
+            -1,
+            -1
+          ]
+        ],
+        "token_embeddings": [
+          [
+            -0.1,
+            -0.2
+          ],
+          [
+            -0.3,
+            0.1
+          ],
+          [
+            0.2,
+            -0.4
+          ],
+          [
+            -0.5,
+            0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            -0.01,
+            -0.02
+          ],
+          [
+            0.03,
+            -0.04
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0,
+            -0.1
+          ],
+          [
+            -0.1,
+            0
+          ],
+          [
+            -0.2,
+            0.1
+          ],
+          [
+            0.1,
+            -0.2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.11,
+            -0.32
+          ],
+          [
+            -0.61,
+            -0.02
+          ],
+          [
+            0.03,
+            -0.34
+          ],
+          [
+            -0.17,
+            -0.14
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "token_ids": [
+          [
+            0,
+            10,
+            20,
+            30
+          ]
+        ],
+        "segment_ids": [
+          [
+            0,
+            0,
+            10,
+            10
+          ]
+        ],
+        "token_embeddings": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            -1.0
+          ],
+          [
+            -2.0,
+            4.0
+          ],
+          [
+            5.0,
+            0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            -0.3,
+            0.4
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0,
+            1.0
+          ],
+          [
+            1.0,
+            0
+          ],
+          [
+            2.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.11,
+            0.32
+          ],
+          [
+            0.41,
+            -0.08
+          ],
+          [
+            -0.03,
+            0.34
+          ],
+          [
+            0.37,
+            0.24
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "token_ids": [
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "segment_ids": [
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "token_embeddings": [
+          [
+            0.01,
+            0.02
+          ],
+          [
+            0.03,
+            -0.01
+          ],
+          [
+            -0.02,
+            0.04
+          ],
+          [
+            0.05,
+            0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            0.001,
+            0.002
+          ],
+          [
+            -0.003,
+            0.004
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0,
+            0.01
+          ],
+          [
+            0.01,
+            0
+          ],
+          [
+            0.02,
+            -0.01
+          ],
+          [
+            -0.01,
+            0.02
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.011,
+            0.032
+          ],
+          [
+            0.021,
+            0.022
+          ],
+          [
+            0.031,
+            0.012
+          ],
+          [
+            0.001,
+            0.042
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "token_ids": [
+          [
+            5.0,
+            6.0,
+            7.0,
+            8.0
+          ]
+        ],
+        "segment_ids": [
+          [
+            5.0,
+            5.0,
+            6.0,
+            6.0
+          ]
+        ],
+        "token_embeddings": [
+          [
+            5.1,
+            5.2
+          ],
+          [
+            5.3,
+            4.9
+          ],
+          [
+            4.8,
+            5.4
+          ],
+          [
+            5.5,
+            5.0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            5.01,
+            5.02
+          ],
+          [
+            4.97,
+            5.04
+          ]
+        ],
+        "position_embeddings": [
+          [
+            5.0,
+            5.1
+          ],
+          [
+            5.1,
+            5.0
+          ],
+          [
+            5.2,
+            4.9
+          ],
+          [
+            4.9,
+            5.2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.11,
+            0.32
+          ],
+          [
+            0.41,
+            -0.08
+          ],
+          [
+            -0.03,
+            0.34
+          ],
+          [
+            0.37,
+            0.24
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "token_ids": [
+          [
+            0,
+            2,
+            3,
+            4
+          ]
+        ],
+        "segment_ids": [
+          [
+            0,
+            0,
+            2,
+            2
+          ]
+        ],
+        "token_embeddings": [
+          [
+            0.15,
+            0.3
+          ],
+          [
+            0.45,
+            -0.15
+          ],
+          [
+            -0.3,
+            0.6
+          ],
+          [
+            0.75,
+            0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            0.015,
+            0.03
+          ],
+          [
+            -0.045,
+            0.06
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0,
+            0.15
+          ],
+          [
+            0.15,
+            0
+          ],
+          [
+            0.3,
+            -0.15
+          ],
+          [
+            -0.15,
+            0.3
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.11,
+            0.32
+          ],
+          [
+            0.41,
+            -0.08
+          ],
+          [
+            -0.03,
+            0.34
+          ],
+          [
+            0.37,
+            0.24
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "token_ids": [
+          [
+            0,
+            -2,
+            -4,
+            -6
+          ]
+        ],
+        "segment_ids": [
+          [
+            0,
+            0,
+            -2,
+            -2
+          ]
+        ],
+        "token_embeddings": [
+          [
+            -0.2,
+            -0.4
+          ],
+          [
+            -0.6,
+            0.2
+          ],
+          [
+            0.4,
+            -0.8
+          ],
+          [
+            -1.0,
+            0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            -0.02,
+            -0.04
+          ],
+          [
+            0.06,
+            -0.08
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0,
+            -0.2
+          ],
+          [
+            -0.2,
+            0
+          ],
+          [
+            -0.4,
+            0.2
+          ],
+          [
+            0.2,
+            -0.4
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.11,
+            0.32
+          ],
+          [
+            0.41,
+            -0.08
+          ],
+          [
+            -0.03,
+            0.34
+          ],
+          [
+            0.37,
+            0.24
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "token_ids": [
+          [
+            0,
+            0,
+            0,
+            1
+          ]
+        ],
+        "segment_ids": [
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "token_embeddings": [
+          [
+            0.025,
+            0.05
+          ],
+          [
+            0.075,
+            -0.025
+          ],
+          [
+            -0.05,
+            0.1
+          ],
+          [
+            0.125,
+            0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            0.0025,
+            0.005
+          ],
+          [
+            -0.0075,
+            0.01
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0,
+            0.025
+          ],
+          [
+            0.025,
+            0
+          ],
+          [
+            0.05,
+            -0.025
+          ],
+          [
+            -0.025,
+            0.05
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0275,
+            0.08
+          ],
+          [
+            0.0525,
+            0.055
+          ],
+          [
+            0.0775,
+            0.03
+          ],
+          [
+            0.0525,
+            0.03
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "token_ids": [
+          [
+            -1.0,
+            0.0,
+            1.0,
+            2.0
+          ]
+        ],
+        "segment_ids": [
+          [
+            -1.0,
+            -1.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "token_embeddings": [
+          [
+            -0.9,
+            -0.8
+          ],
+          [
+            -0.7,
+            -1.1
+          ],
+          [
+            -1.2,
+            -0.6
+          ],
+          [
+            -0.5,
+            -1.0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            -0.99,
+            -0.98
+          ],
+          [
+            -1.03,
+            -0.96
+          ]
+        ],
+        "position_embeddings": [
+          [
+            -1.0,
+            -0.9
+          ],
+          [
+            -0.9,
+            -1.0
+          ],
+          [
+            -0.8,
+            -1.1
+          ],
+          [
+            -1.1,
+            -0.8
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -2.53,
+            -2.86
+          ],
+          [
+            -2.83,
+            -2.76
+          ],
+          [
+            -2.49,
+            -3.18
+          ],
+          [
+            -3.29,
+            -2.38
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "token_ids": [
+          [
+            0,
+            4,
+            8,
+            12
+          ]
+        ],
+        "segment_ids": [
+          [
+            0,
+            0,
+            4,
+            4
+          ]
+        ],
+        "token_embeddings": [
+          [
+            0.4,
+            0.8
+          ],
+          [
+            1.2,
+            -0.4
+          ],
+          [
+            -0.8,
+            1.6
+          ],
+          [
+            2.0,
+            0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            0.04,
+            0.08
+          ],
+          [
+            -0.12,
+            0.16
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0,
+            0.4
+          ],
+          [
+            0.4,
+            0
+          ],
+          [
+            0.8,
+            -0.4
+          ],
+          [
+            -0.4,
+            0.8
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.11,
+            0.32
+          ],
+          [
+            0.41,
+            -0.08
+          ],
+          [
+            -0.03,
+            0.34
+          ],
+          [
+            0.37,
+            0.24
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-segment-embedding-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "token_ids": [
+          [
+            0,
+            1,
+            2,
+            2
+          ]
+        ],
+        "segment_ids": [
+          [
+            0,
+            0,
+            1,
+            1
+          ]
+        ],
+        "token_embeddings": [
+          [
+            0.075,
+            0.15
+          ],
+          [
+            0.225,
+            -0.075
+          ],
+          [
+            -0.15,
+            0.3
+          ],
+          [
+            0.375,
+            0
+          ]
+        ],
+        "segment_embeddings": [
+          [
+            0.0075,
+            0.015
+          ],
+          [
+            -0.0225,
+            0.03
+          ]
+        ],
+        "position_embeddings": [
+          [
+            0,
+            0.075
+          ],
+          [
+            0.075,
+            0
+          ],
+          [
+            0.15,
+            -0.075
+          ],
+          [
+            -0.075,
+            0.15
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.0825,
+            0.24
+          ],
+          [
+            0.3075,
+            -0.06
+          ],
+          [
+            -0.0225,
+            0.255
+          ],
+          [
+            -0.2475,
+            0.48
+          ]
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "bert_embeddings",
+    "runtime": "numpy",
+    "parameters": [
+      {
+        "name": "token_ids",
+        "type": "array",
+        "example": [
+          [
+            0,
+            1,
+            2,
+            3
+          ]
+        ],
+        "description": "Int64 token IDs with shape (B, S)."
+      },
+      {
+        "name": "segment_ids",
+        "type": "array",
+        "example": [
+          [
+            0,
+            0,
+            1,
+            1
+          ]
+        ],
+        "description": "Int64 segment IDs with shape (B, S)."
+      },
+      {
+        "name": "token_embeddings",
+        "type": "array",
+        "example": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.3,
+            -0.1
+          ],
+          [
+            -0.2,
+            0.4
+          ],
+          [
+            0.5,
+            0
+          ]
+        ],
+        "description": "Float64 token table with shape (V, H)."
+      },
+      {
+        "name": "position_embeddings",
+        "type": "array",
+        "example": [
+          [
+            0,
+            0.1
+          ],
+          [
+            0.1,
+            0
+          ],
+          [
+            0.2,
+            -0.1
+          ],
+          [
+            -0.1,
+            0.2
+          ]
+        ],
+        "description": "Float64 position table with shape (P, H)."
+      },
+      {
+        "name": "segment_embeddings",
+        "type": "array",
+        "example": [
+          [
+            0.01,
+            0.02
+          ],
+          [
+            -0.03,
+            0.04
+          ]
+        ],
+        "description": "Float64 segment table with shape (2, H)."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "bert-segment-embedding",
+    "name": "Segment Embeddings",
+    "description": "Token type IDs for sentence pairs",
+    "color": "#f472b6"
+  },
+  "paper": {
+    "id": "bert",
+    "title": "BERT: Pre-training of Deep Bidirectional Transformers",
+    "authors": "Devlin et al., 2018",
+    "year": 2018,
+    "paperUrl": "https://arxiv.org/abs/1810.04805",
+    "visualizationComponent": "BertArchViz"
+  },
+  "navigation": {
+    "index": 2,
+    "total": 6,
+    "prev": "bert-wordpiece",
+    "next": "bert-masked-lm"
+  },
+  "cleanTitle": ""
+}

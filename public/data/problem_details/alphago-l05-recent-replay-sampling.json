@@ -1,0 +1,893 @@
+{
+  "id": "alphago-l05-recent-replay-sampling",
+  "slug": "alphago-l05-recent-replay-sampling",
+  "title": "Sample a Recent Self-Play Replay Batch",
+  "cleanTitle": "Sample a Recent Self-Play Replay Batch",
+  "category": "python",
+  "difficulty": "Easy",
+  "tags": [
+    "Reinforcement Learning",
+    "Data Processing",
+    "Probability and Statistics"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "alphago-from-scratch",
+    "title": "Build AlphaGo from Scratch",
+    "sectionId": "alphago-l05"
+  },
+  "seoDescription": "Sample deterministic training positions from a recent window of self-play games while preserving game and position order.",
+  "description": "Extract training samples from a sliding window of recent self-play games, maintaining a deterministic random sampling procedure to feed dual-head neural network training batches.\n\n**Mathematical Formulation:**\n\n$$\n\\mathcal{D}_{\\text{recent}} = \\bigcup_{g \\in \\text{RecentGames}} \\text{Positions}(g), \\quad \\mathcal{B} \\sim \\text{Uniform}(\\mathcal{D}_{\\text{recent}}, N)\n$$\n\n**Step-by-Step Implementation:**\n1. Collect individual board positions sequentially across all recorded self-play games.\n2. Truncate to the most recent window of positions according to window_size.\n3. Draw a uniform random mini-batch of positions without replacement using a deterministic seed.\n4. Return the sampled mini-batch of training records.\n\n**Returns:** List of sampled position records.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Sample a Recent Self-Play Replay Batch specification."
+  ],
+  "requirements": "* Must implement `alphago_l05_recent_replay_sampling` using PYTHON.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Sample a Recent Self-Play Replay Batch\n\n### Core Intuition: Why Do We Need This?\nExtract training samples from a sliding window of recent self-play games, maintaining a deterministic random sampling procedure to feed dual-head neural network training batches. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\n\\mathcal{D}_{\\text{recent}} = \\bigcup_{g \\in \\text{RecentGames}} \\text{Positions}(g), \\quad \\mathcal{B} \\sim \\text{Uniform}(\\mathcal{D}_{\\text{recent}}, N)\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Collect individual board positions sequentially across all recorded self-play games.\n3. **Phase 3: Iterative Execution & Reduction**: Truncate to the most recent window of positions according to window_size.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return the sampled mini-batch of training records.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard PYTHON documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `any` specifications."
+  ],
+  "constraints": "* Category: PYTHON\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, PYTHON\n",
+  "starterCode": "import numpy as np\n\ndef alphago_l05_recent_replay_sampling(game_records: list, window_size: int = 100, batch_size: int = 4, seed: int = 42) -> list:\n    \"\"\"\n    Extract training samples from a sliding window of recent self-play games, maintaining a deterministic random sampling procedure to feed dual-head neural network training batches.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nExtract training samples from a sliding window of recent self-play games, maintaining a deterministic random sampling procedure to feed dual-head neural network training batches.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef alphago_l05_recent_replay_sampling(game_records: list, window_size: int = 100, batch_size: int = 4, seed: int = 42) -> list:\n    all_pos = [pos for g in game_records for pos in g.get('positions', [])]\n    recent = all_pos[-window_size:] if len(all_pos) > window_size else all_pos\n    if not recent: return []\n    rng = np.random.RandomState(seed)\n    indices = sorted(rng.choice(len(recent), size=min(batch_size, len(recent)), replace=False))\n    return [recent[i] for i in indices]\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "alphago-l05-recent-replay-sampling-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 3,
+        "batch_size": 2,
+        "seed": 0
+      },
+      "expectedOutput": [
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "step": 0
+              },
+              {
+                "step": 1
+              },
+              {
+                "step": 2
+              },
+              {
+                "step": 3
+              },
+              {
+                "step": 4
+              },
+              {
+                "step": 5
+              },
+              {
+                "step": 6
+              },
+              {
+                "step": 7
+              },
+              {
+                "step": 8
+              },
+              {
+                "step": 9
+              }
+            ]
+          }
+        ],
+        "window_size": 5,
+        "batch_size": 3,
+        "seed": 1
+      },
+      "expectedOutput": [
+        {
+          "step": 6
+        },
+        {
+          "step": 7
+        },
+        {
+          "step": 9
+        }
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 6,
+        "batch_size": 4,
+        "seed": 0
+      },
+      "expectedOutput": [
+        {
+          "id": 1
+        },
+        {
+          "id": 2
+        },
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 2,
+        "batch_size": 1,
+        "seed": 0
+      },
+      "expectedOutput": [
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": -3,
+        "batch_size": -2,
+        "seed": 0
+      },
+      "expectedOutput": [
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 9,
+        "batch_size": 6,
+        "seed": 0
+      },
+      "expectedOutput": [
+        {
+          "id": 1
+        },
+        {
+          "id": 2
+        },
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 4.0,
+        "batch_size": 3.0,
+        "seed": 1.0
+      },
+      "expectedOutput": [
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 1.0,
+        "batch_size": 0.0,
+        "seed": -2.0
+      },
+      "expectedOutput": [
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 3,
+        "batch_size": 2,
+        "seed": 0
+      },
+      "expectedOutput": [
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": -3,
+        "batch_size": -2,
+        "seed": 0
+      },
+      "expectedOutput": [
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 30,
+        "batch_size": 20,
+        "seed": 0
+      },
+      "expectedOutput": [
+        {
+          "id": 1
+        },
+        {
+          "id": 2
+        },
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 0,
+        "batch_size": 0,
+        "seed": 0
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 8.0,
+        "batch_size": 7.0,
+        "seed": 5.0
+      },
+      "expectedOutput": [
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 4,
+        "batch_size": 3,
+        "seed": 0
+      },
+      "expectedOutput": [
+        {
+          "id": 2
+        },
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": -6,
+        "batch_size": -4,
+        "seed": 0
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 1,
+        "batch_size": 0,
+        "seed": 0
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 2.0,
+        "batch_size": 1.0,
+        "seed": -1.0
+      },
+      "expectedOutput": [
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 12,
+        "batch_size": 8,
+        "seed": 0
+      },
+      "expectedOutput": [
+        {
+          "id": 1
+        },
+        {
+          "id": 2
+        },
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 2,
+        "batch_size": 2,
+        "seed": 0
+      },
+      "expectedOutput": [
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "alphago-l05-recent-replay-sampling-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "game_records": [
+          {
+            "positions": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "positions": [
+              {
+                "id": 3
+              },
+              {
+                "id": 4
+              }
+            ]
+          }
+        ],
+        "window_size": 15,
+        "batch_size": 10,
+        "seed": 0
+      },
+      "expectedOutput": [
+        {
+          "id": 1
+        },
+        {
+          "id": 2
+        },
+        {
+          "id": 3
+        },
+        {
+          "id": 4
+        }
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "alphago_l05_recent_replay_sampling",
+    "parameters": [
+      {
+        "name": "game_records",
+        "type": "any"
+      },
+      {
+        "name": "window_size",
+        "type": "any"
+      },
+      {
+        "name": "batch_size",
+        "type": "any"
+      },
+      {
+        "name": "seed",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "gradient-descent-quadratic",
+    "anchor-box-generation",
+    "value-iteration-step",
+    "precision-recall-at-k",
+    "cs336-l01-train-byte-pair-encoding"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/alphago-l05-recent-replay-sampling",
+  "localUrl": "http://localhost:3000/problems/alphago-l05-recent-replay-sampling"
+}

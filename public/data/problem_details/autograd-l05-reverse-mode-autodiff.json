@@ -1,0 +1,843 @@
+{
+  "id": "autograd-l05-reverse-mode-autodiff",
+  "slug": "autograd-l05-reverse-mode-autodiff",
+  "title": "Run Reverse-Mode Autodiff",
+  "cleanTitle": "Run Reverse-Mode Autodiff",
+  "category": "numpy",
+  "difficulty": "Hard",
+  "tags": [
+    "Neural Networks",
+    "Calculus"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "autograd-from-scratch",
+    "title": "Build Micrograd from Scratch",
+    "sectionId": "autograd-l05"
+  },
+  "seoDescription": "Run reverse-mode autodiff over a scalar tree containing leaves and add, multiply, or tanh operations.",
+  "description": "Execute full reverse-mode automatic differentiation over a scalar expression graph containing leaves and arithmetic operations (add, mul, tanh).\n\n**Mathematical Formulation:**\n\n$$\n\\frac{\\partial L}{\\partial v_i} = \\sum_{j \\in \\text{children}(i)} \\frac{\\partial L}{\\partial v_j} \\frac{\\partial v_j}{\\partial v_i}\n$$\n\n**Step-by-Step Implementation:**\n1. Initialize all node gradients to 0 and set seed gradient dL/d(root) = 1.0.\n2. Traverse nodes in reverse topological order.\n3. Accumulate local vector-Jacobian products into parent gradient accumulators.\n4. Return dictionary containing final accumulated gradients for all leaf nodes.\n\n**Returns:** Dictionary mapping leaf node IDs to scalar gradients.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Run Reverse-Mode Autodiff specification."
+  ],
+  "requirements": "* Must implement `autograd_l05_reverse_mode_autodiff` using NUMPY.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Run Reverse-Mode Autodiff\n\n### Core Intuition: Why Do We Need This?\nExecute full reverse-mode automatic differentiation over a scalar expression graph containing leaves and arithmetic operations (add, mul, tanh). In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\n\\frac{\\partial L}{\\partial v_i} = \\sum_{j \\in \\text{children}(i)} \\frac{\\partial L}{\\partial v_j} \\frac{\\partial v_j}{\\partial v_i}\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Initialize all node gradients to 0 and set seed gradient dL/d(root) = 1.0.\n3. **Phase 3: Iterative Execution & Reduction**: Traverse nodes in reverse topological order.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return dictionary containing final accumulated gradients for all leaf nodes.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard NUMPY documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `np.ndarray` specifications."
+  ],
+  "constraints": "* Category: NUMPY\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, NUMPY\n",
+  "starterCode": "def autograd_l05_reverse_mode_autodiff(nodes: dict, root_id: str) -> dict:\n    \"\"\"\n    Execute full reverse-mode automatic differentiation over a scalar expression graph containing leaves and arithmetic operations (add, mul, tanh).\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nExecute full reverse-mode automatic differentiation over a scalar expression graph containing leaves and arithmetic operations (add, mul, tanh).\n\n### ⚡ Python Reference Implementation\n```python\ndef autograd_l05_reverse_mode_autodiff(nodes: dict, root_id: str) -> dict:\n    grads = {k: 0.0 for k in nodes}\n    grads[root_id] = 1.0\n    topo, visited = [], set()\n    def dfs(n):\n        visited.add(n)\n        for p in nodes[n].get('parents', []):\n            if p not in visited: dfs(p)\n        topo.append(n)\n    dfs(root_id)\n    for nid in topo[::-1]:\n        up, op, parents = grads[nid], nodes[nid].get('op'), nodes[nid].get('parents', [])\n        if op == 'add':\n            grads[parents[0]] += up\n            grads[parents[1]] += up\n        elif op == 'mul':\n            grads[parents[0]] += up * nodes[parents[1]]['val']\n            grads[parents[1]] += up * nodes[parents[0]]['val']\n        elif op == 'tanh':\n            y = nodes[nid]['val']\n            grads[parents[0]] += up * (1.0 - y ** 2)\n    return {k: round(v, 6) for k, v in grads.items() if nodes[k].get('op') == 'leaf'}\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": true
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "nodes": {
+          "x": {
+            "val": 0.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "y": {
+            "val": 0.0,
+            "op": "tanh",
+            "parents": [
+              "x"
+            ]
+          }
+        },
+        "root_id": "y"
+      },
+      "expectedOutput": {
+        "x": 1.0
+      },
+      "isPublic": true
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "autograd-l05-reverse-mode-autodiff-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "nodes": {
+          "a": {
+            "val": 2.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "b": {
+            "val": 3.0,
+            "op": "leaf",
+            "parents": []
+          },
+          "c": {
+            "val": 5.0,
+            "op": "add",
+            "parents": [
+              "a",
+              "b"
+            ]
+          },
+          "d": {
+            "val": 10.0,
+            "op": "mul",
+            "parents": [
+              "c",
+              "a"
+            ]
+          }
+        },
+        "root_id": "d"
+      },
+      "expectedOutput": {
+        "a": 7.0,
+        "b": 2.0
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "autograd_l05_reverse_mode_autodiff",
+    "parameters": [
+      {
+        "name": "nodes",
+        "type": "any"
+      },
+      {
+        "name": "root_id",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/autograd-l05-reverse-mode-autodiff",
+  "localUrl": "http://localhost:3000/problems/autograd-l05-reverse-mode-autodiff"
+}

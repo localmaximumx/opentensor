@@ -1,0 +1,463 @@
+{
+  "id": "information-gain",
+  "title": "Compute Information Gain for a Split",
+  "description": "Compute the information gain produced by a boolean split of classification labels.\n\n$$\nH(Y)=-\\sum_{c=1}^{C}p_c\\log_2 p_c\n$$\n\n$$\n\\operatorname{IG}=H(Y)-\\frac{N_L}{N}H(Y_L)-\\frac{N_R}{N}H(Y_R)\n$$\n\nHere, $p_c$ is the proportion of class $c$, $Y_L$ contains labels where split_mask is true, $Y_R$ contains the remaining labels, and $N=N_L+N_R$. A split with an empty side has gain zero. Return the gain as a Python float.",
+  "seoDescription": "Compute information gain for a decision-tree split from parent entropy and weighted child entropies.",
+  "examples": [
+    "Input: y = [0, 0, 1, 1], split_mask = [true, true, false, false]\n\nOutput: 1.0\n\nExplanation: Each child is pure, so the split removes all one bit of parent entropy.",
+    "Input: y = [0, 0, 0, 1], split_mask = [true, false, false, true]\n\nOutput: 0.311278",
+    "Input: y = [0, 0, 1, 2], split_mask = [true, false, true, false]\n\nOutput: 0.5"
+  ],
+  "requirements": "* Compute base-2 entropy from class frequencies\n* Partition labels with the boolean split mask\n* Weight child entropies by child size\n* Return a Python float, or zero when either child is empty",
+  "theory": "## Understanding the Theory: Compute Information Gain for a Split\n\n### Core Intuition: Why Do We Need This?\nClassical machine learning algorithms provide robust, mathematically interpretable baselines for classification, regression, and unsupervised clustering. Understanding their geometric decision boundaries and optimization guarantees forms the foundation of modern data science. **Compute Information Gain for a Split** constructs predictive decision boundaries or uncovers latent cluster structures in tabular datasets.\n\nIn this problem, the objective is to implement **Compute Information Gain for a Split** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nH(Y)=-\\sum_{c=1}^{C}p_c\\log_2 p_c\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Bias-Variance Tradeoff**: Controlling model complexity (e.g. tree depth, K in KNN, regularization strength) balances training accuracy against generalization on unseen test data.\n* **Feature Scaling**: Distance-based algorithms (like KNN and K-Means) require standardizing features to zero mean and unit variance to prevent high-magnitude features from dominating.\n* **Computational Complexity**: While linear models scale linearly $\\\\mathcal{O}(N)$, pair-wise distance algorithms can scale quadratically $\\\\mathcal{O}(N^2)$ without approximate nearest neighbor indexing.",
+  "hints": [
+    "Use np.unique(labels, return_counts=True) inside a small entropy helper.",
+    "Form children with labels[mask] and labels[~mask]."
+  ],
+  "constraints": "* y and split_mask are one-dimensional and have equal lengths\n* Labels are integers and the mask contains booleans\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef information_gain(y: list, split_mask: list) -> float:\n    \"\"\"\n    Returns the information gain as a float.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-15T16:16:59.836Z",
+  "updatedAt": "2026-08-23T10:06:15.807Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport math\nfrom collections import Counter\nimport numpy as np\n\ndef information_gain(y: list, split_mask: list) -> float:\n    def entropy(labels):\n        if len(labels) == 0: return 0.0\n        n = len(labels)\n        counts = Counter(labels)\n        return -sum((c / n) * math.log2(c / n) for c in counts.values() if c > 0)\n    arr_y = np.array(y)\n    mask = np.array(split_mask, dtype=bool)\n    n = len(arr_y)\n    p_ent = entropy(arr_y)\n    l_ent = entropy(arr_y[mask])\n    r_ent = entropy(arr_y[~mask])\n    w_ent = (np.sum(mask) * l_ent + np.sum(~mask) * r_ent) / n\n    return float(round(p_ent - w_ent, 6))\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "InformationGainViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Perfect split",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "split_mask": [
+          true,
+          true,
+          false,
+          false
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 1.0
+    },
+    {
+      "id": "test-2",
+      "name": "Imbalanced split (Ex2)",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "split_mask": [
+          true,
+          false,
+          false,
+          true
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": 0.311278
+    },
+    {
+      "id": "test-3",
+      "name": "Multiclass (Ex3)",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          1,
+          2
+        ],
+        "split_mask": [
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": 0.5
+    },
+    {
+      "id": "information-gain-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          2,
+          2
+        ],
+        "split_mask": [
+          2,
+          2,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "split_mask": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": -0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "y": [
+          1,
+          1,
+          2,
+          2
+        ],
+        "split_mask": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          2,
+          2
+        ],
+        "split_mask": [
+          2,
+          2,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          3,
+          3
+        ],
+        "split_mask": [
+          3,
+          3,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "split_mask": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": -0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "y": [
+          2,
+          2,
+          3,
+          3
+        ],
+        "split_mask": [
+          2,
+          2,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          4,
+          4
+        ],
+        "split_mask": [
+          4,
+          4,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "y": [
+          1,
+          1,
+          0,
+          0
+        ],
+        "split_mask": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "split_mask": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          5,
+          5
+        ],
+        "split_mask": [
+          5,
+          5,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "y": [
+          3,
+          3,
+          4,
+          4
+        ],
+        "split_mask": [
+          3,
+          3,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "split_mask": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          6,
+          6
+        ],
+        "split_mask": [
+          6,
+          6,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "y": [
+          4,
+          4,
+          5,
+          5
+        ],
+        "split_mask": [
+          4,
+          4,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "split_mask": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "information-gain-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "y": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "split_mask": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "expectedOutput": -0.0,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "information_gain",
+    "parameters": [
+      {
+        "name": "y",
+        "type": "array",
+        "example": "[0, 0, 1, 1]",
+        "description": "1D array of integer class labels (0..K-1)"
+      },
+      {
+        "name": "split_mask",
+        "type": "array",
+        "example": "[true, true, false, false]",
+        "description": "Boolean array indicating left (True) vs right (False) partition"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "entropy-node",
+    "gini-impurity",
+    "decision-tree-split",
+    "random-forest-vote",
+    "naive-bayes-bernoulli"
+  ],
+  "tags": [
+    "Classic ML"
+  ],
+  "prevId": "naive-bayes-bernoulli",
+  "nextId": "matrix-trace",
+  "slug": "information-gain",
+  "cleanTitle": "Compute Information Gain for a Split",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/information-gain",
+  "localUrl": "http://localhost:3000/problems/information-gain",
+  "studyPlan": null
+}

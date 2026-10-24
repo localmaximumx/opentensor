@@ -1,0 +1,783 @@
+{
+  "id": "triton-kv-append",
+  "slug": "triton-kv-append",
+  "title": "Triton KV Cache Row Append Kernel",
+  "cleanTitle": "Triton KV Cache Row Append Kernel",
+  "category": "triton",
+  "difficulty": "Easy",
+  "tags": [
+    "Inference",
+    "Transformers",
+    "GPU Programming"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "triton-basics",
+    "title": "Triton Kernels",
+    "sectionId": "triton-basics-attention-and-llm"
+  },
+  "seoDescription": "Append one autoregressive decoding row to key and value caches in Triton without modifying other cache positions.",
+  "description": "Append one autoregressive decoding token vector to a preallocated key or value cache buffer at a designated sequence position.\n\n**Mathematical Formulation:**\n\n$$\n\\text{Cache}[\\text{pos}, :] \\leftarrow \\mathbf{x}_{\\text{new}}\n$$\n\n**Step-by-Step Implementation:**\n1. Compute destination row offset using current insert position.\n2. Load new vector tile into registers with head-dimension boundary mask.\n3. Store tile into designated cache row without overwriting prior history.\n4. Return updated cache buffer.\n\n**Returns:** Updated 2D cache array with newly inserted row.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching KV Cache Append specification."
+  ],
+  "requirements": "* Must implement `triton_kv_append` using TRITON.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Triton KV Cache Row Append Kernel\n\n### Core Intuition: Why Do We Need This?\nAppend one autoregressive decoding token vector to a preallocated key or value cache buffer at a designated sequence position. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\n\\text{Cache}[\\text{pos}, :] \\leftarrow \\mathbf{x}_{\\text{new}}\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Compute destination row offset using current insert position.\n3. **Phase 3: Iterative Execution & Reduction**: Load new vector tile into registers with head-dimension boundary mask.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return updated cache buffer.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard TRITON documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `torch.Tensor` specifications."
+  ],
+  "constraints": "* Category: TRITON\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, TRITON\n",
+  "starterCode": "import numpy as np\n\ndef triton_kv_append(cache: list, new_entry: list, insert_pos: int) -> list:\n    \"\"\"\n    Append one autoregressive decoding token vector to a preallocated key or value cache buffer at a designated sequence position.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nAppend one autoregressive decoding token vector to a preallocated key or value cache buffer at a designated sequence position.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef triton_kv_append(cache: list, new_entry: list, insert_pos: int) -> list:\n    c = np.array(cache, dtype=float).copy()\n    c[insert_pos] = np.array(new_entry, dtype=float)\n    return np.round(c, 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "triton-kv-append-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "cache": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          1.5,
+          2.5
+        ],
+        "insert_pos": 0
+      },
+      "expectedOutput": [
+        [
+          1.5,
+          2.5
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "triton-kv-append-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "cache": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          3.0,
+          4.0
+        ],
+        "insert_pos": 1
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          3.0,
+          4.0
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "triton-kv-append-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "cache": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          1.5,
+          2.5
+        ],
+        "insert_pos": 0
+      },
+      "expectedOutput": [
+        [
+          1.5,
+          2.5
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "cache": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          3.0,
+          4.0
+        ],
+        "insert_pos": 1
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          3.0,
+          4.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "cache": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          1.5,
+          2.5
+        ],
+        "insert_pos": 0
+      },
+      "expectedOutput": [
+        [
+          1.5,
+          2.5
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "cache": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          3.0,
+          4.0
+        ],
+        "insert_pos": 1
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          3.0,
+          4.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "cache": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          1.5,
+          2.5
+        ],
+        "insert_pos": 0
+      },
+      "expectedOutput": [
+        [
+          1.5,
+          2.5
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "cache": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          3.0,
+          4.0
+        ],
+        "insert_pos": 1
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          3.0,
+          4.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "cache": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          1.5,
+          2.5
+        ],
+        "insert_pos": 0
+      },
+      "expectedOutput": [
+        [
+          1.5,
+          2.5
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "cache": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          3.0,
+          4.0
+        ],
+        "insert_pos": 1
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          3.0,
+          4.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "cache": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          1.5,
+          2.5
+        ],
+        "insert_pos": 0
+      },
+      "expectedOutput": [
+        [
+          1.5,
+          2.5
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "cache": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          3.0,
+          4.0
+        ],
+        "insert_pos": 1
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          3.0,
+          4.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "cache": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          1.5,
+          2.5
+        ],
+        "insert_pos": 0
+      },
+      "expectedOutput": [
+        [
+          1.5,
+          2.5
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "cache": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          3.0,
+          4.0
+        ],
+        "insert_pos": 1
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          3.0,
+          4.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "cache": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          1.5,
+          2.5
+        ],
+        "insert_pos": 0
+      },
+      "expectedOutput": [
+        [
+          1.5,
+          2.5
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "cache": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          3.0,
+          4.0
+        ],
+        "insert_pos": 1
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          3.0,
+          4.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "cache": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          1.5,
+          2.5
+        ],
+        "insert_pos": 0
+      },
+      "expectedOutput": [
+        [
+          1.5,
+          2.5
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "cache": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          3.0,
+          4.0
+        ],
+        "insert_pos": 1
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          3.0,
+          4.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "cache": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          1.5,
+          2.5
+        ],
+        "insert_pos": 0
+      },
+      "expectedOutput": [
+        [
+          1.5,
+          2.5
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "triton-kv-append-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "cache": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "new_entry": [
+          3.0,
+          4.0
+        ],
+        "insert_pos": 1
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          3.0,
+          4.0
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "triton_kv_append",
+    "parameters": [
+      {
+        "name": "cache",
+        "type": "any"
+      },
+      {
+        "name": "new_entry",
+        "type": "any"
+      },
+      {
+        "name": "insert_pos",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "triton-layernorm-backward",
+    "triton-dropout",
+    "triton-sum",
+    "triton-split-k-matmul",
+    "triton-logsumexp"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/triton-kv-append",
+  "localUrl": "http://localhost:3000/problems/triton-kv-append"
+}

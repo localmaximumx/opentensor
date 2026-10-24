@@ -1,0 +1,375 @@
+{
+  "catalogId": "python:inference-disaggregated-prefill-decode",
+  "id": "inference-disaggregated-prefill-decode",
+  "sourceId": "inference-disaggregated-prefill-decode",
+  "slug": "inference-disaggregated-prefill-decode",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Simulate Disaggregated Prefill and Decode Serving",
+  "difficulty": "Hard",
+  "tags": [
+    "Inference",
+    "Distributed Computing"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-distributed",
+  "sortOrder": 435,
+  "seoDescription": "Simulate Disaggregated Prefill and Decode Serving, and return selected prefill and decode replica indices, TTFT, and completion time for every request.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Model decoupled compute dynamics for compute-bound prompt prefill nodes and memory-bound autoregressive decoding nodes.\n\nSeparating compute-bound parallel prefill from memory-bandwidth-bound iterative decoding eliminates resource interference in LLM serving.\n\n### Mathematical Formulation\n$$\n\\text{TTFT} = T_{\\text{prefill}}(S_{\\text{prompt}}), \\quad T_{\\text{total}} = \\text{TTFT} + S_{\\text{gen}} \\times T_{\\text{decode}}\n$$\n\n### Step-by-Step Implementation\n1. Compute Time-To-First-Token (TTFT) from prompt length on prefill worker cluster\n2. Compute sequential generation latency across decode workers\n3. Evaluate overall request latency and token generation throughput\n\n### Returns\nDictionary with 'time_to_first_token_ms', 'total_latency_ms', and 'decode_throughput_tps'.",
+  "theory": "## Understanding the Theory: Simulate Disaggregated Prefill and Decode Serving\n\n### Core Intuition: Why Do We Need This?\nRunning large AI models in production requires massive computing power. During text generation, memory bandwidth (fetching weights and past key-value caches from VRAM) is often the primary bottleneck rather than raw arithmetic compute. **Simulate Disaggregated Prefill and Decode Serving** optimizes hardware efficiency, memory consumption, or request serving throughput.\n\nSeparating compute-bound parallel prefill from memory-bandwidth-bound iterative decoding eliminates resource interference in LLM serving. In this problem, the goal is to: model decoupled compute dynamics for compute-bound prompt prefill nodes and memory-bound autoregressive decoding nodes.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\text{TTFT} = T_{\\text{prefill}}(S_{\\text{prompt}}), \\quad T_{\\text{total}} = \\text{TTFT} + S_{\\text{gen}} \\times T_{\\text{decode}}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute Time-To-First-Token (TTFT) from prompt length on prefill worker cluster\n2. **Phase 2**: Compute sequential generation latency across decode workers\n3. **Phase 3**: Evaluate overall request latency and token generation throughput\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth Bottleneck**: Quantizing weights to INT8 or INT4 cuts memory traffic in half or quarters, dramatically increasing token generation speeds.\n* **Serving Systems**: Dynamic batching and PagedAttention maximize GPU utilization by grouping requests arriving at different times.\n* **Latency vs. Throughput**: In production serving, systems engineers balance Time-To-First-Token (TTFT) against overall tokens-per-second throughput.",
+  "examples": [
+    "Input: prefill_latency_ms = 20.0, decode_step_latency_ms = 15.0, prompt_tokens = 1000, generated_tokens = 50\n\nOutput: {\"time_to_first_token_ms\": 20.0, \"total_latency_ms\": 770.0, \"decode_throughput_tps\": 66.67}\n\nExplanation: Evaluated inference_disaggregated_prefill_decode under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_disaggregated_prefill_decode`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_disaggregated_prefill_decode`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def inference_disaggregated_prefill_decode(prefill_latency_ms: float, decode_step_latency_ms: float, prompt_tokens: int, generated_tokens: int) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Simulate Disaggregated Prefill and Decode Serving** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef inference_disaggregated_prefill_decode(prefill_latency_ms: float, decode_step_latency_ms: float, prompt_tokens: int, generated_tokens: int) -> dict:\n    t_pre = float(prefill_latency_ms) * float(prompt_tokens) / 1000.0\n    t_dec = float(decode_step_latency_ms) * float(generated_tokens)\n    return {'time_to_first_token_ms': round(t_pre, 2), 'total_latency_ms': round(t_pre + t_dec, 2), 'decode_throughput_tps': round(float(generated_tokens) / max(t_dec / 1000.0, 1e-12), 2)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "1000 prompt tokens, 50 gen tokens",
+      "inputs": {
+        "prefill_latency_ms": 20.0,
+        "decode_step_latency_ms": 15.0,
+        "prompt_tokens": 1000,
+        "generated_tokens": 50
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 20.0,
+        "total_latency_ms": 770.0,
+        "decode_throughput_tps": 66.67
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "prefill_latency_ms": 40.0,
+        "decode_step_latency_ms": 30.0,
+        "prompt_tokens": 2000,
+        "generated_tokens": 100
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 80.0,
+        "total_latency_ms": 3080.0,
+        "decode_throughput_tps": 33.33
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "prefill_latency_ms": 10.0,
+        "decode_step_latency_ms": 7.5,
+        "prompt_tokens": 500,
+        "generated_tokens": 25
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 5.0,
+        "total_latency_ms": 192.5,
+        "decode_throughput_tps": 133.33
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "prefill_latency_ms": 20.0,
+        "decode_step_latency_ms": 15.0,
+        "prompt_tokens": 1000,
+        "generated_tokens": 50
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 20.0,
+        "total_latency_ms": 770.0,
+        "decode_throughput_tps": 66.67
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "prefill_latency_ms": 30.0,
+        "decode_step_latency_ms": 22.5,
+        "prompt_tokens": 1500,
+        "generated_tokens": 75
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 45.0,
+        "total_latency_ms": 1732.5,
+        "decode_throughput_tps": 44.44
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "prefill_latency_ms": 60.0,
+        "decode_step_latency_ms": 45.0,
+        "prompt_tokens": 3000,
+        "generated_tokens": 150
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 180.0,
+        "total_latency_ms": 6930.0,
+        "decode_throughput_tps": 22.22
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "prefill_latency_ms": 5.0,
+        "decode_step_latency_ms": 3.75,
+        "prompt_tokens": 250,
+        "generated_tokens": 12
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 1.25,
+        "total_latency_ms": 46.25,
+        "decode_throughput_tps": 266.67
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "prefill_latency_ms": 40.0,
+        "decode_step_latency_ms": 30.0,
+        "prompt_tokens": 2000,
+        "generated_tokens": 100
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 80.0,
+        "total_latency_ms": 3080.0,
+        "decode_throughput_tps": 33.33
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "prefill_latency_ms": 80.0,
+        "decode_step_latency_ms": 60.0,
+        "prompt_tokens": 4000,
+        "generated_tokens": 200
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 320.0,
+        "total_latency_ms": 12320.0,
+        "decode_throughput_tps": 16.67
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "prefill_latency_ms": 20.0,
+        "decode_step_latency_ms": 15.0,
+        "prompt_tokens": 1000,
+        "generated_tokens": 50
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 20.0,
+        "total_latency_ms": 770.0,
+        "decode_throughput_tps": 66.67
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "prefill_latency_ms": 15.0,
+        "decode_step_latency_ms": 11.25,
+        "prompt_tokens": 750,
+        "generated_tokens": 38
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 11.25,
+        "total_latency_ms": 438.75,
+        "decode_throughput_tps": 88.89
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "prefill_latency_ms": 100.0,
+        "decode_step_latency_ms": 75.0,
+        "prompt_tokens": 5000,
+        "generated_tokens": 250
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 500.0,
+        "total_latency_ms": 19250.0,
+        "decode_throughput_tps": 13.33
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "prefill_latency_ms": 60.0,
+        "decode_step_latency_ms": 45.0,
+        "prompt_tokens": 3000,
+        "generated_tokens": 150
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 180.0,
+        "total_latency_ms": 6930.0,
+        "decode_throughput_tps": 22.22
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "prefill_latency_ms": 16.0,
+        "decode_step_latency_ms": 12.0,
+        "prompt_tokens": 800,
+        "generated_tokens": 40
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 12.8,
+        "total_latency_ms": 492.8,
+        "decode_throughput_tps": 83.33
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "prefill_latency_ms": 120.0,
+        "decode_step_latency_ms": 90.0,
+        "prompt_tokens": 6000,
+        "generated_tokens": 300
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 720.0,
+        "total_latency_ms": 27720.0,
+        "decode_throughput_tps": 11.11
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "prefill_latency_ms": 80.0,
+        "decode_step_latency_ms": 60.0,
+        "prompt_tokens": 4000,
+        "generated_tokens": 200
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 320.0,
+        "total_latency_ms": 12320.0,
+        "decode_throughput_tps": 16.67
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "prefill_latency_ms": 24.0,
+        "decode_step_latency_ms": 18.0,
+        "prompt_tokens": 1200,
+        "generated_tokens": 60
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 28.8,
+        "total_latency_ms": 1108.8,
+        "decode_throughput_tps": 55.56
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "prefill_latency_ms": 8.0,
+        "decode_step_latency_ms": 6.0,
+        "prompt_tokens": 400,
+        "generated_tokens": 20
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 3.2,
+        "total_latency_ms": 123.2,
+        "decode_throughput_tps": 166.67
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "prefill_latency_ms": 160.0,
+        "decode_step_latency_ms": 120.0,
+        "prompt_tokens": 8000,
+        "generated_tokens": 400
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 1280.0,
+        "total_latency_ms": 49280.0,
+        "decode_throughput_tps": 8.33
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-disaggregated-prefill-decode-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "prefill_latency_ms": 100.0,
+        "decode_step_latency_ms": 75.0,
+        "prompt_tokens": 5000,
+        "generated_tokens": 250
+      },
+      "expectedOutput": {
+        "time_to_first_token_ms": 500.0,
+        "total_latency_ms": 19250.0,
+        "decode_throughput_tps": 13.33
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_disaggregated_prefill_decode",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

@@ -1,0 +1,532 @@
+{
+  "id": "lbfgs-two-loop",
+  "title": "L-BFGS Two-Loop Recursion",
+  "description": "L-BFGS approximates an inverse Hessian using a limited history of parameter changes and gradient changes. Implement its two-loop recursion to compute a descent direction without constructing a Hessian matrix.\n\nThe input grad is the current gradient vector. The lists s_list and y_list contain m history vectors ordered from oldest to newest. Every vector has n elements.\n\nFor each history index i, define the curvature scale:\n\n$$\n\\rho_i = \\frac{1}{y_i^{\\mathsf T}s_i}\n$$\n\nStart the backward pass with:\n\n$$\nq = g\n$$\n\nProcess the history from newest to oldest. For each index i, compute:\n\n$$\n\\alpha_i = \\rho_i s_i^{\\mathsf T}q\n$$\n\nThen update:\n\n$$\nq = q - \\alpha_i y_i\n$$\n\nUse the newest history pair to scale the initial inverse-Hessian approximation:\n\n$$\n\\gamma = \\frac{s_{m-1}^{\\mathsf T}y_{m-1}}{y_{m-1}^{\\mathsf T}y_{m-1}}\n$$\n\n$$\nr = \\gamma q\n$$\n\nProcess the history from oldest to newest. For each index i, compute:\n\n$$\n\\beta_i = \\rho_i y_i^{\\mathsf T}r\n$$\n\nThen update:\n\n$$\nr = r + s_i(\\alpha_i - \\beta_i)\n$$\n\nHere, g denotes the current gradient, s_i denotes a parameter change, y_i denotes its corresponding gradient change, and m is the number of stored history pairs.\n\nReturn the negated vector, -r, as a list of n floats.",
+  "seoDescription": "Implement the L-BFGS two-loop recursion to transform a gradient using stored correction-vector history.",
+  "examples": [
+    "Input: grad = [2], s_list = [[1]], y_list = [[2]]\n\nOutput: [-1.0]\n\nExplanation: The single history pair produces an inverse-Hessian scale of one half.",
+    "Input: grad = [4, 2], s_list = [[1, 0]], y_list = [[2, 0]]\n\nOutput: [-2.0, -1.0]"
+  ],
+  "requirements": "* Implement the backward loop computing alpha values and updating q\n* Compute the initial Hessian scaling gamma from the most recent history pair\n* Implement the forward loop computing beta and updating r\n* Return the negated result as the descent direction",
+  "theory": "## Understanding the Theory: L-BFGS Two-Loop Recursion\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization challenge across highly non-convex loss surfaces filled with saddle points, ravines, and plateaus. Naive gradient descent often oscillates wildly in steep directions while crawling along flat regions. **L-BFGS Two-Loop Recursion** accelerates convergence, dampens oscillations, and stabilizes weight trajectories during training.\n\nIn this problem, the objective is to implement **L-BFGS Two-Loop Recursion** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\rho_i = \\frac{1}{y_i^{\\mathsf T}s_i}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Momentum Accumulation**: Smoothing velocity vectors across successive mini-batches enables optimizers to escape shallow local minima and push through ill-conditioned ravines.\n* **Adaptive Scaling**: Tracking running second moments scales learning rates inversely with gradient variance, preventing rare features from vanishing and frequent features from exploding.\n* **Gradient Regularization**: Gradient clipping enforces hard norm bounds, preventing runaway parameter updates during training instability.",
+  "hints": [
+    "Store rho and alpha values while traversing history from newest to oldest.",
+    "Apply the newest-pair scale before traversing history from oldest to newest."
+  ],
+  "constraints": "* grad is a list of floats (length n)\n* s_list and y_list are lists of m vectors, each of length n, with m >= 1\n* dot(y_i, s_i) > 0 for all i (curvature condition is satisfied)\n* Return a list of n floats (the descent direction)\n* Time limit: 300 ms",
+  "difficulty": "Hard",
+  "starterCode": "def lbfgs_direction(grad: list, s_list: list, y_list: list) -> list:\n    \"\"\"\n    Returns the L-BFGS descent direction from the stored history.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T15:34:08.693Z",
+  "updatedAt": "2026-08-23T19:40:10.830Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef lbfgs_direction(grad: list, s_list: list, y_list: list) -> list:\n    q = np.array(grad, dtype=float)\n    m = len(s_list)\n    alphas = [0.0] * m\n    rhos = []\n    for s, y in zip(s_list, y_list):\n        s_arr, y_arr = np.array(s, dtype=float), np.array(y, dtype=float)\n        rhos.append(1.0 / np.dot(y_arr, s_arr))\n    for i in reversed(range(m)):\n        s_arr, y_arr = np.array(s_list[i], dtype=float), np.array(y_list[i], dtype=float)\n        alphas[i] = rhos[i] * np.dot(s_arr, q)\n        q = q - alphas[i] * y_arr\n    s_last, y_last = np.array(s_list[-1], dtype=float), np.array(y_list[-1], dtype=float)\n    gamma = np.dot(s_last, y_last) / np.dot(y_last, y_last)\n    r = gamma * q\n    for i in range(m):\n        s_arr, y_arr = np.array(s_list[i], dtype=float), np.array(y_list[i], dtype=float)\n        beta = rhos[i] * np.dot(y_arr, r)\n        r = r + s_arr * (alphas[i] - beta)\n    return (-r).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "LBFGSTwoLoopViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "1D",
+      "inputs": {
+        "grad": [
+          2
+        ],
+        "s_list": [
+          [
+            1
+          ]
+        ],
+        "y_list": [
+          [
+            2
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        -1.0
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "2D",
+      "inputs": {
+        "grad": [
+          4,
+          2
+        ],
+        "s_list": [
+          [
+            1,
+            0
+          ]
+        ],
+        "y_list": [
+          [
+            2,
+            0
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        -2.0,
+        -1.0
+      ]
+    },
+    {
+      "id": "lbfgs-two-loop-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "grad": [
+          4
+        ],
+        "s_list": [
+          [
+            2
+          ]
+        ],
+        "y_list": [
+          [
+            4
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "grad": [
+          1
+        ],
+        "s_list": [
+          [
+            0
+          ]
+        ],
+        "y_list": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "grad": [
+          3
+        ],
+        "s_list": [
+          [
+            2
+          ]
+        ],
+        "y_list": [
+          [
+            3
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "grad": [
+          3
+        ],
+        "s_list": [
+          [
+            2
+          ]
+        ],
+        "y_list": [
+          [
+            3
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "grad": [
+          6
+        ],
+        "s_list": [
+          [
+            3
+          ]
+        ],
+        "y_list": [
+          [
+            6
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "grad": [
+          0
+        ],
+        "s_list": [
+          [
+            0
+          ]
+        ],
+        "y_list": [
+          [
+            0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "grad": [
+          4
+        ],
+        "s_list": [
+          [
+            3
+          ]
+        ],
+        "y_list": [
+          [
+            4
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "grad": [
+          8
+        ],
+        "s_list": [
+          [
+            4
+          ]
+        ],
+        "y_list": [
+          [
+            8
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "grad": [
+          2
+        ],
+        "s_list": [
+          [
+            1
+          ]
+        ],
+        "y_list": [
+          [
+            2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "grad": [
+          2
+        ],
+        "s_list": [
+          [
+            1
+          ]
+        ],
+        "y_list": [
+          [
+            2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "grad": [
+          10
+        ],
+        "s_list": [
+          [
+            5
+          ]
+        ],
+        "y_list": [
+          [
+            10
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -5.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "grad": [
+          5
+        ],
+        "s_list": [
+          [
+            4
+          ]
+        ],
+        "y_list": [
+          [
+            5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "grad": [
+          2
+        ],
+        "s_list": [
+          [
+            1
+          ]
+        ],
+        "y_list": [
+          [
+            2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "grad": [
+          12
+        ],
+        "s_list": [
+          [
+            6
+          ]
+        ],
+        "y_list": [
+          [
+            12
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -6.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "grad": [
+          6
+        ],
+        "s_list": [
+          [
+            5
+          ]
+        ],
+        "y_list": [
+          [
+            6
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -5.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "grad": [
+          2
+        ],
+        "s_list": [
+          [
+            1
+          ]
+        ],
+        "y_list": [
+          [
+            2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "grad": [
+          1
+        ],
+        "s_list": [
+          [
+            0
+          ]
+        ],
+        "y_list": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lbfgs-two-loop-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "grad": [
+          16
+        ],
+        "s_list": [
+          [
+            8
+          ]
+        ],
+        "y_list": [
+          [
+            16
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -8.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "lbfgs_direction",
+    "parameters": [
+      {
+        "name": "grad",
+        "type": "array",
+        "example": "[2.0]",
+        "description": "Current gradient"
+      },
+      {
+        "name": "s_list",
+        "type": "array",
+        "example": "[[1.0]]",
+        "description": "List of s vectors"
+      },
+      {
+        "name": "y_list",
+        "type": "array",
+        "example": "[[2.0]]",
+        "description": "List of y vectors"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "nesterov-momentum",
+    "adam-optimizer",
+    "gradient-descent-quadratic",
+    "gradient-clipping",
+    "adamw-optimizer"
+  ],
+  "tags": [
+    "Optimization"
+  ],
+  "prevId": "cosine-annealing-lr",
+  "nextId": "sobel-edge-detection",
+  "slug": "lbfgs-two-loop",
+  "cleanTitle": "L-BFGS Two-Loop Recursion",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/lbfgs-two-loop",
+  "localUrl": "http://localhost:3000/problems/lbfgs-two-loop",
+  "studyPlan": null
+}

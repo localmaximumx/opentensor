@@ -1,0 +1,1236 @@
+{
+  "catalogId": "python:inference-moe-dispatch-aggregation",
+  "id": "inference-moe-dispatch-aggregation",
+  "sourceId": "inference-moe-dispatch-aggregation",
+  "slug": "inference-moe-dispatch-aggregation",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Implement MoE Token Dispatch and Expert Aggregation",
+  "difficulty": "Hard",
+  "tags": [
+    "Inference",
+    "Neural Networks",
+    "Transformers"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-transformer-components",
+  "sortOrder": 763,
+  "seoDescription": "Run each expert's feed-forward computation only on the tokens routed to it, and scatter-add the routing-weighted results back into token order.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Aggregate top-K routed expert outputs using normalized routing gate probabilities.\n\nMixture of Experts routes tokens conditionally to specialized subnetworks, increasing total parameter capacity by orders of magnitude at constant compute budget.\n\n### Mathematical Formulation\n$$\n\\mathbf{y}_t = \\sum_{i=1}^K g_{t, i} \\mathbf{E}_{t, i}(\\mathbf{x}_t)\n$$\n\n### Step-by-Step Implementation\n1. Multiply each expert output vector by its corresponding gating coefficient g\n2. Sum scaled vectors across top-k active experts per token\n3. Return aggregated token representations rounded to 4 decimal places\n\n### Returns\nNested 2D list of shape (N, D) representing aggregated MoE layer activations.",
+  "theory": "## Understanding the Theory: Implement MoE Token Dispatch and Expert Aggregation\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of discrete words and symbols arranged in sequential order. To process text with neural networks, we convert words into continuous embedding vectors and model their grammatical and semantic relationships. **Implement MoE Token Dispatch and Expert Aggregation** is a core sequence-processing mechanism used in modern Transformer and LLM architectures.\n\nMixture of Experts routes tokens conditionally to specialized subnetworks, increasing total parameter capacity by orders of magnitude at constant compute budget. In this problem, the goal is to: aggregate top-k routed expert outputs using normalized routing gate probabilities.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\mathbf{y}_t = \\sum_{i=1}^K g_{t, i} \\mathbf{E}_{t, i}(\\mathbf{x}_t)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Multiply each expert output vector by its corresponding gating coefficient g\n2. **Phase 2**: Sum scaled vectors across top-k active experts per token\n3. **Phase 3**: Return aggregated token representations rounded to 4 decimal places\n\n### Practical Machine Learning Applications & Nuances\n* **Self-Attention Mechanics**: Scaled dot-product attention computes all-to-all token interactions dynamically, allowing tokens to gather context from the entire sentence simultaneously.\n* **Position Encodings**: Because self-attention is permutation-invariant, positional encodings (like sinusoidal or Rotary Position Embeddings) inject word order into the representations.\n* **Vocabulary & Subwords**: Algorithms like BPE tokenize text into frequent subwords, allowing models to represent rare words without requiring an infinite vocabulary.",
+  "examples": [
+    "Input: token_hidden_states = [[1.0, 2.0], [3.0, 4.0]], routing_weights = [[0.7, 0.3], [0.4, 0.6]], expert_outputs = [[[10.0, 10.0], [20.0, 20.0]], [[30.0, 30.0], [40.0, 40.0]]]\n\nOutput: [[13.0, 13.0], [36.0, 36.0]]\n\nExplanation: Evaluated inference_moe_dispatch_aggregation under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_moe_dispatch_aggregation`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_moe_dispatch_aggregation`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef inference_moe_dispatch_aggregation(token_hidden_states: list, routing_weights: list, expert_outputs: list) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Implement MoE Token Dispatch and Expert Aggregation** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef inference_moe_dispatch_aggregation(token_hidden_states: list, routing_weights: list, expert_outputs: list) -> list:\n    rw = np.array(routing_weights, dtype=float)[:, :, None]\n    return np.round(np.sum(rw * np.array(expert_outputs, dtype=float), axis=1), 4).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "2 tokens 2 experts 2 dims",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            0.7,
+            0.3
+          ],
+          [
+            0.4,
+            0.6
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              10.0,
+              10.0
+            ],
+            [
+              20.0,
+              20.0
+            ]
+          ],
+          [
+            [
+              30.0,
+              30.0
+            ],
+            [
+              40.0,
+              40.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          13.0,
+          13.0
+        ],
+        [
+          36.0,
+          36.0
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            2.0,
+            4.0
+          ],
+          [
+            6.0,
+            8.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            1.4,
+            0.6
+          ],
+          [
+            0.8,
+            1.2
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              20.0,
+              20.0
+            ],
+            [
+              40.0,
+              40.0
+            ]
+          ],
+          [
+            [
+              60.0,
+              60.0
+            ],
+            [
+              80.0,
+              80.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          52.0,
+          52.0
+        ],
+        [
+          144.0,
+          144.0
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            0.5,
+            1.0
+          ],
+          [
+            1.5,
+            2.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            0.35,
+            0.15
+          ],
+          [
+            0.2,
+            0.3
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              5.0,
+              5.0
+            ],
+            [
+              10.0,
+              10.0
+            ]
+          ],
+          [
+            [
+              15.0,
+              15.0
+            ],
+            [
+              20.0,
+              20.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          3.25,
+          3.25
+        ],
+        [
+          9.0,
+          9.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            0.7,
+            0.3
+          ],
+          [
+            0.4,
+            0.6
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              11.0,
+              11.0
+            ],
+            [
+              21.0,
+              21.0
+            ]
+          ],
+          [
+            [
+              31.0,
+              31.0
+            ],
+            [
+              41.0,
+              41.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          14.0,
+          14.0
+        ],
+        [
+          37.0,
+          37.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            1.5,
+            3.0
+          ],
+          [
+            4.5,
+            6.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            1.0499999999999998,
+            0.44999999999999996
+          ],
+          [
+            0.6000000000000001,
+            0.8999999999999999
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              15.0,
+              15.0
+            ],
+            [
+              30.0,
+              30.0
+            ]
+          ],
+          [
+            [
+              45.0,
+              45.0
+            ],
+            [
+              60.0,
+              60.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          29.25,
+          29.25
+        ],
+        [
+          81.0,
+          81.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            3.0,
+            6.0
+          ],
+          [
+            9.0,
+            12.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            2.0999999999999996,
+            0.8999999999999999
+          ],
+          [
+            1.2000000000000002,
+            1.7999999999999998
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              30.0,
+              30.0
+            ],
+            [
+              60.0,
+              60.0
+            ]
+          ],
+          [
+            [
+              90.0,
+              90.0
+            ],
+            [
+              120.0,
+              120.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          117.0,
+          117.0
+        ],
+        [
+          324.0,
+          324.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            0.25,
+            0.5
+          ],
+          [
+            0.75,
+            1.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            0.175,
+            0.1
+          ],
+          [
+            0.1,
+            0.15
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              2.5,
+              2.5
+            ],
+            [
+              5.0,
+              5.0
+            ]
+          ],
+          [
+            [
+              7.5,
+              7.5
+            ],
+            [
+              10.0,
+              10.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.9375,
+          0.9375
+        ],
+        [
+          2.25,
+          2.25
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            2.0,
+            4.0
+          ],
+          [
+            6.0,
+            8.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            1.4,
+            0.6
+          ],
+          [
+            0.8,
+            1.2
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              12.0,
+              12.0
+            ],
+            [
+              22.0,
+              22.0
+            ]
+          ],
+          [
+            [
+              32.0,
+              32.0
+            ],
+            [
+              42.0,
+              42.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          30.0,
+          30.0
+        ],
+        [
+          76.0,
+          76.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            4.0,
+            8.0
+          ],
+          [
+            12.0,
+            16.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            2.8,
+            1.2
+          ],
+          [
+            1.6,
+            2.4
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              40.0,
+              40.0
+            ],
+            [
+              80.0,
+              80.0
+            ]
+          ],
+          [
+            [
+              120.0,
+              120.0
+            ],
+            [
+              160.0,
+              160.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          208.0,
+          208.0
+        ],
+        [
+          576.0,
+          576.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            2.0,
+            1.0
+          ],
+          [
+            4.0,
+            3.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            0.3,
+            0.7
+          ],
+          [
+            0.6,
+            0.4
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              10.0,
+              10.0
+            ],
+            [
+              20.0,
+              20.0
+            ]
+          ],
+          [
+            [
+              30.0,
+              30.0
+            ],
+            [
+              40.0,
+              40.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          17.0,
+          17.0
+        ],
+        [
+          34.0,
+          34.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            0.75,
+            1.5
+          ],
+          [
+            2.25,
+            3.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            0.5249999999999999,
+            0.22499999999999998
+          ],
+          [
+            0.30000000000000004,
+            0.44999999999999996
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              7.5,
+              7.5
+            ],
+            [
+              15.0,
+              15.0
+            ]
+          ],
+          [
+            [
+              22.5,
+              22.5
+            ],
+            [
+              30.0,
+              30.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          7.3125,
+          7.3125
+        ],
+        [
+          20.25,
+          20.25
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            15.0,
+            20.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            3.5,
+            1.5
+          ],
+          [
+            2.0,
+            3.0
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              50.0,
+              50.0
+            ],
+            [
+              100.0,
+              100.0
+            ]
+          ],
+          [
+            [
+              150.0,
+              150.0
+            ],
+            [
+              200.0,
+              200.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          325.0,
+          325.0
+        ],
+        [
+          900.0,
+          900.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            3.0,
+            6.0
+          ],
+          [
+            9.0,
+            12.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            2.0999999999999996,
+            0.8999999999999999
+          ],
+          [
+            1.2000000000000002,
+            1.7999999999999998
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              13.0,
+              13.0
+            ],
+            [
+              23.0,
+              23.0
+            ]
+          ],
+          [
+            [
+              33.0,
+              33.0
+            ],
+            [
+              43.0,
+              43.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          48.0,
+          48.0
+        ],
+        [
+          117.0,
+          117.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            0.8,
+            1.6
+          ],
+          [
+            2.4000000000000004,
+            3.2
+          ]
+        ],
+        "routing_weights": [
+          [
+            0.5599999999999999,
+            0.24
+          ],
+          [
+            0.32000000000000006,
+            0.48
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              8.0,
+              8.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          [
+            [
+              24.0,
+              24.0
+            ],
+            [
+              32.0,
+              32.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          8.32,
+          8.32
+        ],
+        [
+          23.04,
+          23.04
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            6.0,
+            12.0
+          ],
+          [
+            18.0,
+            24.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            4.199999999999999,
+            1.7999999999999998
+          ],
+          [
+            2.4000000000000004,
+            3.5999999999999996
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              60.0,
+              60.0
+            ],
+            [
+              120.0,
+              120.0
+            ]
+          ],
+          [
+            [
+              180.0,
+              180.0
+            ],
+            [
+              240.0,
+              240.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          468.0,
+          468.0
+        ],
+        [
+          1296.0,
+          1296.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            4.0,
+            8.0
+          ],
+          [
+            12.0,
+            16.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            2.8,
+            1.2
+          ],
+          [
+            1.6,
+            2.4
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              14.0,
+              14.0
+            ],
+            [
+              24.0,
+              24.0
+            ]
+          ],
+          [
+            [
+              34.0,
+              34.0
+            ],
+            [
+              44.0,
+              44.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          68.0,
+          68.0
+        ],
+        [
+          160.0,
+          160.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            1.2,
+            2.4
+          ],
+          [
+            3.5999999999999996,
+            4.8
+          ]
+        ],
+        "routing_weights": [
+          [
+            0.84,
+            0.36
+          ],
+          [
+            0.48,
+            0.72
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              12.0,
+              12.0
+            ],
+            [
+              24.0,
+              24.0
+            ]
+          ],
+          [
+            [
+              36.0,
+              36.0
+            ],
+            [
+              48.0,
+              48.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          18.72,
+          18.72
+        ],
+        [
+          51.84,
+          51.84
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            0.4,
+            0.8
+          ],
+          [
+            1.2000000000000002,
+            1.6
+          ]
+        ],
+        "routing_weights": [
+          [
+            0.27999999999999997,
+            0.12
+          ],
+          [
+            0.16000000000000003,
+            0.24
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              4.0,
+              4.0
+            ],
+            [
+              8.0,
+              8.0
+            ]
+          ],
+          [
+            [
+              12.0,
+              12.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.08,
+          2.08
+        ],
+        [
+          5.76,
+          5.76
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            8.0,
+            16.0
+          ],
+          [
+            24.0,
+            32.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            5.6,
+            2.4
+          ],
+          [
+            3.2,
+            4.8
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              80.0,
+              80.0
+            ],
+            [
+              160.0,
+              160.0
+            ]
+          ],
+          [
+            [
+              240.0,
+              240.0
+            ],
+            [
+              320.0,
+              320.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          832.0,
+          832.0
+        ],
+        [
+          2304.0,
+          2304.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-moe-dispatch-aggregation-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "token_hidden_states": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            15.0,
+            20.0
+          ]
+        ],
+        "routing_weights": [
+          [
+            3.5,
+            1.5
+          ],
+          [
+            2.0,
+            3.0
+          ]
+        ],
+        "expert_outputs": [
+          [
+            [
+              15.0,
+              15.0
+            ],
+            [
+              25.0,
+              25.0
+            ]
+          ],
+          [
+            [
+              35.0,
+              35.0
+            ],
+            [
+              45.0,
+              45.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          90.0,
+          90.0
+        ],
+        [
+          205.0,
+          205.0
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_moe_dispatch_aggregation",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

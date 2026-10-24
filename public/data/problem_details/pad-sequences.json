@@ -1,0 +1,779 @@
+{
+  "id": "pad-sequences",
+  "title": "Pad Sequences",
+  "description": "In NLP, batches often need sequences of equal length. Given a list of token ID sequences (lists of ints), pad them with a special pad\\_value to match the length of the longest sequence.",
+  "seoDescription": "Pad or truncate variable-length token ID sequences in NumPy with configurable maximum length and padding values.",
+  "examples": [
+    "Input: seqs = [[1, 2], [3, 4, 5], [6]], pad_value = 0, max_len = None\n\nOutput: [[1, 2, 0], [3, 4, 5], [6, 0, 0]]\n\nExplanation: The longest sequence has length 3, so shorter sequences are padded on the right.",
+    "Input: seqs = [[1, 2, 3], [4]], pad_value = -1, max_len = None\n\nOutput: [[1, 2, 3], [4, -1, -1]]"
+  ],
+  "requirements": "* <span style=\"font-size: 14px;\">If max\\_len is None, use the maximum length among sequences</span>\n* <span style=\"font-size: 14px;\">If some sequences are shorter, pad them at the end with pad\\_value</span>\n* <span style=\"font-size: 14px;\">If some sequences are longer than max\\_len, truncate them at the end</span>\n* <span style=\"font-size: 14px;\">If seqs is empty, return an array of shape (0, 0)</span>\n* <span style=\"font-size: 14px;\">Output must be a NumPy array of dtype int</span>",
+  "theory": "## Understanding the Theory: Pad Sequences\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of variable-length sequences of discrete tokens with complex grammatical and long-range semantic dependencies. Modern Transformer architectures eliminate sequential recurrent bottlenecks by allowing every token to compute dynamic affinity scores with every other token. **Pad Sequences** is an essential sequence modeling operation in modern large language models.\n\nIn this problem, the objective is to implement **Pad Sequences** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nL = \\max(l_1, l_2, ..., l_B) \\quad \\text{if max\\_len is None}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **All-to-All Self-Attention**: Dot-product attention computes contextualized representations dynamically, weighting relevant context tokens higher than uninformative tokens.\n* **Causal Masking**: In autoregressive decoder models (like GPT and LLaMA), upper-triangular masking ensures the model cannot look ahead at future tokens during generation.\n* **Positional Embeddings**: Because self-attention is permutation-invariant, positional encodings inject sequence order into the token representations.",
+  "hints": [
+    "When max_len is None, derive it from the longest sequence and use zero for an empty collection.",
+    "Initialize the output with np.full, then copy each truncated sequence into its row."
+  ],
+  "constraints": "* <span style=\"font-size: 14px;\">Number of sequences N ≤ 10,000</span>\n* <span style=\"font-size: 14px;\">Each sequence length ≤ 1,000</span>\n* <span style=\"font-size: 14px;\">NumPy required</span>",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef pad_sequences(seqs: list, pad_value: int = 0, max_len: int | None = None) -> np.ndarray:\n    \"\"\"\n    Returns: np.ndarray of shape (N, L) where:\n      N = len(seqs)\n      L = max_len if provided else max(len(seq) for seq in seqs) or 0\n    \"\"\"\n    # Your code here\n    pass",
+  "createdAt": "2025-11-15T16:17:03.356Z",
+  "updatedAt": "2026-03-05T20:25:27.868Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef pad_sequences(seqs: list, pad_value: int = 0, max_len: int | None = None) -> np.ndarray:\n    L = max(len(s) for s in seqs) if max_len is None else max_len\n    out = np.full((len(seqs), L), pad_value, dtype=int)\n    for i, s in enumerate(seqs):\n        trunc = s[:L]\n        out[i, :len(trunc)] = trunc\n    return out\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "PadSequencesViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Basic padding",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4,
+            5
+          ],
+          [
+            6
+          ]
+        ],
+        "max_len": null,
+        "pad_value": 0
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          0
+        ],
+        [
+          3,
+          4,
+          5
+        ],
+        [
+          6,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Custom pad value",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4
+          ]
+        ],
+        "max_len": null,
+        "pad_value": -1
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          4,
+          -1,
+          -1
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4,
+            5
+          ],
+          [
+            6
+          ]
+        ],
+        "max_len": null,
+        "pad_value": 0
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          0
+        ],
+        [
+          3,
+          4,
+          5
+        ],
+        [
+          6,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4
+          ]
+        ],
+        "max_len": null,
+        "pad_value": -1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          4,
+          -1,
+          -1
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4,
+            5
+          ],
+          [
+            6
+          ]
+        ],
+        "max_len": null,
+        "pad_value": 0
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          0
+        ],
+        [
+          3,
+          4,
+          5
+        ],
+        [
+          6,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4
+          ]
+        ],
+        "max_len": null,
+        "pad_value": -1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          4,
+          -1,
+          -1
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4,
+            5
+          ],
+          [
+            6
+          ]
+        ],
+        "max_len": null,
+        "pad_value": 0
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          0
+        ],
+        [
+          3,
+          4,
+          5
+        ],
+        [
+          6,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4
+          ]
+        ],
+        "max_len": null,
+        "pad_value": -1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          4,
+          -1,
+          -1
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4,
+            5
+          ],
+          [
+            6
+          ]
+        ],
+        "max_len": null,
+        "pad_value": 0
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          0
+        ],
+        [
+          3,
+          4,
+          5
+        ],
+        [
+          6,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4
+          ]
+        ],
+        "max_len": null,
+        "pad_value": -1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          4,
+          -1,
+          -1
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4,
+            5
+          ],
+          [
+            6
+          ]
+        ],
+        "max_len": null,
+        "pad_value": 0
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          0
+        ],
+        [
+          3,
+          4,
+          5
+        ],
+        [
+          6,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4
+          ]
+        ],
+        "max_len": null,
+        "pad_value": -1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          4,
+          -1,
+          -1
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4,
+            5
+          ],
+          [
+            6
+          ]
+        ],
+        "max_len": null,
+        "pad_value": 0
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          0
+        ],
+        [
+          3,
+          4,
+          5
+        ],
+        [
+          6,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4
+          ]
+        ],
+        "max_len": null,
+        "pad_value": -1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          4,
+          -1,
+          -1
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4,
+            5
+          ],
+          [
+            6
+          ]
+        ],
+        "max_len": null,
+        "pad_value": 0
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          0
+        ],
+        [
+          3,
+          4,
+          5
+        ],
+        [
+          6,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4
+          ]
+        ],
+        "max_len": null,
+        "pad_value": -1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          4,
+          -1,
+          -1
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4,
+            5
+          ],
+          [
+            6
+          ]
+        ],
+        "max_len": null,
+        "pad_value": 0
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          0
+        ],
+        [
+          3,
+          4,
+          5
+        ],
+        [
+          6,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4
+          ]
+        ],
+        "max_len": null,
+        "pad_value": -1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          4,
+          -1,
+          -1
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4,
+            5
+          ],
+          [
+            6
+          ]
+        ],
+        "max_len": null,
+        "pad_value": 0
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          0
+        ],
+        [
+          3,
+          4,
+          5
+        ],
+        [
+          6,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "pad-sequences-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "seqs": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4
+          ]
+        ],
+        "max_len": null,
+        "pad_value": -1
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          4,
+          -1,
+          -1
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "pad_sequences",
+    "parameters": [
+      {
+        "name": "seqs",
+        "type": "array",
+        "example": "[[1, 2], [3, 4, 5], [6]]",
+        "description": "List of variable-length sequences"
+      },
+      {
+        "name": "pad_value",
+        "type": "number",
+        "example": "0",
+        "description": "Value to use for padding shorter sequences"
+      },
+      {
+        "name": "max_len",
+        "type": "any",
+        "example": "null",
+        "description": "Maximum length to pad/truncate to (None = use longest)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "text-chunking",
+    "remove-stopwords",
+    "word-count-dict",
+    "batch-generator",
+    "bigram-probabilities"
+  ],
+  "tags": [
+    "NLP",
+    "Data Processing"
+  ],
+  "prevId": "logistic-regression-training",
+  "nextId": "matrix-transpose",
+  "slug": "pad-sequences",
+  "cleanTitle": "Pad Sequences",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/pad-sequences",
+  "localUrl": "http://localhost:3000/problems/pad-sequences",
+  "studyPlan": null
+}

@@ -1,0 +1,490 @@
+{
+  "id": "focal-loss",
+  "title": "Implement Focal Loss",
+  "description": "Compute the mean binary focal loss from predicted probabilities:\n\n$$\nL_i = -(1-p_i)^\\gamma y_i\\log(p_i) - p_i^\\gamma(1-y_i)\\log(1-p_i)\n$$\n\nHere, $p_i$ is the predicted probability for sample $i$, $y_i$ is its binary label, and $\\gamma$ is gamma. Clip probabilities only for numerical stability, then return the mean of all $L_i$ values as a Python float.",
+  "seoDescription": "Compute mean binary focal loss from predicted probabilities using a configurable focusing parameter.",
+  "examples": [
+    "Input: p = [0.9, 0.2, 0.7, 0.1], y = [1, 0, 1, 0], gamma = 2.0\n\nOutput: 0.010783\n\nExplanation: Confident correct predictions receive small weights, so their mean focal loss is low.",
+    "Input: p = [0.5, 0.5, 0.5, 0.5], y = [1, 0, 1, 0], gamma = 2.0\n\nOutput: 0.173287",
+    "Input: p = [0.9, 0.2, 0.7, 0.1], y = [1, 0, 1, 0], gamma = 0.0\n\nOutput: 0.197635"
+  ],
+  "requirements": "* Treat p as probabilities without applying sigmoid\n* Apply the focal-loss equation elementwise\n* Return the mean loss as a Python float",
+  "theory": "## Understanding the Theory: Implement Focal Loss\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **Implement Focal Loss** implements a core computational routine.\n\nIn this problem, the objective is to implement **Implement Focal Loss** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nL_i = -(1-p_i)^\\gamma y_i\\log(p_i) - p_i^\\gamma(1-y_i)\\log(1-p_i)\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "Use np.clip(p, 1e-15, 1.0 - 1e-15) before taking logarithms.",
+    "Use np.log1p(-p) for the negative-class logarithm.",
+    "Average the negative sum of the positive and negative terms."
+  ],
+  "constraints": "* p and y are equal-length nonempty numeric lists\n* Every label in y is 0 or 1\n* Every probability in p is between 0 and 1\n* gamma is between 0 and 5\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef focal_loss(p: list, y: list, gamma: float = 2.0) -> float:\n    \"\"\"\n    Returns the loss as a float.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-05T19:02:27.732Z",
+  "updatedAt": "2026-03-05T19:39:25.776Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef focal_loss(p: list, y: list, gamma: float = 2.0) -> float:\n    arr_p = np.array(p, dtype=float)\n    arr_y = np.array(y, dtype=float)\n    eps = 1e-15\n    arr_p = np.clip(arr_p, eps, 1.0 - eps)\n    p_t = np.where(arr_y == 1, arr_p, 1.0 - arr_p)\n    loss = -((1.0 - p_t) ** gamma) * np.log(p_t)\n    return float(round(np.mean(loss), 6))\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "FocalLossViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Basic",
+      "inputs": {
+        "p": [
+          0.9,
+          0.2,
+          0.7,
+          0.1
+        ],
+        "y": [
+          1,
+          0,
+          1,
+          0
+        ],
+        "gamma": 2
+      },
+      "isPublic": true,
+      "expectedOutput": 0.010783
+    },
+    {
+      "id": "test-2",
+      "name": "Uncertain predictions",
+      "inputs": {
+        "p": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ],
+        "y": [
+          1,
+          0,
+          1,
+          0
+        ],
+        "gamma": 2
+      },
+      "isPublic": true,
+      "expectedOutput": 0.173287
+    },
+    {
+      "id": "test-4",
+      "name": "Gamma = 0",
+      "inputs": {
+        "p": [
+          0.9,
+          0.2,
+          0.7,
+          0.1
+        ],
+        "y": [
+          1,
+          0,
+          1,
+          0
+        ],
+        "gamma": 0
+      },
+      "isPublic": false,
+      "expectedOutput": 0.197635
+    },
+    {
+      "id": "focal-loss-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "p": [
+          1.8,
+          0.4,
+          1.4,
+          0.2
+        ],
+        "y": [
+          2,
+          0,
+          2,
+          0
+        ],
+        "gamma": 4
+      },
+      "expectedOutput": 17.273147,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "p": [
+          0.45,
+          0.1,
+          0.35,
+          0.05
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gamma": 1
+      },
+      "expectedOutput": 0.108225,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "p": [
+          -0.9,
+          -0.2,
+          -0.7,
+          -0.1
+        ],
+        "y": [
+          -1,
+          0,
+          -1,
+          0
+        ],
+        "gamma": -2
+      },
+      "expectedOutput": 1000799917193444.1,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "p": [
+          2.7,
+          0.6,
+          2.1,
+          0.3
+        ],
+        "y": [
+          3,
+          0,
+          3,
+          0
+        ],
+        "gamma": 6
+      },
+      "expectedOutput": 17.280541,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "p": [
+          1.9,
+          1.2,
+          1.7,
+          1.1
+        ],
+        "y": [
+          2.0,
+          1.0,
+          2.0,
+          1.0
+        ],
+        "gamma": 3.0
+      },
+      "expectedOutput": 17.269788,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "p": [
+          -1.1,
+          -1.8,
+          -1.3,
+          -1.9
+        ],
+        "y": [
+          -1.0,
+          -2.0,
+          -1.0,
+          -2.0
+        ],
+        "gamma": 0.0
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "p": [
+          0.1,
+          0.7,
+          0.2,
+          0.9
+        ],
+        "y": [
+          0,
+          1,
+          0,
+          1
+        ],
+        "gamma": 2
+      },
+      "expectedOutput": 0.010783,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "p": [
+          -0.9,
+          -0.2,
+          -0.7,
+          -0.1
+        ],
+        "y": [
+          -1,
+          0,
+          -1,
+          0
+        ],
+        "gamma": -2
+      },
+      "expectedOutput": 1000799917193444.1,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "p": [
+          9.0,
+          2.0,
+          7.0,
+          1.0
+        ],
+        "y": [
+          10,
+          0,
+          10,
+          0
+        ],
+        "gamma": 20
+      },
+      "expectedOutput": 34.539576,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "p": [
+          0.09,
+          0.02,
+          0.07,
+          0.01
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gamma": 0
+      },
+      "expectedOutput": 0.049284,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "p": [
+          5.9,
+          5.2,
+          5.7,
+          5.1
+        ],
+        "y": [
+          6.0,
+          5.0,
+          6.0,
+          5.0
+        ],
+        "gamma": 7.0
+      },
+      "expectedOutput": 34.539576,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "p": [
+          1.35,
+          0.3,
+          1.05,
+          0.15
+        ],
+        "y": [
+          2,
+          0,
+          2,
+          0
+        ],
+        "gamma": 3
+      },
+      "expectedOutput": 17.272333,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "p": [
+          -1.8,
+          -0.4,
+          -1.4,
+          -0.2
+        ],
+        "y": [
+          -2,
+          0,
+          -2,
+          0
+        ],
+        "gamma": -4
+      },
+      "expectedOutput": 1.0024016716947214e+45,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "p": [
+          0.225,
+          0.05,
+          0.175,
+          0.025
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gamma": 0
+      },
+      "expectedOutput": 0.130969,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "p": [
+          -0.09999999999999998,
+          -0.8,
+          -0.30000000000000004,
+          -0.9
+        ],
+        "y": [
+          0.0,
+          -1.0,
+          0.0,
+          -1.0
+        ],
+        "gamma": 1.0
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "p": [
+          3.6,
+          0.8,
+          2.8,
+          0.4
+        ],
+        "y": [
+          4,
+          0,
+          4,
+          0
+        ],
+        "gamma": 8
+      },
+      "expectedOutput": 17.337376,
+      "isPublic": false
+    },
+    {
+      "id": "focal-loss-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "p": [
+          0.675,
+          0.15,
+          0.525,
+          0.075
+        ],
+        "y": [
+          1,
+          0,
+          1,
+          0
+        ],
+        "gamma": 2
+      },
+      "expectedOutput": 0.047748,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "focal_loss",
+    "parameters": [
+      {
+        "name": "p",
+        "type": "array",
+        "example": "[0.9, 0.2, 0.7, 0.1]",
+        "description": "Predicted probabilities (0 to 1)"
+      },
+      {
+        "name": "y",
+        "type": "array",
+        "example": "[1, 0, 1, 0]",
+        "description": "Binary labels (0 or 1)"
+      },
+      {
+        "name": "gamma",
+        "type": "number",
+        "example": "2.0",
+        "description": "Focusing parameter (default: 2.0)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "binary-focal-loss",
+    "cross-entropy-loss",
+    "dice-loss",
+    "label-smoothing-loss",
+    "kl-divergence"
+  ],
+  "tags": [
+    "Loss Functions"
+  ],
+  "prevId": "info-nce-loss",
+  "nextId": "dice-loss",
+  "slug": "focal-loss",
+  "cleanTitle": "Implement Focal Loss",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/focal-loss",
+  "localUrl": "http://localhost:3000/problems/focal-loss",
+  "studyPlan": null
+}

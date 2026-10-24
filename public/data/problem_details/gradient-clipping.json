@@ -1,0 +1,432 @@
+{
+  "id": "gradient-clipping",
+  "title": "Gradient Clipping (Global Norm)",
+  "description": "Clip an entire gradient array by its global L2 norm:\n\n$$\n\\lVert g \\rVert_2 = \\sqrt{\\sum_i g_i^2}\n$$\n\n$$\ng_{\\mathrm{clipped}} = \\begin{cases} g, & \\lVert g \\rVert_2 \\le m \\\\ g\\dfrac{m}{\\lVert g \\rVert_2}, & \\lVert g \\rVert_2 > m \\end{cases}\n$$\n\nHere, $g$ is the gradient array and $m$ is max_norm. Return a NumPy array with the same shape as $g$.",
+  "seoDescription": "Clip a NumPy gradient array by its global L2 norm while preserving direction when scaling is required.",
+  "examples": [
+    "Input: g = [0.1, 0.2, 0.2], max_norm = 1.0\n\nOutput: [0.1, 0.2, 0.2]\n\nExplanation: The global norm is 0.3, so the gradient remains unchanged.",
+    "Input: g = [6, 8], max_norm = 5.0\n\nOutput: [3.0, 4.0]",
+    "Input: g = [[2, 2], [2, 2]], max_norm = 2.0\n\nOutput: [[1.0, 1.0], [1.0, 1.0]]"
+  ],
+  "requirements": "* Compute one global norm across every array element\n* Scale only when the norm exceeds max_norm\n* Preserve shape and direction\n* Return a NumPy array",
+  "theory": "## Understanding the Theory: Gradient Clipping (Global Norm)\n\n### Core Intuition: Why Do We Need This?\nWhen training neural networks with gradient descent, optimizers rely on exact derivatives to adjust parameters in the direction of steepest loss reduction. If an analytical derivative formula has a flaw, the model will train erratically or fail to converge completely. **Gradient Clipping (Global Norm)** provides the exact mathematical foundation to compute, verify, or propagate these gradient signals.\n\nIn this problem, the objective is to implement **Gradient Clipping (Global Norm)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\lVert g \\rVert_2 = \\sqrt{\\sum_i g_i^2}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Autograd & Backpropagation**: Deep learning libraries like PyTorch and JAX compute vector-Jacobian products automatically; understanding the underlying differentiation rules helps engineers write custom autograd functions.\n* **Numerical Stability**: Choosing step sizes in finite differences or gradient updates requires balancing truncation errors against floating-point roundoff.\n* **Computational Efficiency**: Analytical gradients evaluate in a single backward pass, executing orders of magnitude faster than numerical approximations during training.",
+  "hints": [
+    "Use np.linalg.norm(g) to compute the global L2 norm.",
+    "When clipping is needed, multiply by max_norm / norm."
+  ],
+  "constraints": "* g is a nonempty numeric array of any shape\n* max_norm is positive\n* g contains at most $10^6$ values\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef clip_gradients(g: list, max_norm: float) -> np.ndarray:\n    \"\"\"\n    Returns a NumPy array with the same shape as g.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-05T19:02:25.997Z",
+  "updatedAt": "2026-03-05T19:49:05.778Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef clip_gradients(g: list, max_norm: float) -> np.ndarray:\n    arr = np.array(g, dtype=float)\n    norm = float(np.linalg.norm(arr))\n    if norm > max_norm and norm > 0:\n        arr = arr * (max_norm / norm)\n    return np.round(arr, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "GradientClippingViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "No clipping",
+      "inputs": {
+        "g": [
+          0.1,
+          0.2,
+          0.2
+        ],
+        "max_norm": 1
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        0.1,
+        0.2,
+        0.2
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Clipping needed (Ex2)",
+      "inputs": {
+        "g": [
+          6,
+          8
+        ],
+        "max_norm": 5
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        3.0,
+        4.0
+      ]
+    },
+    {
+      "id": "test-4",
+      "name": "2D array clipping (Ex3)",
+      "inputs": {
+        "g": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "max_norm": 2
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          1.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "gradient-clipping-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "g": [
+          0.2,
+          0.4,
+          0.4
+        ],
+        "max_norm": 2
+      },
+      "expectedOutput": [
+        0.2,
+        0.4,
+        0.4
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "g": [
+          0.05,
+          0.1,
+          0.1
+        ],
+        "max_norm": 0
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "g": [
+          -0.1,
+          -0.2,
+          -0.2
+        ],
+        "max_norm": -1
+      },
+      "expectedOutput": [
+        0.333333,
+        0.666667,
+        0.666667
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "g": [
+          0.3,
+          0.6,
+          0.6
+        ],
+        "max_norm": 3
+      },
+      "expectedOutput": [
+        0.3,
+        0.6,
+        0.6
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "g": [
+          1.1,
+          1.2,
+          1.2
+        ],
+        "max_norm": 2.0
+      },
+      "expectedOutput": [
+        1.08783,
+        1.186724,
+        1.186724
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "g": [
+          -1.9,
+          -1.8,
+          -1.8
+        ],
+        "max_norm": -1.0
+      },
+      "expectedOutput": [
+        0.598147,
+        0.566666,
+        0.566666
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "g": [
+          0.2,
+          0.2,
+          0.1
+        ],
+        "max_norm": 1
+      },
+      "expectedOutput": [
+        0.2,
+        0.2,
+        0.1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "g": [
+          -0.1,
+          -0.2,
+          -0.2
+        ],
+        "max_norm": -1
+      },
+      "expectedOutput": [
+        0.333333,
+        0.666667,
+        0.666667
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "g": [
+          1.0,
+          2.0,
+          2.0
+        ],
+        "max_norm": 10
+      },
+      "expectedOutput": [
+        1.0,
+        2.0,
+        2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "g": [
+          0.01,
+          0.02,
+          0.02
+        ],
+        "max_norm": 0
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "g": [
+          5.1,
+          5.2,
+          5.2
+        ],
+        "max_norm": 6.0
+      },
+      "expectedOutput": [
+        3.419261,
+        3.486306,
+        3.486306
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "g": [
+          0.15,
+          0.3,
+          0.3
+        ],
+        "max_norm": 2
+      },
+      "expectedOutput": [
+        0.15,
+        0.3,
+        0.3
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "g": [
+          -0.2,
+          -0.4,
+          -0.4
+        ],
+        "max_norm": -2
+      },
+      "expectedOutput": [
+        0.666667,
+        1.333333,
+        1.333333
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "g": [
+          0.025,
+          0.05,
+          0.05
+        ],
+        "max_norm": 0
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "g": [
+          -0.9,
+          -0.8,
+          -0.8
+        ],
+        "max_norm": 0.0
+      },
+      "expectedOutput": [
+        -0.0,
+        -0.0,
+        -0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "g": [
+          0.4,
+          0.8,
+          0.8
+        ],
+        "max_norm": 4
+      },
+      "expectedOutput": [
+        0.4,
+        0.8,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "gradient-clipping-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "g": [
+          0.075,
+          0.15,
+          0.15
+        ],
+        "max_norm": 1
+      },
+      "expectedOutput": [
+        0.075,
+        0.15,
+        0.15
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "clip_gradients",
+    "parameters": [
+      {
+        "name": "g",
+        "type": "array",
+        "example": "[0.1, 0.2, 0.2]",
+        "description": "Gradient array (any shape)"
+      },
+      {
+        "name": "max_norm",
+        "type": "number",
+        "example": "1.0",
+        "description": "Maximum allowed norm (positive)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "adam-optimizer",
+    "adamw-optimizer",
+    "nesterov-momentum",
+    "gradient-descent-quadratic",
+    "rmsprop-optimizer"
+  ],
+  "tags": [
+    "Optimization",
+    "Neural Networks"
+  ],
+  "prevId": "pearson-correlation",
+  "nextId": "adagrad-optimizer",
+  "slug": "gradient-clipping",
+  "cleanTitle": "Gradient Clipping (Global Norm)",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/gradient-clipping",
+  "localUrl": "http://localhost:3000/problems/gradient-clipping",
+  "studyPlan": null
+}

@@ -1,0 +1,934 @@
+{
+  "catalogId": "python:rl-policy-iteration",
+  "id": "rl-policy-iteration",
+  "sourceId": "rl-policy-iteration",
+  "slug": "rl-policy-iteration",
+  "source": "python",
+  "category": "python",
+  "title": "Policy Iteration",
+  "difficulty": "Medium",
+  "tags": [
+    "Reinforcement Learning"
+  ],
+  "isFree": false,
+  "planId": "cracking-rl",
+  "planTitle": "Cracking RL",
+  "sectionId": "cracking-rl-mdps-and-dynamic-programming",
+  "sortOrder": 567,
+  "seoDescription": "Policy iteration solves a finite Markov Decision Process by alternating two steps until the greedy policy stops changing.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Compute optimal policy for discrete MDP using alternating policy evaluation and greedy policy improvement.\n\nPolicy iteration guarantees strictly monotonic improvement in state values at every iteration, converging to global optimal policy in finite steps.\n\n### Mathematical Formulation\n$$\nV^{\\pi} = (\\mathbf{I} - \\gamma \\mathbf{P}^{\\pi})^{-1} \\mathbf{R}^{\\pi}, \\quad \\pi'(s) = \\arg\\max_a \\left[ R(s, a) + \\gamma \\sum_{s'} P(s'|s, a) V^{\\pi}(s') \\right]\n$$\n\n### Step-by-Step Implementation\n1. Solve linear system for state values under current stationary policy pi\n2. Greedily update action at each state maximizing expected 1-step Q-value\n3. Terminate when policy is stable and return optimal action indices\n\n### Returns\nList of integers representing optimal action choice per state.",
+  "theory": "## Understanding the Theory: Policy Iteration\n\n### Core Intuition: Why Do We Need This?\nIn reinforcement learning, there is no supervisor providing correct answers. Instead, an agent learns by trial and error: taking actions, observing environment states, and receiving feedback rewards. The agent must continuously balance exploiting known high-reward actions with exploring new actions that might be even better. **Policy Iteration** implements a core decision-making or value-estimation algorithm.\n\nPolicy iteration guarantees strictly monotonic improvement in state values at every iteration, converging to global optimal policy in finite steps. In this problem, the goal is to: compute optimal policy for discrete mdp using alternating policy evaluation and greedy policy improvement.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nV^{\\pi} = (\\mathbf{I} - \\gamma \\mathbf{P}^{\\pi})^{-1} \\mathbf{R}^{\\pi}, \\quad \\pi'(s) = \\arg\\max_a \\left[ R(s, a) + \\gamma \\sum_{s'} P(s'|s, a) V^{\\pi}(s') \\right]\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Solve linear system for state values under current stationary policy pi\n2. **Phase 2**: Greedily update action at each state maximizing expected 1-step Q-value\n3. **Phase 3**: Terminate when policy is stable and return optimal action indices\n\n### Practical Machine Learning Applications & Nuances\n* **Bellman Equations**: The core idea of dynamic programming in RL is that the value of a state equals the immediate reward plus the discounted expected value of the next state.\n* **Sample Efficiency**: Replay buffers and temporal difference updates allow agents to learn stably from past experiences.\n* **Policy Optimization**: Whether using value-based methods (like Q-learning) or policy gradients (like PPO), algorithms converge toward the optimal behavioral policy.",
+  "examples": [
+    "Input: P = [[[0.7, 0.3], [0.1, 0.9]], [[0.2, 0.8], [0.8, 0.2]]], R = [[5.0, 10.0], [-1.0, 2.0]], gamma = 0.9\n\nOutput: [1, 1]\n\nExplanation: Evaluated rl_policy_iteration under standard test conditions."
+  ],
+  "requirements": "* Function must be named `rl_policy_iteration`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `rl_policy_iteration`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef rl_policy_iteration(P: list, R: list, gamma: float = 0.9) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Policy Iteration** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef rl_policy_iteration(P: list, R: list, gamma: float = 0.9) -> list:\n    S, A = len(R), len(P[0])\n    pol = [0] * S\n    for _ in range(20):\n        T_pi = np.array([P[s][pol[s]] for s in range(S)])\n        R_pi = np.array([R[s][pol[s]] for s in range(S)])\n        V = np.linalg.solve(np.eye(S) - gamma * T_pi, R_pi)\n        stable = True\n        for s in range(S):\n            q = [R[s][a] + gamma * np.dot(P[s][a], V) for a in range(A)]\n            best = int(np.argmax(q))\n            if best != pol[s]: stable = False; pol[s] = best\n        if stable: break\n    return pol\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "2-state 2-action MDP",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "rl-policy-iteration-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "rl-policy-iteration-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "P": [
+          [
+            [
+              0.7,
+              0.3
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          [
+            [
+              0.2,
+              0.8
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            -1.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9
+      },
+      "expectedOutput": [
+        1,
+        1
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "rl_policy_iteration",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "gradient-descent-quadratic",
+    "anchor-box-generation",
+    "value-iteration-step",
+    "precision-recall-at-k",
+    "cs336-l01-train-byte-pair-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "python",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

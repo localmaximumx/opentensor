@@ -1,0 +1,595 @@
+{
+  "catalogId": "python:nlp-span-extraction",
+  "id": "nlp-span-extraction",
+  "sourceId": "nlp-span-extraction",
+  "slug": "nlp-span-extraction",
+  "source": "python",
+  "category": "python",
+  "title": "Span Extraction",
+  "difficulty": "Medium",
+  "tags": [
+    "NLP",
+    "Inference"
+  ],
+  "isFree": false,
+  "planId": "cracking-nlp",
+  "planTitle": "Cracking NLP",
+  "sectionId": "cracking-nlp-transformers-for-nlp",
+  "sortOrder": 227,
+  "seoDescription": "Select the highest-scoring valid answer span from token-level start and end logits under a length limit.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Extract the optimal answer token span (start, end) that maximizes combined boundary logits subject to a maximum span length constraint.\n\nBERT for SQuAD casts question answering as predicting start and end token indices over the context document.\n\n### Mathematical Formulation\n$$\n(\\hat{i}, \\hat{j}) = \\arg\\max_{i \\le j \\le i + L_{\\max}} \\left( s_i + e_j \\right)\n$$\n\n### Step-by-Step Implementation\n1. Search all candidate token start positions i and end positions j\n2. Enforce valid boundary constraints: i <= j and j - i + 1 <= max_answer_length\n3. Select span with maximum sum of start and end logits\n\n### Returns\nDictionary containing 'start_index', 'end_index', and 'span_score'.",
+  "theory": "## Understanding the Theory: Span Extraction\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of discrete words and symbols arranged in sequential order. To process text with neural networks, we convert words into continuous embedding vectors and model their grammatical and semantic relationships. **Span Extraction** is a core sequence-processing mechanism used in modern Transformer and LLM architectures.\n\nBERT for SQuAD casts question answering as predicting start and end token indices over the context document. In this problem, the goal is to: extract the optimal answer token span (start, end) that maximizes combined boundary logits subject to a maximum span length constraint.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n(\\hat{i}, \\hat{j}) = \\arg\\max_{i \\le j \\le i + L_{\\max}} \\left( s_i + e_j \\right)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Search all candidate token start positions i and end positions j\n2. **Phase 2**: Enforce valid boundary constraints: i <= j and j - i + 1 <= max_answer_length\n3. **Phase 3**: Select span with maximum sum of start and end logits\n\n### Practical Machine Learning Applications & Nuances\n* **Self-Attention Mechanics**: Scaled dot-product attention computes all-to-all token interactions dynamically, allowing tokens to gather context from the entire sentence simultaneously.\n* **Position Encodings**: Because self-attention is permutation-invariant, positional encodings (like sinusoidal or Rotary Position Embeddings) inject word order into the representations.\n* **Vocabulary & Subwords**: Algorithms like BPE tokenize text into frequent subwords, allowing models to represent rare words without requiring an infinite vocabulary.",
+  "examples": [
+    "Input: start_logits = [0.1, 2.5, 0.4, 0.2, 0.1], end_logits = [0.1, 0.2, 1.8, 2.2, 0.1], max_answer_length = 3\n\nOutput: {\"start_index\": 1, \"end_index\": 3, \"span_score\": 4.7}\n\nExplanation: Evaluated nlp_span_extraction under standard test conditions."
+  ],
+  "requirements": "* Function must be named `nlp_span_extraction`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `nlp_span_extraction`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def nlp_span_extraction(start_logits: list, end_logits: list, max_answer_length: int = 5) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Span Extraction** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef nlp_span_extraction(start_logits: list, end_logits: list, max_answer_length: int = 5) -> dict:\n    s, e, ml, n = np.array(start_logits), np.array(end_logits), int(max_answer_length), len(start_logits)\n    best_sc, bs, be = float('-inf'), 0, 0\n    for i in range(n):\n        for j in range(i, min(i + ml, n)):\n            if s[i] + e[j] > best_sc:\n                best_sc, bs, be = s[i] + e[j], i, j\n    return {'start_index': bs, 'end_index': be, 'span_score': round(float(best_sc), 4)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "5 tokens span extraction",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": true
+    },
+    {
+      "id": "nlp-span-extraction-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-span-extraction-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "start_logits": [
+          0.1,
+          2.5,
+          0.4,
+          0.2,
+          0.1
+        ],
+        "end_logits": [
+          0.1,
+          0.2,
+          1.8,
+          2.2,
+          0.1
+        ],
+        "max_answer_length": 3
+      },
+      "expectedOutput": {
+        "start_index": 1,
+        "end_index": 3,
+        "span_score": 4.7
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "nlp_span_extraction",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "gradient-descent-quadratic",
+    "anchor-box-generation",
+    "value-iteration-step",
+    "precision-recall-at-k",
+    "cs336-l01-train-byte-pair-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "python",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

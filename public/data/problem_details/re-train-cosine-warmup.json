@@ -1,0 +1,299 @@
+{
+  "id": "re-train-cosine-warmup",
+  "slug": "re-train-cosine-warmup",
+  "title": "Cosine LR with Warmup",
+  "cleanTitle": "Cosine LR with Warmup",
+  "type": "code",
+  "difficulty": "Medium",
+  "category": "Assessment",
+  "tags": [
+    "Assessment",
+    "CODE",
+    "Training and Decoding Primitives"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Compute a learning rate that increases linearly during warmup and then decays according to a cosine schedule.",
+  "theory": "## Understanding the Theory: Cosine LR with Warmup\n\n### Core Intuition: Why Do We Need This?\n**Cosine LR with Warmup** forms a vital mathematical pillar within **Training and Decoding Primitives**. In modern foundation models and frontier LLM architectures, computational efficiency, activation stability, and precise hardware memory alignment govern both pre-training scalability and low-latency autoregressive generation. Flaws in numerical precision or suboptimal tensor transformations can silently corrupt model weights or cause distributed training divergence.\n\nUnderstanding the core mechanics enables engineers to diagnose convergence anomalies, optimize memory layouts, and construct maintainable ML pipelines from first principles.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\eta_t = \\begin{cases} \\frac{t}{T_{\\text{warmup}}} \\eta_{\\max} & t < T_{\\text{warmup}} \\\\ \\eta_{\\min} + \\frac{1}{2}(\\eta_{\\max} - \\eta_{\\min})\\left(1 + \\cos\\left(\\frac{t - T_{\\text{warmup}}}{T_{\\max} - T_{\\text{warmup}}} \\pi\\right)\\right) & t \\ge T_{\\text{warmup}} \\end{cases}\n$$\n\nIn this formulation:\n* The input features and parameters are projected, normalized, or aggregated according to established algorithmic invariants.\n* Dimensional consistency is preserved across all tensor or matrix axes, ensuring mathematical validity.\n* Intermediate accumulators maintain numerical dynamic range to protect against floating-point anomalies.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Validate input array dimensions, check for empty sequences or invalid bounds, and convert inputs into contiguous buffers.\n2. **Phase 2: Core Algorithmic Transformation**: Execute the foundational mathematical logic using vectorized SIMD array operations or optimized iteration.\n3. **Phase 3: Aggregation & Normalization**: Compute required sums, projections, or ranking reductions while guarding against division by zero.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Format outputs into required data types and verify that returned numerical estimates adhere to expected precision thresholds.\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth & Cache Hierarchy**: High-throughput transformer operators must saturate hardware cache lines and minimize redundant memory reads between DRAM and fast register buffers.\n* **Numerical Stability & Gradient Flow**: Preventing floating-point cancellation, underflow in softmax exponents, and division by zero ensures smooth loss descent across billions of tokens.\n* **Inference Throughput**: Idempotent, stateless tensor updates allow distributed inference engines to execute asynchronous prefill and decoding iterations without race conditions.\n* **Algorithmic Complexity**: Operates with optimal asymptotic time and space complexity, ensuring minimal compute overhead.",
+  "examples": [
+    {
+      "inputArgs": [
+        5,
+        100,
+        10,
+        0.001
+      ],
+      "output": 0.0006000000000000001,
+      "explanation": "Illustrative small example for cosine lr with warmup."
+    }
+  ],
+  "requirements": [
+    "Implement the mathematical or algorithmic behavior described above.",
+    "Match the function signature and output structure in starterCode.",
+    "Handle boundary inputs and ties consistently with the supplied test cases."
+  ],
+  "hints": [
+    "Implement the small mathematical contract first; do not add production-only model machinery.",
+    "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+  ],
+  "constraints": [
+    "Inputs are small enough for a straightforward reference implementation.",
+    "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+    "Unless otherwise stated, dimensions must be consistent."
+  ],
+  "starterCode": "import math\ndef solve(step,total_steps,warmup_steps,base_lr):\n    pass",
+  "solution": "### 💡 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### ⚡ Implementation\n```python\nimport math\ndef solve(step,total_steps,warmup_steps,base_lr):\n    if step<warmup_steps: return base_lr*(step+1)/max(1,warmup_steps)\n    progress=(step-warmup_steps)/max(1,total_steps-warmup_steps)\n    return base_lr*0.5*(1+math.cos(math.pi*min(1,progress)))\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
+  "testCases": [
+    {
+      "id": "case-1",
+      "name": "smoke test",
+      "inputs": {
+        "step": 5,
+        "total_steps": 100,
+        "warmup_steps": 10,
+        "base_lr": 0.001
+      },
+      "expectedOutput": 0.0006000000000000001,
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-2",
+      "name": "Case 2",
+      "inputs": {
+        "step": 10,
+        "total_steps": 200,
+        "warmup_steps": 20,
+        "base_lr": 0.002
+      },
+      "expectedOutput": 0.0010999999999999998,
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-3",
+      "name": "Case 3",
+      "inputs": {
+        "step": 2,
+        "total_steps": 50,
+        "warmup_steps": 5,
+        "base_lr": 0.0005
+      },
+      "expectedOutput": 0.00030000000000000003,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-4",
+      "name": "Case 4",
+      "inputs": {
+        "step": -5,
+        "total_steps": -100,
+        "warmup_steps": -10,
+        "base_lr": -0.001
+      },
+      "expectedOutput": -0.0,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-5",
+      "name": "Case 5",
+      "inputs": {
+        "step": 15,
+        "total_steps": 300,
+        "warmup_steps": 30,
+        "base_lr": 0.003
+      },
+      "expectedOutput": 0.0016,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-6",
+      "name": "Case 6",
+      "inputs": {
+        "step": 6.0,
+        "total_steps": 101.0,
+        "warmup_steps": 11.0,
+        "base_lr": 1.001
+      },
+      "expectedOutput": 0.637,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-7",
+      "name": "Case 7",
+      "inputs": {
+        "step": 3.0,
+        "total_steps": 98.0,
+        "warmup_steps": 8.0,
+        "base_lr": -1.999
+      },
+      "expectedOutput": -0.9995,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-8",
+      "name": "Case 8",
+      "inputs": {
+        "step": 5,
+        "total_steps": 100,
+        "warmup_steps": 10,
+        "base_lr": 0.001
+      },
+      "expectedOutput": 0.0006000000000000001,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-9",
+      "name": "Case 9",
+      "inputs": {
+        "step": -5,
+        "total_steps": -100,
+        "warmup_steps": -10,
+        "base_lr": -0.001
+      },
+      "expectedOutput": -0.0,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-10",
+      "name": "Case 10",
+      "inputs": {
+        "step": 50,
+        "total_steps": 1000,
+        "warmup_steps": 100,
+        "base_lr": 0.01
+      },
+      "expectedOutput": 0.0051,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-11",
+      "name": "Case 11",
+      "inputs": {
+        "step": 0,
+        "total_steps": 10,
+        "warmup_steps": 1,
+        "base_lr": 0.0001
+      },
+      "expectedOutput": 0.0001,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-12",
+      "name": "Case 12",
+      "inputs": {
+        "step": 10.0,
+        "total_steps": 105.0,
+        "warmup_steps": 15.0,
+        "base_lr": 5.001
+      },
+      "expectedOutput": 3.6674,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-13",
+      "name": "Case 13",
+      "inputs": {
+        "step": 8,
+        "total_steps": 150,
+        "warmup_steps": 15,
+        "base_lr": 0.0015
+      },
+      "expectedOutput": 0.0009,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-14",
+      "name": "Case 14",
+      "inputs": {
+        "step": -10,
+        "total_steps": -200,
+        "warmup_steps": -20,
+        "base_lr": -0.002
+      },
+      "expectedOutput": -0.0,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-15",
+      "name": "Case 15",
+      "inputs": {
+        "step": 1,
+        "total_steps": 25,
+        "warmup_steps": 2,
+        "base_lr": 0.0003
+      },
+      "expectedOutput": 0.0003,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-16",
+      "name": "Case 16",
+      "inputs": {
+        "step": 4.0,
+        "total_steps": 99.0,
+        "warmup_steps": 9.0,
+        "base_lr": -0.999
+      },
+      "expectedOutput": -0.555,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-17",
+      "name": "Case 17",
+      "inputs": {
+        "step": 20,
+        "total_steps": 400,
+        "warmup_steps": 40,
+        "base_lr": 0.004
+      },
+      "expectedOutput": 0.0021000000000000003,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-18",
+      "name": "Case 18",
+      "inputs": {
+        "step": 4,
+        "total_steps": 75,
+        "warmup_steps": 8,
+        "base_lr": 0.0008
+      },
+      "expectedOutput": 0.0005,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-19",
+      "name": "Case 19",
+      "inputs": {
+        "step": 25,
+        "total_steps": 500,
+        "warmup_steps": 50,
+        "base_lr": 0.005
+      },
+      "expectedOutput": 0.0026,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-20",
+      "name": "Case 20",
+      "inputs": {
+        "step": 15.0,
+        "total_steps": 110.0,
+        "warmup_steps": 20.0,
+        "base_lr": 10.001
+      },
+      "expectedOutput": 8.0008,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "solve",
+    "signature": "def solve(step,total_steps,warmup_steps,base_lr):",
+    "returnType": "varies by problem; see example output"
+  },
+  "assessmentNames": [
+    "Training and Decoding Primitives"
+  ],
+  "source": "assessment",
+  "sourceId": "assessment",
+  "updatedAt": "2026-03-01T00:00:00.000Z"
+}

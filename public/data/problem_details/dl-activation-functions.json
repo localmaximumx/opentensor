@@ -1,0 +1,1355 @@
+{
+  "catalogId": "python:dl-activation-functions",
+  "id": "dl-activation-functions",
+  "sourceId": "dl-activation-functions",
+  "slug": "dl-activation-functions",
+  "source": "python",
+  "category": "numpy",
+  "title": "Activation Functions",
+  "difficulty": "Easy",
+  "tags": [
+    "Neural Networks",
+    "Activation Functions"
+  ],
+  "isFree": false,
+  "planId": "cracking-dl",
+  "planTitle": "Cracking Deep Learning",
+  "sectionId": "cracking-dl-neural-network-foundations",
+  "sortOrder": 27,
+  "seoDescription": "Implement ReLU, sigmoid, tanh, Leaky ReLU, GELU, and Swish with their analytical derivatives.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Implement standard activation functions (ReLU, Sigmoid, Tanh, GELU) and their analytical gradients.\n\nNonlinear activations enable neural networks to form deep hierarchical feature representations.\n\n### Mathematical Formulation\n$$\n\\operatorname{ReLU}(x) = \\max(0, x), \\quad \\sigma(x) = \\frac{1}{1 + e^{-x}}, \\quad \\tanh(x) = \\frac{e^x - e^{-x}}{e^x + e^{-x}}\n$$\n\n### Step-by-Step Implementation\n1. Compute forward activations element-wise\n2. Compute analytical first derivatives\n3. Compute GELU using the hyperbolic tangent approximation formula\n\n### Returns\nDictionary containing activation outputs and gradients.",
+  "theory": "## Understanding the Theory: Activation Functions\n\n### Core Intuition: Why Do We Need This?\nNeural networks achieve their remarkable expressive power by stacking linear layers interspersed with non-linear activation functions and normalization layers. Without non-linear activations, any deep network would collapse into a single shallow linear regression. **Activation Functions** ensures signals propagate cleanly through dozens or hundreds of layers without vanishing or exploding.\n\nNonlinear activations enable neural networks to form deep hierarchical feature representations. In this problem, the goal is to: implement standard activation functions (relu, sigmoid, tanh, gelu) and their analytical gradients.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\operatorname{ReLU}(x) = \\max(0, x), \\quad \\sigma(x) = \\frac{1}{1 + e^{-x}}, \\quad \\tanh(x) = \\frac{e^x - e^{-x}}{e^x + e^{-x}}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute forward activations element-wise\n2. **Phase 2**: Compute analytical first derivatives\n3. **Phase 3**: Compute GELU using the hyperbolic tangent approximation formula\n\n### Practical Machine Learning Applications & Nuances\n* **Gradient Flow**: Carefully designed activation functions (like ReLU, GELU, and Swish) maintain strong gradient signals during backpropagation.\n* **Internal Covariate Shift**: Normalization techniques (like LayerNorm and RMSNorm) standardize hidden states across channels or batch dimensions, allowing models to train stably at higher learning rates.\n* **Hardware Friendly**: Modern deep learning frameworks implement these layers using fused GPU kernels to reduce memory round-trips.",
+  "examples": [
+    "Input: x = [-2.0, -0.5, 0.0, 1.0, 2.0]\n\nOutput: {\"relu\": [0.0, 0.0, 0.0, 1.0, 2.0], \"relu_grad\": [0.0, 0.0, 0.0, 1.0, 1.0], \"sigmoid\": [0.119203, 0.377541, 0.5, 0.731059, 0.880797], \"sigmoid_grad\": [0.104994, 0.235004, 0.25, 0.196612, 0.104994], \"tanh\": [-0.964028, -0.462117, 0.0, 0.761594, 0.964028], \"tanh_grad\": [0.070651, 0.786448, 1.0, 0.419974, 0.070651], \"gelu\": [-0.045402, -0.154286, 0.0, 0.841192, 1.954598]}\n\nExplanation: Evaluated dl_activation_functions under standard test conditions."
+  ],
+  "requirements": "* Function must be named `dl_activation_functions`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `dl_activation_functions`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef dl_activation_functions(x: list) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Activation Functions** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef dl_activation_functions(x: list) -> dict:\n    arr = np.array(x, dtype=np.float64)\n    relu = np.maximum(0.0, arr)\n    relu_grad = (arr > 0.0).astype(np.float64)\n    sig = 1.0 / (1.0 + np.exp(-np.clip(arr, -20.0, 20.0)))\n    sig_grad = sig * (1.0 - sig)\n    tnh = np.tanh(arr)\n    tnh_grad = 1.0 - tnh ** 2\n    gelu = 0.5 * arr * (1.0 + np.tanh(np.sqrt(2.0 / np.pi) * (arr + 0.044715 * (arr ** 3))))\n    return {\n        'relu': np.round(relu, 6).tolist(), 'relu_grad': np.round(relu_grad, 6).tolist(),\n        'sigmoid': np.round(sig, 6).tolist(), 'sigmoid_grad': np.round(sig_grad, 6).tolist(),\n        'tanh': np.round(tnh, 6).tolist(), 'tanh_grad': np.round(tnh_grad, 6).tolist(),\n        'gelu': np.round(gelu, 6).tolist()\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Negative and positive points",
+      "inputs": {
+        "x": [
+          -2.0,
+          -0.5,
+          0.0,
+          1.0,
+          2.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          2.0
+        ],
+        "relu_grad": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "sigmoid": [
+          0.119203,
+          0.377541,
+          0.5,
+          0.731059,
+          0.880797
+        ],
+        "sigmoid_grad": [
+          0.104994,
+          0.235004,
+          0.25,
+          0.196612,
+          0.104994
+        ],
+        "tanh": [
+          -0.964028,
+          -0.462117,
+          0.0,
+          0.761594,
+          0.964028
+        ],
+        "tanh_grad": [
+          0.070651,
+          0.786448,
+          1.0,
+          0.419974,
+          0.070651
+        ],
+        "gelu": [
+          -0.045402,
+          -0.154286,
+          0.0,
+          0.841192,
+          1.954598
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "dl-activation-functions-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "x": [
+          -4.0,
+          -1.0,
+          0.0,
+          2.0,
+          4.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          0.0,
+          0.0,
+          0.0,
+          2.0,
+          4.0
+        ],
+        "relu_grad": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "sigmoid": [
+          0.017986,
+          0.268941,
+          0.5,
+          0.880797,
+          0.982014
+        ],
+        "sigmoid_grad": [
+          0.017663,
+          0.196612,
+          0.25,
+          0.104994,
+          0.017663
+        ],
+        "tanh": [
+          -0.999329,
+          -0.761594,
+          0.0,
+          0.964028,
+          0.999329
+        ],
+        "tanh_grad": [
+          0.001341,
+          0.419974,
+          1.0,
+          0.070651,
+          0.001341
+        ],
+        "gelu": [
+          -7e-05,
+          -0.158808,
+          0.0,
+          1.954598,
+          3.99993
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "dl-activation-functions-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          -1.0,
+          -0.25,
+          0.0,
+          0.5,
+          1.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          0.0,
+          0.0,
+          0.0,
+          0.5,
+          1.0
+        ],
+        "relu_grad": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "sigmoid": [
+          0.268941,
+          0.437823,
+          0.5,
+          0.622459,
+          0.731059
+        ],
+        "sigmoid_grad": [
+          0.196612,
+          0.246134,
+          0.25,
+          0.235004,
+          0.196612
+        ],
+        "tanh": [
+          -0.761594,
+          -0.244919,
+          0.0,
+          0.462117,
+          0.761594
+        ],
+        "tanh_grad": [
+          0.419974,
+          0.940015,
+          1.0,
+          0.786448,
+          0.419974
+        ],
+        "gelu": [
+          -0.158808,
+          -0.100325,
+          0.0,
+          0.345714,
+          0.841192
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          2.0,
+          0.5,
+          -0.0,
+          -1.0,
+          -2.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          2.0,
+          0.5,
+          -0.0,
+          0.0,
+          0.0
+        ],
+        "relu_grad": [
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sigmoid": [
+          0.880797,
+          0.622459,
+          0.5,
+          0.268941,
+          0.119203
+        ],
+        "sigmoid_grad": [
+          0.104994,
+          0.235004,
+          0.25,
+          0.196612,
+          0.104994
+        ],
+        "tanh": [
+          0.964028,
+          0.462117,
+          -0.0,
+          -0.761594,
+          -0.964028
+        ],
+        "tanh_grad": [
+          0.070651,
+          0.786448,
+          1.0,
+          0.419974,
+          0.070651
+        ],
+        "gelu": [
+          1.954598,
+          0.345714,
+          -0.0,
+          -0.158808,
+          -0.045402
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          -6.0,
+          -1.5,
+          0.0,
+          3.0,
+          6.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          0.0,
+          0.0,
+          0.0,
+          3.0,
+          6.0
+        ],
+        "relu_grad": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "sigmoid": [
+          0.002473,
+          0.182426,
+          0.5,
+          0.952574,
+          0.997527
+        ],
+        "sigmoid_grad": [
+          0.002467,
+          0.149146,
+          0.25,
+          0.045177,
+          0.002467
+        ],
+        "tanh": [
+          -0.999988,
+          -0.905148,
+          0.0,
+          0.995055,
+          0.999988
+        ],
+        "tanh_grad": [
+          2.5e-05,
+          0.180707,
+          1.0,
+          0.009866,
+          2.5e-05
+        ],
+        "gelu": [
+          -0.0,
+          -0.100428,
+          0.0,
+          2.996363,
+          6.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          -1.0,
+          0.5,
+          1.0,
+          2.0,
+          3.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          0.0,
+          0.5,
+          1.0,
+          2.0,
+          3.0
+        ],
+        "relu_grad": [
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "sigmoid": [
+          0.268941,
+          0.622459,
+          0.731059,
+          0.880797,
+          0.952574
+        ],
+        "sigmoid_grad": [
+          0.196612,
+          0.235004,
+          0.196612,
+          0.104994,
+          0.045177
+        ],
+        "tanh": [
+          -0.761594,
+          0.462117,
+          0.761594,
+          0.964028,
+          0.995055
+        ],
+        "tanh_grad": [
+          0.419974,
+          0.786448,
+          0.419974,
+          0.070651,
+          0.009866
+        ],
+        "gelu": [
+          -0.158808,
+          0.345714,
+          0.841192,
+          1.954598,
+          2.996363
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          -4.0,
+          -2.5,
+          -2.0,
+          -1.0,
+          0.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "relu_grad": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sigmoid": [
+          0.017986,
+          0.075858,
+          0.119203,
+          0.268941,
+          0.5
+        ],
+        "sigmoid_grad": [
+          0.017663,
+          0.070104,
+          0.104994,
+          0.196612,
+          0.25
+        ],
+        "tanh": [
+          -0.999329,
+          -0.986614,
+          -0.964028,
+          -0.761594,
+          0.0
+        ],
+        "tanh_grad": [
+          0.001341,
+          0.026592,
+          0.070651,
+          0.419974,
+          1.0
+        ],
+        "gelu": [
+          -7e-05,
+          -0.015084,
+          -0.045402,
+          -0.158808,
+          0.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          2.0,
+          1.0,
+          0.0,
+          -0.5,
+          -2.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          2.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "relu_grad": [
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sigmoid": [
+          0.880797,
+          0.731059,
+          0.5,
+          0.377541,
+          0.119203
+        ],
+        "sigmoid_grad": [
+          0.104994,
+          0.196612,
+          0.25,
+          0.235004,
+          0.104994
+        ],
+        "tanh": [
+          0.964028,
+          0.761594,
+          0.0,
+          -0.462117,
+          -0.964028
+        ],
+        "tanh_grad": [
+          0.070651,
+          0.419974,
+          1.0,
+          0.786448,
+          0.070651
+        ],
+        "gelu": [
+          1.954598,
+          0.841192,
+          0.0,
+          -0.154286,
+          -0.045402
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          2.0,
+          0.5,
+          -0.0,
+          -1.0,
+          -2.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          2.0,
+          0.5,
+          -0.0,
+          0.0,
+          0.0
+        ],
+        "relu_grad": [
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sigmoid": [
+          0.880797,
+          0.622459,
+          0.5,
+          0.268941,
+          0.119203
+        ],
+        "sigmoid_grad": [
+          0.104994,
+          0.235004,
+          0.25,
+          0.196612,
+          0.104994
+        ],
+        "tanh": [
+          0.964028,
+          0.462117,
+          -0.0,
+          -0.761594,
+          -0.964028
+        ],
+        "tanh_grad": [
+          0.070651,
+          0.786448,
+          1.0,
+          0.419974,
+          0.070651
+        ],
+        "gelu": [
+          1.954598,
+          0.345714,
+          -0.0,
+          -0.158808,
+          -0.045402
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          -20.0,
+          -5.0,
+          0.0,
+          10.0,
+          20.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          0.0,
+          0.0,
+          0.0,
+          10.0,
+          20.0
+        ],
+        "relu_grad": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "sigmoid": [
+          0.0,
+          0.006693,
+          0.5,
+          0.999955,
+          1.0
+        ],
+        "sigmoid_grad": [
+          0.0,
+          0.006648,
+          0.25,
+          4.5e-05,
+          0.0
+        ],
+        "tanh": [
+          -1.0,
+          -0.999909,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "tanh_grad": [
+          0.0,
+          0.000182,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "gelu": [
+          -0.0,
+          -0.0,
+          0.0,
+          10.0,
+          20.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          -0.2,
+          -0.05,
+          0.0,
+          0.1,
+          0.2
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          0.0,
+          0.0,
+          0.0,
+          0.1,
+          0.2
+        ],
+        "relu_grad": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "sigmoid": [
+          0.450166,
+          0.487503,
+          0.5,
+          0.524979,
+          0.549834
+        ],
+        "sigmoid_grad": [
+          0.247517,
+          0.249844,
+          0.25,
+          0.249376,
+          0.247517
+        ],
+        "tanh": [
+          -0.197375,
+          -0.049958,
+          0.0,
+          0.099668,
+          0.197375
+        ],
+        "tanh_grad": [
+          0.961043,
+          0.997504,
+          1.0,
+          0.990066,
+          0.961043
+        ],
+        "gelu": [
+          -0.084149,
+          -0.024003,
+          0.0,
+          0.053983,
+          0.115851
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          3.0,
+          4.5,
+          5.0,
+          6.0,
+          7.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          3.0,
+          4.5,
+          5.0,
+          6.0,
+          7.0
+        ],
+        "relu_grad": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "sigmoid": [
+          0.952574,
+          0.989013,
+          0.993307,
+          0.997527,
+          0.999089
+        ],
+        "sigmoid_grad": [
+          0.045177,
+          0.010866,
+          0.006648,
+          0.002467,
+          0.00091
+        ],
+        "tanh": [
+          0.995055,
+          0.999753,
+          0.999909,
+          0.999988,
+          0.999998
+        ],
+        "tanh_grad": [
+          0.009866,
+          0.000494,
+          0.000182,
+          2.5e-05,
+          3e-06
+        ],
+        "gelu": [
+          2.996363,
+          4.499995,
+          5.0,
+          6.0,
+          7.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          -3.0,
+          -0.75,
+          0.0,
+          1.5,
+          3.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          0.0,
+          0.0,
+          0.0,
+          1.5,
+          3.0
+        ],
+        "relu_grad": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "sigmoid": [
+          0.047426,
+          0.320821,
+          0.5,
+          0.817574,
+          0.952574
+        ],
+        "sigmoid_grad": [
+          0.045177,
+          0.217895,
+          0.25,
+          0.149146,
+          0.045177
+        ],
+        "tanh": [
+          -0.995055,
+          -0.635149,
+          0.0,
+          0.905148,
+          0.995055
+        ],
+        "tanh_grad": [
+          0.009866,
+          0.596586,
+          1.0,
+          0.180707,
+          0.009866
+        ],
+        "gelu": [
+          -0.003637,
+          -0.170039,
+          0.0,
+          1.399572,
+          2.996363
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          4.0,
+          1.0,
+          -0.0,
+          -2.0,
+          -4.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          4.0,
+          1.0,
+          -0.0,
+          0.0,
+          0.0
+        ],
+        "relu_grad": [
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sigmoid": [
+          0.982014,
+          0.731059,
+          0.5,
+          0.119203,
+          0.017986
+        ],
+        "sigmoid_grad": [
+          0.017663,
+          0.196612,
+          0.25,
+          0.104994,
+          0.017663
+        ],
+        "tanh": [
+          0.999329,
+          0.761594,
+          -0.0,
+          -0.964028,
+          -0.999329
+        ],
+        "tanh_grad": [
+          0.001341,
+          0.419974,
+          1.0,
+          0.070651,
+          0.001341
+        ],
+        "gelu": [
+          3.99993,
+          0.841192,
+          -0.0,
+          -0.045402,
+          -7e-05
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          -0.5,
+          -0.125,
+          0.0,
+          0.25,
+          0.5
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          0.0,
+          0.0,
+          0.0,
+          0.25,
+          0.5
+        ],
+        "relu_grad": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "sigmoid": [
+          0.377541,
+          0.468791,
+          0.5,
+          0.562177,
+          0.622459
+        ],
+        "sigmoid_grad": [
+          0.235004,
+          0.249026,
+          0.25,
+          0.246134,
+          0.235004
+        ],
+        "tanh": [
+          -0.462117,
+          -0.124353,
+          0.0,
+          0.244919,
+          0.462117
+        ],
+        "tanh_grad": [
+          0.786448,
+          0.984536,
+          1.0,
+          0.940015,
+          0.786448
+        ],
+        "gelu": [
+          -0.154286,
+          -0.056283,
+          0.0,
+          0.149675,
+          0.345714
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          -3.0,
+          -1.5,
+          -1.0,
+          0.0,
+          1.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "relu_grad": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "sigmoid": [
+          0.047426,
+          0.182426,
+          0.268941,
+          0.5,
+          0.731059
+        ],
+        "sigmoid_grad": [
+          0.045177,
+          0.149146,
+          0.196612,
+          0.25,
+          0.196612
+        ],
+        "tanh": [
+          -0.995055,
+          -0.905148,
+          -0.761594,
+          0.0,
+          0.761594
+        ],
+        "tanh_grad": [
+          0.009866,
+          0.180707,
+          0.419974,
+          1.0,
+          0.419974
+        ],
+        "gelu": [
+          -0.003637,
+          -0.100428,
+          -0.158808,
+          0.0,
+          0.841192
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          -8.0,
+          -2.0,
+          0.0,
+          4.0,
+          8.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          0.0,
+          0.0,
+          0.0,
+          4.0,
+          8.0
+        ],
+        "relu_grad": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "sigmoid": [
+          0.000335,
+          0.119203,
+          0.5,
+          0.982014,
+          0.999665
+        ],
+        "sigmoid_grad": [
+          0.000335,
+          0.104994,
+          0.25,
+          0.017663,
+          0.000335
+        ],
+        "tanh": [
+          -1.0,
+          -0.964028,
+          0.0,
+          0.999329,
+          1.0
+        ],
+        "tanh_grad": [
+          0.0,
+          0.070651,
+          1.0,
+          0.001341,
+          0.0
+        ],
+        "gelu": [
+          -0.0,
+          -0.045402,
+          0.0,
+          3.99993,
+          8.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          -1.5,
+          -0.375,
+          0.0,
+          0.75,
+          1.5
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          0.0,
+          0.0,
+          0.0,
+          0.75,
+          1.5
+        ],
+        "relu_grad": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "sigmoid": [
+          0.182426,
+          0.407333,
+          0.5,
+          0.679179,
+          0.817574
+        ],
+        "sigmoid_grad": [
+          0.149146,
+          0.241413,
+          0.25,
+          0.217895,
+          0.149146
+        ],
+        "tanh": [
+          -0.905148,
+          -0.358357,
+          0.0,
+          0.635149,
+          0.905148
+        ],
+        "tanh_grad": [
+          0.180707,
+          0.87158,
+          1.0,
+          0.596586,
+          0.180707
+        ],
+        "gelu": [
+          -0.100428,
+          -0.132692,
+          0.0,
+          0.579961,
+          1.399572
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          -10.0,
+          -2.5,
+          0.0,
+          5.0,
+          10.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          0.0,
+          0.0,
+          0.0,
+          5.0,
+          10.0
+        ],
+        "relu_grad": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "sigmoid": [
+          4.5e-05,
+          0.075858,
+          0.5,
+          0.993307,
+          0.999955
+        ],
+        "sigmoid_grad": [
+          4.5e-05,
+          0.070104,
+          0.25,
+          0.006648,
+          4.5e-05
+        ],
+        "tanh": [
+          -1.0,
+          -0.986614,
+          0.0,
+          0.999909,
+          1.0
+        ],
+        "tanh_grad": [
+          0.0,
+          0.026592,
+          1.0,
+          0.000182,
+          0.0
+        ],
+        "gelu": [
+          -0.0,
+          -0.015084,
+          0.0,
+          5.0,
+          10.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-activation-functions-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          8.0,
+          9.5,
+          10.0,
+          11.0,
+          12.0
+        ]
+      },
+      "expectedOutput": {
+        "relu": [
+          8.0,
+          9.5,
+          10.0,
+          11.0,
+          12.0
+        ],
+        "relu_grad": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "sigmoid": [
+          0.999665,
+          0.999925,
+          0.999955,
+          0.999983,
+          0.999994
+        ],
+        "sigmoid_grad": [
+          0.000335,
+          7.5e-05,
+          4.5e-05,
+          1.7e-05,
+          6e-06
+        ],
+        "tanh": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "tanh_grad": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "gelu": [
+          8.0,
+          9.5,
+          10.0,
+          11.0,
+          12.0
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "dl_activation_functions",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

@@ -1,0 +1,585 @@
+{
+  "id": "priority-replay-sample",
+  "title": "Prioritized Experience Replay",
+  "description": "Prioritized Experience Replay (PER) improves on uniform replay by sampling transitions proportional to their TD error magnitude. Transitions where the agent was most \"surprised\" (large TD error) are replayed more often, leading to faster learning. To correct for the bias introduced by non-uniform sampling, importance sampling weights are applied.\n\nGiven a list of priority values, an alpha parameter (controls how much prioritization is used), and a beta parameter (controls importance sampling correction), compute the sampling probabilities and normalized importance sampling weights.\n\n### Algorithm\n\n1. Compute powered priorities:\n\n$$\np_i^{\\alpha}\n$$\n\n2. Compute sampling probabilities:\n\n$$\nP(i) = \\frac{p_i^{\\alpha}}{\\sum_j p_j^{\\alpha}}\n$$\n\n3. Compute raw importance sampling weights:\n\n$$\nw_i = (N \\cdot P(i))^{-\\beta}\n$$\n\n4. Normalize weights by the maximum weight:\n\n$$\n\\hat{w}_i = \\frac{w_i}{\\max_j w_j}\n$$\n\nReturn a two-item list containing probabilities followed by normalized weights.",
+  "seoDescription": "Compute prioritized replay sampling probabilities and normalized importance weights from transition priorities.",
+  "examples": [
+    "Input: priorities = [1, 2, 3], alpha = 1, beta = 1\n\nOutput: [[0.166667, 0.333333, 0.5], [1.0, 0.5, 0.333333]]\n\nExplanation: Probabilities follow the priorities, while inverse-probability weights reduce the influence of frequently sampled items.",
+    "Input: priorities = [1, 1, 1], alpha = 1, beta = 1\n\nOutput: [[0.333333, 0.333333, 0.333333], [1.0, 1.0, 1.0]]"
+  ],
+  "requirements": "* Raise each priority to the power alpha to control prioritization strength\n* Compute sampling probabilities by normalizing the powered priorities\n* Compute importance sampling weights as (N * P(i))^(-beta)\n* Normalize weights by dividing by the maximum weight\n* Return a list of two lists: [probabilities, normalized_weights]",
+  "theory": "## Understanding the Theory: Prioritized Experience Replay\n\n### Core Intuition: Why Do We Need This?\nIn reinforcement learning, an agent learns optimal decision policies through environmental trial-and-error without explicit target labels. The agent must balance exploiting known high-value actions against exploring uncertain actions that may yield higher cumulative discounted rewards. **Prioritized Experience Replay** provides the algorithmic rule for updating state values, policy distributions, or Q-tables.\n\nIn this problem, the objective is to implement **Prioritized Experience Replay** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\np_i^{\\alpha}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Bellman Optimality**: Dynamic programming in RL computes value functions iteratively: current value equals immediate reward plus discounted expectation of subsequent state values.\n* **Exploration Strategies**: Techniques like $\\\\epsilon$-greedy and entropy regularization prevent the policy from collapsing prematurely into sub-optimal actions.\n* **Credit Assignment**: Temporal difference learning allows agents to update value estimates after every step rather than waiting until the end of an episode.",
+  "hints": [
+    "Normalize priorities after raising each one to alpha.",
+    "Compute each raw weight from its probability, then divide all weights by their maximum."
+  ],
+  "constraints": "* priorities has at least one element with all positive values\n* alpha >= 0, beta >= 0\n* Return [probabilities, normalized_weights] where each is a list of floats\n* Time limit: 300 ms",
+  "difficulty": "Easy",
+  "starterCode": "def priority_replay_sample(priorities: list, alpha: float, beta: float) -> list:\n    \"\"\"\n    Returns sampling probabilities and normalized importance weights.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T17:15:13.080Z",
+  "updatedAt": "2026-08-23T20:14:05.557Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef priority_replay_sample(priorities: list, alpha: float, beta: float) -> list:\n    p = np.array(priorities, dtype=float) ** alpha\n    probs = p / np.sum(p)\n    N = len(priorities)\n    weights = (N * probs) ** (-beta)\n    weights /= np.max(weights)\n    return [np.round(probs, 6).tolist(), np.round(weights, 6).tolist()]\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "PriorityReplayViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "public_nonuniform",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          2,
+          3
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.166667,
+          0.333333,
+          0.5
+        ],
+        [
+          1.0,
+          0.5,
+          0.333333
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "public_uniform",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.333333,
+          0.333333,
+          0.333333
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          2,
+          3
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.166667,
+          0.333333,
+          0.5
+        ],
+        [
+          1.0,
+          0.5,
+          0.333333
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.333333,
+          0.333333,
+          0.333333
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          2,
+          3
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.166667,
+          0.333333,
+          0.5
+        ],
+        [
+          1.0,
+          0.5,
+          0.333333
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.333333,
+          0.333333,
+          0.333333
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          2,
+          3
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.166667,
+          0.333333,
+          0.5
+        ],
+        [
+          1.0,
+          0.5,
+          0.333333
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.333333,
+          0.333333,
+          0.333333
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          2,
+          3
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.166667,
+          0.333333,
+          0.5
+        ],
+        [
+          1.0,
+          0.5,
+          0.333333
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.333333,
+          0.333333,
+          0.333333
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          2,
+          3
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.166667,
+          0.333333,
+          0.5
+        ],
+        [
+          1.0,
+          0.5,
+          0.333333
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.333333,
+          0.333333,
+          0.333333
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          2,
+          3
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.166667,
+          0.333333,
+          0.5
+        ],
+        [
+          1.0,
+          0.5,
+          0.333333
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.333333,
+          0.333333,
+          0.333333
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          2,
+          3
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.166667,
+          0.333333,
+          0.5
+        ],
+        [
+          1.0,
+          0.5,
+          0.333333
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.333333,
+          0.333333,
+          0.333333
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          2,
+          3
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.166667,
+          0.333333,
+          0.5
+        ],
+        [
+          1.0,
+          0.5,
+          0.333333
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.333333,
+          0.333333,
+          0.333333
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          2,
+          3
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.166667,
+          0.333333,
+          0.5
+        ],
+        [
+          1.0,
+          0.5,
+          0.333333
+        ]
+      ]
+    },
+    {
+      "id": "priority-replay-sample-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "beta": 1,
+        "alpha": 1,
+        "priorities": [
+          1,
+          1,
+          1
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.333333,
+          0.333333,
+          0.333333
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "priority_replay_sample",
+    "returns": {
+      "type": "array"
+    },
+    "parameters": [
+      {
+        "name": "priorities",
+        "type": "array"
+      },
+      {
+        "name": "alpha",
+        "type": "number"
+      },
+      {
+        "name": "beta",
+        "type": "number"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "replay-buffer-sample",
+    "q-learning-update",
+    "sarsa-update",
+    "epsilon-greedy",
+    "td-value-update"
+  ],
+  "tags": [
+    "Reinforcement Learning"
+  ],
+  "prevId": "gae-computation",
+  "nextId": "linear-regression-closed-form",
+  "slug": "priority-replay-sample",
+  "cleanTitle": "Prioritized Experience Replay",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/priority-replay-sample",
+  "localUrl": "http://localhost:3000/problems/priority-replay-sample",
+  "studyPlan": null
+}

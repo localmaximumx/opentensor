@@ -1,0 +1,654 @@
+{
+  "id": "matrix-normalization",
+  "title": "Implement Matrix Normalization",
+  "description": "Normalize a matrix by an L1, L2, or maximum norm. Compute the selected norm over columns when axis=0, rows when axis=1, or the complete matrix when axis=None.\n\n$$\n\\lVert x \\rVert_1 = \\sum_i |x_i|\n$$\n\n$$\n\\lVert x \\rVert_2 = \\sqrt{\\sum_i x_i^2}\n$$\n\n$$\n\\lVert x \\rVert_{\\infty} = \\max_i |x_i|\n$$\n\nDivide every value by the norm of its selected slice. A zero-norm slice remains zero. Return a NumPy array with the same shape as the matrix.",
+  "seoDescription": "Normalize a NumPy matrix using the specified axis and norm while safely handling zero-magnitude slices.",
+  "examples": [
+    "Input: matrix = [[3, 4], [1, 0]], axis = 1, norm_type = \"l2\"\n\nOutput: [[0.6, 0.8], [1.0, 0.0]]\n\nExplanation: The row norms are 5 and 1, so each row is divided by its own norm.",
+    "Input: matrix = [[1, 2], [3, 4]], axis = 0, norm_type = \"l1\"\n\nOutput: [[0.25, 0.333333], [0.75, 0.666667]]",
+    "Input: matrix = [[2, 8, 4], [1, 3, 9]], axis = 1, norm_type = \"max\"\n\nOutput: [[0.25, 1.0, 0.5], [0.111111, 0.333333, 1.0]]"
+  ],
+  "requirements": "* Support l1, l2, and max norms\n* Support axis 0, axis 1, and axis None\n* Preserve zero slices without dividing by zero\n* Return a NumPy array",
+  "theory": "## Understanding the Theory: Implement Matrix Normalization\n\n### Core Intuition: Why Do We Need This?\nLinear algebra is the foundational mathematical language of artificial intelligence. Image pixels, word embeddings, and hidden representations are all structured as multi-dimensional vectors and matrices. **Implement Matrix Normalization** allows machine learning practitioners to project representations into informative subspaces, rotate coordinate frames, or decompose complex transformations into simpler geometric building blocks.\n\nIn this problem, the objective is to implement **Implement Matrix Normalization** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\lVert x \\rVert_1 = \\sum_i |x_i|\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Dimensionality & Subspaces**: Orthogonal projections and low-rank factorizations compress massive feature vectors while preserving maximum variance.\n* **Condition Numbers & Inversion**: Inverting ill-conditioned matrices (matrices with near-zero determinants) causes numerical explosion; regularization (e.g. Ridge / Tikhonov) stabilizes these systems.\n* **Tensor Core Acceleration**: Modern hardware accelerators (GPUs and TPUs) are specialized matrix multiplication engines; formulating operations linearly maximizes throughput.",
+  "hints": [
+    "Use keepdims=True when reducing so the norm broadcasts back over the matrix.",
+    "Replace zero norms with 1.0 through np.where before dividing."
+  ],
+  "constraints": "* matrix is a nonempty rectangular two-dimensional numeric list\n* axis is 0, 1, or None\n* norm_type is l1, l2, or max\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef matrix_normalization(matrix: list, axis=None, norm_type: str = \"l2\") -> np.ndarray:\n    \"\"\"\n    Returns a NumPy array with the same shape as matrix.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-10-30T20:12:28.416Z",
+  "updatedAt": "2026-03-05T20:12:10.780Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef matrix_normalization(matrix: list, axis=None, norm_type: str = \"l2\") -> np.ndarray:\n    arr = np.array(matrix, dtype=float)\n    p = 1 if norm_type == 'l1' else (np.inf if norm_type == 'max' else 2)\n    norm = np.linalg.norm(arr, ord=p, axis=axis, keepdims=True)\n    norm = np.where(norm == 0, 1.0, norm)\n    return np.round(arr / norm, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "MatrixNormalizationViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "L2 Row",
+      "inputs": {
+        "axis": 1,
+        "matrix": [
+          [
+            3,
+            4
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.6,
+          0.8
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "L1 Col",
+      "inputs": {
+        "axis": 0,
+        "matrix": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "norm_type": "l1"
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.25,
+          0.333333
+        ],
+        [
+          0.75,
+          0.666667
+        ]
+      ]
+    },
+    {
+      "id": "test-5",
+      "name": "Max Row (Ex3)",
+      "inputs": {
+        "axis": 1,
+        "matrix": [
+          [
+            2,
+            8,
+            4
+          ],
+          [
+            1,
+            3,
+            9
+          ]
+        ],
+        "norm_type": "max"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.25,
+          1.0,
+          0.5
+        ],
+        [
+          0.111111,
+          0.333333,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "matrix-normalization-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "axis": 2,
+        "matrix": [
+          [
+            6,
+            8
+          ],
+          [
+            2,
+            0
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          0.6,
+          0.8
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "axis": 0,
+        "matrix": [
+          [
+            2,
+            2
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "axis": 2,
+        "matrix": [
+          [
+            4,
+            5
+          ],
+          [
+            2,
+            1
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          0.6,
+          0.8
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "axis": 2,
+        "matrix": [
+          [
+            4,
+            6
+          ],
+          [
+            2,
+            0
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          0.6,
+          0.8
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "axis": 3,
+        "matrix": [
+          [
+            9,
+            12
+          ],
+          [
+            3,
+            0
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          0.6,
+          0.8
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "axis": 0,
+        "matrix": [
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "axis": 3,
+        "matrix": [
+          [
+            5,
+            6
+          ],
+          [
+            3,
+            2
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          0.6,
+          0.8
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "axis": 4,
+        "matrix": [
+          [
+            12,
+            16
+          ],
+          [
+            4,
+            0
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          0.6,
+          0.8
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "axis": 1,
+        "matrix": [
+          [
+            4,
+            3
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "norm_type": "2l"
+      },
+      "expectedOutput": [
+        [
+          0.8,
+          0.6
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "axis": 1,
+        "matrix": [
+          [
+            2,
+            3
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          0.5547,
+          0.83205
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "axis": 5,
+        "matrix": [
+          [
+            15,
+            20
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          0.6,
+          0.8
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "axis": 4,
+        "matrix": [
+          [
+            6,
+            7
+          ],
+          [
+            4,
+            3
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          0.6,
+          0.8
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "axis": 1,
+        "matrix": [
+          [
+            2,
+            3
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          0.5547,
+          0.83205
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "axis": 6,
+        "matrix": [
+          [
+            18,
+            24
+          ],
+          [
+            6,
+            0
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          0.6,
+          0.8
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "axis": 5,
+        "matrix": [
+          [
+            7,
+            8
+          ],
+          [
+            5,
+            4
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          0.6,
+          0.8
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "axis": 1,
+        "matrix": [
+          [
+            4,
+            5
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          0.624695,
+          0.780869
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "matrix-normalization-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "axis": 0,
+        "matrix": [
+          [
+            1,
+            2
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "norm_type": "l2"
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "matrix_normalization",
+    "parameters": [
+      {
+        "name": "matrix",
+        "type": "array",
+        "example": "[[3, 4], [1, 0]]",
+        "description": "2D matrix to normalize"
+      },
+      {
+        "name": "axis",
+        "type": "any",
+        "example": "1",
+        "description": "Axis along which to normalize (0=columns, 1=rows, null=entire matrix)"
+      },
+      {
+        "name": "norm_type",
+        "type": "string",
+        "example": "\"l2\"",
+        "description": "Norm type: 'l1', 'l2', or 'max'"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "zscore-standardization",
+    "minmax-normalization",
+    "pca-projection",
+    "covariance-matrix",
+    "pearson-correlation"
+  ],
+  "tags": [
+    "Linear Algebra",
+    "Data Processing"
+  ],
+  "prevId": "dot-product",
+  "nextId": "tfidf-vectorizer",
+  "slug": "matrix-normalization",
+  "cleanTitle": "Implement Matrix Normalization",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/matrix-normalization",
+  "localUrl": "http://localhost:3000/problems/matrix-normalization",
+  "studyPlan": null
+}

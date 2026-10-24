@@ -1,0 +1,730 @@
+{
+  "id": "cs336-l07-column-parallel-mlp",
+  "slug": "cs336-l07-column-parallel-mlp",
+  "title": "Megatron Column-Parallel Linear Layer",
+  "cleanTitle": "Megatron Column-Parallel Linear Layer",
+  "category": "pytorch",
+  "difficulty": "Medium",
+  "tags": [
+    "Distributed Computing",
+    "Neural Networks"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "language-modeling-from-scratch",
+    "title": "Language Modeling from Scratch",
+    "sectionId": "cs336-l07"
+  },
+  "seoDescription": "Compute local linear activations from column-sharded weights and reconstruct the full activation in rank order.",
+  "description": "Compute local column-parallel matrix multiplications across sharded weight ranks and reconstruct full activation tensors in rank order.\n\n**Mathematical Formulation:**\n\n$$\nY = [X W_0, X W_1, \\dots, X W_{R-1}] = X [W_0, W_1, \\dots, W_{R-1}]\n$$\n\n**Step-by-Step Implementation:**\n1. Multiply input activation X by each rank's column-sharded weight matrix W_r.\n2. Perform all-gather / concatenation of intermediate activations across column dimension.\n3. Return full concatenated activation tensor.\n\n**Returns:** Multi-dimensional list of concatenated linear outputs.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Reconstruct a Column-Parallel MLP Layer specification."
+  ],
+  "requirements": "* Must implement `cs336_l07_column_parallel_mlp` using PYTORCH.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Megatron Column-Parallel Linear Layer\n\n### Core Intuition: Why Do We Need This?\nCompute local column-parallel matrix multiplications across sharded weight ranks and reconstruct full activation tensors in rank order. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\nY = [X W_0, X W_1, \\dots, X W_{R-1}] = X [W_0, W_1, \\dots, W_{R-1}]\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Multiply input activation X by each rank's column-sharded weight matrix W_r.\n3. **Phase 3: Iterative Execution & Reduction**: Perform all-gather / concatenation of intermediate activations across column dimension.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return full concatenated activation tensor.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard PYTORCH documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `torch.Tensor` specifications."
+  ],
+  "constraints": "* Category: PYTORCH\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, PYTORCH\n",
+  "starterCode": "import numpy as np\n\ndef cs336_l07_column_parallel_mlp(x: list, weight_shards: list) -> list:\n    \"\"\"\n    Compute local column-parallel matrix multiplications across sharded weight ranks and reconstruct full activation tensors in rank order.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nCompute local column-parallel matrix multiplications across sharded weight ranks and reconstruct full activation tensors in rank order.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cs336_l07_column_parallel_mlp(x: list, weight_shards: list) -> list:\n    arr_x = np.array(x, dtype=float)\n    outs = [np.dot(arr_x, np.array(w, dtype=float)) for w in weight_shards]\n    return np.round(np.concatenate(outs, axis=-1), 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "cs336-l07-column-parallel-mlp-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0
+        ],
+        "weight_shards": [
+          [
+            [
+              1.0
+            ],
+            [
+              2.0
+            ]
+          ],
+          [
+            [
+              3.0
+            ],
+            [
+              4.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        5.0,
+        11.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "weight_shards": [
+          [
+            [
+              1.0
+            ],
+            [
+              0.0
+            ]
+          ],
+          [
+            [
+              0.0
+            ],
+            [
+              1.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0
+        ],
+        "weight_shards": [
+          [
+            [
+              2.0
+            ],
+            [
+              4.0
+            ]
+          ],
+          [
+            [
+              6.0
+            ],
+            [
+              8.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        20.0,
+        44.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          0.5,
+          1.0
+        ],
+        "weight_shards": [
+          [
+            [
+              0.5
+            ],
+            [
+              1.0
+            ]
+          ],
+          [
+            [
+              1.5
+            ],
+            [
+              2.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        1.25,
+        2.75
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          -1.0,
+          -2.0
+        ],
+        "weight_shards": [
+          [
+            [
+              -1.0
+            ],
+            [
+              -2.0
+            ]
+          ],
+          [
+            [
+              -3.0
+            ],
+            [
+              -4.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        5.0,
+        11.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          3.0,
+          6.0
+        ],
+        "weight_shards": [
+          [
+            [
+              3.0
+            ],
+            [
+              6.0
+            ]
+          ],
+          [
+            [
+              9.0
+            ],
+            [
+              12.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        45.0,
+        99.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          2.0,
+          3.0
+        ],
+        "weight_shards": [
+          [
+            [
+              2.0
+            ],
+            [
+              3.0
+            ]
+          ],
+          [
+            [
+              4.0
+            ],
+            [
+              5.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        13.0,
+        23.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          -1.0,
+          0.0
+        ],
+        "weight_shards": [
+          [
+            [
+              -1.0
+            ],
+            [
+              0.0
+            ]
+          ],
+          [
+            [
+              1.0
+            ],
+            [
+              2.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          2.0,
+          1.0
+        ],
+        "weight_shards": [
+          [
+            [
+              1.0
+            ],
+            [
+              2.0
+            ]
+          ],
+          [
+            [
+              3.0
+            ],
+            [
+              4.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        4.0,
+        10.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          -1.0,
+          -2.0
+        ],
+        "weight_shards": [
+          [
+            [
+              -1.0
+            ],
+            [
+              -2.0
+            ]
+          ],
+          [
+            [
+              -3.0
+            ],
+            [
+              -4.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        5.0,
+        11.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          10.0,
+          20.0
+        ],
+        "weight_shards": [
+          [
+            [
+              10.0
+            ],
+            [
+              20.0
+            ]
+          ],
+          [
+            [
+              30.0
+            ],
+            [
+              40.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        500.0,
+        1100.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          0.1,
+          0.2
+        ],
+        "weight_shards": [
+          [
+            [
+              0.1
+            ],
+            [
+              0.2
+            ]
+          ],
+          [
+            [
+              0.3
+            ],
+            [
+              0.4
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.05,
+        0.11
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          6.0,
+          7.0
+        ],
+        "weight_shards": [
+          [
+            [
+              6.0
+            ],
+            [
+              7.0
+            ]
+          ],
+          [
+            [
+              8.0
+            ],
+            [
+              9.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        85.0,
+        111.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          1.5,
+          3.0
+        ],
+        "weight_shards": [
+          [
+            [
+              1.5
+            ],
+            [
+              3.0
+            ]
+          ],
+          [
+            [
+              4.5
+            ],
+            [
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        11.25,
+        24.75
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          -2.0,
+          -4.0
+        ],
+        "weight_shards": [
+          [
+            [
+              -2.0
+            ],
+            [
+              -4.0
+            ]
+          ],
+          [
+            [
+              -6.0
+            ],
+            [
+              -8.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        20.0,
+        44.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          0.25,
+          0.5
+        ],
+        "weight_shards": [
+          [
+            [
+              0.25
+            ],
+            [
+              0.5
+            ]
+          ],
+          [
+            [
+              0.75
+            ],
+            [
+              1.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.3125,
+        0.6875
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0
+        ],
+        "weight_shards": [
+          [
+            [
+              0.0
+            ],
+            [
+              1.0
+            ]
+          ],
+          [
+            [
+              2.0
+            ],
+            [
+              3.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          4.0,
+          8.0
+        ],
+        "weight_shards": [
+          [
+            [
+              4.0
+            ],
+            [
+              8.0
+            ]
+          ],
+          [
+            [
+              12.0
+            ],
+            [
+              16.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        80.0,
+        176.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          0.75,
+          1.5
+        ],
+        "weight_shards": [
+          [
+            [
+              0.75
+            ],
+            [
+              1.5
+            ]
+          ],
+          [
+            [
+              2.25
+            ],
+            [
+              3.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        2.8125,
+        6.1875
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l07-column-parallel-mlp-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          5.0,
+          10.0
+        ],
+        "weight_shards": [
+          [
+            [
+              5.0
+            ],
+            [
+              10.0
+            ]
+          ],
+          [
+            [
+              15.0
+            ],
+            [
+              20.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        125.0,
+        275.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cs336_l07_column_parallel_mlp",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "any"
+      },
+      {
+        "name": "weight_shards",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/cs336-l07-column-parallel-mlp",
+  "localUrl": "http://localhost:3000/problems/cs336-l07-column-parallel-mlp"
+}

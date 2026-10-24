@@ -1,0 +1,918 @@
+{
+  "id": "global-avg-pooling",
+  "title": "Implement Global Average Pooling",
+  "description": "Implement global average pooling for channel-first feature maps by averaging every spatial location independently for each channel:\n\n$$\n\\mathrm{GAP}(x)_c = \\frac{1}{HW} \\sum_{h=1}^{H} \\sum_{w=1}^{W} x_{c,h,w}\n$$\n\nFor an input with shape $(C,H,W)$, return shape $(C,)$. For a batched input with shape $(N,C,H,W)$, return shape $(N,C)$. The output must be a floating-point NumPy array.",
+  "seoDescription": "Apply global average pooling to spatial feature maps by averaging each channel across its height and width.",
+  "examples": [
+    "Input: x = [[[1, 1], [1, 1]], [[1, 1], [1, 1]], [[1, 1], [1, 1]]]\n\nOutput: [1.0, 1.0, 1.0]\n\nExplanation: Each channel contains four ones, so every channel mean is 1.",
+    "Input: x = [[[[1, 2], [3, 4]]]]\n\nOutput: [[2.5]]"
+  ],
+  "requirements": "* Accept an unbatched or batched channel-first input\n* Average only the final two spatial dimensions\n* Return a floating-point NumPy array\n* Do not modify the input",
+  "theory": "## Understanding the Theory: Implement Global Average Pooling\n\n### Core Intuition: Why Do We Need This?\nImages possess rich spatial structure: nearby pixels are correlated, and visual patterns (edges, textures, object parts) are translation invariant. Computer vision models apply local receptive fields and weight sharing to process high-resolution visual inputs with minimal parameter overhead. **Implement Global Average Pooling** extracts localized visual features, pools spatial maps, or reconciles geometric bounding boxes.\n\nIn this problem, the objective is to implement **Implement Global Average Pooling** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\mathrm{GAP}(x)_c = \\frac{1}{HW} \\sum_{h=1}^{H} \\sum_{w=1}^{W} x_{c,h,w}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Receptive Field Growth**: Stacking convolutional layers with strides or pooling progressively expands the effective field of view, enabling deep layers to capture global semantic context.\n* **Boundary Padding & Strides**: Padding controls spatial dimension retention, while strides downsample feature resolutions efficiently without extra parameters.\n* **Vectorized im2col**: High-performance vision libraries transform sliding window convolutions into matrix multiplications (`GEMM`) via im2col operations.",
+  "hints": [
+    "The spatial dimensions are always the final two axes.",
+    "np.mean(x, axis=(-2, -1)) preserves batch and channel axes."
+  ],
+  "constraints": "* Spatial height and width are at least 1\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef global_avg_pool(x: list) -> np.ndarray:\n    \"\"\"\n    Returns a spatially averaged NumPy array with shape (C,) or (N, C).\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-10-21T18:37:14.553Z",
+  "updatedAt": "2026-03-05T19:48:17.238Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef global_avg_pool(x: list) -> np.ndarray:\n    arr = np.array(x, dtype=float)\n    if arr.ndim == 3:\n        return np.round(arr.mean(axis=(1, 2)), 6)\n    elif arr.ndim == 4:\n        return np.round(arr.mean(axis=(2, 3)), 6)\n    return np.round(arr.mean(axis=-1), 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "GlobalAvgPoolingViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "3D ones",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "4D small batch",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                1,
+                2
+              ],
+              [
+                3,
+                4
+              ]
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          2.5
+        ]
+      ]
+    },
+    {
+      "id": "global-avg-pooling-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          [
+            [
+              2,
+              2
+            ],
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            [
+              2,
+              2
+            ],
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            [
+              2,
+              2
+            ],
+            [
+              2,
+              2
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        2.0,
+        2.0,
+        2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            [
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1
+            ]
+          ],
+          [
+            [
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1
+            ]
+          ],
+          [
+            [
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            [
+              3,
+              3
+            ],
+            [
+              3,
+              3
+            ]
+          ],
+          [
+            [
+              3,
+              3
+            ],
+            [
+              3,
+              3
+            ]
+          ],
+          [
+            [
+              3,
+              3
+            ],
+            [
+              3,
+              3
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        3.0,
+        3.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            [
+              2.0,
+              2.0
+            ],
+            [
+              2.0,
+              2.0
+            ]
+          ],
+          [
+            [
+              2.0,
+              2.0
+            ],
+            [
+              2.0,
+              2.0
+            ]
+          ],
+          [
+            [
+              2.0,
+              2.0
+            ],
+            [
+              2.0,
+              2.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        2.0,
+        2.0,
+        2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            [
+              -1.0,
+              -1.0
+            ],
+            [
+              -1.0,
+              -1.0
+            ]
+          ],
+          [
+            [
+              -1.0,
+              -1.0
+            ],
+            [
+              -1.0,
+              -1.0
+            ]
+          ],
+          [
+            [
+              -1.0,
+              -1.0
+            ],
+            [
+              -1.0,
+              -1.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            [
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1
+            ]
+          ],
+          [
+            [
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1
+            ]
+          ],
+          [
+            [
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            [
+              10,
+              10
+            ],
+            [
+              10,
+              10
+            ]
+          ],
+          [
+            [
+              10,
+              10
+            ],
+            [
+              10,
+              10
+            ]
+          ],
+          [
+            [
+              10,
+              10
+            ],
+            [
+              10,
+              10
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        10.0,
+        10.0,
+        10.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            [
+              6.0,
+              6.0
+            ],
+            [
+              6.0,
+              6.0
+            ]
+          ],
+          [
+            [
+              6.0,
+              6.0
+            ],
+            [
+              6.0,
+              6.0
+            ]
+          ],
+          [
+            [
+              6.0,
+              6.0
+            ],
+            [
+              6.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        6.0,
+        6.0,
+        6.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            [
+              2,
+              2
+            ],
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            [
+              2,
+              2
+            ],
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            [
+              2,
+              2
+            ],
+            [
+              2,
+              2
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        2.0,
+        2.0,
+        2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            [
+              -2,
+              -2
+            ],
+            [
+              -2,
+              -2
+            ]
+          ],
+          [
+            [
+              -2,
+              -2
+            ],
+            [
+              -2,
+              -2
+            ]
+          ],
+          [
+            [
+              -2,
+              -2
+            ],
+            [
+              -2,
+              -2
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -2.0,
+        -2.0,
+        -2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            [
+              4,
+              4
+            ],
+            [
+              4,
+              4
+            ]
+          ],
+          [
+            [
+              4,
+              4
+            ],
+            [
+              4,
+              4
+            ]
+          ],
+          [
+            [
+              4,
+              4
+            ],
+            [
+              4,
+              4
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        4.0,
+        4.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            [
+              1,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "global-avg-pooling-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            [
+              5,
+              5
+            ],
+            [
+              5,
+              5
+            ]
+          ],
+          [
+            [
+              5,
+              5
+            ],
+            [
+              5,
+              5
+            ]
+          ],
+          [
+            [
+              5,
+              5
+            ],
+            [
+              5,
+              5
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "global_avg_pool",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": "[[[1,1],[1,1]],[[1,1],[1,1]],[[1,1],[1,1]]]",
+        "description": "Input array of shape (C,H,W) or (N,C,H,W)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "max-pooling-2d",
+    "average-pooling-2d",
+    "simple-cnn-layer",
+    "maxpool-forward",
+    "conv2d-image-filtering"
+  ],
+  "tags": [
+    "Neural Networks"
+  ],
+  "prevId": "causal-masking",
+  "nextId": "simple-cnn-layer",
+  "slug": "global-avg-pooling",
+  "cleanTitle": "Implement Global Average Pooling",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/global-avg-pooling",
+  "localUrl": "http://localhost:3000/problems/global-avg-pooling",
+  "studyPlan": null
+}

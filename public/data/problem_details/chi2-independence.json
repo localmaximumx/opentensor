@@ -1,0 +1,657 @@
+{
+  "id": "chi2-independence",
+  "title": "Chi-Square Test",
+  "description": "Given an $r\\times c$ contingency table of observed counts $O$, compute each expected count under independence:\n\n$$\nE_{ij} = \\frac{R_iC_j}{N}\n$$\n\nThen compute the chi-square statistic:\n\n$$\n\\chi^2 = \\sum_{i=1}^{r}\\sum_{j=1}^{c}\\frac{(O_{ij}-E_{ij})^2}{E_{ij}}\n$$\n\nHere, $R_i$ is row $i$'s total, $C_j$ is column $j$'s total, and $N$ is the grand total. Return chi2 as a Python float and expected as a NumPy array in a dictionary.",
+  "seoDescription": "Run a chi-square independence test on a contingency table using expected counts and the chi-square statistic.",
+  "examples": [
+    "Input: C = [[10, 20], [20, 10]]\n\nOutput: {\"chi2\": 6.666667, \"expected\": [[15.0, 15.0], [15.0, 15.0]]}\n\nExplanation: Equal row and column totals produce expected counts of 15 in every cell.",
+    "Input: C = [[20, 30], [40, 60]]\n\nOutput: {\"chi2\": 0.0, \"expected\": [[20.0, 30.0], [40.0, 60.0]]}",
+    "Input: C = [[25, 25], [25, 25]]\n\nOutput: {\"chi2\": 0.0, \"expected\": [[25.0, 25.0], [25.0, 25.0]]}"
+  ],
+  "requirements": "* Compute row totals, column totals, and the grand total\n* Build the expected table with an outer product\n* Return exactly chi2 and expected in a dictionary\n* expected must be a NumPy array",
+  "theory": "## Understanding the Theory: Chi-Square Test\n\n### Core Intuition: Why Do We Need This?\nReal-world data is inherently stochastic and incomplete. Probability theory and statistics provide principled methods to quantify uncertainty, model data-generating distributions, and evaluate confidence in empirical predictions. **Chi-Square Test** computes statistical moments, likelihoods, or uncertainty metrics across observation samples.\n\nIn this problem, the objective is to implement **Chi-Square Test** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nE_{ij} = \\frac{R_iC_j}{N}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Log-Space Calculations**: Probabilities can be extremely small; computing log-likelihoods prevents floating-point underflow when multiplying many probability densities.\n* **Maximum Likelihood Estimation**: Many machine learning loss functions (like Cross-Entropy and Mean Squared Error) directly derive from minimizing negative log-likelihood under specific distributional assumptions.\n* **Outlier Sensitivity**: High-order moments (skewness and kurtosis) reveal distribution heavy-tails, signaling when robust statistics or clipping are necessary.",
+  "hints": [
+    "Use np.outer(row_totals, column_totals) / total for expected counts.",
+    "Sum (C - expected) ** 2 / expected across the complete table."
+  ],
+  "constraints": "* C is a nonempty two-dimensional table of positive counts\n* Every expected frequency is positive\n* Use NumPy only",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef chi2_independence(C: list) -> dict:\n    \"\"\"\n    Returns a dictionary with chi2 and expected.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-08T13:01:05.034Z",
+  "updatedAt": "2026-03-05T17:03:41.938Z",
+  "solution": "### 💡 Intuition & Approach\nContingency table Pearson chi-squared goodness of fit test against expected frequencies under independence.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef chi2_independence(C: list) -> dict:\n    O = np.array(C, dtype=float)\n    row_sums = O.sum(axis=1, keepdims=True)\n    col_sums = O.sum(axis=0, keepdims=True)\n    total = O.sum()\n    E = (row_sums @ col_sums) / total\n    chi2 = float(np.sum((O - E) ** 2 / E))\n    return {\n        \"chi2\": round(chi2, 6),\n        \"expected\": np.round(E, 4).tolist()\n    }\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "Chi2IndependenceViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Basic 2x2 table",
+      "inputs": {
+        "C": [
+          [
+            10,
+            20
+          ],
+          [
+            20,
+            10
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "chi2": 6.666667,
+        "expected": [
+          [
+            15.0,
+            15.0
+          ],
+          [
+            15.0,
+            15.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Perfect independence (chi2=0)",
+      "inputs": {
+        "C": [
+          [
+            20,
+            30
+          ],
+          [
+            40,
+            60
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "chi2": 0.0,
+        "expected": [
+          [
+            20.0,
+            30.0
+          ],
+          [
+            40.0,
+            60.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": "test-7",
+      "name": "Equal frequencies",
+      "inputs": {
+        "C": [
+          [
+            25,
+            25
+          ],
+          [
+            25,
+            25
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "chi2": 0.0,
+        "expected": [
+          [
+            25.0,
+            25.0
+          ],
+          [
+            25.0,
+            25.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": "chi2-independence-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "C": [
+          [
+            20,
+            40
+          ],
+          [
+            40,
+            20
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": 13.333333,
+        "expected": [
+          [
+            30.0,
+            30.0
+          ],
+          [
+            30.0,
+            30.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "C": [
+          [
+            5,
+            10
+          ],
+          [
+            10,
+            5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": 3.333333,
+        "expected": [
+          [
+            7.5,
+            7.5
+          ],
+          [
+            7.5,
+            7.5
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "C": [
+          [
+            -10,
+            -20
+          ],
+          [
+            -20,
+            -10
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": -6.666667,
+        "expected": [
+          [
+            -15.0,
+            -15.0
+          ],
+          [
+            -15.0,
+            -15.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "C": [
+          [
+            30,
+            60
+          ],
+          [
+            60,
+            30
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": 20.0,
+        "expected": [
+          [
+            45.0,
+            45.0
+          ],
+          [
+            45.0,
+            45.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "C": [
+          [
+            11.0,
+            21.0
+          ],
+          [
+            21.0,
+            11.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": 6.25,
+        "expected": [
+          [
+            16.0,
+            16.0
+          ],
+          [
+            16.0,
+            16.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "C": [
+          [
+            8.0,
+            18.0
+          ],
+          [
+            18.0,
+            8.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": 7.692308,
+        "expected": [
+          [
+            13.0,
+            13.0
+          ],
+          [
+            13.0,
+            13.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "C": [
+          [
+            20,
+            10
+          ],
+          [
+            10,
+            20
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": 6.666667,
+        "expected": [
+          [
+            15.0,
+            15.0
+          ],
+          [
+            15.0,
+            15.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "C": [
+          [
+            -10,
+            -20
+          ],
+          [
+            -20,
+            -10
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": -6.666667,
+        "expected": [
+          [
+            -15.0,
+            -15.0
+          ],
+          [
+            -15.0,
+            -15.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "C": [
+          [
+            100,
+            200
+          ],
+          [
+            200,
+            100
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": 66.666667,
+        "expected": [
+          [
+            150.0,
+            150.0
+          ],
+          [
+            150.0,
+            150.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "C": [
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": 0.666667,
+        "expected": [
+          [
+            1.5,
+            1.5
+          ],
+          [
+            1.5,
+            1.5
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "C": [
+          [
+            15.0,
+            25.0
+          ],
+          [
+            25.0,
+            15.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": 5.0,
+        "expected": [
+          [
+            20.0,
+            20.0
+          ],
+          [
+            20.0,
+            20.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "C": [
+          [
+            15,
+            30
+          ],
+          [
+            30,
+            15
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": 10.0,
+        "expected": [
+          [
+            22.5,
+            22.5
+          ],
+          [
+            22.5,
+            22.5
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "C": [
+          [
+            -20,
+            -40
+          ],
+          [
+            -40,
+            -20
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": -13.333333,
+        "expected": [
+          [
+            -30.0,
+            -30.0
+          ],
+          [
+            -30.0,
+            -30.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "C": [
+          [
+            2,
+            5
+          ],
+          [
+            5,
+            2
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": 2.571429,
+        "expected": [
+          [
+            3.5,
+            3.5
+          ],
+          [
+            3.5,
+            3.5
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "C": [
+          [
+            9.0,
+            19.0
+          ],
+          [
+            19.0,
+            9.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": 7.142857,
+        "expected": [
+          [
+            14.0,
+            14.0
+          ],
+          [
+            14.0,
+            14.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "C": [
+          [
+            40,
+            80
+          ],
+          [
+            80,
+            40
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": 26.666667,
+        "expected": [
+          [
+            60.0,
+            60.0
+          ],
+          [
+            60.0,
+            60.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "chi2-independence-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "C": [
+          [
+            8,
+            15
+          ],
+          [
+            15,
+            8
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "chi2": 4.26087,
+        "expected": [
+          [
+            11.5,
+            11.5
+          ],
+          [
+            11.5,
+            11.5
+          ]
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "chi2_independence",
+    "parameters": [
+      {
+        "name": "C",
+        "type": "array",
+        "example": "[[10, 20], [20, 10]]",
+        "description": "2D contingency table (observed frequencies)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "t-test-one-sample",
+    "bootstrap-mean",
+    "naive-bayes-bernoulli",
+    "bernoulli-pmf",
+    "expected-value-discrete"
+  ],
+  "tags": [
+    "Probability and Statistics"
+  ],
+  "prevId": "percentiles",
+  "nextId": "t-test-one-sample",
+  "slug": "chi2-independence",
+  "cleanTitle": "Chi-Square Test",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/chi2-independence",
+  "localUrl": "http://localhost:3000/problems/chi2-independence",
+  "studyPlan": null
+}

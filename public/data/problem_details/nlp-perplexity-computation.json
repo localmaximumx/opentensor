@@ -1,0 +1,775 @@
+{
+  "catalogId": "python:nlp-perplexity-computation",
+  "id": "nlp-perplexity-computation",
+  "sourceId": "nlp-perplexity-computation",
+  "slug": "nlp-perplexity-computation",
+  "source": "python",
+  "category": "numpy",
+  "title": "Perplexity Computation",
+  "difficulty": "Medium",
+  "tags": [
+    "Metrics & Evaluation",
+    "NLP"
+  ],
+  "isFree": false,
+  "planId": "cracking-nlp",
+  "planTitle": "Cracking NLP",
+  "sectionId": "cracking-nlp-advanced-nlp",
+  "sortOrder": 123,
+  "seoDescription": "Compute sequence perplexity from token IDs and precomputed next-token logits using stable log probabilities.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Compute sequence Negative Log-Likelihood (NLL) and Perplexity from next-token vocabulary logits using numerically stable log-softmax.\n\nPerplexity measures the effective branching factor: a PPL of K indicates the model is as uncertain as choosing uniformly among K words.\n\n### Mathematical Formulation\n$$\n\\operatorname{NLL} = -\\frac{1}{T}\\sum_{t=1}^T \\log P(x_t), \\quad \\operatorname{PPL} = \\exp(\\operatorname{NLL})\n$$\n\n### Step-by-Step Implementation\n1. Apply numerically stable log-softmax across vocabulary logits\n2. Extract log probabilities of the target sequence tokens\n3. Compute average sequence cross-entropy and exponentiate for perplexity\n\n### Returns\nDictionary with 'nll_loss' and 'perplexity' values.",
+  "theory": "## Understanding the Theory: Perplexity Computation\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of discrete words and symbols arranged in sequential order. To process text with neural networks, we convert words into continuous embedding vectors and model their grammatical and semantic relationships. **Perplexity Computation** is a core sequence-processing mechanism used in modern Transformer and LLM architectures.\n\nPerplexity measures the effective branching factor: a PPL of K indicates the model is as uncertain as choosing uniformly among K words. In this problem, the goal is to: compute sequence negative log-likelihood (nll) and perplexity from next-token vocabulary logits using numerically stable log-softmax.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\operatorname{NLL} = -\\frac{1}{T}\\sum_{t=1}^T \\log P(x_t), \\quad \\operatorname{PPL} = \\exp(\\operatorname{NLL})\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Apply numerically stable log-softmax across vocabulary logits\n2. **Phase 2**: Extract log probabilities of the target sequence tokens\n3. **Phase 3**: Compute average sequence cross-entropy and exponentiate for perplexity\n\n### Practical Machine Learning Applications & Nuances\n* **Self-Attention Mechanics**: Scaled dot-product attention computes all-to-all token interactions dynamically, allowing tokens to gather context from the entire sentence simultaneously.\n* **Position Encodings**: Because self-attention is permutation-invariant, positional encodings (like sinusoidal or Rotary Position Embeddings) inject word order into the representations.\n* **Vocabulary & Subwords**: Algorithms like BPE tokenize text into frequent subwords, allowing models to represent rare words without requiring an infinite vocabulary.",
+  "examples": [
+    "Input: token_ids = [1, 2, 0], logits = [[0.1, 2.5, 0.3, 0.2], [0.5, 0.1, 3.0, 0.2], [2.0, 0.5, 0.1, 0.4]]\n\nOutput: {\"nll_loss\": 0.2994, \"perplexity\": 1.3491}\n\nExplanation: Evaluated nlp_perplexity_computation under standard test conditions."
+  ],
+  "requirements": "* Function must be named `nlp_perplexity_computation`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `nlp_perplexity_computation`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef nlp_perplexity_computation(token_ids: list, logits: list) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Perplexity Computation** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef nlp_perplexity_computation(token_ids: list, logits: list) -> dict:\n    ids, logs = np.array(token_ids, dtype=np.int64), np.array(logits, dtype=np.float64)\n    mx = np.max(logs, axis=-1, keepdims=True)\n    lp = logs - (mx + np.log(np.sum(np.exp(logs - mx), axis=-1, keepdims=True)))\n    nll = -np.mean(lp[np.arange(len(ids)), ids])\n    return {'nll_loss': round(float(nll), 4), 'perplexity': round(float(np.exp(nll)), 4)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "3 tokens over vocab size 4",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": true
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    },
+    {
+      "id": "nlp-perplexity-computation-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "token_ids": [
+          1,
+          2,
+          0
+        ],
+        "logits": [
+          [
+            0.1,
+            2.5,
+            0.3,
+            0.2
+          ],
+          [
+            0.5,
+            0.1,
+            3.0,
+            0.2
+          ],
+          [
+            2.0,
+            0.5,
+            0.1,
+            0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "nll_loss": 0.2994,
+        "perplexity": 1.3491
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "nlp_perplexity_computation",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

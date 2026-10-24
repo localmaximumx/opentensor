@@ -1,0 +1,902 @@
+{
+  "id": "image-rotation-nearest",
+  "title": "Image Rotation (Nearest Neighbor)",
+  "description": "Rotate a two-dimensional image counterclockwise around its center using nearest-neighbor sampling. The output must have the same height and width as the input image.\n\nFor an image with H rows and W columns, define the center row coordinate:\n\n$$\nc_y = \\frac{H - 1}{2}\n$$\n\nDefine the center column coordinate:\n\n$$\nc_x = \\frac{W - 1}{2}\n$$\n\nLet a be the supplied angle in degrees. Convert it to radians:\n\n$$\n\\theta = a\\frac{\\pi}{180}\n$$\n\nFor each output position with row i and column j, subtract the image center to obtain dy = i - c_y and dx = j - c_x. Use inverse rotation to locate the corresponding source row:\n\n$$\ns_y = c_y + dy\\cos(\\theta) + dx\\sin(\\theta)\n$$\n\nCompute the corresponding source column:\n\n$$\ns_x = c_x - dy\\sin(\\theta) + dx\\cos(\\theta)\n$$\n\nRound s_y and s_x to the nearest integers using Python round. If both rounded coordinates are inside the input image, copy that source pixel. Otherwise, place 0 at the output position.\n\nHere, i and j are output coordinates, s_y and s_x are source coordinates, and theta is the counterclockwise rotation angle in radians.\n\nReturn the rotated image as a two-dimensional list with the same dimensions as the input image.",
+  "seoDescription": "Rotate a 2D image around its center with nearest-neighbor sampling and defined out-of-bounds handling.",
+  "examples": [
+    "Input: image = [[1, 2, 3], [4, 5, 6], [7, 8, 9]], angle_degrees = 0\n\nOutput: [[1, 2, 3], [4, 5, 6], [7, 8, 9]]\n\nExplanation: A zero-degree inverse mapping selects every original pixel.",
+    "Input: image = [[1, 2, 3], [4, 5, 6], [7, 8, 9]], angle_degrees = 180\n\nOutput: [[9, 8, 7], [6, 5, 4], [3, 2, 1]]"
+  ],
+  "requirements": "* Rotate around the image center, not the top-left corner\n* Use inverse mapping: for each output pixel, find the source pixel\n* Apply round() for nearest neighbor selection\n* Fill out-of-bounds pixels with 0",
+  "theory": "## Understanding the Theory: Image Rotation (Nearest Neighbor)\n\n### Core Intuition: Why Do We Need This?\nImages possess rich spatial structure: nearby pixels are correlated, and visual patterns (edges, textures, object parts) are translation invariant. Computer vision models apply local receptive fields and weight sharing to process high-resolution visual inputs with minimal parameter overhead. **Image Rotation (Nearest Neighbor)** extracts localized visual features, pools spatial maps, or reconciles geometric bounding boxes.\n\nIn this problem, the objective is to implement **Image Rotation (Nearest Neighbor)** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nc_y = \\frac{H - 1}{2}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Receptive Field Growth**: Stacking convolutional layers with strides or pooling progressively expands the effective field of view, enabling deep layers to capture global semantic context.\n* **Boundary Padding & Strides**: Padding controls spatial dimension retention, while strides downsample feature resolutions efficiently without extra parameters.\n* **Vectorized im2col**: High-performance vision libraries transform sliding window convolutions into matrix multiplications (`GEMM`) via im2col operations.",
+  "hints": [
+    "Map each output coordinate backward through the inverse rotation.",
+    "Round the source coordinates and use zero when they fall outside the image."
+  ],
+  "constraints": "* Image has at least one pixel\n* angle_degrees can be any number (positive = counterclockwise)\n* Output has the same dimensions as the input\n* Out-of-bounds pixels are filled with 0\n* Time limit: 300 ms",
+  "difficulty": "Medium",
+  "starterCode": "import math\n\ndef rotate_image(image: list, angle_degrees: float) -> list:\n    \"\"\"\n    Returns the counterclockwise nearest-neighbor rotation.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T15:48:34.812Z",
+  "updatedAt": "2026-08-23T19:53:15.450Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport math\nimport numpy as np\n\ndef rotate_image(image: list, angle_degrees: float) -> list:\n    if angle_degrees == 0:\n        return image\n    arr = np.array(image)\n    H, W = arr.shape\n    rad = math.radians(angle_degrees)\n    cos_a, sin_a = math.cos(rad), math.sin(rad)\n    cy, cx = (H - 1) / 2.0, (W - 1) / 2.0\n    out = np.zeros_like(arr)\n    for y in range(H):\n        for x in range(W):\n            src_x = cos_a * (x - cx) + sin_a * (y - cy) + cx\n            src_y = -sin_a * (x - cx) + cos_a * (y - cy) + cy\n            nx, ny = int(round(src_x)), int(round(src_y))\n            if 0 <= nx < W and 0 <= ny < H:\n                out[y, x] = arr[ny, nx]\n    return out.tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "ImageRotationNearestViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "0 degrees",
+      "inputs": {
+        "image": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4,
+            5,
+            6
+          ],
+          [
+            7,
+            8,
+            9
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          4,
+          5,
+          6
+        ],
+        [
+          7,
+          8,
+          9
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "180 degrees",
+      "inputs": {
+        "image": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4,
+            5,
+            6
+          ],
+          [
+            7,
+            8,
+            9
+          ]
+        ],
+        "angle_degrees": 180
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          9,
+          8,
+          7
+        ],
+        [
+          6,
+          5,
+          4
+        ],
+        [
+          3,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "image-rotation-nearest-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "image": [
+          [
+            2,
+            4,
+            6
+          ],
+          [
+            8,
+            10,
+            12
+          ],
+          [
+            14,
+            16,
+            18
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "expectedOutput": [
+        [
+          2,
+          4,
+          6
+        ],
+        [
+          8,
+          10,
+          12
+        ],
+        [
+          14,
+          16,
+          18
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "image": [
+          [
+            0,
+            1,
+            2
+          ],
+          [
+            2,
+            2,
+            3
+          ],
+          [
+            4,
+            4,
+            4
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "expectedOutput": [
+        [
+          0,
+          1,
+          2
+        ],
+        [
+          2,
+          2,
+          3
+        ],
+        [
+          4,
+          4,
+          4
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "image": [
+          [
+            -1,
+            -2,
+            -3
+          ],
+          [
+            -4,
+            -5,
+            -6
+          ],
+          [
+            -7,
+            -8,
+            -9
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "expectedOutput": [
+        [
+          -1,
+          -2,
+          -3
+        ],
+        [
+          -4,
+          -5,
+          -6
+        ],
+        [
+          -7,
+          -8,
+          -9
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "image": [
+          [
+            3,
+            6,
+            9
+          ],
+          [
+            12,
+            15,
+            18
+          ],
+          [
+            21,
+            24,
+            27
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "expectedOutput": [
+        [
+          3,
+          6,
+          9
+        ],
+        [
+          12,
+          15,
+          18
+        ],
+        [
+          21,
+          24,
+          27
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "image": [
+          [
+            2.0,
+            3.0,
+            4.0
+          ],
+          [
+            5.0,
+            6.0,
+            7.0
+          ],
+          [
+            8.0,
+            9.0,
+            10.0
+          ]
+        ],
+        "angle_degrees": 1.0
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          3.0,
+          4.0
+        ],
+        [
+          5.0,
+          6.0,
+          7.0
+        ],
+        [
+          8.0,
+          9.0,
+          10.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "image": [
+          [
+            -1.0,
+            0.0,
+            1.0
+          ],
+          [
+            2.0,
+            3.0,
+            4.0
+          ],
+          [
+            5.0,
+            6.0,
+            7.0
+          ]
+        ],
+        "angle_degrees": -2.0
+      },
+      "expectedOutput": [
+        [
+          -1.0,
+          0.0,
+          1.0
+        ],
+        [
+          2.0,
+          3.0,
+          4.0
+        ],
+        [
+          5.0,
+          6.0,
+          7.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "image": [
+          [
+            3,
+            2,
+            1
+          ],
+          [
+            6,
+            5,
+            4
+          ],
+          [
+            9,
+            8,
+            7
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "expectedOutput": [
+        [
+          3,
+          2,
+          1
+        ],
+        [
+          6,
+          5,
+          4
+        ],
+        [
+          9,
+          8,
+          7
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "image": [
+          [
+            -1,
+            -2,
+            -3
+          ],
+          [
+            -4,
+            -5,
+            -6
+          ],
+          [
+            -7,
+            -8,
+            -9
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "expectedOutput": [
+        [
+          -1,
+          -2,
+          -3
+        ],
+        [
+          -4,
+          -5,
+          -6
+        ],
+        [
+          -7,
+          -8,
+          -9
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "image": [
+          [
+            10,
+            20,
+            30
+          ],
+          [
+            40,
+            50,
+            60
+          ],
+          [
+            70,
+            80,
+            90
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "expectedOutput": [
+        [
+          10,
+          20,
+          30
+        ],
+        [
+          40,
+          50,
+          60
+        ],
+        [
+          70,
+          80,
+          90
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "expectedOutput": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "image": [
+          [
+            6.0,
+            7.0,
+            8.0
+          ],
+          [
+            9.0,
+            10.0,
+            11.0
+          ],
+          [
+            12.0,
+            13.0,
+            14.0
+          ]
+        ],
+        "angle_degrees": 5.0
+      },
+      "expectedOutput": [
+        [
+          6.0,
+          7.0,
+          8.0
+        ],
+        [
+          9.0,
+          10.0,
+          11.0
+        ],
+        [
+          12.0,
+          13.0,
+          14.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "image": [
+          [
+            2,
+            3,
+            4
+          ],
+          [
+            6,
+            8,
+            9
+          ],
+          [
+            10,
+            12,
+            14
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "expectedOutput": [
+        [
+          2,
+          3,
+          4
+        ],
+        [
+          6,
+          8,
+          9
+        ],
+        [
+          10,
+          12,
+          14
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "image": [
+          [
+            -2,
+            -4,
+            -6
+          ],
+          [
+            -8,
+            -10,
+            -12
+          ],
+          [
+            -14,
+            -16,
+            -18
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "expectedOutput": [
+        [
+          -2,
+          -4,
+          -6
+        ],
+        [
+          -8,
+          -10,
+          -12
+        ],
+        [
+          -14,
+          -16,
+          -18
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            1,
+            2
+          ],
+          [
+            2,
+            2,
+            2
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "expectedOutput": [
+        [
+          0,
+          0,
+          1
+        ],
+        [
+          1,
+          1,
+          2
+        ],
+        [
+          2,
+          2,
+          2
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "image": [
+          [
+            0.0,
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0,
+            5.0
+          ],
+          [
+            6.0,
+            7.0,
+            8.0
+          ]
+        ],
+        "angle_degrees": -1.0
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          1.0,
+          2.0
+        ],
+        [
+          3.0,
+          4.0,
+          5.0
+        ],
+        [
+          6.0,
+          7.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "image": [
+          [
+            4,
+            8,
+            12
+          ],
+          [
+            16,
+            20,
+            24
+          ],
+          [
+            28,
+            32,
+            36
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "expectedOutput": [
+        [
+          4,
+          8,
+          12
+        ],
+        [
+          16,
+          20,
+          24
+        ],
+        [
+          28,
+          32,
+          36
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "image": [
+          [
+            1,
+            2,
+            2
+          ],
+          [
+            3,
+            4,
+            4
+          ],
+          [
+            5,
+            6,
+            7
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "expectedOutput": [
+        [
+          1,
+          2,
+          2
+        ],
+        [
+          3,
+          4,
+          4
+        ],
+        [
+          5,
+          6,
+          7
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "image-rotation-nearest-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "image": [
+          [
+            5,
+            10,
+            15
+          ],
+          [
+            20,
+            25,
+            30
+          ],
+          [
+            35,
+            40,
+            45
+          ]
+        ],
+        "angle_degrees": 0
+      },
+      "expectedOutput": [
+        [
+          5,
+          10,
+          15
+        ],
+        [
+          20,
+          25,
+          30
+        ],
+        [
+          35,
+          40,
+          45
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "rotate_image",
+    "parameters": [
+      {
+        "name": "image",
+        "type": "array",
+        "example": "[[1,2,3],[4,5,6],[7,8,9]]",
+        "description": "2D image array"
+      },
+      {
+        "name": "angle_degrees",
+        "type": "number",
+        "example": "90",
+        "description": "Rotation angle (counterclockwise)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "bilinear-interpolation",
+    "rotate-around-z",
+    "homogeneous-transform",
+    "gaussian-blur-kernel",
+    "conv2d-image-filtering"
+  ],
+  "tags": [
+    "Computer Vision"
+  ],
+  "prevId": "morphological-operations",
+  "nextId": "elu-activation",
+  "slug": "image-rotation-nearest",
+  "cleanTitle": "Image Rotation (Nearest Neighbor)",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/image-rotation-nearest",
+  "localUrl": "http://localhost:3000/problems/image-rotation-nearest",
+  "studyPlan": null
+}

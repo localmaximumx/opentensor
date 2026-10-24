@@ -1,0 +1,533 @@
+{
+  "id": "bert-wordpiece",
+  "title": "WordPiece Tokenization",
+  "description": "Implement BERT WordPiece tokenization with greedy longest-match-first segmentation. Lowercase the input and split it on whitespace. For each word, choose the longest vocabulary token beginning at the current character. A token after the first piece must use the continuation prefix ##. If a word cannot be fully segmented, or its length exceeds max_word_length, emit only unk_token for that word.\n\nFor example, when play and ##ing are in the vocabulary, playing becomes play followed by ##ing. Return all pieces from all words as a Python list of strings in their original word order.",
+  "seoDescription": "Implement BERT WordPiece tokenization with greedy longest-match subwords, continuation prefixes, and unknown-token fallback.",
+  "examples": [
+    "Input: text = \"Playing cats\", vocab = {\"play\":1,\"##ing\":2,\"cat\":3,\"##s\":4,\"[UNK]\":0}, unk_token = \"[UNK]\", max_word_length = 20\n\nOutput: [\"play\",\"##ing\",\"cat\",\"##s\"]\n\nExplanation: The tokenizer chooses play first, then matches the remaining characters with the continuation token ##ing.",
+    "Input: text = \"unaffable\", vocab = {\"un\":1,\"##aff\":2,\"##able\":3,\"##a\":4,\"##ff\":5,\"[UNK]\":0}, unk_token = \"[UNK]\", max_word_length = 20\n\nOutput: [\"un\",\"##aff\",\"##able\"]",
+    "Input: text = \"known mystery\", vocab = {\"known\":1,\"my\":2,\"[UNK]\":0}, unk_token = \"[UNK]\", max_word_length = 20\n\nOutput: [\"known\",\"[UNK]\"]"
+  ],
+  "requirements": "- Use ordinary Python string and list operations.\n- Lowercase the text before tokenizing.\n- Use greedy longest-match-first segmentation for each word.\n- Prefix continuation candidates with ##.\n- Replace an entire unsegmentable or overlong word with unk_token.\n- Return a Python list of strings.",
+  "theory": "# <span style=\"font-size: 20px;\">WordPiece Tokenization</span>\n\n<span style=\"font-size: 14px;\">WordPiece is a subword tokenization algorithm that splits text into subword units drawn from a fixed vocabulary. Introduced by Schuster and Nakajima (2012) for Japanese and Korean segmentation, it was later adopted as the core tokenizer for BERT (Devlin et al., 2018). The algorithm uses greedy longest-match-first: given a word, it finds the longest prefix in the vocabulary, emits it, and continues from where it left off.</span>\n\n<span style=\"font-size: 14px;\">In BERT, WordPiece operates on a 30,000-token vocabulary. Every input sentence is first split into whitespace-delimited words, then each word is broken into WordPiece tokens. The first subword token retains its original form; all subsequent subword tokens within the same word are prefixed with `##` to signal continuation. If the algorithm cannot segment a word at all, the entire word is replaced by `[UNK]`.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is / What It Does</span>\n\n<span style=\"font-size: 14px;\">Tokenization converts raw text into discrete units a model can process. Three broad strategies exist:</span>\n\n* <span style=\"font-size: 14px;\">**Word-level tokenization:** Each whitespace-separated word becomes one token. This creates enormous vocabularies (English alone has hundreds of thousands of word forms) and causes out-of-vocabulary (OOV) failures on unseen words.</span>\n* <span style=\"font-size: 14px;\">**Character-level tokenization:** Each character becomes one token. The vocabulary is tiny and OOV is eliminated, but sequences become extremely long, making self-attention quadratically expensive. Individual characters carry minimal semantic information.</span>\n* <span style=\"font-size: 14px;\">**Subword tokenization:** Words are split into pieces that balance frequency and coverage. Common words stay whole (\"the\", \"is\"), while rare words are decomposed into meaningful sub-units (\"un\", \"##happi\", \"##ness\"). The vocabulary stays compact and OOV is handled gracefully.</span>\n\n<span style=\"font-size: 14px;\">WordPiece maintains a fixed-size vocabulary of subword units covering all training text. Frequent words appear as single tokens; rare words decompose into known subwords carrying partial semantics. This is why BERT handles misspellings, neologisms, and morphological variants without [UNK].</span>\n\n<span style=\"font-size: 14px;\">The `##` prefix disambiguates word-initial tokens from continuations. \"un\" starting \"unhappy\" is token `un`, while \"un\" mid-word would be `##un`. This lets the model reconstruct word boundaries from a flat token sequence.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">WordPiece tokenization at inference time is defined by a greedy algorithm rather than a closed-form equation. The core logic can be expressed formally as follows.</span>\n\n<span style=\"font-size: 14px;\">Let $w = c_1 c_2 \\dots c_n$ be a word of $n$ characters, and let $V$ be the vocabulary. Define the tokenization function $\\text{WordPiece}(w, V)$:</span>\n\n<span style=\"font-size: 14px;\">**Initialize:**</span>\n\n$$\n\\text{tokens} = [\\,], \\quad \\text{start} = 0\n$$\n\n<span style=\"font-size: 14px;\">**While** $\\text{start} < n$:</span>\n\n$$\n\\text{end} = n, \\quad \\text{cur\\_substr} = \\text{None}\n$$\n\n<span style=\"font-size: 14px;\">**While** $\\text{start} < \\text{end}$:</span>\n\n$$\n\\text{substr} = \\begin{cases} w[\\text{start}:\\text{end}] & \\text{if } \\text{start} = 0 \\\\ \\texttt{\\#\\#} + w[\\text{start}:\\text{end}] & \\text{if } \\text{start} > 0 \\end{cases}\n$$\n\n$$\n\\text{if } \\text{substr} \\in V: \\quad \\text{cur\\_substr} = \\text{substr}, \\quad \\text{break}\n$$\n\n$$\n\\text{end} = \\text{end} - 1\n$$\n\n<span style=\"font-size: 14px;\">**If** $\\text{cur\\_substr}$ is None: return $[\\texttt{[UNK]}]$</span>\n\n$$\n\\text{tokens.append}(\\text{cur\\_substr}), \\quad \\text{start} = \\text{end}\n$$\n\n<span style=\"font-size: 14px;\">**Return** tokens</span>\n\n<span style=\"font-size: 14px;\">The key insight is greedy longest-match: at each position, try the longest possible substring first and shrink until a vocabulary match is found. This is $O(n^2)$ worst case for a word of length $n$, though in practice words are short and vocabulary lookups use hash sets for $O(1)$ membership testing.</span>\n\n<span style=\"font-size: 14px;\">The vocabulary construction phase (offline, before training) uses a different criterion. WordPiece merges the token pair $(x, y)$ that maximizes:</span>\n\n$$\n\\text{score}(x, y) = \\frac{P(xy)}{P(x) \\cdot P(y)}\n$$\n\n<span style=\"font-size: 14px;\">where $P$ denotes corpus frequency. This is pointwise mutual information -- it favors merging pairs that co-occur more than expected by chance, not merely pairs that are frequent in absolute terms.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Algorithm Step by Step</span>\n\n<span style=\"font-size: 14px;\">The WordPiece tokenization algorithm for a single word proceeds as follows:</span>\n\n* <span style=\"font-size: 14px;\">**Step 1 -- Set the start pointer to position 0.** The first token emitted will not have the `##` prefix.</span>\n* <span style=\"font-size: 14px;\">**Step 2 -- Set the end pointer to the word length.** The candidate substring is `word[start:end]`. We try the longest possible substring first.</span>\n* <span style=\"font-size: 14px;\">**Step 3 -- Check if the candidate is in the vocabulary.** If `start > 0`, prepend `##` before checking. If found, emit it and go to Step 5.</span>\n* <span style=\"font-size: 14px;\">**Step 4 -- Shrink the candidate.** Decrement `end` by 1 and repeat Step 3. If `end` reaches `start` without finding a match, return `[UNK]` for the entire word.</span>\n* <span style=\"font-size: 14px;\">**Step 5 -- Advance the start pointer.** Set `start = end`. If `start` has reached the end of the word, we are done. Otherwise, go to Step 2.</span>\n\n<span style=\"font-size: 14px;\">Critical details:</span>\n\n* <span style=\"font-size: 14px;\">**The `##` prefix is only added when `start > 0`.** The first subword of every word is unprefixed. All continuation subwords carry `##`.</span>\n* <span style=\"font-size: 14px;\">**Failure is all-or-nothing.** If at any position the algorithm cannot find even a single-character match, the entire original word becomes `[UNK]`. Partial results are discarded.</span>\n* <span style=\"font-size: 14px;\">**Greedy does not guarantee optimal segmentation.** The longest match at position $i$ may prevent a globally better segmentation. WordPiece accepts this tradeoff for speed.</span>\n* <span style=\"font-size: 14px;\">**The vocabulary must contain all individual characters from training data.** If even one character is missing, any word containing it becomes `[UNK]`.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">The original BERT paper (Devlin et al., 2018) states: \"We use WordPiece embeddings with a 30,000 token vocabulary.\" Here is how WordPiece fits into BERT:</span>\n\n<span style=\"font-size: 14px;\">**Vocabulary construction.** The 30K vocabulary is built offline before training. Starting from individual characters, the algorithm iteratively merges token pairs that maximize corpus likelihood. This differs from BPE, which merges the most frequent pair. The process repeats until 30,000 tokens are reached.</span>\n\n<span style=\"font-size: 14px;\">**Special tokens.** BERT's vocabulary includes five special tokens:</span>\n\n* <span style=\"font-size: 14px;\">**[CLS]:** Prepended to every input. Its final hidden state serves as the sequence representation for classification.</span>\n* <span style=\"font-size: 14px;\">**[SEP]:** Inserted between sentence pairs and at the end. Marks sentence boundaries.</span>\n* <span style=\"font-size: 14px;\">**[PAD]:** Fills sequences to uniform length. Masked out in attention.</span>\n* <span style=\"font-size: 14px;\">**[MASK]:** Replaces tokens during Masked Language Model pre-training. The model predicts the original token from context.</span>\n* <span style=\"font-size: 14px;\">**[UNK]:** Represents words that cannot be segmented into known subwords.</span>\n\n<span style=\"font-size: 14px;\">**Cased vs. uncased models.** The uncased model lowercases text and strips accents, reducing vocabulary pressure but losing case info. The cased model preserves casing, important for NER where \"Apple\" (company) differs from \"apple\" (fruit).</span>\n\n<span style=\"font-size: 14px;\">**Input representation.** After tokenization, each token receives three embeddings summed element-wise:</span>\n\n* <span style=\"font-size: 14px;\">**Token embedding:** Learned vector for each vocabulary entry (30,000 vectors).</span>\n* <span style=\"font-size: 14px;\">**Segment embedding:** Indicates Sentence A vs. Sentence B (two vectors).</span>\n* <span style=\"font-size: 14px;\">**Position embedding:** Encodes absolute position (up to 512 vectors).</span>\n\n<span style=\"font-size: 14px;\">**Maximum sequence length.** BERT supports up to 512 WordPiece tokens including [CLS] and [SEP]. Subword expansion means the effective word-level context window is shorter than 512.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">WordPiece vs BPE vs Unigram</span>\n\n<span style=\"font-size: 14px;\">Three subword tokenization algorithms dominate modern NLP. They share the goal of decomposing text into subword units but differ in how they build vocabularies and segment at inference.</span>\n\n* <span style=\"font-size: 14px;\">**BPE (GPT, GPT-2, GPT-3, RoBERTa):** Build bottom-up by merging the most frequent adjacent pair. Inference replays merges in learned order. Deterministic.</span>\n* <span style=\"font-size: 14px;\">**WordPiece (BERT, DistilBERT, ELECTRA):** Build bottom-up by merging the pair that maximizes $P(xy) / (P(x) \\cdot P(y))$ -- likelihood gain rather than raw frequency. Inference uses greedy longest-match on the final vocabulary; merge history is discarded. Deterministic.</span>\n* <span style=\"font-size: 14px;\">**Unigram (T5, XLNet, ALBERT, mBART):** Build top-down by starting with a large vocabulary and pruning tokens whose removal least decreases corpus likelihood. Inference finds the optimal segmentation via Viterbi. Can sample multiple segmentations for subword regularization.</span>\n\n<span style=\"font-size: 14px;\">**Key distinctions:**</span>\n\n* <span style=\"font-size: 14px;\">**Build direction:** BPE and WordPiece merge bottom-up. Unigram prunes top-down.</span>\n* <span style=\"font-size: 14px;\">**Merge/prune criterion:** BPE uses frequency. WordPiece uses likelihood ratio. Unigram uses likelihood loss on removal.</span>\n* <span style=\"font-size: 14px;\">**Inference:** BPE replays merges. WordPiece does greedy longest-match. Unigram uses Viterbi or sampling.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Consider tokenizing \"unhappiness\" with vocabulary $V = \\{$\"un\", \"happy\", \"##happi\", \"##happiness\", \"##ness\", \"##i\", \"##n\", \"##e\", \"##s\", \"a\", \"h\", \"i\", \"n\", \"p\", \"s\", \"u\", \"e\", ...$\\}$</span>\n\n<span style=\"font-size: 14px;\">**Iteration 1 (start=0):**</span>\n\n* <span style=\"font-size: 14px;\">**Try** word[0:11] = \"unhappiness\". Not in $V$.</span>\n* <span style=\"font-size: 14px;\">**Try** word[0:10] through word[0:3]. None in $V$.</span>\n* <span style=\"font-size: 14px;\">**Try** word[0:2] = \"un\". Found! Emit \"un\". Set start=2.</span>\n\n<span style=\"font-size: 14px;\">**Iteration 2 (start=2):**</span>\n\n* <span style=\"font-size: 14px;\">**Try** \"##\" + word[2:11] = \"##happiness\". Found! Emit \"##happiness\". Set start=11.</span>\n\n<span style=\"font-size: 14px;\">**start=11 = word length. Result:** [\"un\", \"##happiness\"]</span>\n\n<span style=\"font-size: 14px;\">Now with $V_2$ where \"##happiness\" is absent but \"##happi\" and \"##ness\" are present:</span>\n\n<span style=\"font-size: 14px;\">**Iteration 1 (start=0):**</span>\n\n* <span style=\"font-size: 14px;\">**Try** word[0:11] through word[0:3]. None found.</span>\n* <span style=\"font-size: 14px;\">**Try** word[0:2] = \"un\". Found! Emit \"un\". Set start=2.</span>\n\n<span style=\"font-size: 14px;\">**Iteration 2 (start=2):**</span>\n\n* <span style=\"font-size: 14px;\">**Try** \"##\" + word[2:11] through \"##\" + word[2:8]. None in $V_2$.</span>\n* <span style=\"font-size: 14px;\">**Try** \"##\" + word[2:7] = \"##happi\". Found! Emit \"##happi\". Set start=7.</span>\n\n<span style=\"font-size: 14px;\">**Iteration 3 (start=7):**</span>\n\n* <span style=\"font-size: 14px;\">**Try** \"##\" + word[7:11] = \"##ness\". Found! Emit \"##ness\". Set start=11.</span>\n\n<span style=\"font-size: 14px;\">**Result:** [\"un\", \"##happi\", \"##ness\"]</span>\n\n<span style=\"font-size: 14px;\">The same word produces two tokens with $V$ and three with $V_2$. Vocabulary composition directly determines segmentation granularity. In both cases the algorithm greedily takes the longest available match at each position.</span>\n\n<span style=\"font-size: 14px;\">**The [UNK] case.** If we tokenize \"cafe\" with an accent on the final character but that accented character is absent from the vocabulary, the algorithm fails at that position and the entire word becomes [UNK]. The unaccented \"cafe\" tokenizes fine -- this is why BERT's uncased model strips accents.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Modern Context</span>\n\n<span style=\"font-size: 14px;\">WordPiece was state-of-the-art when BERT was published in 2018, but tokenization has evolved significantly.</span>\n\n<span style=\"font-size: 14px;\">**SentencePiece (Kudo, 2018).** A language-independent library that treats input as a raw byte stream, removing the need for whitespace-based pre-tokenization. It implements both BPE and Unigram, making it applicable to languages without word boundaries (Chinese, Japanese, Thai). Used by T5, ALBERT, XLNet, and mBART.</span>\n\n<span style=\"font-size: 14px;\">**Byte-level BPE (Radford et al., 2019).** GPT-2 introduced BPE on UTF-8 bytes instead of Unicode characters. The base vocabulary is 256 byte values, so any text can be encoded without [UNK]. GPT-3 and GPT-4 use the same approach via tiktoken, a fast Rust-based tokenizer with a 100K vocabulary (cl100k_base).</span>\n\n<span style=\"font-size: 14px;\">**HuggingFace Tokenizers (2020).** A Rust-based library with fast implementations of WordPiece, BPE, and Unigram behind a unified API. Makes BERT tokenization microsecond-fast.</span>\n\n<span style=\"font-size: 14px;\">**Vocabulary size trends.** BERT uses 30K. GPT-2 uses 50K. T5 uses 32K. GPT-4 uses 100K. Larger vocabularies reduce sequence length but increase embedding table size.</span>\n\n<span style=\"font-size: 14px;\">**Multilingual challenges.** Multilingual BERT uses a shared 110K vocabulary across 104 languages. Non-Latin scripts fragment heavily, increasing sequence length -- a known issue called \"fertility\" disparity.</span>\n\n<span style=\"font-size: 14px;\">**Byte-level models.** ByT5 and MegaByte operate directly on raw bytes, bypassing tokenization but producing much longer sequences.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls and Common Mistakes</span>\n\n* <span style=\"font-size: 14px;\">**Greedy is not optimal.** Consider a vocabulary with \"a\", \"ab\", \"##b\", \"##bc\", \"##c\". For \"abc\", greedy matches \"ab\" + \"##c\", but \"a\" + \"##bc\" might be semantically better. Unigram avoids this via Viterbi.</span>\n\n* <span style=\"font-size: 14px;\">**A single unknown character kills the entire word.** If the vocabulary lacks a character, the algorithm fails at that position and returns [UNK] for the whole word. All other valid characters are lost.</span>\n\n* <span style=\"font-size: 14px;\">**Case sensitivity matters.** BERT's cased model treats \"The\" and \"the\" as different tokens. The uncased model lowercases everything, but then \"US\" (country) and \"us\" (pronoun) become identical.</span>\n\n* <span style=\"font-size: 14px;\">**The `##` prefix must be handled consistently.** Forgetting `##` for continuations, or prepending it for the first token, produces vocabulary misses leading to spurious [UNK] or embedding lookup errors.</span>\n\n* <span style=\"font-size: 14px;\">**Vocabulary must contain single characters as fallback.** Without them the algorithm has no base case and any uncovered character causes [UNK].</span>\n\n* <span style=\"font-size: 14px;\">**Tokenization is not fully reversible.** Whitespace between words is lost during pre-tokenization. The token sequence alone does not encode where spaces existed.</span>\n\n* <span style=\"font-size: 14px;\">**Sequence length explosion.** Rare words, URLs, and code fragments into many tokens, rapidly consuming the 512-token budget.</span>\n\n* <span style=\"font-size: 14px;\">**Pre-tokenization assumptions.** WordPiece assumes whitespace-delimited input. Languages without whitespace (Chinese, Japanese) need special handling -- BERT inserts spaces around each CJK character.</span>\n\n* <span style=\"font-size: 14px;\">**Domain vocabulary mismatch.** Terms absent from the pre-training vocabulary fragment excessively during fine-tuning, degrading domain-specific performance.</span>\n\n---",
+  "hints": [
+    "Move a start index through each word and shrink an end index until vocab contains the candidate.",
+    "Add ## to a candidate whenever start is greater than zero.",
+    "Discard partial pieces if any remaining character cannot be matched."
+  ],
+  "constraints": "- text contains words separated by whitespace.\n- vocab is a dictionary whose keys are token strings.\n- unk_token is present in vocab.\n- max_word_length is a positive integer.\n- Continuation tokens in vocab include the ## prefix.",
+  "difficulty": "Hard",
+  "starterCode": "def wordpiece_tokenize(text: str, vocab: dict,\n                       unk_token: str = \"[UNK]\", max_word_length: int = 100) -> list:\n    \"\"\"\n    Returns the WordPiece tokens as a list of strings.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-03T18:27:22.288Z",
+  "updatedAt": "2026-02-21T17:14:46.644Z",
+  "topicId": "bert-wordpiece",
+  "paperSnippet": "\"We use WordPiece embeddings with a 30,000 token vocabulary. The first token of every sequence is always a special classification token ([CLS]).\"",
+  "visualizationComponent": "WordPieceViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **WordPiece Tokenization** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef wordpiece_tokenize(text: str, vocab: dict,\n                       unk_token: str = \"[UNK]\", max_word_length: int = 100) -> list:\n    tokens = []\n    for word in text.strip().lower().split():\n        if len(word) > int(max_word_length):\n            tokens.append(unk_token)\n            continue\n        is_bad = False\n        start = 0\n        sub_tokens = []\n        while start < len(word):\n            end = len(word)\n            cur_substr = None\n            while start < end:\n                substr = word[start:end]\n                if start > 0:\n                    substr = \"##\" + substr\n                if substr in vocab:\n                    cur_substr = substr\n                    break\n                end -= 1\n            if cur_substr is None:\n                is_bad = True\n                break\n            sub_tokens.append(cur_substr)\n            start = end\n        if is_bad:\n            tokens.append(unk_token)\n        else:\n            tokens.extend(sub_tokens)\n    return tokens\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "public-1",
+      "name": "Greedy continuations",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 20
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        "play",
+        "##ing",
+        "cat",
+        "##s"
+      ]
+    },
+    {
+      "id": "public-2",
+      "name": "Longest match",
+      "inputs": {
+        "text": "unaffable",
+        "vocab": {
+          "un": 1,
+          "##a": 4,
+          "##ff": 5,
+          "##aff": 2,
+          "[UNK]": 0,
+          "##able": 3
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 20
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        "un",
+        "##aff",
+        "##able"
+      ]
+    },
+    {
+      "id": "public-3",
+      "name": "Unknown word",
+      "inputs": {
+        "text": "known mystery",
+        "vocab": {
+          "my": 2,
+          "[UNK]": 0,
+          "known": 1
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 20
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        "known",
+        "[UNK]"
+      ]
+    },
+    {
+      "id": "bert-wordpiece-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 40
+      },
+      "expectedOutput": [
+        "play",
+        "##ing",
+        "cat",
+        "##s"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 10
+      },
+      "expectedOutput": [
+        "play",
+        "##ing",
+        "cat",
+        "##s"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": -20
+      },
+      "expectedOutput": [
+        "[UNK]",
+        "[UNK]"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 60
+      },
+      "expectedOutput": [
+        "play",
+        "##ing",
+        "cat",
+        "##s"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 21.0
+      },
+      "expectedOutput": [
+        "play",
+        "##ing",
+        "cat",
+        "##s"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 18.0
+      },
+      "expectedOutput": [
+        "play",
+        "##ing",
+        "cat",
+        "##s"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "text": "stac gniyalP",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "]KNU[",
+        "max_word_length": 20
+      },
+      "expectedOutput": [
+        "]KNU[",
+        "]KNU["
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": -20
+      },
+      "expectedOutput": [
+        "[UNK]",
+        "[UNK]"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 200
+      },
+      "expectedOutput": [
+        "play",
+        "##ing",
+        "cat",
+        "##s"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 2
+      },
+      "expectedOutput": [
+        "[UNK]",
+        "[UNK]"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 25.0
+      },
+      "expectedOutput": [
+        "play",
+        "##ing",
+        "cat",
+        "##s"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 30
+      },
+      "expectedOutput": [
+        "play",
+        "##ing",
+        "cat",
+        "##s"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": -40
+      },
+      "expectedOutput": [
+        "[UNK]",
+        "[UNK]"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 5
+      },
+      "expectedOutput": [
+        "[UNK]",
+        "cat",
+        "##s"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 19.0
+      },
+      "expectedOutput": [
+        "play",
+        "##ing",
+        "cat",
+        "##s"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 80
+      },
+      "expectedOutput": [
+        "play",
+        "##ing",
+        "cat",
+        "##s"
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "bert-wordpiece-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "text": "Playing cats",
+        "vocab": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "unk_token": "[UNK]",
+        "max_word_length": 15
+      },
+      "expectedOutput": [
+        "play",
+        "##ing",
+        "cat",
+        "##s"
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "wordpiece_tokenize",
+    "runtime": "numpy",
+    "parameters": [
+      {
+        "name": "text",
+        "type": "string",
+        "example": "Playing cats",
+        "description": "Whitespace-separated input text."
+      },
+      {
+        "name": "vocab",
+        "type": "object",
+        "example": {
+          "##s": 4,
+          "cat": 3,
+          "play": 1,
+          "##ing": 2,
+          "[UNK]": 0
+        },
+        "description": "Dictionary whose keys are WordPiece tokens."
+      },
+      {
+        "name": "unk_token",
+        "type": "string",
+        "example": "[UNK]",
+        "description": "Token used for an unsegmentable word."
+      },
+      {
+        "name": "max_word_length",
+        "type": "number",
+        "example": 20,
+        "description": "Maximum word length to attempt."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "bert-wordpiece",
+    "name": "WordPiece Tokenization",
+    "description": "Subword tokenization with ## prefix",
+    "color": "#3b82f6"
+  },
+  "paper": {
+    "id": "bert",
+    "title": "BERT: Pre-training of Deep Bidirectional Transformers",
+    "authors": "Devlin et al., 2018",
+    "year": 2018,
+    "paperUrl": "https://arxiv.org/abs/1810.04805",
+    "visualizationComponent": "BertArchViz"
+  },
+  "navigation": {
+    "index": 1,
+    "total": 6,
+    "prev": null,
+    "next": "bert-segment-embedding"
+  },
+  "cleanTitle": ""
+}

@@ -1,0 +1,1894 @@
+{
+  "catalogId": "python:pytorch-masked-causal-attention",
+  "id": "pytorch-masked-causal-attention",
+  "sourceId": "pytorch-masked-causal-attention",
+  "slug": "pytorch-masked-causal-attention",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Masked Causal Attention",
+  "difficulty": "Medium",
+  "tags": [
+    "Transformers"
+  ],
+  "isFree": false,
+  "planId": "pytorch-basics",
+  "planTitle": "PyTorch Sheet",
+  "sectionId": "pytorch-basics-sequence-and-structure",
+  "sortOrder": 222,
+  "seoDescription": "Implement scaled dot-product attention with a causal mask that prevents each position from attending to future positions.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Implement autoregressive scaled dot-product attention with an upper-triangular causal mask preventing future token lookahead.\n\nCausal masking enforces temporal order during transformer decoding, preventing representations from leaking future target tokens.\n\n### Mathematical Formulation\n$$\n\\operatorname{Attention}(Q, K, V) = \\operatorname{softmax}\\left( \\frac{Q K^T}{\\sqrt{d_k}} + M \\right) V, \\quad M_{ij} = \\begin{cases} 0 & j \\le i \\\\ -\\infty & j > i \\end{cases}\n$$\n\n### Step-by-Step Implementation\n1. Compute raw attention logits via scaled matrix dot-product Q K^T / sqrt(d_k)\n2. Add upper-triangular causal attention mask with negative infinity penalties\n3. Compute normalized softmax attention weights and project over values V\n\n### Returns\nDictionary with 'output' tensor and 'attention_weights' matrix.",
+  "theory": "## Understanding the Theory: Masked Causal Attention\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of discrete words and symbols arranged in sequential order. To process text with neural networks, we convert words into continuous embedding vectors and model their grammatical and semantic relationships. **Masked Causal Attention** is a core sequence-processing mechanism used in modern Transformer and LLM architectures.\n\nCausal masking enforces temporal order during transformer decoding, preventing representations from leaking future target tokens. In this problem, the goal is to: implement autoregressive scaled dot-product attention with an upper-triangular causal mask preventing future token lookahead.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\operatorname{Attention}(Q, K, V) = \\operatorname{softmax}\\left( \\frac{Q K^T}{\\sqrt{d_k}} + M \\right) V, \\quad M_{ij} = \\begin{cases} 0 & j \\le i \\\\ -\\infty & j > i \\end{cases}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute raw attention logits via scaled matrix dot-product Q K^T / sqrt(d_k)\n2. **Phase 2**: Add upper-triangular causal attention mask with negative infinity penalties\n3. **Phase 3**: Compute normalized softmax attention weights and project over values V\n\n### Practical Machine Learning Applications & Nuances\n* **Self-Attention Mechanics**: Scaled dot-product attention computes all-to-all token interactions dynamically, allowing tokens to gather context from the entire sentence simultaneously.\n* **Position Encodings**: Because self-attention is permutation-invariant, positional encodings (like sinusoidal or Rotary Position Embeddings) inject word order into the representations.\n* **Vocabulary & Subwords**: Algorithms like BPE tokenize text into frequent subwords, allowing models to represent rare words without requiring an infinite vocabulary.",
+  "examples": [
+    "Input: q = [[[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]], k = [[[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]], v = [[[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]]\n\nOutput: {\"output\": [[[1.0, 2.0], [2.3395, 3.3395], [3.5105, 4.5105]]], \"attention_weights\": [[[1.0, 0.0, 0.0], [0.3302, 0.6698, 0.0], [0.2483, 0.2483, 0.5035]]]}\n\nExplanation: Evaluated pytorch_masked_causal_attention under standard test conditions."
+  ],
+  "requirements": "* Function must be named `pytorch_masked_causal_attention`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `pytorch_masked_causal_attention`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import torch\nimport math\n\ndef pytorch_masked_causal_attention(q: list, k: list, v: list) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Masked Causal Attention** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch, math, numpy as np\n\ndef pytorch_masked_causal_attention(q: list, k: list, v: list) -> dict:\n    Q, K, V = torch.tensor(q, dtype=torch.float32), torch.tensor(k, dtype=torch.float32), torch.tensor(v, dtype=torch.float32)\n    D, S = Q.shape[-1], Q.shape[-2]\n    scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(D)\n    i = torch.arange(S).unsqueeze(1)\n    j = torch.arange(S).unsqueeze(0)\n    mask = torch.where(j > i, float('-inf'), 0.0)\n    weights = torch.softmax(scores + mask, dim=-1)\n    out = torch.matmul(weights, V)\n    return {'output': np.round(out.numpy(), 4).tolist(), 'attention_weights': np.round(weights.numpy(), 4).tolist()}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Batch 1, Seq 3, Dim 2",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-masked-causal-attention-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "output": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.3395,
+              3.3395
+            ],
+            [
+              3.5105,
+              4.5105
+            ]
+          ]
+        ],
+        "attention_weights": [
+          [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.3302,
+              0.6698,
+              0.0
+            ],
+            [
+              0.2483,
+              0.2483,
+              0.5035
+            ]
+          ]
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "pytorch_masked_causal_attention",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

@@ -1,0 +1,615 @@
+{
+  "id": "classification-metrics",
+  "title": "Compute Accuracy, Precision, Recall, F1",
+  "description": "Compute accuracy, precision, recall, and F1 for single-label classification. For each class $c$, let $TP_c$ count correct predictions of $c$, $FP_c$ count predictions of $c$ whose true label differs, and $FN_c$ count occurrences of $c$ predicted as another class.\n\n$$\nP_c = \\frac{TP_c}{TP_c + FP_c}\n$$\n\n$$\nR_c = \\frac{TP_c}{TP_c + FN_c}\n$$\n\n$$\nF_{1,c} = \\frac{2P_cR_c}{P_c + R_c}\n$$\n\nUse micro to aggregate class counts before computing metrics, macro to average class metrics equally, weighted to average them by true-label support, and binary to report the class selected by pos_label. A zero denominator contributes 0.0. Return accuracy, precision, recall, and f1 in a dictionary, with every value rounded to six decimals.",
+  "seoDescription": "Compute binary accuracy, precision, recall, and F1 score from predicted and true class labels.",
+  "examples": [
+    "Input: y_true = [0, 1, 2, 2], y_pred = [0, 1, 0, 2], average = \"micro\", pos_label = 1\n\nOutput: {\"accuracy\": 0.75, \"precision\": 0.75, \"recall\": 0.75, \"f1\": 0.75}\n\nExplanation: Three of four labels are correct; for single-label micro averaging, precision, recall, and F1 also equal 0.75.",
+    "Input: y_true = [0, 1, 2, 2], y_pred = [0, 1, 0, 2], average = \"macro\", pos_label = 1\n\nOutput: {\"accuracy\": 0.75, \"precision\": 0.833333, \"recall\": 0.833333, \"f1\": 0.777778}"
+  ],
+  "requirements": "* Compute accuracy across all samples\n* Support micro, macro, weighted, and binary averaging\n* Use 0.0 when a precision, recall, or F1 denominator is zero\n* Return exactly the keys accuracy, precision, recall, and f1\n* Round every returned value to six decimals",
+  "theory": "## Understanding the Theory: Compute Accuracy, Precision, Recall, F1\n\n### Core Intuition: Why Do We Need This?\nRecommender systems surface relevant content, products, or information from catalogs containing millions of items. Evaluating recommendations requires ranking-sensitive metrics that emphasize placing the most relevant items near the top of the recommendation list. **Compute Accuracy, Precision, Recall, F1** calculates ranking quality, user-item affinities, or top-K relevance scores.\n\nIn this problem, the objective is to implement **Compute Accuracy, Precision, Recall, F1** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nP_c = \\frac{TP_c}{TP_c + FP_c}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Position Discounting**: Users rarely scroll past the top items; ranking metrics heavily penalize placing relevant recommendations further down the list.\n* **Sparsity & Cold Start**: User-item interaction matrices are over 99% empty; embeddings and matrix factorization discover latent features to generalize to unseen interactions.\n* **Online vs. Offline Evaluation**: Offline ranking metrics (like NDCG@K and Recall@K) correlate strongly with online user engagement and click-through rates.",
+  "hints": [
+    "Use np.unique(np.concatenate([y_true, y_pred])) to collect every observed class.",
+    "For each class, boolean masks can count true positives, false positives, and false negatives.",
+    "Use the true-label count of each class as its weight for weighted averaging."
+  ],
+  "constraints": "* y_true and y_pred are equal-length, nonempty lists of integer labels\n* average is micro, macro, weighted, or binary\n* At most $100{,}000$ labels are provided\n* Do not use an external machine learning library",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef classification_metrics(y_true: list[int], y_pred: list[int], average: str = \"micro\", pos_label: int = 1) -> dict:\n    \"\"\"\n    Returns a dictionary containing accuracy, precision, recall, and f1 rounded to six decimals.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-10-21T18:37:15.993Z",
+  "updatedAt": "2026-03-05T17:05:13.238Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef classification_metrics(y_true: list[int], y_pred: list[int], average: str = \"micro\", pos_label: int = 1) -> dict:\n    yt = np.array(y_true)\n    yp = np.array(y_pred)\n    acc = float(np.mean(yt == yp))\n    classes = np.unique(np.concatenate([yt, yp]))\n    if average == \"micro\":\n        tp = int(np.sum(yt == yp))\n        total = len(yt)\n        prec = tp / total if total > 0 else 0.0\n        rec = tp / total if total > 0 else 0.0\n        f1 = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0\n        return {'accuracy': round(acc, 6), 'precision': round(prec, 6), 'recall': round(rec, 6), 'f1': round(f1, 6)}\n    elif average == \"binary\":\n        tp = int(np.sum((yt == pos_label) & (yp == pos_label)))\n        fp = int(np.sum((yt != pos_label) & (yp == pos_label)))\n        fn = int(np.sum((yt == pos_label) & (yp != pos_label)))\n        prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0\n        rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0\n        f1 = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0\n        return {'accuracy': round(acc, 6), 'precision': round(prec, 6), 'recall': round(rec, 6), 'f1': round(f1, 6)}\n    else:\n        precs, recs, f1s = [], [], []\n        for c in classes:\n            tp = int(np.sum((yt == c) & (yp == c)))\n            fp = int(np.sum((yt != c) & (yp == c)))\n            fn = int(np.sum((yt == c) & (yp != c)))\n            p = tp / (tp + fp) if (tp + fp) > 0 else 0.0\n            r = tp / (tp + fn) if (tp + fn) > 0 else 0.0\n            f = 2 * p * r / (p + r) if (p + r) > 0 else 0.0\n            precs.append(p)\n            recs.append(r)\n            f1s.append(f)\n        return {'accuracy': round(acc, 6), 'precision': round(float(np.mean(precs)), 6), 'recall': round(float(np.mean(recs)), 6), 'f1': round(float(np.mean(f1s)), 6)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "ClassificationMetricsViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Micro averaging (3 classes)",
+      "inputs": {
+        "y_pred": [
+          0,
+          1,
+          0,
+          2
+        ],
+        "y_true": [
+          0,
+          1,
+          2,
+          2
+        ],
+        "average": "micro",
+        "pos_label": 1
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Macro averaging (3 classes)",
+      "inputs": {
+        "y_pred": [
+          0,
+          1,
+          0,
+          2
+        ],
+        "y_true": [
+          0,
+          1,
+          2,
+          2
+        ],
+        "average": "macro",
+        "pos_label": 1
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.833333,
+        "recall": 0.833333,
+        "f1": 0.777778
+      }
+    },
+    {
+      "id": "classification-metrics-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "y_pred": [
+          0,
+          2,
+          0,
+          4
+        ],
+        "y_true": [
+          0,
+          2,
+          4,
+          4
+        ],
+        "average": "micro",
+        "pos_label": 2
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "y_pred": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "y_true": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "average": "micro",
+        "pos_label": 0
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "y_pred": [
+          0,
+          -1,
+          0,
+          -2
+        ],
+        "y_true": [
+          0,
+          -1,
+          -2,
+          -2
+        ],
+        "average": "micro",
+        "pos_label": -1
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "y_pred": [
+          0,
+          3,
+          0,
+          6
+        ],
+        "y_true": [
+          0,
+          3,
+          6,
+          6
+        ],
+        "average": "micro",
+        "pos_label": 3
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "y_pred": [
+          1.0,
+          2.0,
+          1.0,
+          3.0
+        ],
+        "y_true": [
+          1.0,
+          2.0,
+          3.0,
+          3.0
+        ],
+        "average": "micro",
+        "pos_label": 2.0
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "y_pred": [
+          -2.0,
+          -1.0,
+          -2.0,
+          0.0
+        ],
+        "y_true": [
+          -2.0,
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "average": "micro",
+        "pos_label": -1.0
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "y_pred": [
+          2,
+          0,
+          1,
+          0
+        ],
+        "y_true": [
+          2,
+          2,
+          1,
+          0
+        ],
+        "average": "orcim",
+        "pos_label": 1
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.833333,
+        "recall": 0.833333,
+        "f1": 0.777778
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "y_pred": [
+          0,
+          -1,
+          0,
+          -2
+        ],
+        "y_true": [
+          0,
+          -1,
+          -2,
+          -2
+        ],
+        "average": "micro",
+        "pos_label": -1
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "y_pred": [
+          0,
+          10,
+          0,
+          20
+        ],
+        "y_true": [
+          0,
+          10,
+          20,
+          20
+        ],
+        "average": "micro",
+        "pos_label": 10
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "y_pred": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "y_true": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "average": "micro",
+        "pos_label": 0
+      },
+      "expectedOutput": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "y_pred": [
+          5.0,
+          6.0,
+          5.0,
+          7.0
+        ],
+        "y_true": [
+          5.0,
+          6.0,
+          7.0,
+          7.0
+        ],
+        "average": "micro",
+        "pos_label": 6.0
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "y_pred": [
+          0,
+          2,
+          0,
+          3
+        ],
+        "y_true": [
+          0,
+          2,
+          3,
+          3
+        ],
+        "average": "micro",
+        "pos_label": 2
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "y_pred": [
+          0,
+          -2,
+          0,
+          -4
+        ],
+        "y_true": [
+          0,
+          -2,
+          -4,
+          -4
+        ],
+        "average": "micro",
+        "pos_label": -2
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "y_pred": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "y_true": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "average": "micro",
+        "pos_label": 0
+      },
+      "expectedOutput": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "y_pred": [
+          -1.0,
+          0.0,
+          -1.0,
+          1.0
+        ],
+        "y_true": [
+          -1.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "average": "micro",
+        "pos_label": 0.0
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "y_pred": [
+          0,
+          4,
+          0,
+          8
+        ],
+        "y_true": [
+          0,
+          4,
+          8,
+          8
+        ],
+        "average": "micro",
+        "pos_label": 4
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "y_pred": [
+          0,
+          1,
+          0,
+          2
+        ],
+        "y_true": [
+          0,
+          1,
+          2,
+          2
+        ],
+        "average": "micro",
+        "pos_label": 1
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "classification-metrics-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "y_pred": [
+          0,
+          5,
+          0,
+          10
+        ],
+        "y_true": [
+          0,
+          5,
+          10,
+          10
+        ],
+        "average": "micro",
+        "pos_label": 5
+      },
+      "expectedOutput": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "classification_metrics",
+    "parameters": [
+      {
+        "name": "y_true",
+        "type": "array",
+        "example": "[0, 1, 2, 2]",
+        "description": "True labels"
+      },
+      {
+        "name": "y_pred",
+        "type": "array",
+        "example": "[0, 1, 0, 2]",
+        "description": "Predicted labels"
+      },
+      {
+        "name": "average",
+        "type": "string",
+        "example": "\"micro\"",
+        "description": "Averaging mode: 'micro', 'macro', 'weighted', or 'binary' (default: 'micro')"
+      },
+      {
+        "name": "pos_label",
+        "type": "number",
+        "example": "1",
+        "description": "Positive class label for binary mode (default: 1)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "metrics-f1-micro",
+    "auc",
+    "log-loss-per-sample",
+    "confusion-matrix-norm",
+    "cohens-kappa"
+  ],
+  "tags": [
+    "Metrics & Evaluation"
+  ],
+  "prevId": "zscore-standardization",
+  "nextId": "r2-score",
+  "slug": "classification-metrics",
+  "cleanTitle": "Compute Accuracy, Precision, Recall, F1",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/classification-metrics",
+  "localUrl": "http://localhost:3000/problems/classification-metrics",
+  "studyPlan": null
+}

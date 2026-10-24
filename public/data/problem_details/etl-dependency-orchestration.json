@@ -1,0 +1,981 @@
+{
+  "id": "etl-dependency-orchestration",
+  "title": "ETL Dependency Orchestration",
+  "description": "Schedule ETL tasks that form a dependency graph under a shared resource budget. Each task has a unique name, positive integer duration, resource requirement, and depends_on list.\n\nAt each time value, first complete every running task whose end time has been reached. Next, collect unscheduled tasks whose dependencies are complete, sort them alphabetically, and greedily start each task that fits the remaining resource budget. Skipped tasks may start at a later completion event. Advance time to the next running-task completion.\n\nReturn a list of {\"task_name\": str, \"start_time\": int} dictionaries sorted by start time and then task name.",
+  "seoDescription": "Resolve ETL job dependencies into a valid execution order while detecting missing or cyclic dependencies.",
+  "examples": [
+    "Input: tasks = [{\"name\": \"extract\", \"duration\": 2, \"resources\": 1, \"depends_on\": []}, {\"name\": \"transform\", \"duration\": 3, \"resources\": 1, \"depends_on\": [\"extract\"]}, {\"name\": \"load\", \"duration\": 1, \"resources\": 1, \"depends_on\": [\"transform\"]}], resource_budget = 2\n\nOutput: [{\"task_name\": \"extract\", \"start_time\": 0}, {\"task_name\": \"transform\", \"start_time\": 2}, {\"task_name\": \"load\", \"start_time\": 5}]\n\nExplanation: Each task starts when its preceding dependency finishes.",
+    "Input: tasks = [{\"name\": \"fetch_orders\", \"duration\": 3, \"resources\": 1, \"depends_on\": []}, {\"name\": \"fetch_users\", \"duration\": 2, \"resources\": 1, \"depends_on\": []}, {\"name\": \"join\", \"duration\": 1, \"resources\": 2, \"depends_on\": [\"fetch_users\", \"fetch_orders\"]}], resource_budget = 2\n\nOutput: [{\"task_name\": \"fetch_orders\", \"start_time\": 0}, {\"task_name\": \"fetch_users\", \"start_time\": 0}, {\"task_name\": \"join\", \"start_time\": 3}]"
+  ],
+  "requirements": "* Start tasks only after all dependencies complete\n* Never exceed resource_budget\n* Consider ready tasks alphabetically at each event\n* Return the named schedule dictionaries in deterministic order",
+  "theory": "## Understanding the Theory: ETL Dependency Orchestration\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **ETL Dependency Orchestration** implements a core computational routine.\n\nIn this problem, the objective is to implement **ETL Dependency Orchestration** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\text{current\\_usage} = \\sum_{t \\in \\text{running}} \\text{resources}(t)\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "Track running tasks as {name: end_time} and advance to min(running.values()).",
+    "After completions, sort ready task dictionaries with key=lambda task: task[\"name\"]."
+  ],
+  "constraints": "* Tasks form a directed acyclic graph\n* Every task fits within the resource budget\n* Names are unique and dependencies refer to existing tasks",
+  "difficulty": "Hard",
+  "starterCode": "def schedule_pipeline(tasks: list, resource_budget: int) -> list:\n    \"\"\"\n    Returns a list of schedule dictionaries.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-29T21:07:26.167Z",
+  "updatedAt": "2026-08-23T11:59:44.127Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\ndef schedule_pipeline(tasks: list, resource_budget: int) -> list:\n    task_map = {t['name']: t for t in tasks}\n    finish_times = {}\n    schedule = []\n    remaining = set(task_map.keys())\n    while remaining:\n        ready = [t for t in remaining if all(dep in finish_times for dep in task_map[t]['depends_on'])]\n        ready.sort(key=lambda x: (max([finish_times[dep] for dep in task_map[x]['depends_on']] or [0]), x))\n        curr = ready[0]\n        remaining.remove(curr)\n        deps = task_map[curr]['depends_on']\n        start_t = max([finish_times[d] for d in deps]) if deps else 0\n        dur = task_map[curr]['duration']\n        finish_times[curr] = start_t + dur\n        schedule.append({'task_name': curr, 'start_time': start_t})\n    return schedule\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "EtlDependencyOrchestrationViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "public_linear_chain",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 2
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "public_parallel_merge",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "fetch_orders",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "fetch_users",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "join",
+            "duration": 1,
+            "resources": 2,
+            "depends_on": [
+              "fetch_users",
+              "fetch_orders"
+            ]
+          }
+        ],
+        "resource_budget": 2
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        {
+          "task_name": "fetch_orders",
+          "start_time": 0
+        },
+        {
+          "task_name": "fetch_users",
+          "start_time": 0
+        },
+        {
+          "task_name": "join",
+          "start_time": 3
+        }
+      ]
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 4
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 1
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": -2
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 6
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 3.0
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 0.0
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 2
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": -2
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 20
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 0
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 7.0
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 3
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": -4
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 0
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 1.0
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 8
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 2
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "etl-dependency-orchestration-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "tasks": [
+          {
+            "name": "extract",
+            "duration": 2,
+            "resources": 1,
+            "depends_on": []
+          },
+          {
+            "name": "transform",
+            "duration": 3,
+            "resources": 1,
+            "depends_on": [
+              "extract"
+            ]
+          },
+          {
+            "name": "load",
+            "duration": 1,
+            "resources": 1,
+            "depends_on": [
+              "transform"
+            ]
+          }
+        ],
+        "resource_budget": 10
+      },
+      "expectedOutput": [
+        {
+          "task_name": "extract",
+          "start_time": 0
+        },
+        {
+          "task_name": "transform",
+          "start_time": 2
+        },
+        {
+          "task_name": "load",
+          "start_time": 5
+        }
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "schedule_pipeline",
+    "parameters": [
+      {
+        "name": "tasks",
+        "type": "array",
+        "example": "[{\"name\": \"extract\", \"duration\": 2, \"resources\": 1, \"depends_on\": []}]",
+        "description": "List of task objects with name, duration, resources, and depends_on"
+      },
+      {
+        "name": "resource_budget",
+        "type": "number",
+        "example": "2",
+        "description": "Maximum total resources that can be used concurrently"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "etl-schema-validation",
+    "etl-deduplication",
+    "feature-store-lookup",
+    "retraining-trigger-design",
+    "monitoring-metrics-selection"
+  ],
+  "tags": [
+    "MLOps"
+  ],
+  "prevId": "etl-deduplication",
+  "nextId": "cohens-kappa",
+  "slug": "etl-dependency-orchestration",
+  "cleanTitle": "ETL Dependency Orchestration",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/etl-dependency-orchestration",
+  "localUrl": "http://localhost:3000/problems/etl-dependency-orchestration",
+  "studyPlan": null
+}

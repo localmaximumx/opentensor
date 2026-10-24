@@ -1,0 +1,1196 @@
+{
+  "catalogId": "python:optim-lasso-ista",
+  "id": "optim-lasso-ista",
+  "sourceId": "optim-lasso-ista",
+  "slug": "optim-lasso-ista",
+  "source": "python",
+  "category": "numpy",
+  "title": "Lasso Regression using ISTA",
+  "difficulty": "Medium",
+  "tags": [
+    "Regression",
+    "Optimization",
+    "Classic ML"
+  ],
+  "isFree": false,
+  "planId": "math-optimization",
+  "planTitle": "Optimization",
+  "sectionId": "math-optimization-regularization",
+  "sortOrder": 263,
+  "seoDescription": "Return the weight trajectory showing how ISTA drives weights toward a sparse solution.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Solve L1-regularized Lasso regression using proximal gradient updates with soft-thresholding shrinkage.\n\nISTA optimizes non-smooth composite objectives by decoupling smooth gradient updates from non-smooth proximal projections.\n\n### Mathematical Formulation\n$$\nw_{t+1} = \\mathcal{S}_{\\lambda \\eta}\\left( w_t - \\eta \\nabla f(w_t) \\right), \\quad \\mathcal{S}_\\tau(z) = \\operatorname{sgn}(z) \\max(0, |z| - \\tau)\n$$\n\n### Step-by-Step Implementation\n1. Compute gradient of smooth least-squares loss\n2. Apply forward gradient descent step\n3. Apply proximal soft-thresholding shrinkage operator to drive small weights to exact zero\n\n### Returns\nDictionary with 'final_weights' and historical weight 'trajectory'.",
+  "theory": "## Understanding the Theory: Lasso Regression using ISTA\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization problem: we want to find parameter values that minimize the loss function across training samples. Because loss landscapes in deep learning are non-convex with ravines, saddle points, and plateaus, simple gradient descent can get stuck or oscillate. **Lasso Regression using ISTA** accelerates convergence and stabilizes parameter trajectories.\n\nISTA optimizes non-smooth composite objectives by decoupling smooth gradient updates from non-smooth proximal projections. In this problem, the goal is to: solve l1-regularized lasso regression using proximal gradient updates with soft-thresholding shrinkage.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nw_{t+1} = \\mathcal{S}_{\\lambda \\eta}\\left( w_t - \\eta \\nabla f(w_t) \\right), \\quad \\mathcal{S}_\\tau(z) = \\operatorname{sgn}(z) \\max(0, |z| - \\tau)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute gradient of smooth least-squares loss\n2. **Phase 2**: Apply forward gradient descent step\n3. **Phase 3**: Apply proximal soft-thresholding shrinkage operator to drive small weights to exact zero\n\n### Practical Machine Learning Applications & Nuances\n* **Escaping Ravines**: Momentum methods accumulate velocity across successive steps, helping the optimizer push through flat regions and dampening high-frequency oscillations.\n* **Adaptive Learning Rates**: Algorithms like Adam scale learning rates per parameter, giving infrequent features larger updates and preventing exploding updates on frequent features.\n* **Gradient Regularization**: Techniques like gradient clipping and weight decay prevent exploding gradients and encourage simpler, more generalizable model weights.",
+  "examples": [
+    "Input: X = [[1.0, 0.0], [2.0, 0.0], [3.0, 0.0]], y = [1.0, 2.0, 3.0], lmbda = 0.5, lr = 0.1, num_steps = 5\n\nOutput: {\"final_weights\": [0.8543, 0.0], \"trajectory\": [[0.4167, 0.0], [0.6389, 0.0], [0.7574, 0.0], [0.8206, 0.0], [0.8543, 0.0]]}\n\nExplanation: Evaluated optim_lasso_ista under standard test conditions."
+  ],
+  "requirements": "* Function must be named `optim_lasso_ista`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `optim_lasso_ista`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef optim_lasso_ista(X: list, y: list, lmbda: float = 0.1, lr: float = 0.01, num_steps: int = 5) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Lasso Regression using ISTA** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef optim_lasso_ista(X: list, y: list, lmbda: float = 0.1, lr: float = 0.01, num_steps: int = 5) -> dict:\n    Xa, ya = np.array(X, dtype=np.float64), np.array(y, dtype=np.float64)\n    N, D = Xa.shape; w = np.zeros(D); traj = []\n    for _ in range(int(num_steps)):\n        grad = (1.0/N) * np.dot(Xa.T, np.dot(Xa, w) - ya)\n        z = w - float(lr) * grad\n        w = np.sign(z) * np.maximum(0.0, np.abs(z) - float(lr)*float(lmbda))\n        traj.append(np.round(w, 4).tolist())\n    return {'final_weights': np.round(w, 4).tolist(), 'trajectory': traj}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Sparse feature selection test",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "optim-lasso-ista-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-lasso-ista-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0
+          ],
+          [
+            3.0,
+            0.0
+          ]
+        ],
+        "y": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "lmbda": 0.5,
+        "lr": 0.1,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8543,
+          0.0
+        ],
+        "trajectory": [
+          [
+            0.4167,
+            0.0
+          ],
+          [
+            0.6389,
+            0.0
+          ],
+          [
+            0.7574,
+            0.0
+          ],
+          [
+            0.8206,
+            0.0
+          ],
+          [
+            0.8543,
+            0.0
+          ]
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "optim_lasso_ista",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

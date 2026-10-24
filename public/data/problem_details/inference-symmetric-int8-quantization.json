@@ -1,0 +1,656 @@
+{
+  "catalogId": "python:inference-symmetric-int8-quantization",
+  "id": "inference-symmetric-int8-quantization",
+  "sourceId": "inference-symmetric-int8-quantization",
+  "slug": "inference-symmetric-int8-quantization",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Implement Symmetric INT8 Quantization",
+  "difficulty": "Easy",
+  "tags": [
+    "Quantization",
+    "Inference",
+    "GPU Programming"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-quantization",
+  "sortOrder": 573,
+  "seoDescription": "Quantize finite tensors to symmetric INT8 values with an absolute-maximum scale and reconstruct dequantized outputs.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Map floating-point tensor to signed 8-bit integers centered at zero using dynamic symmetric scaling factor.\n\nSymmetric quantization fixes zero-point z = 0, eliminating cross-terms during integer matrix multiply-accumulate (INT8 GEMM) kernel execution.\n\n### Mathematical Formulation\n$$\ns = \\frac{\\max |x|}{127}, \\quad q = \\text{clamp}\\left(\\left\\lfloor \\frac{x}{s} \\right\\rceil, -128, 127\\right)\n$$\n\n### Step-by-Step Implementation\n1. Find maximum absolute value across entire input tensor\n2. Compute scaling factor scale = max(|x|) / 127.0\n3. Divide by scale, round to nearest integer, and clamp into range [-128, 127]\n\n### Returns\nDictionary with 'quantized' (nested int list) and float 'scale' rounded to 6 decimal places.",
+  "theory": "## Understanding the Theory: Implement Symmetric INT8 Quantization\n\n### Core Intuition: Why Do We Need This?\nRunning large AI models in production requires massive computing power. During text generation, memory bandwidth (fetching weights and past key-value caches from VRAM) is often the primary bottleneck rather than raw arithmetic compute. **Implement Symmetric INT8 Quantization** optimizes hardware efficiency, memory consumption, or request serving throughput.\n\nSymmetric quantization fixes zero-point z = 0, eliminating cross-terms during integer matrix multiply-accumulate (INT8 GEMM) kernel execution. In this problem, the goal is to: map floating-point tensor to signed 8-bit integers centered at zero using dynamic symmetric scaling factor.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\ns = \\frac{\\max |x|}{127}, \\quad q = \\text{clamp}\\left(\\left\\lfloor \\frac{x}{s} \\right\\rceil, -128, 127\\right)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Find maximum absolute value across entire input tensor\n2. **Phase 2**: Compute scaling factor scale = max(|x|) / 127.0\n3. **Phase 3**: Divide by scale, round to nearest integer, and clamp into range [-128, 127]\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth Bottleneck**: Quantizing weights to INT8 or INT4 cuts memory traffic in half or quarters, dramatically increasing token generation speeds.\n* **Serving Systems**: Dynamic batching and PagedAttention maximize GPU utilization by grouping requests arriving at different times.\n* **Latency vs. Throughput**: In production serving, systems engineers balance Time-To-First-Token (TTFT) against overall tokens-per-second throughput.",
+  "examples": [
+    "Input: x = [[-1.2, 0.5], [2.4, -0.1]]\n\nOutput: {\"quantized\": [[-64, 26], [127, -5]], \"scale\": 0.018898}\n\nExplanation: Evaluated inference_symmetric_int8_quantization under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_symmetric_int8_quantization`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_symmetric_int8_quantization`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef inference_symmetric_int8_quantization(x: list) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Implement Symmetric INT8 Quantization** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef inference_symmetric_int8_quantization(x: list) -> dict:\n    arr = np.array(x, dtype=float)\n    mv = np.max(np.abs(arr))\n    s = mv / 127.0 if mv > 0 else 1.0\n    return {'quantized': np.clip(np.round(arr / s), -128, 127).astype(int).tolist(), 'scale': round(float(s), 6)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "2x2 matrix INT8",
+      "inputs": {
+        "x": [
+          [
+            -1.2,
+            0.5
+          ],
+          [
+            2.4,
+            -0.1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -64,
+            26
+          ],
+          [
+            127,
+            -5
+          ]
+        ],
+        "scale": 0.018898
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "x": [
+          [
+            -2.4,
+            1.0
+          ],
+          [
+            4.8,
+            -0.2
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -64,
+            26
+          ],
+          [
+            127,
+            -5
+          ]
+        ],
+        "scale": 0.037795
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          [
+            -0.6,
+            0.25
+          ],
+          [
+            1.2,
+            -0.05
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -64,
+            26
+          ],
+          [
+            127,
+            -5
+          ]
+        ],
+        "scale": 0.009449
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            -0.2,
+            1.5
+          ],
+          [
+            3.4,
+            0.9
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -7,
+            56
+          ],
+          [
+            127,
+            34
+          ]
+        ],
+        "scale": 0.026772
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            -1.8,
+            0.75
+          ],
+          [
+            3.6,
+            -0.15
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -64,
+            26
+          ],
+          [
+            127,
+            -5
+          ]
+        ],
+        "scale": 0.028346
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            -3.6,
+            1.5
+          ],
+          [
+            7.2,
+            -0.3
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -64,
+            26
+          ],
+          [
+            127,
+            -5
+          ]
+        ],
+        "scale": 0.056693
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            -0.3,
+            0.125
+          ],
+          [
+            0.6,
+            -0.025
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -64,
+            26
+          ],
+          [
+            127,
+            -5
+          ]
+        ],
+        "scale": 0.004724
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            0.8,
+            2.5
+          ],
+          [
+            4.4,
+            1.9
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            23,
+            72
+          ],
+          [
+            127,
+            55
+          ]
+        ],
+        "scale": 0.034646
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            -4.8,
+            2.0
+          ],
+          [
+            9.6,
+            -0.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -64,
+            26
+          ],
+          [
+            127,
+            -5
+          ]
+        ],
+        "scale": 0.075591
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            0.5,
+            -1.2
+          ],
+          [
+            -0.1,
+            2.4
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            26,
+            -64
+          ],
+          [
+            -5,
+            127
+          ]
+        ],
+        "scale": 0.018898
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            -0.9,
+            0.375
+          ],
+          [
+            1.8,
+            -0.075
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -64,
+            26
+          ],
+          [
+            127,
+            -5
+          ]
+        ],
+        "scale": 0.014173
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            -6.0,
+            2.5
+          ],
+          [
+            12.0,
+            -0.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -64,
+            26
+          ],
+          [
+            127,
+            -5
+          ]
+        ],
+        "scale": 0.094488
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            1.8,
+            3.5
+          ],
+          [
+            5.4,
+            2.9
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            42,
+            82
+          ],
+          [
+            127,
+            68
+          ]
+        ],
+        "scale": 0.04252
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            -0.96,
+            0.4
+          ],
+          [
+            1.92,
+            -0.08
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -64,
+            26
+          ],
+          [
+            127,
+            -5
+          ]
+        ],
+        "scale": 0.015118
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            -7.2,
+            3.0
+          ],
+          [
+            14.4,
+            -0.6
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -64,
+            26
+          ],
+          [
+            127,
+            -5
+          ]
+        ],
+        "scale": 0.113386
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            2.8,
+            4.5
+          ],
+          [
+            6.4,
+            3.9
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            56,
+            89
+          ],
+          [
+            127,
+            77
+          ]
+        ],
+        "scale": 0.050394
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            -1.44,
+            0.6
+          ],
+          [
+            2.88,
+            -0.12
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -64,
+            26
+          ],
+          [
+            127,
+            -5
+          ]
+        ],
+        "scale": 0.022677
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            -0.48,
+            0.2
+          ],
+          [
+            0.96,
+            -0.04
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -64,
+            26
+          ],
+          [
+            127,
+            -5
+          ]
+        ],
+        "scale": 0.007559
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            -9.6,
+            4.0
+          ],
+          [
+            19.2,
+            -0.8
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            -64,
+            26
+          ],
+          [
+            127,
+            -5
+          ]
+        ],
+        "scale": 0.151181
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-symmetric-int8-quantization-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            3.8,
+            5.5
+          ],
+          [
+            7.4,
+            4.9
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "quantized": [
+          [
+            65,
+            94
+          ],
+          [
+            127,
+            84
+          ]
+        ],
+        "scale": 0.058268
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_symmetric_int8_quantization",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

@@ -1,0 +1,943 @@
+{
+  "catalogId": "python:inference-continuous-batching",
+  "id": "inference-continuous-batching",
+  "sourceId": "inference-continuous-batching",
+  "slug": "inference-continuous-batching",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Simulate Continuous Batching",
+  "difficulty": "Hard",
+  "tags": [
+    "Inference",
+    "MLOps"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-serving",
+  "sortOrder": 256,
+  "seoDescription": "Simulate continuous batching by admitting requests in arrival order and replacing completed sequences during decoding.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Simulate continuous iteration-level request batching, admitting new requests dynamically as completed sequences exit.\n\nContinuous batching eliminates idle GPU bubble latency caused by varying sequence lengths in static batching.\n\n### Mathematical Formulation\n$$\n\\text{Batch}_{t+1} = (\\text{Batch}_t \\setminus \\text{Completed}_t) \\cup \\text{Admitted}_t\n$$\n\n### Step-by-Step Implementation\n1. Track per-iteration generation steps for all active batch slots\n2. Evict completed sequences immediately upon generation of EOS token\n3. Admit pending requests from arrival queue into newly vacated batch slots\n\n### Returns\nDictionary with 'completed_requests' timestamps and total iterations.",
+  "theory": "## Understanding the Theory: Simulate Continuous Batching\n\n### Core Intuition: Why Do We Need This?\nRunning large AI models in production requires massive computing power. During text generation, memory bandwidth (fetching weights and past key-value caches from VRAM) is often the primary bottleneck rather than raw arithmetic compute. **Simulate Continuous Batching** optimizes hardware efficiency, memory consumption, or request serving throughput.\n\nContinuous batching eliminates idle GPU bubble latency caused by varying sequence lengths in static batching. In this problem, the goal is to: simulate continuous iteration-level request batching, admitting new requests dynamically as completed sequences exit.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\text{Batch}_{t+1} = (\\text{Batch}_t \\setminus \\text{Completed}_t) \\cup \\text{Admitted}_t\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Track per-iteration generation steps for all active batch slots\n2. **Phase 2**: Evict completed sequences immediately upon generation of EOS token\n3. **Phase 3**: Admit pending requests from arrival queue into newly vacated batch slots\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth Bottleneck**: Quantizing weights to INT8 or INT4 cuts memory traffic in half or quarters, dramatically increasing token generation speeds.\n* **Serving Systems**: Dynamic batching and PagedAttention maximize GPU utilization by grouping requests arriving at different times.\n* **Latency vs. Throughput**: In production serving, systems engineers balance Time-To-First-Token (TTFT) against overall tokens-per-second throughput.",
+  "examples": [
+    "Input: requests = [{\"id\": 1, \"arrival_step\": 0, \"total_steps\": 2, \"steps_done\": 2}, {\"id\": 2, \"arrival_step\": 0, \"total_steps\": 4, \"steps_done\": 4}, {\"id\": 3, \"arrival_step\": 1, \"total_steps\": 2, \"steps_done\": 2}], max_batch_slots = 2\n\nOutput: {\"completed_requests\": [{\"id\": 1, \"finish_step\": 3}, {\"id\": 2, \"finish_step\": 5}, {\"id\": 3, \"finish_step\": 5}], \"total_steps_simulated\": 5}\n\nExplanation: Evaluated inference_continuous_batching under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_continuous_batching`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_continuous_batching`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def inference_continuous_batching(requests: list, max_batch_slots: int = 2) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Simulate Continuous Batching** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef inference_continuous_batching(requests: list, max_batch_slots: int = 2) -> dict:\n    slots, queue, comp, step = {}, sorted(requests, key=lambda r: r['arrival_step']), [], 0\n    max_s = max(r['arrival_step'] + r['total_steps'] for r in requests) + 2\n    while (queue or slots) and step < max_s:\n        rem = []\n        for s, req in slots.items():\n            req['steps_done'] += 1\n            if req['steps_done'] >= req['total_steps']:\n                comp.append({'id': req['id'], 'finish_step': step + 1}); rem.append(s)\n        for s in rem: del slots[s]\n        while queue and queue[0]['arrival_step'] <= step and len(slots) < max_batch_slots:\n            r = queue.pop(0); r['steps_done'] = 0\n            for s in range(max_batch_slots):\n                if s not in slots: slots[s] = r; break\n        step += 1\n    return {'completed_requests': sorted(comp, key=lambda x: x['id']), 'total_steps_simulated': step}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "3 requests with 2 slots",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "arrival_step": 0,
+            "total_steps": 2,
+            "steps_done": 2
+          },
+          {
+            "id": 2,
+            "arrival_step": 0,
+            "total_steps": 4,
+            "steps_done": 4
+          },
+          {
+            "id": 3,
+            "arrival_step": 1,
+            "total_steps": 2,
+            "steps_done": 2
+          }
+        ],
+        "max_batch_slots": 2
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 1,
+            "finish_step": 3
+          },
+          {
+            "id": 2,
+            "finish_step": 5
+          },
+          {
+            "id": 3,
+            "finish_step": 5
+          }
+        ],
+        "total_steps_simulated": 5
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-continuous-batching-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "requests": [
+          {
+            "id": 2,
+            "arrival_step": 0,
+            "total_steps": 4,
+            "steps_done": 4
+          },
+          {
+            "id": 4,
+            "arrival_step": 0,
+            "total_steps": 8,
+            "steps_done": 8
+          },
+          {
+            "id": 6,
+            "arrival_step": 2,
+            "total_steps": 4,
+            "steps_done": 4
+          }
+        ],
+        "max_batch_slots": 4
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 2,
+            "finish_step": 5
+          },
+          {
+            "id": 4,
+            "finish_step": 9
+          },
+          {
+            "id": 6,
+            "finish_step": 7
+          }
+        ],
+        "total_steps_simulated": 9
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-continuous-batching-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "arrival_step": 0,
+            "total_steps": 1,
+            "steps_done": 1
+          },
+          {
+            "id": 1,
+            "arrival_step": 0,
+            "total_steps": 2,
+            "steps_done": 2
+          },
+          {
+            "id": 2,
+            "arrival_step": 0,
+            "total_steps": 1,
+            "steps_done": 0
+          }
+        ],
+        "max_batch_slots": 1
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 1,
+            "finish_step": 2
+          },
+          {
+            "id": 1,
+            "finish_step": 4
+          }
+        ],
+        "total_steps_simulated": 4
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "arrival_step": 1,
+            "total_steps": 2,
+            "steps_done": 2
+          },
+          {
+            "id": 2,
+            "arrival_step": 1,
+            "total_steps": 4,
+            "steps_done": 4
+          },
+          {
+            "id": 3,
+            "arrival_step": 2,
+            "total_steps": 2,
+            "steps_done": 2
+          }
+        ],
+        "max_batch_slots": 2
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 1,
+            "finish_step": 4
+          },
+          {
+            "id": 2,
+            "finish_step": 6
+          },
+          {
+            "id": 3,
+            "finish_step": 6
+          }
+        ],
+        "total_steps_simulated": 6
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "requests": [
+          {
+            "id": 2,
+            "arrival_step": 0,
+            "total_steps": 3,
+            "steps_done": 3
+          },
+          {
+            "id": 3,
+            "arrival_step": 0,
+            "total_steps": 6,
+            "steps_done": 6
+          },
+          {
+            "id": 4,
+            "arrival_step": 2,
+            "total_steps": 3,
+            "steps_done": 3
+          }
+        ],
+        "max_batch_slots": 3
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 2,
+            "finish_step": 4
+          },
+          {
+            "id": 3,
+            "finish_step": 7
+          },
+          {
+            "id": 4,
+            "finish_step": 6
+          }
+        ],
+        "total_steps_simulated": 7
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "requests": [
+          {
+            "id": 3,
+            "arrival_step": 0,
+            "total_steps": 6,
+            "steps_done": 6
+          },
+          {
+            "id": 6,
+            "arrival_step": 0,
+            "total_steps": 12,
+            "steps_done": 12
+          },
+          {
+            "id": 9,
+            "arrival_step": 3,
+            "total_steps": 6,
+            "steps_done": 6
+          }
+        ],
+        "max_batch_slots": 6
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 3,
+            "finish_step": 7
+          },
+          {
+            "id": 6,
+            "finish_step": 13
+          },
+          {
+            "id": 9,
+            "finish_step": 10
+          }
+        ],
+        "total_steps_simulated": 13
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "arrival_step": 0,
+            "total_steps": 1,
+            "steps_done": 1
+          },
+          {
+            "id": 1,
+            "arrival_step": 0,
+            "total_steps": 1,
+            "steps_done": 1
+          },
+          {
+            "id": 1,
+            "arrival_step": 0,
+            "total_steps": 1,
+            "steps_done": 0
+          }
+        ],
+        "max_batch_slots": 1
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 1,
+            "finish_step": 2
+          },
+          {
+            "id": 1,
+            "finish_step": 3
+          }
+        ],
+        "total_steps_simulated": 3
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "requests": [
+          {
+            "id": 2,
+            "arrival_step": 2,
+            "total_steps": 4,
+            "steps_done": 4
+          },
+          {
+            "id": 4,
+            "arrival_step": 2,
+            "total_steps": 8,
+            "steps_done": 8
+          },
+          {
+            "id": 6,
+            "arrival_step": 3,
+            "total_steps": 4,
+            "steps_done": 4
+          }
+        ],
+        "max_batch_slots": 4
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 2,
+            "finish_step": 7
+          },
+          {
+            "id": 4,
+            "finish_step": 11
+          },
+          {
+            "id": 6,
+            "finish_step": 8
+          }
+        ],
+        "total_steps_simulated": 11
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "requests": [
+          {
+            "id": 4,
+            "arrival_step": 0,
+            "total_steps": 8,
+            "steps_done": 8
+          },
+          {
+            "id": 8,
+            "arrival_step": 0,
+            "total_steps": 16,
+            "steps_done": 16
+          },
+          {
+            "id": 12,
+            "arrival_step": 4,
+            "total_steps": 8,
+            "steps_done": 8
+          }
+        ],
+        "max_batch_slots": 8
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 4,
+            "finish_step": 9
+          },
+          {
+            "id": 8,
+            "finish_step": 17
+          },
+          {
+            "id": 12,
+            "finish_step": 13
+          }
+        ],
+        "total_steps_simulated": 17
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "arrival_step": 0,
+            "total_steps": 2,
+            "steps_done": 2
+          },
+          {
+            "id": 2,
+            "arrival_step": 0,
+            "total_steps": 4,
+            "steps_done": 4
+          },
+          {
+            "id": 3,
+            "arrival_step": 1,
+            "total_steps": 2,
+            "steps_done": 2
+          }
+        ],
+        "max_batch_slots": 2
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 1,
+            "finish_step": 3
+          },
+          {
+            "id": 2,
+            "finish_step": 5
+          },
+          {
+            "id": 3,
+            "finish_step": 5
+          }
+        ],
+        "total_steps_simulated": 5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "arrival_step": 0,
+            "total_steps": 2,
+            "steps_done": 2
+          },
+          {
+            "id": 2,
+            "arrival_step": 0,
+            "total_steps": 3,
+            "steps_done": 3
+          },
+          {
+            "id": 2,
+            "arrival_step": 1,
+            "total_steps": 2,
+            "steps_done": 2
+          }
+        ],
+        "max_batch_slots": 2
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 1,
+            "finish_step": 3
+          },
+          {
+            "id": 2,
+            "finish_step": 4
+          },
+          {
+            "id": 2,
+            "finish_step": 5
+          }
+        ],
+        "total_steps_simulated": 5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "requests": [
+          {
+            "id": 5,
+            "arrival_step": 0,
+            "total_steps": 10,
+            "steps_done": 10
+          },
+          {
+            "id": 10,
+            "arrival_step": 0,
+            "total_steps": 20,
+            "steps_done": 20
+          },
+          {
+            "id": 15,
+            "arrival_step": 5,
+            "total_steps": 10,
+            "steps_done": 10
+          }
+        ],
+        "max_batch_slots": 10
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 5,
+            "finish_step": 11
+          },
+          {
+            "id": 10,
+            "finish_step": 21
+          },
+          {
+            "id": 15,
+            "finish_step": 16
+          }
+        ],
+        "total_steps_simulated": 21
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "requests": [
+          {
+            "id": 3,
+            "arrival_step": 3,
+            "total_steps": 6,
+            "steps_done": 6
+          },
+          {
+            "id": 6,
+            "arrival_step": 3,
+            "total_steps": 12,
+            "steps_done": 12
+          },
+          {
+            "id": 9,
+            "arrival_step": 4,
+            "total_steps": 6,
+            "steps_done": 6
+          }
+        ],
+        "max_batch_slots": 6
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 3,
+            "finish_step": 10
+          },
+          {
+            "id": 6,
+            "finish_step": 16
+          },
+          {
+            "id": 9,
+            "finish_step": 11
+          }
+        ],
+        "total_steps_simulated": 16
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "arrival_step": 0,
+            "total_steps": 2,
+            "steps_done": 2
+          },
+          {
+            "id": 2,
+            "arrival_step": 0,
+            "total_steps": 3,
+            "steps_done": 3
+          },
+          {
+            "id": 2,
+            "arrival_step": 1,
+            "total_steps": 2,
+            "steps_done": 2
+          }
+        ],
+        "max_batch_slots": 2
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 1,
+            "finish_step": 3
+          },
+          {
+            "id": 2,
+            "finish_step": 4
+          },
+          {
+            "id": 2,
+            "finish_step": 5
+          }
+        ],
+        "total_steps_simulated": 5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "requests": [
+          {
+            "id": 6,
+            "arrival_step": 0,
+            "total_steps": 12,
+            "steps_done": 12
+          },
+          {
+            "id": 12,
+            "arrival_step": 0,
+            "total_steps": 24,
+            "steps_done": 24
+          },
+          {
+            "id": 18,
+            "arrival_step": 6,
+            "total_steps": 12,
+            "steps_done": 12
+          }
+        ],
+        "max_batch_slots": 12
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 6,
+            "finish_step": 13
+          },
+          {
+            "id": 12,
+            "finish_step": 25
+          },
+          {
+            "id": 18,
+            "finish_step": 19
+          }
+        ],
+        "total_steps_simulated": 25
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "requests": [
+          {
+            "id": 4,
+            "arrival_step": 4,
+            "total_steps": 8,
+            "steps_done": 8
+          },
+          {
+            "id": 8,
+            "arrival_step": 4,
+            "total_steps": 16,
+            "steps_done": 16
+          },
+          {
+            "id": 12,
+            "arrival_step": 5,
+            "total_steps": 8,
+            "steps_done": 8
+          }
+        ],
+        "max_batch_slots": 8
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 4,
+            "finish_step": 13
+          },
+          {
+            "id": 8,
+            "finish_step": 21
+          },
+          {
+            "id": 12,
+            "finish_step": 14
+          }
+        ],
+        "total_steps_simulated": 21
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "arrival_step": 0,
+            "total_steps": 2,
+            "steps_done": 2
+          },
+          {
+            "id": 2,
+            "arrival_step": 0,
+            "total_steps": 5,
+            "steps_done": 5
+          },
+          {
+            "id": 4,
+            "arrival_step": 1,
+            "total_steps": 2,
+            "steps_done": 2
+          }
+        ],
+        "max_batch_slots": 2
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 1,
+            "finish_step": 3
+          },
+          {
+            "id": 2,
+            "finish_step": 6
+          },
+          {
+            "id": 4,
+            "finish_step": 5
+          }
+        ],
+        "total_steps_simulated": 6
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "requests": [
+          {
+            "id": 1,
+            "arrival_step": 0,
+            "total_steps": 1,
+            "steps_done": 1
+          },
+          {
+            "id": 1,
+            "arrival_step": 0,
+            "total_steps": 2,
+            "steps_done": 2
+          },
+          {
+            "id": 1,
+            "arrival_step": 0,
+            "total_steps": 1,
+            "steps_done": 0
+          }
+        ],
+        "max_batch_slots": 1
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 1,
+            "finish_step": 2
+          },
+          {
+            "id": 1,
+            "finish_step": 4
+          }
+        ],
+        "total_steps_simulated": 4
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "requests": [
+          {
+            "id": 8,
+            "arrival_step": 0,
+            "total_steps": 16,
+            "steps_done": 16
+          },
+          {
+            "id": 16,
+            "arrival_step": 0,
+            "total_steps": 32,
+            "steps_done": 32
+          },
+          {
+            "id": 24,
+            "arrival_step": 8,
+            "total_steps": 16,
+            "steps_done": 16
+          }
+        ],
+        "max_batch_slots": 16
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 8,
+            "finish_step": 17
+          },
+          {
+            "id": 16,
+            "finish_step": 33
+          },
+          {
+            "id": 24,
+            "finish_step": 25
+          }
+        ],
+        "total_steps_simulated": 33
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-continuous-batching-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "requests": [
+          {
+            "id": 5,
+            "arrival_step": 5,
+            "total_steps": 10,
+            "steps_done": 10
+          },
+          {
+            "id": 10,
+            "arrival_step": 5,
+            "total_steps": 20,
+            "steps_done": 20
+          },
+          {
+            "id": 15,
+            "arrival_step": 6,
+            "total_steps": 10,
+            "steps_done": 10
+          }
+        ],
+        "max_batch_slots": 10
+      },
+      "expectedOutput": {
+        "completed_requests": [
+          {
+            "id": 5,
+            "finish_step": 16
+          },
+          {
+            "id": 10,
+            "finish_step": 26
+          },
+          {
+            "id": 15,
+            "finish_step": 17
+          }
+        ],
+        "total_steps_simulated": 26
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_continuous_batching",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

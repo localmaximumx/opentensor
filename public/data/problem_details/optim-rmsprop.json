@@ -1,0 +1,914 @@
+{
+  "catalogId": "python:optim-rmsprop",
+  "id": "optim-rmsprop",
+  "sourceId": "optim-rmsprop",
+  "slug": "optim-rmsprop",
+  "source": "python",
+  "category": "numpy",
+  "title": "RMSProp",
+  "difficulty": "Medium",
+  "tags": [
+    "Optimization"
+  ],
+  "isFree": false,
+  "planId": "math-optimization",
+  "planTitle": "Optimization",
+  "sectionId": "math-optimization-adaptive-methods",
+  "sortOrder": 401,
+  "seoDescription": "Implement the RMSProp optimizer to train a linear regression model using full-batch gradient descent with MSE loss.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Train linear regression parameters using RMSProp moving average squared gradient scaling to stabilize non-stationary optimization.\n\nRMSProp resolves AdaGrad's diminishing learning rate problem by discounting ancient squared gradients with decay factor beta.\n\n### Mathematical Formulation\n$$\ns_{t+1} = \\beta s_t + (1 - \\beta) g_t^2, \\quad w_{t+1} = w_t - \\frac{\\eta}{\\sqrt{s_{t+1} + \\varepsilon}} g_t\n$$\n\n### Step-by-Step Implementation\n1. Maintain exponentially decaying moving average of squared gradient coordinates\n2. Scale gradient coordinate step sizes inversely by root mean square magnitude\n3. Update parameter weights and track MSE loss curve\n\n### Returns\nDictionary with 'final_weights' and historical 'loss_curve'.",
+  "theory": "## Understanding the Theory: RMSProp\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization problem: we want to find parameter values that minimize the loss function across training samples. Because loss landscapes in deep learning are non-convex with ravines, saddle points, and plateaus, simple gradient descent can get stuck or oscillate. **RMSProp** accelerates convergence and stabilizes parameter trajectories.\n\nRMSProp resolves AdaGrad's diminishing learning rate problem by discounting ancient squared gradients with decay factor beta. In this problem, the goal is to: train linear regression parameters using rmsprop moving average squared gradient scaling to stabilize non-stationary optimization.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\ns_{t+1} = \\beta s_t + (1 - \\beta) g_t^2, \\quad w_{t+1} = w_t - \\frac{\\eta}{\\sqrt{s_{t+1} + \\varepsilon}} g_t\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Maintain exponentially decaying moving average of squared gradient coordinates\n2. **Phase 2**: Scale gradient coordinate step sizes inversely by root mean square magnitude\n3. **Phase 3**: Update parameter weights and track MSE loss curve\n\n### Practical Machine Learning Applications & Nuances\n* **Escaping Ravines**: Momentum methods accumulate velocity across successive steps, helping the optimizer push through flat regions and dampening high-frequency oscillations.\n* **Adaptive Learning Rates**: Algorithms like Adam scale learning rates per parameter, giving infrequent features larger updates and preventing exploding updates on frequent features.\n* **Gradient Regularization**: Techniques like gradient clipping and weight decay prevent exploding gradients and encourage simpler, more generalizable model weights.",
+  "examples": [
+    "Input: X = [[1.0, 1.0], [2.0, 1.0], [3.0, 1.0]], y = [2.0, 4.0, 6.0], lr = 0.1, beta = 0.9, eps = 1e-08, num_steps = 5\n\nOutput: {\"final_weights\": [0.8909, 0.8783], \"loss_curve\": [18.666667, 11.200593, 7.486562, 5.195522, 3.668753]}\n\nExplanation: Evaluated optim_rmsprop under standard test conditions."
+  ],
+  "requirements": "* Function must be named `optim_rmsprop`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `optim_rmsprop`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef optim_rmsprop(X: list, y: list, lr: float = 0.05, beta: float = 0.9, eps: float = 1e-8, num_steps: int = 10) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **RMSProp** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef optim_rmsprop(X: list, y: list, lr: float = 0.05, beta: float = 0.9, eps: float = 1e-8, num_steps: int = 10) -> dict:\n    Xa, ya = np.array(X, dtype=np.float64), np.array(y, dtype=np.float64)\n    N, D = Xa.shape; w, s, losses = np.zeros(D), np.zeros(D), []\n    for _ in range(int(num_steps)):\n        losses.append(round(float(np.mean((np.dot(Xa, w) - ya)**2)), 6))\n        g = (2.0/N) * np.dot(Xa.T, np.dot(Xa, w) - ya)\n        s = float(beta)*s + (1.0 - float(beta))*(g**2)\n        w -= float(lr) * (g / (np.sqrt(s) + float(eps)))\n    return {'final_weights': np.round(w, 4).tolist(), 'loss_curve': losses}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "RMSProp on linear model",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "optim-rmsprop-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-rmsprop-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.1,
+        "beta": 0.9,
+        "eps": 1e-08,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          0.8909,
+          0.8783
+        ],
+        "loss_curve": [
+          18.666667,
+          11.200593,
+          7.486562,
+          5.195522,
+          3.668753
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "optim_rmsprop",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

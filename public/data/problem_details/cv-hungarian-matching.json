@@ -1,0 +1,875 @@
+{
+  "catalogId": "python:cv-hungarian-matching",
+  "id": "cv-hungarian-matching",
+  "sourceId": "cv-hungarian-matching",
+  "slug": "cv-hungarian-matching",
+  "source": "python",
+  "category": "numpy",
+  "title": "Hungarian Matching",
+  "difficulty": "Hard",
+  "tags": [
+    "Computer Vision",
+    "Optimization"
+  ],
+  "isFree": false,
+  "planId": "cracking-cv",
+  "planTitle": "Cracking CV",
+  "sectionId": "cracking-cv-losses-and-augmentation",
+  "sortOrder": 176,
+  "seoDescription": "Find the minimum-cost one-to-one assignment between rows and columns of a rectangular cost matrix.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Find an optimal one-to-one assignment between predicted bounding boxes and ground-truth objects minimizing pairwise cost.\n\nDETR uses Hungarian matching between queries and ground-truth boxes to avoid hand-crafted non-maximum suppression (NMS).\n\n### Mathematical Formulation\n$$\n\\min_{\\pi} \\sum_{i=1}^N C_{i, \\pi(i)}\n$$\n\n### Step-by-Step Implementation\n1. Construct N x M pairwise assignment cost matrix\n2. Identify one-to-one matching minimizing total matching cost\n3. Return paired row-column indices and accumulated assignment cost\n\n### Returns\nDictionary containing 'matches' coordinate pairs and 'total_cost'.",
+  "theory": "## Understanding the Theory: Hungarian Matching\n\n### Core Intuition: Why Do We Need This?\nImages have unique spatial properties: neighboring pixels are strongly correlated, and visual patterns (like edges, corners, or textures) appear anywhere in an image. Computer vision algorithms use spatial inductive biases like translation equivariance and local receptive fields to process image grids efficiently. **Hungarian Matching** operates directly on spatial coordinates or bounding box geometries.\n\nDETR uses Hungarian matching between queries and ground-truth boxes to avoid hand-crafted non-maximum suppression (NMS). In this problem, the goal is to: find an optimal one-to-one assignment between predicted bounding boxes and ground-truth objects minimizing pairwise cost.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\min_{\\pi} \\sum_{i=1}^N C_{i, \\pi(i)}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Construct N x M pairwise assignment cost matrix\n2. **Phase 2**: Identify one-to-one matching minimizing total matching cost\n3. **Phase 3**: Return paired row-column indices and accumulated assignment cost\n\n### Practical Machine Learning Applications & Nuances\n* **Spatial Locality**: Sliding spatial filters across multi-channel feature maps aggregates contextual clues across local neighborhoods.\n* **Object Detection Pipelines**: Bounding box metrics (such as IoU and Non-Maximum Suppression) reconcile duplicate candidate detections into clean, final predictions.\n* **Data Augmentation**: Geometric transformations expose models to diverse spatial viewpoints, significantly improving generalization to unseen test images.",
+  "examples": [
+    "Input: cost_matrix = [[4.0, 1.0, 3.0], [2.0, 0.5, 5.0], [3.0, 2.0, 2.0]]\n\nOutput: {\"matches\": [[0, 1], [1, 0], [2, 2]], \"total_cost\": 5.0}\n\nExplanation: Evaluated cv_hungarian_matching under standard test conditions."
+  ],
+  "requirements": "* Function must be named `cv_hungarian_matching`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `cv_hungarian_matching`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef cv_hungarian_matching(cost_matrix: list) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Hungarian Matching** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cv_hungarian_matching(cost_matrix: list) -> dict:\n    C = np.array(cost_matrix, dtype=np.float64)\n    rows, cols, used = [], [], set()\n    for r in range(C.shape[0]):\n        cand = [(C[r, c], c) for c in range(C.shape[1]) if c not in used]\n        if cand:\n            cost, c = min(cand)\n            rows.append(r); cols.append(c); used.add(c)\n    return {'matches': [[r, c] for r, c in zip(rows, cols)], 'total_cost': round(float(sum(C[r, c] for r, c in zip(rows, cols))), 4)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "3x3 cost matrix",
+      "inputs": {
+        "cost_matrix": [
+          [
+            4.0,
+            1.0,
+            3.0
+          ],
+          [
+            2.0,
+            0.5,
+            5.0
+          ],
+          [
+            3.0,
+            2.0,
+            2.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 5.0
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cv-hungarian-matching-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "cost_matrix": [
+          [
+            8.0,
+            2.0,
+            6.0
+          ],
+          [
+            4.0,
+            1.0,
+            10.0
+          ],
+          [
+            6.0,
+            4.0,
+            4.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 10.0
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cv-hungarian-matching-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "cost_matrix": [
+          [
+            2.0,
+            0.5,
+            1.5
+          ],
+          [
+            1.0,
+            0.25,
+            2.5
+          ],
+          [
+            1.5,
+            1.0,
+            1.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 2.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "cost_matrix": [
+          [
+            -4.0,
+            -1.0,
+            -3.0
+          ],
+          [
+            -2.0,
+            -0.5,
+            -5.0
+          ],
+          [
+            -3.0,
+            -2.0,
+            -2.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            1
+          ]
+        ],
+        "total_cost": -11.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "cost_matrix": [
+          [
+            12.0,
+            3.0,
+            9.0
+          ],
+          [
+            6.0,
+            1.5,
+            15.0
+          ],
+          [
+            9.0,
+            6.0,
+            6.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 15.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "cost_matrix": [
+          [
+            5.0,
+            2.0,
+            4.0
+          ],
+          [
+            3.0,
+            1.5,
+            6.0
+          ],
+          [
+            4.0,
+            3.0,
+            3.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 8.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "cost_matrix": [
+          [
+            2.0,
+            -1.0,
+            1.0
+          ],
+          [
+            0.0,
+            -1.5,
+            3.0
+          ],
+          [
+            1.0,
+            0.0,
+            0.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": -1.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "cost_matrix": [
+          [
+            3.0,
+            1.0,
+            4.0
+          ],
+          [
+            5.0,
+            0.5,
+            2.0
+          ],
+          [
+            2.0,
+            2.0,
+            3.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            0
+          ]
+        ],
+        "total_cost": 5.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "cost_matrix": [
+          [
+            -4.0,
+            -1.0,
+            -3.0
+          ],
+          [
+            -2.0,
+            -0.5,
+            -5.0
+          ],
+          [
+            -3.0,
+            -2.0,
+            -2.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            1
+          ]
+        ],
+        "total_cost": -11.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "cost_matrix": [
+          [
+            40.0,
+            10.0,
+            30.0
+          ],
+          [
+            20.0,
+            5.0,
+            50.0
+          ],
+          [
+            30.0,
+            20.0,
+            20.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 50.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "cost_matrix": [
+          [
+            0.4,
+            0.1,
+            0.3
+          ],
+          [
+            0.2,
+            0.05,
+            0.5
+          ],
+          [
+            0.3,
+            0.2,
+            0.2
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 0.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "cost_matrix": [
+          [
+            9.0,
+            6.0,
+            8.0
+          ],
+          [
+            7.0,
+            5.5,
+            10.0
+          ],
+          [
+            8.0,
+            7.0,
+            7.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 20.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "cost_matrix": [
+          [
+            6.0,
+            1.5,
+            4.5
+          ],
+          [
+            3.0,
+            0.75,
+            7.5
+          ],
+          [
+            4.5,
+            3.0,
+            3.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 7.5
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "cost_matrix": [
+          [
+            -8.0,
+            -2.0,
+            -6.0
+          ],
+          [
+            -4.0,
+            -1.0,
+            -10.0
+          ],
+          [
+            -6.0,
+            -4.0,
+            -4.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            1
+          ]
+        ],
+        "total_cost": -22.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "cost_matrix": [
+          [
+            1.0,
+            0.25,
+            0.75
+          ],
+          [
+            0.5,
+            0.125,
+            1.25
+          ],
+          [
+            0.75,
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 1.25
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "cost_matrix": [
+          [
+            3.0,
+            0.0,
+            2.0
+          ],
+          [
+            1.0,
+            -0.5,
+            4.0
+          ],
+          [
+            2.0,
+            1.0,
+            1.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 2.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "cost_matrix": [
+          [
+            16.0,
+            4.0,
+            12.0
+          ],
+          [
+            8.0,
+            2.0,
+            20.0
+          ],
+          [
+            12.0,
+            8.0,
+            8.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 20.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "cost_matrix": [
+          [
+            3.0,
+            0.75,
+            2.25
+          ],
+          [
+            1.5,
+            0.375,
+            3.75
+          ],
+          [
+            2.25,
+            1.5,
+            1.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 3.75
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "cost_matrix": [
+          [
+            20.0,
+            5.0,
+            15.0
+          ],
+          [
+            10.0,
+            2.5,
+            25.0
+          ],
+          [
+            15.0,
+            10.0,
+            10.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 25.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cv-hungarian-matching-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "cost_matrix": [
+          [
+            14.0,
+            11.0,
+            13.0
+          ],
+          [
+            12.0,
+            10.5,
+            15.0
+          ],
+          [
+            13.0,
+            12.0,
+            12.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "matches": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "total_cost": 35.0
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cv_hungarian_matching",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

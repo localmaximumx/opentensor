@@ -1,0 +1,2970 @@
+{
+  "id": "densenet-forward",
+  "title": "Full DenseNet Forward Pass",
+  "description": "Implement a deterministic DenseNet forward pass. Apply the supplied 3 by 3 stem convolution, then each dense block in order with a transition between adjacent blocks. Finish with batch normalization, ReLU, global average pooling, and the supplied linear classifier.\n\n$$\nx_{\\ell}=H_{\\ell}\\!\\left([x_0,x_1,\\ldots,x_{\\ell-1}]\\right)\n$$\n\n$$\np_{n,c}=\\frac{1}{HW}\\sum_{h=1}^{H}\\sum_{w=1}^{W}z_{n,c,h,w}\n$$\n\n$$\n\\operatorname{logits}=pW_{\\mathrm{fc}}^{\\mathsf T}+b_{\\mathrm{fc}}\n$$\n\nThe weights dictionary contains stem_conv, blocks, transitions, the four final batch-normalization vectors, fc_weight, and fc_bias. Each block is an ordered list of composite-layer dictionaries, and each transition supplies its own batch-normalization vectors and 1 by 1 convolution. Return the class logits as a float64 PyTorch tensor with shape $(N,C_{\\mathrm{classes}})$.",
+  "seoDescription": "Assemble a DenseNet forward pass with dense blocks, transitions, final normalization, global pooling, and classification.",
+  "examples": [
+    "Input: x = [[[[-0.15441,0.38403],[-0.03968,0.04415]]]], weights = {\"stem_conv\":[[[[-0.19179,-0.20879,-0.10259],[-0.19144,-0.02615,-0.15921],[-0.07057,0.06929,0.08283]]]],\"blocks\":[[{\"bn_gamma\":[0.69251],\"bn_beta\":[-0.1198],\"bn_mean\":[0.10282],\"bn_var\":[0.95959],\"conv_weight\":[[[[-0.13171,-0.19187,0.19535],[-0.04574,0.13067,0.15458],[-0.15993,-0.19898,0.09224]]]]}]],\"transitions\":[],\"final_bn_gamma\":[0.89042,0.59945],\"final_bn_beta\":[0.11602,0.29186],\"final_bn_mean\":[0.28338,-0.11992],\"final_bn_var\":[1.27184,0.65231],\"fc_weight\":[[0.04251,-0.0161],[-0.0053,0.0332]],\"fc_bias\":[-0.00133,0.11938]}, growth_rate = 1, eps = 0.00001\n\nOutput: [[-0.007462,0.132025]]\n\nExplanation: The supplied stem, dense layer, final normalization, pooling, and classifier are applied in order.",
+    "Input: x.shape = (2, 1, 4, 4), weights = supplied DenseNet weights, growth_rate = 1, eps = 0.00001\n\nOutput: [[-0.110528,-0.069652],[-0.11093,-0.069368]]",
+    "Input: x.shape = (1, 2, 3, 3), weights = supplied DenseNet weights, growth_rate = 2, eps = 0.00001\n\nOutput: [[0.250917,-0.325549,0.058388]]"
+  ],
+  "requirements": "- Use PyTorch.\n- Apply every supplied dense block and transition in order.\n- Use dense concatenation inside each block.\n- Apply final BN-ReLU, global average pooling, and the supplied classifier.\n- Return the documented float64 logits tensor.",
+  "theory": "# <span style=\"font-size: 20px;\">Full DenseNet Forward Pass</span>\n\n<span style=\"font-size: 14px;\">DenseNet (Huang et al., 2017) is a convolutional architecture in which every layer receives the feature maps of all preceding layers within a block as input. The full forward pass assembles a stem convolution, several dense blocks separated by transition layers, a final normalization, global average pooling, and a linear classifier into one end to end function from an image to class logits.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What the Full Network Computes</span>\n\n<span style=\"font-size: 14px;\">A DenseNet maps an input image $x \\in \\mathbb{R}^{N \\times C_{in} \\times H \\times W}$ to logits $z \\in \\mathbb{R}^{N \\times K}$ over $K$ classes. The paper organizes the network into a small number of dense blocks (typically 3 or 4) joined by transition layers that downsample. The repeating motif is the dense block: a stack of composite layers where layer $\\ell$ sees the concatenation of all earlier feature maps.</span>\n\n<span style=\"font-size: 14px;\">The end to end pipeline is:</span>\n\n* <span style=\"font-size: 14px;\">**Stem:** a single $3 \\times 3$ convolution that lifts the raw channels to an initial feature width $C_0$ (the paper uses $2k$ for a growth rate $k$ on ImageNet, with a stride and pooling stem there; this problem uses the simpler CIFAR style $3 \\times 3$ stem with padding 1).</span>\n* <span style=\"font-size: 14px;\">**Dense blocks:** each block grows the channel count by $k$ per composite layer through concatenation.</span>\n* <span style=\"font-size: 14px;\">**Transitions:** between consecutive blocks, a batch norm, ReLU, $1 \\times 1$ convolution, and $2 \\times 2$ average pool reduce both channels and spatial resolution.</span>\n* <span style=\"font-size: 14px;\">**Head:** a final batch norm and ReLU, global average pooling over the spatial dimensions, and a linear layer to class logits.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Composite Layer</span>\n\n<span style=\"font-size: 14px;\">Each layer inside a block is a **composite function** $H_\\ell$. In the plain (non bottleneck) form used here, $H_\\ell$ is batch normalization, then ReLU, then a $3 \\times 3$ convolution with padding 1 that outputs exactly $k$ feature maps, where $k$ is the **growth rate**:</span>\n\n$$\nH_\\ell(x) = \\text{Conv}_{3\\times3}\\big(\\text{ReLU}(\\text{BN}(x))\\big)\n$$\n\n<span style=\"font-size: 14px;\">The pre activation order (BN then ReLU then convolution) follows the identity mappings work of He et al. (2016). It matters: putting normalization before the convolution keeps the concatenated inputs on a comparable scale even though they originate from layers at very different depths.</span>\n\n<span style=\"font-size: 14px;\">Batch normalization in inference uses the stored running statistics, so for a channel $c$ the normalized activation is:</span>\n\n$$\n\\hat{x}_c = \\frac{x_c - \\mu_c}{\\sqrt{\\sigma_c^2 + \\epsilon}}, \\qquad y_c = \\gamma_c \\hat{x}_c + \\beta_c\n$$\n\n<span style=\"font-size: 14px;\">where $\\mu_c, \\sigma_c^2$ are the running mean and variance, and $\\gamma_c, \\beta_c$ are the learned scale and shift. The padding of 1 on the $3 \\times 3$ convolution keeps the spatial size unchanged so that all feature maps inside a block remain concatenable.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Dense Connectivity Inside a Block</span>\n\n<span style=\"font-size: 14px;\">The defining idea of DenseNet is **dense connectivity**. Layer $\\ell$ receives the feature maps of all preceding layers as input, formed by concatenation along the channel axis:</span>\n\n$$\nx_\\ell = H_\\ell\\big([x_0, x_1, \\ldots, x_{\\ell-1}]\\big)\n$$\n\n<span style=\"font-size: 14px;\">Here $x_0$ is the block input and $[\\cdot]$ is channel concatenation. A block with $L$ composite layers and growth rate $k$ that starts with $C_0$ channels ends with $C_0 + L \\cdot k$ channels. Because each layer adds only $k$ maps, the network stays narrow even though connectivity is dense.</span>\n\n<span style=\"font-size: 14px;\">The implementation maintains a running list of feature maps, appends each layer's $k$ new maps, and concatenates the accumulated list to feed the next layer:</span>\n\n* <span style=\"font-size: 14px;\">Start with the block input as the first element of the feature list.</span>\n* <span style=\"font-size: 14px;\">For each composite layer, compute $k$ new maps from the concatenation of everything seen so far.</span>\n* <span style=\"font-size: 14px;\">Append the new maps and concatenate again for the next layer.</span>\n* <span style=\"font-size: 14px;\">The block output is the concatenation of the input plus every layer's output.</span>\n\n<span style=\"font-size: 14px;\">This is the contrast with ResNet, where the shortcut is additive: $x_\\ell = H_\\ell(x_{\\ell-1}) + x_{\\ell-1}$. Addition combines features by summation, which can impede information flow; concatenation preserves every feature map intact and lets later layers selectively reuse them.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Transition Layers</span>\n\n<span style=\"font-size: 14px;\">Dense blocks keep spatial resolution fixed, so the network needs explicit downsampling between blocks. A **transition layer** does this and also compresses the channel count:</span>\n\n$$\n\\text{Transition}(x) = \\text{AvgPool}_{2\\times2}\\Big(\\text{Conv}_{1\\times1}\\big(\\text{ReLU}(\\text{BN}(x))\\big)\\Big)\n$$\n\n<span style=\"font-size: 14px;\">The $1 \\times 1$ convolution has no bias and outputs a reduced number of channels. The paper introduces a **compression factor** $\\theta \\in (0, 1]$: a transition that follows a block with $m$ channels produces $\\lfloor \\theta m \\rfloor$ output channels. DenseNet-BC uses $\\theta = 0.5$. The $2 \\times 2$ average pool with stride 2 then halves both height and width. Transitions appear between blocks only, never after the last block, so a network with $B$ blocks has exactly $B - 1$ transitions.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Global Average Pooling and the Classifier</span>\n\n<span style=\"font-size: 14px;\">After the final dense block, the network applies one more batch norm and ReLU, then collapses the spatial dimensions with **global average pooling**. For a feature tensor of shape $(N, C, H, W)$ the pooled vector is:</span>\n\n$$\np_{n,c} = \\frac{1}{H W} \\sum_{i=1}^{H} \\sum_{j=1}^{W} x_{n,c,i,j}\n$$\n\n<span style=\"font-size: 14px;\">producing $(N, C)$. Global average pooling, popularized by Network in Network (Lin et al., 2014), replaces large fully connected layers with a single spatial average per channel. It removes a huge number of parameters and imposes a useful structural prior: each channel of the final feature map acts as a confidence map for a concept, and its spatial average is the evidence for that concept.</span>\n\n<span style=\"font-size: 14px;\">The classifier is a single linear layer applied to the pooled vector:</span>\n\n$$\nz = p\\, W_{fc}^\\top + b_{fc}\n$$\n\n<span style=\"font-size: 14px;\">with $W_{fc} \\in \\mathbb{R}^{K \\times C}$ and $b_{fc} \\in \\mathbb{R}^{K}$, giving logits of shape $(N, K)$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Standard DenseNet Configurations</span>\n\n<span style=\"font-size: 14px;\">The paper defines a family of networks (Table 1) that all share four dense blocks with growth rate $k = 32$ and the BC variant ($1 \\times 1$ bottleneck plus $\\theta = 0.5$ compression). They differ only in the number of composite layers per block:</span>\n\n* <span style=\"font-size: 14px;\">**DenseNet-121:** blocks of 6, 12, 24, 16 layers.</span>\n* <span style=\"font-size: 14px;\">**DenseNet-169:** blocks of 6, 12, 32, 32 layers.</span>\n* <span style=\"font-size: 14px;\">**DenseNet-201:** blocks of 6, 12, 48, 32 layers.</span>\n* <span style=\"font-size: 14px;\">**DenseNet-161:** a wider variant with $k = 48$ and blocks of 6, 12, 36, 24 layers.</span>\n\n<span style=\"font-size: 14px;\">The number in the name counts layers with learnable weights: convolutions in the composite layers and transitions, plus the stem and the classifier. The depth grows but the parameter count stays modest because the per layer growth $k$ is small and transitions repeatedly compress the width.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Bottleneck and Compression in Full Models</span>\n\n<span style=\"font-size: 14px;\">In the full DenseNet-BC, the composite layer is augmented with a bottleneck: a $1 \\times 1$ convolution produces $4k$ feature maps before the $3 \\times 3$ convolution. The bottleneck caps the cost of the $3 \\times 3$ convolution, whose input width grows with every layer. Combined with transition compression $\\theta = 0.5$, BC models reach the best accuracy per parameter. This problem deliberately uses the **plain** composite layer (BN-ReLU-$3 \\times 3$Conv only) so the forward logic stays tractable; the dense connectivity, transitions, pooling, and classifier are identical to the full model.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why Dense Connectivity Helps at Network Scale</span>\n\n<span style=\"font-size: 14px;\">The benefits of concatenative connectivity are clearest when reasoning about the whole network rather than a single block.</span>\n\n* <span style=\"font-size: 14px;\">**Implicit deep supervision.** Because the classifier sees feature maps from many depths through concatenation and short transition paths, gradients reach early layers over short routes. The paper notes this acts like the deep supervision of DSN (Lee et al., 2015) without auxiliary classifiers, easing the training of very deep models.</span>\n* <span style=\"font-size: 14px;\">**Feature reuse.** A layer can produce only $k$ new maps yet still draw on the full collection of earlier features. The network does not need to relearn redundant representations at each depth, which is why a 32 channel growth rate is enough for state of the art accuracy.</span>\n* <span style=\"font-size: 14px;\">**Diversified gradient flow.** Each layer receives gradients from the loss through every later layer it feeds. This many to many connectivity reduces the chance that a single bad path stalls learning, a structural advantage that compounds as the network deepens.</span>\n* <span style=\"font-size: 14px;\">**Regularization on small data.** The paper reports that dense connectivity reduces overfitting on datasets like CIFAR without heavy augmentation, attributing it to the compact, reused feature representation.</span>\n\n<span style=\"font-size: 14px;\">A subtle cost is memory. Naive concatenation stores every intermediate feature map for the backward pass, so memory grows quadratically with block depth. The paper and follow up work address this with shared memory allocations and recomputation, but the forward computation itself is exactly the concatenation described here.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Implementation Order and Numerical Notes</span>\n\n<span style=\"font-size: 14px;\">The forward pass is sensitive to the order of operations, and several conventions must be matched exactly to reproduce reference logits:</span>\n\n* <span style=\"font-size: 14px;\">**Pre activation within every BN-ReLU-Conv unit.** Both composite layers and transitions normalize first, activate, then convolve. The final head also applies BN then ReLU before pooling. Reordering these (for example convolving before normalizing) changes the output.</span>\n* <span style=\"font-size: 14px;\">**Padding keeps blocks concatenable.** The $3 \\times 3$ convolutions use padding 1 so that height and width are preserved inside a block. Without it, each layer would shrink the spatial size and concatenation would fail.</span>\n* <span style=\"font-size: 14px;\">**Convolutions in the head have no bias.** The transition $1 \\times 1$ convolution and the composite $3 \\times 3$ convolution carry no bias term; the only bias in the network is in the final linear classifier.</span>\n* <span style=\"font-size: 14px;\">**Inference batch norm uses running statistics.** At forward time the normalization divides by $\\sqrt{\\sigma_c^2 + \\epsilon}$ using the stored variance, not batch statistics. A small $\\epsilon$ (typically $10^{-5}$) guards against division by near zero variance.</span>\n* <span style=\"font-size: 14px;\">**Even spatial sizes before pooling.** Each $2 \\times 2$ average pool with stride 2 requires an even input size to halve cleanly. Architectures choose input resolutions so that every pre transition feature map has even height and width.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Comparison with ResNet Forward</span>\n\n<span style=\"font-size: 14px;\">Both DenseNet and ResNet build very deep networks by giving gradients short paths back to early layers, but the mechanism differs:</span>\n\n* <span style=\"font-size: 14px;\">**ResNet** uses additive skip connections. Each block adds its transformed output to its input. Layer count and feature width are decoupled, but features from different depths are summed, mixing them irreversibly.</span>\n* <span style=\"font-size: 14px;\">**DenseNet** uses concatenative connectivity. Every feature map is preserved and made available to all later layers, which encourages **feature reuse** and lets the classifier draw on low and high level features directly.</span>\n* <span style=\"font-size: 14px;\">**Parameter efficiency:** because layers are narrow ($k$ around 12 to 48) and features are reused rather than relearned, DenseNet matches ResNet accuracy on ImageNet with substantially fewer parameters and FLOPs.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Worked Example (tiny network)</span>\n\n<span style=\"font-size: 14px;\">Take $N = 1$, $C_{in} = 2$, $H = W = 8$, stem width $C_0 = 4$, growth rate $k = 2$, two blocks of two layers each, and one transition, with $K = 3$ classes.</span>\n\n* <span style=\"font-size: 14px;\">**Stem:** $3 \\times 3$ conv with padding 1 gives a $(1, 4, 8, 8)$ feature map.</span>\n* <span style=\"font-size: 14px;\">**Block 1:** layer 1 sees 4 channels and adds 2, giving 6; layer 2 sees 6 and adds 2, giving 8. Output is $(1, 8, 8, 8)$.</span>\n* <span style=\"font-size: 14px;\">**Transition:** $1 \\times 1$ conv compresses 8 to 4 channels, then $2 \\times 2$ average pool halves the spatial size to $(1, 4, 4, 4)$.</span>\n* <span style=\"font-size: 14px;\">**Block 2:** starts at 4 channels, adds 2 then 2, ending at 8 channels and shape $(1, 8, 4, 4)$.</span>\n* <span style=\"font-size: 14px;\">**Head:** final BN and ReLU, then global average pool over the $4 \\times 4$ grid gives $(1, 8)$, and the linear layer maps to $(1, 3)$ logits.</span>\n\n<span style=\"font-size: 14px;\">The key invariant to track at every step is the channel count: it grows by $k$ per composite layer and is reset by each transition.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n* <span style=\"font-size: 14px;\">**Applying a transition after the last block.** Transitions sit between blocks. A network with $B$ blocks has $B - 1$ transitions. An off by one that downsamples after the final block changes the channel count fed to the final batch norm and the classifier, producing a shape mismatch or silently wrong logits.</span>\n* <span style=\"font-size: 14px;\">**Replacing concatenation with addition or sequential chaining.** Dropping the concatenation collapses dense connectivity into a plain feedforward stack. Shapes may still line up if the growth rate matches the input width, so the bug runs but yields the wrong features and breaks the channel growth the rest of the network expects.</span>\n* <span style=\"font-size: 14px;\">**Forgetting the final BN-ReLU before pooling.** The last dense block output is not normalized inside the block. Skipping the final batch norm and ReLU feeds unnormalized, possibly negative activations into global average pooling and shifts every logit.</span>\n* <span style=\"font-size: 14px;\">**Flattening instead of global average pooling, or summing instead of averaging.** The classifier expects a per channel average, a vector of length $C$. Flattening spatial dimensions changes the input width to the linear layer, and summing rather than averaging scales features by $H W$, both of which corrupt the logits.</span>\n* <span style=\"font-size: 14px;\">**Transposing the classifier weight.** With $W_{fc}$ stored as $(K, C)$, the logits are $p\\, W_{fc}^\\top + b_{fc}$. Using $W_{fc}$ without the transpose either mismatches dimensions or computes the wrong projection.</span>\n\n---\n",
+  "hints": [
+    "Implement one helper for the supplied evaluation-mode BN-ReLU operation.",
+    "Keep a feature list inside each block and concatenate it before every layer.",
+    "Average the final feature map over dimensions 2 and 3 before the classifier."
+  ],
+  "constraints": "- x has shape (N, C_in, H, W) and dtype torch.float64.\n- weights contains one fewer transition than dense blocks.\n- Every composite convolution produces growth_rate channels.\n- H and W are divisible by two once for every transition.\n- All supplied floating tensors have dtype torch.float64.\n- eps is positive.",
+  "difficulty": "Hard",
+  "starterCode": "import torch\nimport torch.nn.functional as F\n\ndef densenet_forward(x: torch.Tensor, weights: dict, growth_rate: int,\n                     eps: float = 1e-5) -> torch.Tensor:\n    \"\"\"\n    Returns the float64 class logits from the complete DenseNet forward pass.\n    \"\"\"\n    pass",
+  "createdAt": "2026-06-03T18:52:02.026Z",
+  "updatedAt": "2026-06-03T18:52:02.026Z",
+  "topicId": "densenet-forward",
+  "paperSnippet": "\"Crucially, in contrast to ResNets, we never combine features through summation before they are passed into a layer; instead, we combine features by concatenating them.\"",
+  "visualizationComponent": "DenseNetForwardViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Full DenseNet Forward Pass** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch\nimport torch.nn.functional as F\n\ndef densenet_forward(x: torch.Tensor, weights: dict, growth_rate: int,\n                     eps: float = 1e-5) -> torch.Tensor:\n    cur = x.to(torch.float64) if isinstance(x, torch.Tensor) else torch.tensor(x, dtype=torch.float64)\n    eps = float(eps)\n    \n    # 1. Stem\n    w_stem = torch.tensor(weights['stem_conv'], dtype=torch.float64)\n    cur = F.conv2d(cur, w_stem, stride=1, padding=1)\n    \n    # 2. Blocks and transitions\n    blocks = weights['blocks']\n    transitions = weights.get('transitions', [])\n    for b_idx, block_layers in enumerate(blocks):\n        feats = [cur]\n        for layer in block_layers:\n            inp = torch.cat(feats, dim=1)\n            gamma = torch.tensor(layer['bn_gamma'], dtype=torch.float64).view(1, -1, 1, 1)\n            beta = torch.tensor(layer['bn_beta'], dtype=torch.float64).view(1, -1, 1, 1)\n            mean = torch.tensor(layer['bn_mean'], dtype=torch.float64).view(1, -1, 1, 1)\n            var = torch.tensor(layer['bn_var'], dtype=torch.float64).view(1, -1, 1, 1)\n            w = torch.tensor(layer['conv_weight'], dtype=torch.float64)\n            x_norm = gamma * (inp - mean) / torch.sqrt(var + eps) + beta\n            x_relu = F.relu(x_norm)\n            feats.append(F.conv2d(x_relu, w, stride=1, padding=1))\n        cur = torch.cat(feats, dim=1)\n        if b_idx < len(transitions):\n            t = transitions[b_idx]\n            gamma = torch.tensor(t['bn_gamma'], dtype=torch.float64).view(1, -1, 1, 1)\n            beta = torch.tensor(t['bn_beta'], dtype=torch.float64).view(1, -1, 1, 1)\n            mean = torch.tensor(t['bn_mean'], dtype=torch.float64).view(1, -1, 1, 1)\n            var = torch.tensor(t['bn_var'], dtype=torch.float64).view(1, -1, 1, 1)\n            w = torch.tensor(t['conv_weight'], dtype=torch.float64)\n            x_norm = gamma * (cur - mean) / torch.sqrt(var + eps) + beta\n            z = F.conv2d(F.relu(x_norm), w, stride=1, padding=0)\n            cur = F.avg_pool2d(z, kernel_size=2, stride=2)\n            \n    # 3. Final BN & ReLU\n    f_gamma = torch.tensor(weights['final_bn_gamma'], dtype=torch.float64).view(1, -1, 1, 1)\n    f_beta = torch.tensor(weights['final_bn_beta'], dtype=torch.float64).view(1, -1, 1, 1)\n    f_mean = torch.tensor(weights['final_bn_mean'], dtype=torch.float64).view(1, -1, 1, 1)\n    f_var = torch.tensor(weights['final_bn_var'], dtype=torch.float64).view(1, -1, 1, 1)\n    cur = f_gamma * (cur - f_mean) / torch.sqrt(f_var + eps) + f_beta\n    cur = F.relu(cur)\n    \n    # 4. Global Average Pooling & Linear\n    pooled = torch.mean(cur, dim=(2, 3))\n    fc_w = torch.tensor(weights['fc_weight'], dtype=torch.float64)\n    fc_b = torch.tensor(weights['fc_bias'], dtype=torch.float64)\n    out = pooled @ fc_w.T + fc_b\n    return torch.round(out * 1e6) / 1e6\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "public-1",
+      "name": "Single block",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -0.15441,
+                0.38403
+              ],
+              [
+                -0.03968,
+                0.04415
+              ]
+            ]
+          ]
+        ],
+        "eps": 1e-05,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": 1
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          -0.007462,
+          0.132025
+        ]
+      ]
+    },
+    {
+      "id": "public-2",
+      "name": "Two blocks",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.70552,
+                -0.37367,
+                0.52156,
+                0.27077
+              ],
+              [
+                0.02916,
+                0.78347,
+                -0.18243,
+                0.07214
+              ],
+              [
+                -0.5608,
+                -0.72221,
+                0.04185,
+                -0.25586
+              ],
+              [
+                -0.73072,
+                -0.29793,
+                0.46023,
+                0.77886
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                -0.06703,
+                -0.22009,
+                -0.45315,
+                -0.7345
+              ],
+              [
+                0.38674,
+                -0.11488,
+                -0.19353,
+                0.03982
+              ],
+              [
+                -0.45709,
+                -0.65712,
+                0.21527,
+                0.21034
+              ],
+              [
+                0.60595,
+                0.07423,
+                0.15633,
+                0.64595
+              ]
+            ]
+          ]
+        ],
+        "eps": 1e-05,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.74005,
+                  1.11288
+                ],
+                "bn_beta": [
+                  0.22815,
+                  -0.1289
+                ],
+                "bn_mean": [
+                  0.08191,
+                  -0.34812
+                ],
+                "bn_gamma": [
+                  0.51745,
+                  1.45362
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.08578,
+                        0.08228,
+                        -0.0592
+                      ],
+                      [
+                        0.03063,
+                        0.03436,
+                        -0.14419
+                      ],
+                      [
+                        -0.07844,
+                        0.18712,
+                        -0.15578
+                      ]
+                    ],
+                    [
+                      [
+                        0.13993,
+                        0.17796,
+                        0.1255
+                      ],
+                      [
+                        0.10611,
+                        -0.17075,
+                        0.12862
+                      ],
+                      [
+                        -0.01267,
+                        0.1893,
+                        0.08856
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ],
+            [
+              {
+                "bn_var": [
+                  1.22995,
+                  0.5617
+                ],
+                "bn_beta": [
+                  0.14173,
+                  -0.04589
+                ],
+                "bn_mean": [
+                  -0.38,
+                  -0.39285
+                ],
+                "bn_gamma": [
+                  1.1763,
+                  0.91427
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        0.17987,
+                        -0.15636,
+                        -0.12772
+                      ],
+                      [
+                        0.09375,
+                        0.04956,
+                        0.03371
+                      ],
+                      [
+                        0.03264,
+                        -0.09087,
+                        0.16395
+                      ]
+                    ],
+                    [
+                      [
+                        -0.02165,
+                        0.10283,
+                        0.13148
+                      ],
+                      [
+                        0.17445,
+                        -0.125,
+                        -0.04106
+                      ],
+                      [
+                        -0.07286,
+                        -0.17721,
+                        -0.1563
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.19881,
+            -0.01757
+          ],
+          "fc_weight": [
+            [
+              0.00896,
+              0.26897,
+              -0.2098
+            ],
+            [
+              -0.1285,
+              -0.13236,
+              -0.24738
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.21296,
+                  -0.07146,
+                  -0.17116
+                ],
+                [
+                  -0.03292,
+                  -0.12526,
+                  0.13969
+                ],
+                [
+                  0.05943,
+                  0.10691,
+                  0.0468
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0.19455,
+                  0.18028,
+                  -0.1514
+                ],
+                [
+                  -0.13084,
+                  -0.17107,
+                  -0.05121
+                ],
+                [
+                  0.23061,
+                  0.23734,
+                  -0.16769
+                ]
+              ]
+            ]
+          ],
+          "transitions": [
+            {
+              "bn_var": [
+                0.56185,
+                0.26041,
+                1.39004
+              ],
+              "bn_beta": [
+                -0.05538,
+                -0.27801,
+                -0.17043
+              ],
+              "bn_mean": [
+                0.25748,
+                0.35466,
+                -0.14875
+              ],
+              "bn_gamma": [
+                0.51143,
+                0.69597,
+                0.60745
+              ],
+              "conv_weight": [
+                [
+                  [
+                    [
+                      0.17423
+                    ]
+                  ],
+                  [
+                    [
+                      0.22927
+                    ]
+                  ],
+                  [
+                    [
+                      -0.01748
+                    ]
+                  ]
+                ],
+                [
+                  [
+                    [
+                      -0.23703
+                    ]
+                  ],
+                  [
+                    [
+                      0.27363
+                    ]
+                  ],
+                  [
+                    [
+                      -0.28869
+                    ]
+                  ]
+                ]
+              ]
+            }
+          ],
+          "final_bn_var": [
+            1.34842,
+            0.82686,
+            0.44434
+          ],
+          "final_bn_beta": [
+            -0.21706,
+            0.23248,
+            0.05465
+          ],
+          "final_bn_mean": [
+            0.16512,
+            -0.1581,
+            0.11916
+          ],
+          "final_bn_gamma": [
+            0.7042,
+            0.6816,
+            1.04881
+          ]
+        },
+        "growth_rate": 1
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          -0.110528,
+          -0.069652
+        ],
+        [
+          -0.11093,
+          -0.069368
+        ]
+      ]
+    },
+    {
+      "id": "public-3",
+      "name": "Two-layer block",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -0.76845,
+                0.67762,
+                0.33418
+              ],
+              [
+                -0.27644,
+                -0.48239,
+                0.39669
+              ],
+              [
+                0.67285,
+                -0.2959,
+                -0.23907
+              ]
+            ],
+            [
+              [
+                0.71678,
+                0.02086,
+                -0.37203
+              ],
+              [
+                -0.18509,
+                -0.21422,
+                0.63042
+              ],
+              [
+                0.27723,
+                -0.47555,
+                0.4298
+              ]
+            ]
+          ]
+        ],
+        "eps": 1e-05,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.92538
+                ],
+                "bn_beta": [
+                  -0.1853
+                ],
+                "bn_mean": [
+                  -0.28675
+                ],
+                "bn_gamma": [
+                  0.99205
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.19731,
+                        -0.12906,
+                        0.05875
+                      ],
+                      [
+                        -0.01398,
+                        -0.08999,
+                        -0.1703
+                      ],
+                      [
+                        0.04275,
+                        -0.08092,
+                        0.09933
+                      ]
+                    ]
+                  ],
+                  [
+                    [
+                      [
+                        -0.00987,
+                        0.07279,
+                        0.07209
+                      ],
+                      [
+                        -0.05842,
+                        0.13936,
+                        0.05062
+                      ],
+                      [
+                        0.12188,
+                        -0.07391,
+                        0.09108
+                      ]
+                    ]
+                  ]
+                ]
+              },
+              {
+                "bn_var": [
+                  0.33082,
+                  0.54996,
+                  0.97267
+                ],
+                "bn_beta": [
+                  0.11115,
+                  -0.04611,
+                  -0.10761
+                ],
+                "bn_mean": [
+                  0.01948,
+                  -0.07462,
+                  -0.39028
+                ],
+                "bn_gamma": [
+                  0.94377,
+                  0.65571,
+                  0.81235
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        0.14165,
+                        0.04792,
+                        0.0723
+                      ],
+                      [
+                        -0.12235,
+                        0.17589,
+                        0.04818
+                      ],
+                      [
+                        -0.1019,
+                        0.06931,
+                        -0.02412
+                      ]
+                    ],
+                    [
+                      [
+                        0.05274,
+                        0.13843,
+                        -0.03963
+                      ],
+                      [
+                        0.14553,
+                        0.15834,
+                        0.09858
+                      ],
+                      [
+                        -0.15944,
+                        0.08927,
+                        -0.11997
+                      ]
+                    ],
+                    [
+                      [
+                        -0.09042,
+                        -0.08326,
+                        -0.16954
+                      ],
+                      [
+                        0.05993,
+                        -0.11444,
+                        0.05035
+                      ],
+                      [
+                        0.14743,
+                        0.18671,
+                        0.08219
+                      ]
+                    ]
+                  ],
+                  [
+                    [
+                      [
+                        0.04984,
+                        0.04634,
+                        0.02008
+                      ],
+                      [
+                        -0.05852,
+                        -0.14961,
+                        -0.02238
+                      ],
+                      [
+                        0.08013,
+                        -0.03848,
+                        -0.17424
+                      ]
+                    ],
+                    [
+                      [
+                        0.18565,
+                        -0.19497,
+                        -0.06887
+                      ],
+                      [
+                        -0.16243,
+                        -0.02809,
+                        -0.06205
+                      ],
+                      [
+                        -0.01633,
+                        -0.02336,
+                        -0.05256
+                      ]
+                    ],
+                    [
+                      [
+                        0.15442,
+                        0.023,
+                        -0.17829
+                      ],
+                      [
+                        0.13013,
+                        0.14476,
+                        0.07564
+                      ],
+                      [
+                        -0.18624,
+                        -0.15752,
+                        0.18166
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            0.06336,
+            -0.09255,
+            -0.07638
+          ],
+          "fc_weight": [
+            [
+              0.3983,
+              0.16443,
+              0.07029,
+              0.27885,
+              -0.31915
+            ],
+            [
+              -0.38236,
+              -0.39733,
+              0.00053,
+              -0.34815,
+              0.34325
+            ],
+            [
+              0.24327,
+              -0.38647,
+              0.06824,
+              0.20103,
+              -0.08237
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.21816,
+                  -0.00046,
+                  0.20892
+                ],
+                [
+                  -0.13993,
+                  0.14174,
+                  0.03434
+                ],
+                [
+                  -0.03384,
+                  -0.02858,
+                  -0.04241
+                ]
+              ],
+              [
+                [
+                  0.11375,
+                  -0.13192,
+                  -0.23413
+                ],
+                [
+                  0.09549,
+                  -0.07279,
+                  0.06928
+                ],
+                [
+                  -0.00732,
+                  0.02036,
+                  -0.24622
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            0.88323,
+            0.92886,
+            1.39683,
+            0.302,
+            0.85883
+          ],
+          "final_bn_beta": [
+            -0.28118,
+            0.02206,
+            -0.19019,
+            -0.17911,
+            0.16193
+          ],
+          "final_bn_mean": [
+            -0.28262,
+            0.14846,
+            0.10478,
+            -0.3824,
+            0.2969
+          ],
+          "final_bn_gamma": [
+            0.59444,
+            1.48812,
+            1.39604,
+            1.07171,
+            1.11334
+          ]
+        },
+        "growth_rate": 2
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.250917,
+          -0.325549,
+          0.058388
+        ]
+      ]
+    },
+    {
+      "id": "densenet-forward-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -0.3088,
+                0.7681
+              ],
+              [
+                -0.0794,
+                0.0883
+              ]
+            ]
+          ]
+        ],
+        "eps": 0.0,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": 2
+      },
+      "expectedOutput": "tensor([[-0.0075,  0.1320]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -0.0772,
+                0.192
+              ],
+              [
+                -0.0198,
+                0.0221
+              ]
+            ]
+          ]
+        ],
+        "eps": 0.0,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": 0
+      },
+      "expectedOutput": "tensor([[-0.0075,  0.1320]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.1544,
+                -0.384
+              ],
+              [
+                0.0397,
+                -0.0442
+              ]
+            ]
+          ]
+        ],
+        "eps": -0.0,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": -1
+      },
+      "expectedOutput": "tensor([[-0.0075,  0.1320]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -0.4632,
+                1.1521
+              ],
+              [
+                -0.119,
+                0.1325
+              ]
+            ]
+          ]
+        ],
+        "eps": 0.0,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": 3
+      },
+      "expectedOutput": "tensor([[-0.0075,  0.1320]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.8455900000000001,
+                1.38403
+              ],
+              [
+                0.96032,
+                1.04415
+              ]
+            ]
+          ]
+        ],
+        "eps": 1.00001,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": 2.0
+      },
+      "expectedOutput": "tensor([[-0.0069,  0.1309]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -2.15441,
+                -1.61597
+              ],
+              [
+                -2.03968,
+                -1.95585
+              ]
+            ]
+          ]
+        ],
+        "eps": -1.99999,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": -1.0
+      },
+      "expectedOutput": "tensor([[nan, nan]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.38403,
+                -0.15441
+              ],
+              [
+                0.04415,
+                -0.03968
+              ]
+            ]
+          ]
+        ],
+        "eps": 0.0,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": 1
+      },
+      "expectedOutput": "tensor([[-0.0075,  0.1320]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.15441,
+                -0.38403
+              ],
+              [
+                0.03968,
+                -0.04415
+              ]
+            ]
+          ]
+        ],
+        "eps": -1e-05,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": -1
+      },
+      "expectedOutput": "tensor([[-0.0075,  0.1320]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -1.5441,
+                3.8403
+              ],
+              [
+                -0.3968,
+                0.4415
+              ]
+            ]
+          ]
+        ],
+        "eps": 0.0001,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": 10
+      },
+      "expectedOutput": "tensor([[-0.0065,  0.1319]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -0.0154,
+                0.0384
+              ],
+              [
+                -0.004,
+                0.0044
+              ]
+            ]
+          ]
+        ],
+        "eps": 0.0,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": 0
+      },
+      "expectedOutput": "tensor([[-0.0075,  0.1320]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                4.84559,
+                5.38403
+              ],
+              [
+                4.96032,
+                5.04415
+              ]
+            ]
+          ]
+        ],
+        "eps": 5.00001,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": 6.0
+      },
+      "expectedOutput": "tensor([[-0.0065,  0.1301]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -0.2316,
+                0.576
+              ],
+              [
+                -0.0595,
+                0.0662
+              ]
+            ]
+          ]
+        ],
+        "eps": 0.0,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": 2
+      },
+      "expectedOutput": "tensor([[-0.0075,  0.1320]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                0.3088,
+                -0.7681
+              ],
+              [
+                0.0794,
+                -0.0883
+              ]
+            ]
+          ]
+        ],
+        "eps": -0.0,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": -2
+      },
+      "expectedOutput": "tensor([[-0.0075,  0.1320]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -0.0386,
+                0.096
+              ],
+              [
+                -0.0099,
+                0.011
+              ]
+            ]
+          ]
+        ],
+        "eps": 0.0,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": 0
+      },
+      "expectedOutput": "tensor([[-0.0075,  0.1320]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -1.15441,
+                -0.61597
+              ],
+              [
+                -1.03968,
+                -0.95585
+              ]
+            ]
+          ]
+        ],
+        "eps": -0.99999,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": 0.0
+      },
+      "expectedOutput": "tensor([[nan, nan]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -0.6176,
+                1.5361
+              ],
+              [
+                -0.1587,
+                0.1766
+              ]
+            ]
+          ]
+        ],
+        "eps": 0.0,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": 4
+      },
+      "expectedOutput": "tensor([[-0.0075,  0.1320]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "densenet-forward-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            [
+              [
+                -0.1158,
+                0.288
+              ],
+              [
+                -0.0298,
+                0.0331
+              ]
+            ]
+          ]
+        ],
+        "eps": 0.0,
+        "weights": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "growth_rate": 1
+      },
+      "expectedOutput": "tensor([[-0.0075,  0.1320]], dtype=torch.float64)",
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "densenet_forward",
+    "runtime": "pytorch",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "array",
+        "example": [
+          [
+            [
+              [
+                -0.15441,
+                0.38403
+              ],
+              [
+                -0.03968,
+                0.04415
+              ]
+            ]
+          ]
+        ],
+        "description": "Float64 image tensor with shape (N, C_in, H, W)."
+      },
+      {
+        "name": "weights",
+        "type": "object",
+        "example": {
+          "blocks": [
+            [
+              {
+                "bn_var": [
+                  0.95959
+                ],
+                "bn_beta": [
+                  -0.1198
+                ],
+                "bn_mean": [
+                  0.10282
+                ],
+                "bn_gamma": [
+                  0.69251
+                ],
+                "conv_weight": [
+                  [
+                    [
+                      [
+                        -0.13171,
+                        -0.19187,
+                        0.19535
+                      ],
+                      [
+                        -0.04574,
+                        0.13067,
+                        0.15458
+                      ],
+                      [
+                        -0.15993,
+                        -0.19898,
+                        0.09224
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ]
+          ],
+          "fc_bias": [
+            -0.00133,
+            0.11938
+          ],
+          "fc_weight": [
+            [
+              0.04251,
+              -0.0161
+            ],
+            [
+              -0.0053,
+              0.0332
+            ]
+          ],
+          "stem_conv": [
+            [
+              [
+                [
+                  -0.19179,
+                  -0.20879,
+                  -0.10259
+                ],
+                [
+                  -0.19144,
+                  -0.02615,
+                  -0.15921
+                ],
+                [
+                  -0.07057,
+                  0.06929,
+                  0.08283
+                ]
+              ]
+            ]
+          ],
+          "transitions": [],
+          "final_bn_var": [
+            1.27184,
+            0.65231
+          ],
+          "final_bn_beta": [
+            0.11602,
+            0.29186
+          ],
+          "final_bn_mean": [
+            0.28338,
+            -0.11992
+          ],
+          "final_bn_gamma": [
+            0.89042,
+            0.59945
+          ]
+        },
+        "description": "Nested DenseNet weights and evaluation-mode batch-normalization statistics."
+      },
+      {
+        "name": "growth_rate",
+        "type": "number",
+        "example": 1,
+        "description": "Channels contributed by every composite layer."
+      },
+      {
+        "name": "eps",
+        "type": "number",
+        "example": 1e-05,
+        "description": "Positive batch-normalization epsilon."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "densenet-forward",
+    "name": "Full Forward",
+    "description": "Assemble the full DenseNet: stem conv, dense blocks with transitions, final norm, global pool, classifier.",
+    "color": "#ef4444"
+  },
+  "paper": {
+    "id": "densenet",
+    "title": "DenseNet",
+    "authors": "Huang et al., 2017",
+    "year": 2017,
+    "paperUrl": "https://arxiv.org/abs/1608.06993",
+    "visualizationComponent": "DenseNetArchViz"
+  },
+  "navigation": {
+    "index": 6,
+    "total": 6,
+    "prev": "densenet-transition",
+    "next": null
+  },
+  "cleanTitle": ""
+}

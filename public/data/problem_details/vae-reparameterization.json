@@ -1,0 +1,958 @@
+{
+  "id": "vae-reparameterization",
+  "title": "Reparameterization Trick",
+  "description": "Implement the reparameterization step of a variational autoencoder using the supplied noise.\n\n$$\n\\sigma = \\exp\\left(\\frac{1}{2}\\log \\sigma^2\\right)\n$$\n\n$$\nZ = \\mu + \\sigma \\odot \\varepsilon\n$$\n\nHere, $\\mu$ and $\\log \\sigma^2$ describe a diagonal Gaussian, $\\varepsilon$ is the supplied standard-normal noise, and $\\odot$ denotes elementwise multiplication. Using supplied noise makes the operation deterministic and differentiable with respect to the distribution parameters. Return $Z$ as a float64 NumPy array with the same shape as $\\mu$.",
+  "seoDescription": "Implement the VAE reparameterization trick by sampling latent vectors from the predicted mean and log variance.",
+  "examples": [
+    "Input: mu = [[0.5,-0.3],[0.1,0.8]], log_var = [[-1,0.5],[0.2,-0.5]], epsilon = [[0.3,-0.7],[1.2,0.1]]\n\nOutput: [[0.681959,-1.198818],[1.426205,0.87788]]\n\nExplanation: The standard deviation scales the supplied noise before it is shifted by the latent mean.",
+    "Input: mu = [[1,-2,0.5]], log_var = [[0,1,-1]], epsilon = [[0,0,0]]\n\nOutput: [[1,-2,0.5]]",
+    "Input: mu = [[0,0],[1,-1]], log_var = [[0,0],[0,0]], epsilon = [[-0.5,0.25],[0.75,-0.2]]\n\nOutput: [[-0.5,0.25],[1.75,-1.2]]"
+  ],
+  "requirements": "- Use NumPy.\n- Convert log-variance to standard deviation.\n- Use the supplied epsilon without sampling new noise.\n- Return a float64 NumPy array with the documented shape.",
+  "theory": "# <span style=\"font-size: 20px;\">Reparameterization Trick</span>\n\n<span style=\"font-size: 14px;\">The reparameterization trick (Kingma & Welling, 2014) is a technique that enables backpropagation through stochastic sampling in variational autoencoders (VAEs). By expressing a random variable as a deterministic function of its parameters plus external noise, it transforms a non-differentiable sampling operation into a differentiable computation, making gradient-based optimization of the VAE objective possible.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">In a VAE, the encoder maps an input $x$ to a distribution over latent variables, parameterized by a mean vector $\\mu$ and a log-variance vector $\\log \\sigma^2$. To generate a latent code $z$, the model must sample from this distribution: $z \\sim \\mathcal{N}(\\mu, \\sigma^2 I)$. The problem is that sampling is a stochastic operation with no well-defined gradient. Backpropagation cannot flow through a random number generator.</span>\n\n<span style=\"font-size: 14px;\">The reparameterization trick resolves this by separating the randomness from the learned parameters. Instead of sampling $z$ directly from $\\mathcal{N}(\\mu, \\sigma^2 I)$, the trick first samples noise from a fixed distribution $\\epsilon \\sim \\mathcal{N}(0, I)$, then constructs $z$ as a deterministic function of $\\mu$, $\\sigma$, and $\\epsilon$. This makes $z$ differentiable with respect to $\\mu$ and $\\sigma$, allowing standard backpropagation to optimize the encoder.</span>\n\n<span style=\"font-size: 14px;\">Kingma & Welling state: \"We reparameterize $\\tilde{z}$ as a deterministic variable $\\tilde{z} = g_\\phi(\\epsilon, x)$ where $\\epsilon$ is an auxiliary noise variable.\" The function $g$ encodes the transformation from fixed noise to the desired distribution, and because $g$ is differentiable, gradients flow through it to the encoder parameters $\\phi$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">The encoder outputs two vectors for each input $x$:</span>\n\n$$\n\\mu = f_\\mu(x), \\quad \\log \\sigma^2 = f_{\\log \\sigma^2}(x)\n$$\n\n<span style=\"font-size: 14px;\">where $f_\\mu$ and $f_{\\log \\sigma^2}$ are neural networks (typically sharing earlier layers). The notation $\\log \\sigma^2$ is often written as $\\texttt{log\\_var}$ in code.</span>\n\n<span style=\"font-size: 14px;\">The standard deviation $\\sigma$ is recovered from $\\log \\sigma^2$ via:</span>\n\n$$\n\\sigma = \\exp\\!\\left(\\tfrac{1}{2} \\log \\sigma^2\\right)\n$$\n\n<span style=\"font-size: 14px;\">The reparameterized sample is then:</span>\n\n$$\nz = \\mu + \\sigma \\odot \\epsilon, \\quad \\epsilon \\sim \\mathcal{N}(0, I)\n$$\n\n<span style=\"font-size: 14px;\">where $\\odot$ denotes element-wise multiplication. Each component $z_i = \\mu_i + \\sigma_i \\cdot \\epsilon_i$ is independently computed. The noise $\\epsilon$ has the same shape as $\\mu$ and $\\sigma$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Problem: Sampling Is Non-Differentiable</span>\n\n<span style=\"font-size: 14px;\">Training a VAE requires optimizing the Evidence Lower Bound (ELBO), which involves computing expectations over the latent distribution $q_\\phi(z|x) = \\mathcal{N}(\\mu, \\sigma^2 I)$. The standard approach is to estimate these expectations with Monte Carlo samples: draw $z \\sim q_\\phi(z|x)$, evaluate the reconstruction loss and KL divergence, and backpropagate through the entire computation graph.</span>\n\n<span style=\"font-size: 14px;\">The bottleneck is the sampling step $z \\sim \\mathcal{N}(\\mu, \\sigma^2 I)$. This operation takes $\\mu$ and $\\sigma$ as inputs and produces a random output $z$, but it has no gradient. Consider what $\\partial z / \\partial \\mu$ would mean: changing $\\mu$ shifts the distribution from which $z$ is drawn, but any specific sample $z$ is a random realization, not a smooth function of $\\mu$. The sampling operation is a black box that breaks the computation graph.</span>\n\n<span style=\"font-size: 14px;\">Without the reparameterization trick, the only alternative is REINFORCE-style gradient estimators (score function estimators), which compute $\\nabla_\\phi \\mathbb{E}_{q_\\phi}[f(z)] = \\mathbb{E}_{q_\\phi}[f(z) \\nabla_\\phi \\log q_\\phi(z|x)]$. These are valid but suffer from extremely high variance, making training slow and unstable.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Solution: Move Randomness to an External Variable</span>\n\n<span style=\"font-size: 14px;\">The core insight is to factor the sampling process into two parts: a fixed source of randomness and a deterministic transformation:</span>\n\n$$\n\\epsilon \\sim \\mathcal{N}(0, I), \\quad z = \\mu + \\sigma \\odot \\epsilon\n$$\n\n<span style=\"font-size: 14px;\">The random number $\\epsilon$ is sampled once at the beginning and then treated as a fixed constant throughout the forward and backward pass. The node that computes $z$ is a deterministic function of three inputs: $\\mu$ (a learned parameter), $\\sigma$ (derived from a learned parameter), and $\\epsilon$ (a constant). Because $z = \\mu + \\sigma \\odot \\epsilon$ is just addition and multiplication, it is fully differentiable with respect to $\\mu$ and $\\sigma$.</span>\n\n<span style=\"font-size: 14px;\">The stochasticity has not disappeared. Each training iteration still uses a different $\\epsilon$, so $z$ is still a random variable across the training procedure. But within a single forward-backward pass, $\\epsilon$ is fixed, and $z$ is deterministic. The randomness is external to the computation graph rather than internal to it.</span>\n\n<span style=\"font-size: 14px;\">Kingma & Welling call this the Stochastic Gradient Variational Bayes (SGVB) estimator. The paper shows that even a single Monte Carlo sample ($L = 1$) per datapoint per update is sufficient for practical training, because the reparameterized gradient estimator has low enough variance.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why This Works: Gradient Analysis</span>\n\n<span style=\"font-size: 14px;\">The reparameterized form $z = \\mu + \\sigma \\odot \\epsilon$ yields clean, well-defined gradients with respect to both encoder outputs.</span>\n\n<span style=\"font-size: 14px;\">**Gradient with respect to** $\\mu$**:**</span>\n\n$$\n\\frac{\\partial z}{\\partial \\mu} = I\n$$\n\n<span style=\"font-size: 14px;\">The identity. Shifting $\\mu$ by $\\Delta \\mu$ shifts every component of $z$ by the same amount, regardless of the noise. Gradients from the reconstruction loss flow directly back to $\\mu$ without distortion.</span>\n\n<span style=\"font-size: 14px;\">**Gradient with respect to** $\\sigma$**:**</span>\n\n$$\n\\frac{\\partial z}{\\partial \\sigma} = \\epsilon\n$$\n\n<span style=\"font-size: 14px;\">The gradient is exactly the noise vector. When $\\epsilon_i$ is large, the gradient with respect to $\\sigma_i$ is large, because stretching the distribution has a bigger effect on that component. When $\\epsilon_i$ is near zero, the gradient is small. This is geometrically intuitive: the sensitivity of $z$ to changes in $\\sigma$ is proportional to how far the noise pushed the sample from the mean.</span>\n\n<span style=\"font-size: 14px;\">The chain rule continues through $\\sigma$ to $\\log \\sigma^2$. Since $\\sigma = \\exp(0.5 \\cdot \\log \\sigma^2)$:</span>\n\n$$\n\\frac{\\partial z}{\\partial \\log \\sigma^2} = \\epsilon \\odot \\left(0.5 \\cdot \\sigma\\right) = 0.5 \\cdot \\sigma \\odot \\epsilon\n$$\n\n<span style=\"font-size: 14px;\">This is the gradient that the encoder's $\\log \\sigma^2$ head receives. The factor of $0.5$ comes from the square root in the variance-to-standard-deviation conversion.</span>\n\n---\n\n## The $\\exp(0.5 \\cdot \\log \\sigma^2)$ Conversion\n\n<span style=\"font-size: 14px;\">A common source of confusion is why the encoder outputs $\\log \\sigma^2$ (log-variance) rather than $\\sigma$ directly, and what the coefficient $0.5$ does.</span>\n\n<span style=\"font-size: 14px;\">**Why output log-variance instead of sigma?** The standard deviation $\\sigma$ must be strictly positive. If the encoder output $\\sigma$ directly, a constraint or activation function (like softplus) would be needed. By outputting $\\log \\sigma^2$, the encoder can produce any real number on $(-\\infty, +\\infty)$, which is the natural output range of a linear layer. Positivity is automatically satisfied by the exponential during conversion.</span>\n\n<span style=\"font-size: 14px;\">**Why log-variance and not log-sigma?** Either works mathematically. The log-variance convention aligns naturally with the KL divergence formula:</span>\n\n$$\nD_{KL} = -\\frac{1}{2} \\sum_{j=1}^{d} \\left(1 + \\log \\sigma_j^2 - \\mu_j^2 - \\sigma_j^2\\right)\n$$\n\n<span style=\"font-size: 14px;\">Here $\\log \\sigma_j^2$ appears directly, so using log-variance as the encoder output avoids an extra log operation. In code, $\\texttt{log\\_var}$ is used as-is in the KL term.</span>\n\n<span style=\"font-size: 14px;\">**The 0.5 coefficient derivation:**</span>\n\n$$\n\\sigma = \\sqrt{\\sigma^2} = \\sqrt{\\exp(\\log \\sigma^2)} = \\exp\\!\\left(\\tfrac{1}{2} \\log \\sigma^2\\right)\n$$\n\n<span style=\"font-size: 14px;\">The $0.5$ is the exponent from the square root. In code: $\\texttt{sigma = torch.exp(0.5 * log\\_var)}$. The factor is not arbitrary -- it is the mathematical consequence of converting from variance to standard deviation in log-space.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context: Kingma & Welling (2014)</span>\n\n<span style=\"font-size: 14px;\">The reparameterization trick is the central technical contribution of \"Auto-Encoding Variational Bayes\" (Kingma & Welling, 2014). The paper introduces the VAE framework, combining a probabilistic encoder $q_\\phi(z|x)$ (recognition model) with a probabilistic decoder $p_\\theta(x|z)$ (generative model). The training objective is to maximize the ELBO:</span>\n\n$$\n\\mathcal{L}(\\theta, \\phi; x) = \\mathbb{E}_{q_\\phi(z|x)}[\\log p_\\theta(x|z)] - D_{KL}(q_\\phi(z|x) \\| p(z))\n$$\n\n<span style=\"font-size: 14px;\">The first term is reconstruction quality. The second regularizes the approximate posterior toward the prior $p(z) = \\mathcal{N}(0, I)$. For Gaussian $q_\\phi$, the KL term has a closed-form solution. The reconstruction term requires sampling from $q_\\phi(z|x)$, and optimizing it with respect to $\\phi$ is where the reparameterization trick is essential.</span>\n\n<span style=\"font-size: 14px;\">Before this paper, variational inference in neural networks was impractical for high-dimensional latent spaces because REINFORCE-style gradient estimators had variance too high for stable training. The reparameterization trick produces gradient estimates with variance low enough that a single sample per datapoint suffices. Kingma & Welling demonstrated this on MNIST and Frey Face datasets.</span>\n\n<span style=\"font-size: 14px;\">The paper also notes that the trick is not limited to Gaussian distributions. It applies to any distribution expressible as a differentiable transformation of fixed noise -- any location-scale family. For distributions where no such reparameterization exists (e.g., discrete distributions), alternatives like the Gumbel-Softmax trick were later developed (Jang et al., 2017; Maddison et al., 2017).</span>\n\n---\n\n## Numerical Example ($d = 3$)\n\n<span style=\"font-size: 14px;\">Consider a latent dimension of $d = 3$. The encoder has produced:</span>\n\n$$\n\\mu = [1.0, -0.5, 0.3], \\quad \\log \\sigma^2 = [0.0, -1.0, 0.6]\n$$\n\n<span style=\"font-size: 14px;\">**Step 1 -- Convert log-variance to standard deviation:**</span>\n\n$$\n\\sigma = \\exp(0.5 \\cdot \\log \\sigma^2) = \\exp([0.0, -0.5, 0.3]) = [1.0, 0.6065, 1.3499]\n$$\n\n<span style=\"font-size: 14px;\">Element by element:</span>\n\n* <span style=\"font-size: 14px;\">$\\sigma_1 = \\exp(0.5 \\cdot 0.0) = \\exp(0) = 1.0$</span>\n* <span style=\"font-size: 14px;\">$\\sigma_2 = \\exp(0.5 \\cdot (-1.0)) = \\exp(-0.5) = 0.6065$</span>\n* <span style=\"font-size: 14px;\">$\\sigma_3 = \\exp(0.5 \\cdot 0.6) = \\exp(0.3) = 1.3499$</span>\n\n<span style=\"font-size: 14px;\">**Step 2 -- Sample noise from the standard normal:**</span>\n\n$$\n\\epsilon = [0.5, -1.2, 0.8]\n$$\n\n<span style=\"font-size: 14px;\">Each component is an independent draw from $\\mathcal{N}(0, 1)$.</span>\n\n<span style=\"font-size: 14px;\">**Step 3 -- Compute the reparameterized sample:**</span>\n\n$$\nz = \\mu + \\sigma \\odot \\epsilon = [1.0, -0.5, 0.3] + [1.0, 0.6065, 1.3499] \\odot [0.5, -1.2, 0.8]\n$$\n\n* <span style=\"font-size: 14px;\">$z_1 = 1.0 + 1.0 \\times 0.5 = 1.5$</span>\n* <span style=\"font-size: 14px;\">$z_2 = -0.5 + 0.6065 \\times (-1.2) = -0.5 + (-0.7278) = -1.2278$</span>\n* <span style=\"font-size: 14px;\">$z_3 = 0.3 + 1.3499 \\times 0.8 = 0.3 + 1.0799 = 1.3799$</span>\n\n$$\nz = [1.5, -1.2278, 1.3799]\n$$\n\n<span style=\"font-size: 14px;\">**Step 4 -- Verify gradients:**</span>\n\n* <span style=\"font-size: 14px;\">$\\partial z / \\partial \\mu = [1, 1, 1]$ (identity, each $z_i$ shifts one-to-one with $\\mu_i$)</span>\n* <span style=\"font-size: 14px;\">$\\partial z / \\partial \\sigma = \\epsilon = [0.5, -1.2, 0.8]$</span>\n* <span style=\"font-size: 14px;\">$\\partial z / \\partial \\log \\sigma^2 = 0.5 \\cdot \\sigma \\odot \\epsilon = [0.25, -0.3639, 0.5400]$</span>\n\n<span style=\"font-size: 14px;\">All gradients are concrete numbers. No stochastic estimation was needed to compute them.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n* <span style=\"font-size: 14px;\">**Using log-variance directly as sigma.** Writing $z = \\mu + \\texttt{log\\_var} \\cdot \\epsilon$ instead of $z = \\mu + \\exp(0.5 \\cdot \\texttt{log\\_var}) \\cdot \\epsilon$. Since $\\texttt{log\\_var}$ can be negative, this produces $z$ values that collapse toward $\\mu$, effectively killing the stochasticity. The latent space will be degenerate and reconstructions blurry.</span>\n\n* <span style=\"font-size: 14px;\">**Wrong coefficient in the exponent.** Writing $\\exp(\\texttt{log\\_var})$ instead of $\\exp(0.5 \\cdot \\texttt{log\\_var})$ computes $\\sigma^2$ (variance) instead of $\\sigma$ (standard deviation). The reparameterized sample becomes $z = \\mu + \\sigma^2 \\cdot \\epsilon$, which overestimates the spread when $\\sigma > 1$ and underestimates it when $\\sigma < 1$, distorting the latent space geometry.</span>\n\n* <span style=\"font-size: 14px;\">**Forgetting element-wise multiplication.** The operation $\\sigma \\odot \\epsilon$ is element-wise, not a dot product or matrix multiplication. Each latent dimension $z_i$ depends only on its own $\\sigma_i$ and $\\epsilon_i$. Using a dot product collapses the latent vector into a scalar. In code, this should be a simple $\\texttt{*}$ operator between tensors of the same shape.</span>\n\n* <span style=\"font-size: 14px;\">**Generating epsilon with the wrong shape.** The noise $\\epsilon$ must match the shape of $\\mu$ and $\\log \\sigma^2$. If the encoder outputs shape $(B, d)$, then $\\epsilon$ must also be $(B, d)$. Sampling $\\epsilon$ of shape $(d,)$ and broadcasting across the batch gives every sample the same noise, defeating the purpose of stochastic sampling.</span>\n\n* <span style=\"font-size: 14px;\">**Sampling epsilon once and reusing it.** The noise must be freshly sampled at every forward pass. Reusing the same $\\epsilon$ across iterations makes $z$ a fixed deterministic function, eliminating the Monte Carlo estimation the ELBO requires. The model would converge to a deterministic bottleneck autoencoder, not a VAE.</span>\n\n* <span style=\"font-size: 14px;\">**Confusing log-variance with log-standard-deviation.** Some implementations output $\\log \\sigma$ instead of $\\log \\sigma^2$. In that case, the conversion is $\\sigma = \\exp(\\log \\sigma)$ with no factor of $0.5$. Mixing conventions -- outputting $\\log \\sigma$ but applying $\\exp(0.5 \\cdot \\texttt{output})$ -- produces $\\sigma^{1/2}$ instead of $\\sigma$, compressing the latent distribution. Always verify which convention the encoder uses.</span>\n\n---",
+  "hints": [
+    "Compute the standard deviation with np.exp(0.5 * log_var).",
+    "Combine the three arrays elementwise."
+  ],
+  "constraints": "- mu, log_var, and epsilon have the same shape (B, L).\n- All three arrays have dtype float64 and contain finite values.\n- B and L are positive.",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef reparameterize(mu: np.ndarray, log_var: np.ndarray, epsilon: np.ndarray) -> np.ndarray:\n    \"\"\"\n    Returns the float64 latent sample with the same shape as mu.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-03T21:50:29.658Z",
+  "updatedAt": "2026-02-21T17:14:54.214Z",
+  "topicId": "vae-reparameterization",
+  "paperSnippet": "\"We reparameterize z as a deterministic variable z = g(Îµ, x) where Îµ is an auxiliary noise variable. This allows gradients to flow through the sampling operation.\"",
+  "visualizationComponent": "ReparamViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Reparameterization Trick** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef reparameterize(mu: np.ndarray, log_var: np.ndarray, epsilon: np.ndarray) -> np.ndarray:\n    m = np.asarray(mu, dtype=float)\n    lv = np.asarray(log_var, dtype=float)\n    eps = np.asarray(epsilon, dtype=float)\n    sigma = np.exp(0.5 * lv)\n    return np.round(m + sigma * eps, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "public-1",
+      "name": "Two latent samples",
+      "inputs": {
+        "mu": [
+          [
+            0.5,
+            -0.3
+          ],
+          [
+            0.1,
+            0.8
+          ]
+        ],
+        "epsilon": [
+          [
+            0.3,
+            -0.7
+          ],
+          [
+            1.2,
+            0.1
+          ]
+        ],
+        "log_var": [
+          [
+            -1,
+            0.5
+          ],
+          [
+            0.2,
+            -0.5
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.681959,
+          -1.198818
+        ],
+        [
+          1.426205,
+          0.87788
+        ]
+      ]
+    },
+    {
+      "id": "public-2",
+      "name": "Zero noise",
+      "inputs": {
+        "mu": [
+          [
+            1,
+            -2,
+            0.5
+          ]
+        ],
+        "epsilon": [
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "log_var": [
+          [
+            0,
+            1,
+            -1
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1.0,
+          -2.0,
+          0.5
+        ]
+      ]
+    },
+    {
+      "id": "public-3",
+      "name": "Unit variance",
+      "inputs": {
+        "mu": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            -1
+          ]
+        ],
+        "epsilon": [
+          [
+            -0.5,
+            0.25
+          ],
+          [
+            0.75,
+            -0.2
+          ]
+        ],
+        "log_var": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -0.5,
+          0.25
+        ],
+        [
+          1.75,
+          -1.2
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "mu": [
+          [
+            0.5,
+            -0.3
+          ],
+          [
+            0.1,
+            0.8
+          ]
+        ],
+        "epsilon": [
+          [
+            0.3,
+            -0.7
+          ],
+          [
+            1.2,
+            0.1
+          ]
+        ],
+        "log_var": [
+          [
+            -1,
+            0.5
+          ],
+          [
+            0.2,
+            -0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.681959,
+          -1.198818
+        ],
+        [
+          1.426205,
+          0.87788
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "mu": [
+          [
+            1,
+            -2,
+            0.5
+          ]
+        ],
+        "epsilon": [
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "log_var": [
+          [
+            0,
+            1,
+            -1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.0,
+          -2.0,
+          0.5
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "mu": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            -1
+          ]
+        ],
+        "epsilon": [
+          [
+            -0.5,
+            0.25
+          ],
+          [
+            0.75,
+            -0.2
+          ]
+        ],
+        "log_var": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -0.5,
+          0.25
+        ],
+        [
+          1.75,
+          -1.2
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "mu": [
+          [
+            0.5,
+            -0.3
+          ],
+          [
+            0.1,
+            0.8
+          ]
+        ],
+        "epsilon": [
+          [
+            0.3,
+            -0.7
+          ],
+          [
+            1.2,
+            0.1
+          ]
+        ],
+        "log_var": [
+          [
+            -1,
+            0.5
+          ],
+          [
+            0.2,
+            -0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.681959,
+          -1.198818
+        ],
+        [
+          1.426205,
+          0.87788
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "mu": [
+          [
+            1,
+            -2,
+            0.5
+          ]
+        ],
+        "epsilon": [
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "log_var": [
+          [
+            0,
+            1,
+            -1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.0,
+          -2.0,
+          0.5
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "mu": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            -1
+          ]
+        ],
+        "epsilon": [
+          [
+            -0.5,
+            0.25
+          ],
+          [
+            0.75,
+            -0.2
+          ]
+        ],
+        "log_var": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -0.5,
+          0.25
+        ],
+        [
+          1.75,
+          -1.2
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "mu": [
+          [
+            0.5,
+            -0.3
+          ],
+          [
+            0.1,
+            0.8
+          ]
+        ],
+        "epsilon": [
+          [
+            0.3,
+            -0.7
+          ],
+          [
+            1.2,
+            0.1
+          ]
+        ],
+        "log_var": [
+          [
+            -1,
+            0.5
+          ],
+          [
+            0.2,
+            -0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.681959,
+          -1.198818
+        ],
+        [
+          1.426205,
+          0.87788
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "mu": [
+          [
+            1,
+            -2,
+            0.5
+          ]
+        ],
+        "epsilon": [
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "log_var": [
+          [
+            0,
+            1,
+            -1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.0,
+          -2.0,
+          0.5
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "mu": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            -1
+          ]
+        ],
+        "epsilon": [
+          [
+            -0.5,
+            0.25
+          ],
+          [
+            0.75,
+            -0.2
+          ]
+        ],
+        "log_var": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -0.5,
+          0.25
+        ],
+        [
+          1.75,
+          -1.2
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "mu": [
+          [
+            0.5,
+            -0.3
+          ],
+          [
+            0.1,
+            0.8
+          ]
+        ],
+        "epsilon": [
+          [
+            0.3,
+            -0.7
+          ],
+          [
+            1.2,
+            0.1
+          ]
+        ],
+        "log_var": [
+          [
+            -1,
+            0.5
+          ],
+          [
+            0.2,
+            -0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.681959,
+          -1.198818
+        ],
+        [
+          1.426205,
+          0.87788
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "mu": [
+          [
+            1,
+            -2,
+            0.5
+          ]
+        ],
+        "epsilon": [
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "log_var": [
+          [
+            0,
+            1,
+            -1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.0,
+          -2.0,
+          0.5
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "mu": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            -1
+          ]
+        ],
+        "epsilon": [
+          [
+            -0.5,
+            0.25
+          ],
+          [
+            0.75,
+            -0.2
+          ]
+        ],
+        "log_var": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -0.5,
+          0.25
+        ],
+        [
+          1.75,
+          -1.2
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "mu": [
+          [
+            0.5,
+            -0.3
+          ],
+          [
+            0.1,
+            0.8
+          ]
+        ],
+        "epsilon": [
+          [
+            0.3,
+            -0.7
+          ],
+          [
+            1.2,
+            0.1
+          ]
+        ],
+        "log_var": [
+          [
+            -1,
+            0.5
+          ],
+          [
+            0.2,
+            -0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.681959,
+          -1.198818
+        ],
+        [
+          1.426205,
+          0.87788
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "mu": [
+          [
+            1,
+            -2,
+            0.5
+          ]
+        ],
+        "epsilon": [
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "log_var": [
+          [
+            0,
+            1,
+            -1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.0,
+          -2.0,
+          0.5
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "mu": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            -1
+          ]
+        ],
+        "epsilon": [
+          [
+            -0.5,
+            0.25
+          ],
+          [
+            0.75,
+            -0.2
+          ]
+        ],
+        "log_var": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          -0.5,
+          0.25
+        ],
+        [
+          1.75,
+          -1.2
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "mu": [
+          [
+            0.5,
+            -0.3
+          ],
+          [
+            0.1,
+            0.8
+          ]
+        ],
+        "epsilon": [
+          [
+            0.3,
+            -0.7
+          ],
+          [
+            1.2,
+            0.1
+          ]
+        ],
+        "log_var": [
+          [
+            -1,
+            0.5
+          ],
+          [
+            0.2,
+            -0.5
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.681959,
+          -1.198818
+        ],
+        [
+          1.426205,
+          0.87788
+        ]
+      ]
+    },
+    {
+      "id": "vae-reparameterization-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "mu": [
+          [
+            1,
+            -2,
+            0.5
+          ]
+        ],
+        "epsilon": [
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "log_var": [
+          [
+            0,
+            1,
+            -1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.0,
+          -2.0,
+          0.5
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "reparameterize",
+    "runtime": "numpy",
+    "parameters": [
+      {
+        "name": "mu",
+        "type": "array",
+        "example": [
+          [
+            0.5,
+            -0.3
+          ],
+          [
+            0.1,
+            0.8
+          ]
+        ],
+        "description": "Float64 latent mean with shape (B, L)."
+      },
+      {
+        "name": "log_var",
+        "type": "array",
+        "example": [
+          [
+            -1,
+            0.5
+          ],
+          [
+            0.2,
+            -0.5
+          ]
+        ],
+        "description": "Float64 latent log-variance with shape (B, L)."
+      },
+      {
+        "name": "epsilon",
+        "type": "array",
+        "example": [
+          [
+            0.3,
+            -0.7
+          ],
+          [
+            1.2,
+            0.1
+          ]
+        ],
+        "description": "Float64 supplied noise with shape (B, L)."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "vae-reparameterization",
+    "name": "Reparameterization Trick",
+    "description": "Enable backprop through sampling",
+    "color": "#06b6d4"
+  },
+  "paper": {
+    "id": "vae",
+    "title": "Auto-Encoding Variational Bayes (VAE)",
+    "authors": "Kingma & Welling, 2013",
+    "year": 2013,
+    "paperUrl": "https://arxiv.org/abs/1312.6114",
+    "visualizationComponent": "VaeArchViz"
+  },
+  "navigation": {
+    "index": 2,
+    "total": 6,
+    "prev": "vae-encoder",
+    "next": "vae-decoder"
+  },
+  "cleanTitle": ""
+}

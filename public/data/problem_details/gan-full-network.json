@@ -1,0 +1,1880 @@
+{
+  "id": "gan-full-network",
+  "title": "Complete GAN System",
+  "description": "Implement a deterministic GAN forward pass that connects the generator, discriminator, and adversarial losses. First generate samples with\n\n$$\n\\widehat{X} = \\tanh(ZW_G+b_G)\n$$\n\nThen compute discriminator probabilities for real and generated samples:\n\n$$\np^{\\mathrm{real}} = \\sigma(X^{\\mathrm{real}}W_D)\n$$\n\n$$\np^{\\mathrm{fake}} = \\sigma(\\widehat{X}W_D)\n$$\n\nUse these probabilities to compute the discriminator and non-saturating generator losses defined in the GAN loss problem, clipping only before logarithms. Here, $Z$ contains noise vectors, $W_G$ and $b_G$ are generator parameters, $W_D$ contains discriminator weights, and both batches contain $B$ samples. Return a dictionary containing generated_samples, real_probabilities, fake_probabilities, discriminator_loss, and generator_loss. All returned arrays must be float64.",
+  "seoDescription": "Assemble a complete GAN system that generates samples, scores them with the discriminator, and returns both outputs.",
+  "examples": [
+    "Input: z = [[1,-0.5],[0.3,0.8]], real_data = [[0.7,-0.2,0.4],[0.1,0.9,-0.3]], G_W = [[0.3,-0.1,0.5],[0.2,0.4,-0.3]], G_b = [0.1,0,-0.1], D_W = [[0.5],[-0.2],[0.3]]\n\nOutput: {\"generated_samples\":[[0.291313,-0.291313,0.50052],[0.336376,0.282135,-0.187746]],\"real_probabilities\":[[0.624806],[0.445221]],\"fake_probabilities\":[[0.587605],[0.513856]],\"discriminator_loss\":1.443261,\"generator_loss\":0.598756}\n\nExplanation: The generator produces a fake batch, the shared discriminator scores both batches, and the two losses use those exact scores.",
+    "Input: z = [[-0.2,0.6,0.1]], real_data = [[0.4,-0.5]], G_W = [[0.2,-0.4],[0.5,0.3],[-0.1,0.6]], G_b = [0.05,-0.05], D_W = [[0.7],[-0.2]]\n\nOutput: {\"generated_samples\":[[0.291313,0.263625]],\"real_probabilities\":[[0.593873]],\"fake_probabilities\":[[0.537727]],\"discriminator_loss\":1.292688,\"generator_loss\":0.620405}",
+    "Input: z = [[0,0],[0,0]], real_data = [[1,-1],[-1,1]], G_W = [[0,0],[0,0]], G_b = [0,0], D_W = [[0.4],[-0.4]]\n\nOutput: {\"generated_samples\":[[0,0],[0,0]],\"real_probabilities\":[[0.689974],[0.310026]],\"fake_probabilities\":[[0.5],[0.5]],\"discriminator_loss\":1.464248,\"generator_loss\":0.693147}"
+  ],
+  "requirements": "- Use NumPy.\n- Apply the generator affine transformation and tanh activation.\n- Evaluate the same discriminator on real and generated samples.\n- Compute both adversarial losses from those probabilities.\n- Return exactly the five documented outputs.",
+  "theory": "# <span style=\"font-size: 20px;\">Complete GAN System</span>\n\n<span style=\"font-size: 14px;\">A Generative Adversarial Network is two neural networks locked in a minimax game: a Generator that fabricates data and a Discriminator that tries to tell real from fake. Neither network makes sense in isolation. The Generator has no loss function without a Discriminator to fool, and the Discriminator has no adversary without a Generator producing counterfeits. This problem asks you to build both networks as a single class and wire them together into a training step.</span>\n\n<span style=\"font-size: 14px;\">This is the simplest possible GAN: one linear layer per network, no hidden layers, no convolutional filters. Yet it contains every structural element of the original Goodfellow et al. (2014) framework: noise sampling, generator forward pass, discriminator forward pass on both real and fake data, and the two adversarial losses.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">The Complete GAN System encapsulates the full adversarial framework as a single object. It holds two weight matrices ($W_G$ and $W_D$), exposes a generator that maps noise to fake data, a discriminator that maps any data to a probability of being real, and a train_step that wires everything together to compute both losses in one forward pass.</span>\n\n<span style=\"font-size: 14px;\">The Generator maps noise $z$ to data space via tanh: $G(z) = \\tanh(z \\cdot W_G)$. Tanh bounds outputs to $[-1, 1]$, matching the typical range of normalized real data. The Discriminator produces a probability through sigmoid: $D(x) = \\sigma(x \\cdot W_D)$. The sigmoid squashes the output to $(0, 1)$, representing the probability that $x$ is real.</span>\n\n<span style=\"font-size: 14px;\">The adversarial game is: D wants to output 1 for real data and 0 for fake data. G wants D to output 1 for fake data. They cannot both win. This tension drives generative learning.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">**Noise sampling:**</span>\n\n$$\nz \\sim \\mathcal{N}(0, I), \\quad z \\in \\mathbb{R}^{n \\times \\texttt{noise\\_dim}}\n$$\n\n<span style=\"font-size: 14px;\">**Generator forward pass:**</span>\n\n$$\n\\hat{x} = \\tanh(z \\cdot W_G), \\quad W_G \\in \\mathbb{R}^{\\texttt{noise\\_dim} \\times \\texttt{data\\_dim}}\n$$\n\n<span style=\"font-size: 14px;\">**Discriminator forward pass (on any input $x$):**</span>\n\n$$\np = \\sigma(x \\cdot W_D) = \\frac{1}{1 + e^{-x \\cdot W_D}}, \\quad W_D \\in \\mathbb{R}^{\\texttt{data\\_dim} \\times 1}\n$$\n\n<span style=\"font-size: 14px;\">**Discriminator loss:**</span>\n\n$$\n\\mathcal{L}_D = -\\frac{1}{m}\\sum_{i=1}^{m}\\bigl[\\log D(x_{\\text{real}}^{(i)}) + \\log(1 - D(G(z^{(i)})))\\bigr]\n$$\n\n<span style=\"font-size: 14px;\">**Generator loss (non-saturating form):**</span>\n\n$$\n\\mathcal{L}_G = -\\frac{1}{m}\\sum_{i=1}^{m}\\log D(G(z^{(i)}))\n$$\n\n<span style=\"font-size: 14px;\">**Weight initialization:**</span>\n\n$$\nW_G \\sim \\mathcal{N}(0, 0.01), \\quad W_D \\sim \\mathcal{N}(0, 0.01)\n$$\n\n---\n\n## <span style=\"font-size: 16px;\">The Two Networks as One System</span>\n\n<span style=\"font-size: 14px;\">G and D are co-dependent. The Generator's loss is defined entirely in terms of the Discriminator's output on fake data: $\\mathcal{L}_G = -\\mathbb{E}[\\log D(G(z))]$. Without D, this expression is meaningless. Conversely, the Discriminator's loss requires fake samples to contrast against real ones: $\\mathcal{L}_D = -\\mathbb{E}[\\log D(x_{\\text{real}})] - \\mathbb{E}[\\log(1 - D(G(z)))]$. Without G, the second term vanishes and D never learns to reject fakes.</span>\n\n<span style=\"font-size: 14px;\">This co-dependence is why the class holds both $W_G$ and $W_D$. They are separate weight matrices with different shapes and different gradient flows, but they must live in the same system because each network's training signal depends on the other's current parameters.</span>\n\n<span style=\"font-size: 14px;\">The adversarial dynamic creates a moving target. As G improves, D must work harder to distinguish fakes. As D improves, G must produce better fakes. Ideally, this arms race converges to an equilibrium where G produces perfect samples and D outputs 0.5 everywhere. In practice, convergence is fragile and depends on learning rates, architecture balance, and training schedule.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Forward Pipeline</span>\n\n<span style=\"font-size: 14px;\">The data flow during a training step has four stages:</span>\n\n* <span style=\"font-size: 14px;\">**Stage 1 -- Sample noise.** Draw $z \\in \\mathbb{R}^{m \\times \\texttt{noise\\_dim}}$ from the standard normal distribution. This is G's raw material.</span>\n* <span style=\"font-size: 14px;\">**Stage 2 -- Generator forward.** Compute $\\hat{x} = \\tanh(z \\cdot W_G)$, producing fake samples in $\\mathbb{R}^{m \\times \\texttt{data\\_dim}}$.</span>\n* <span style=\"font-size: 14px;\">**Stage 3 -- Discriminator on real data.** Compute $p_{\\text{real}} = \\sigma(x_{\\text{real}} \\cdot W_D)$. D should push these toward 1.</span>\n* <span style=\"font-size: 14px;\">**Stage 4 -- Discriminator on fake data.** Compute $p_{\\text{fake}} = \\sigma(\\hat{x} \\cdot W_D)$. D should push these toward 0; G should push them toward 1.</span>\n\n<span style=\"font-size: 14px;\">D uses the same weights $W_D$ in stages 3 and 4. The only difference is the input: real data vs. G's output. This is what makes it adversarial: the same classifier evaluates both sources, and its responses define both losses.</span>\n\n<span style=\"font-size: 14px;\">The forward pipeline is a DAG. G's output feeds into D, but D's output does not feed back into G during the forward pass. The adversarial connection happens through the loss: G's loss is a function of D's output on G's samples, so gradients flow backward through D into G during backpropagation.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Weight Initialization</span>\n\n<span style=\"font-size: 14px;\">Both weight matrices are drawn from $\\mathcal{N}(0, 0.01)$. This small standard deviation is critical:</span>\n\n<span style=\"font-size: 14px;\">**Too large (e.g., $\\sigma = 1.0$):** The generator's pre-activation $z \\cdot W_G$ will have large magnitude. After tanh, outputs saturate near $\\pm 1$ and gradients vanish. For the discriminator, large logits push sigmoid to 0 or 1, where $\\log(0) = -\\infty$ and learning collapses immediately.</span>\n\n<span style=\"font-size: 14px;\">**Too small (e.g., $\\sigma = 10^{-6}$):** Both networks are effectively identity maps. G outputs near-zero values regardless of input. D outputs $\\sigma(0) \\approx 0.5$ for everything. Gradients exist but are tiny, and training takes impractically long to escape this flat region.</span>\n\n<span style=\"font-size: 14px;\">**The sweet spot ($\\sigma = 0.01$):** Pre-activations are small enough that tanh and sigmoid operate in their linear regions (where gradients flow freely) but large enough that the networks produce distinguishable outputs.</span>\n\n<span style=\"font-size: 14px;\">In this implementation, the class receives $W_G$ and $W_D$ as constructor arguments rather than sampling them internally. This makes the system deterministic and testable.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Train Step</span>\n\n<span style=\"font-size: 14px;\">The `train_step` method performs one forward pass through the entire system and returns both losses:</span>\n\n<span style=\"font-size: 14px;\">**1. Generate fake data.** Given noise $z$, compute $\\hat{x} = \\tanh(z \\cdot W_G)$.</span>\n\n<span style=\"font-size: 14px;\">**2. Discriminate real data.** Compute $p_{\\text{real}} = \\sigma(x_{\\text{real}} \\cdot W_D)$ and clip to $[\\epsilon, 1 - \\epsilon]$ where $\\epsilon = 10^{-8}$.</span>\n\n<span style=\"font-size: 14px;\">**3. Discriminate fake data.** Compute $p_{\\text{fake}} = \\sigma(\\hat{x} \\cdot W_D)$ and clip identically.</span>\n\n<span style=\"font-size: 14px;\">**4. Compute D loss.** $\\mathcal{L}_D = -\\text{mean}[\\log(p_{\\text{real}}) + \\log(1 - p_{\\text{fake}})]$. D wants $p_{\\text{real}} \\to 1$ and $p_{\\text{fake}} \\to 0$.</span>\n\n<span style=\"font-size: 14px;\">**5. Compute G loss.** $\\mathcal{L}_G = -\\text{mean}[\\log(p_{\\text{fake}})]$. G wants $p_{\\text{fake}} \\to 1$.</span>\n\n<span style=\"font-size: 14px;\">This implementation computes only the forward-pass losses without backpropagation or weight updates. It is a structural demonstration: you wire the components correctly, compute the right losses, and verify the numbers. In a full training loop, you would compute gradients of $\\mathcal{L}_D$ w.r.t. $W_D$ (updating D), then gradients of $\\mathcal{L}_G$ w.r.t. $W_G$ (updating G).</span>\n\n<span style=\"font-size: 14px;\">The non-saturating G loss ($-\\log D(G(z))$) differs from the minimax G loss ($\\log(1 - D(G(z)))$). Early in training when D easily rejects fakes, $D(G(z)) \\approx 0$. The minimax form gives $\\log(1 - 0) \\approx 0$: no gradient for G. The non-saturating form gives $-\\log(0) \\to \\infty$: strong gradient signal pushing G to improve. This is the form used in practice and in this implementation.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">Goodfellow et al. (2014) introduced GANs in \"Generative Adversarial Nets.\" The paper presents the framework as a minimax game:</span>\n\n$$\n\\min_G \\max_D \\; \\mathbb{E}_{x \\sim p_{\\text{data}}}[\\log D(x)] + \\mathbb{E}_{z \\sim p_z}[\\log(1 - D(G(z)))]\n$$\n\n<span style=\"font-size: 14px;\">Algorithm 1 specifies the training procedure: for each iteration, first update D by ascending its stochastic gradient for $k$ steps, then update G by descending its stochastic gradient for one step. The paper proves that if both networks have enough capacity and D is trained to optimality at each step, then $p_G$ converges to $p_{\\text{data}}$. This is a Nash equilibrium: neither player can unilaterally improve.</span>\n\n<span style=\"font-size: 14px;\">The theoretical guarantee relies on D being optimal at every step, which never holds in practice. Real training alternates single gradient steps for D and G, creating a dynamic system that can oscillate, diverge, or mode-collapse. Despite this gap between theory and practice, the basic framework has proven remarkably robust and spawned an entire family of generative models.</span>\n\n<span style=\"font-size: 14px;\">The paper also notes the non-saturating heuristic: instead of G minimizing $\\log(1 - D(G(z)))$, G maximizes $\\log D(G(z))$. This provides stronger gradients early in training and is universally adopted. This implementation uses the non-saturating form.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Trace through a concrete GAN with $\\texttt{noise\\_dim} = 3$, $\\texttt{data\\_dim} = 2$.</span>\n\n<span style=\"font-size: 14px;\">**Weights:**</span>\n\n$$\nW_G = \\begin{bmatrix} 0.3 & -0.1 \\\\ 0.2 & 0.4 \\\\ -0.1 & 0.5 \\end{bmatrix} \\in \\mathbb{R}^{3 \\times 2}, \\quad W_D = \\begin{bmatrix} 0.5 \\\\ -0.2 \\end{bmatrix} \\in \\mathbb{R}^{2 \\times 1}\n$$\n\n<span style=\"font-size: 14px;\">**Step 1 -- Sample noise.** $z = [0.5,\\; -0.5,\\; 1.0]$ (one sample, $\\texttt{noise\\_dim} = 3$).</span>\n\n<span style=\"font-size: 14px;\">**Step 2 -- Generator forward.** Pre-activation: $z \\cdot W_G = [0.5(0.3) + (-0.5)(0.2) + 1.0(-0.1),\\;\\; 0.5(-0.1) + (-0.5)(0.4) + 1.0(0.5)] = [-0.05,\\;\\; 0.25]$. Apply tanh: $\\hat{x} = [\\tanh(-0.05),\\;\\; \\tanh(0.25)] = [-0.0500,\\;\\; 0.2449]$.</span>\n\n<span style=\"font-size: 14px;\">**Step 3 -- Discriminator on fake data.** $\\hat{x} \\cdot W_D = (-0.0500)(0.5) + (0.2449)(-0.2) = -0.0250 - 0.0490 = -0.0740$. $p_{\\text{fake}} = \\sigma(-0.0740) = 1/(1 + e^{0.0740}) \\approx 0.4815$.</span>\n\n<span style=\"font-size: 14px;\">**Step 4 -- Discriminator on real data.** $x_{\\text{real}} = [0.8,\\; -0.3]$. $x_{\\text{real}} \\cdot W_D = 0.8(0.5) + (-0.3)(-0.2) = 0.40 + 0.06 = 0.46$. $p_{\\text{real}} = \\sigma(0.46) \\approx 0.6130$.</span>\n\n<span style=\"font-size: 14px;\">**Step 5 -- Compute losses.**</span>\n\n$$\n\\mathcal{L}_D = -[\\log(0.6130) + \\log(1 - 0.4815)] = -[-0.4894 + (-0.6568)] = 1.1462\n$$\n\n$$\n\\mathcal{L}_G = -\\log(0.4815) = 0.7308\n$$\n\n<span style=\"font-size: 14px;\">**Interpretation:** D is only 61% confident the real sample is real and assigns 48% probability to the fake being real. G would prefer $p_{\\text{fake}} \\to 1$, pushing $\\mathcal{L}_G \\to 0$. At convergence, $p_{\\text{fake}} = p_{\\text{real}} = 0.5$, giving $\\mathcal{L}_D = -2\\log(0.5) = 1.3863$ and $\\mathcal{L}_G = -\\log(0.5) = 0.6931$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The GAN Ecosystem</span>\n\n<span style=\"font-size: 14px;\">The basic framework from Goodfellow et al. (2014) has been extended dramatically:</span>\n\n* <span style=\"font-size: 14px;\">**DCGAN (Radford et al., 2015):** Replaced fully-connected layers with convolutional layers. Established guidelines: batch normalization, ReLU in G, LeakyReLU in D, no fully-connected hidden layers.</span>\n* <span style=\"font-size: 14px;\">**WGAN (Arjovsky et al., 2017):** Replaced JS divergence with Wasserstein distance. Smoother gradients and a loss that correlates with sample quality. The discriminator (now \"critic\") outputs an unbounded score, and weights are clipped for a Lipschitz constraint.</span>\n* <span style=\"font-size: 14px;\">**WGAN-GP (Gulrajani et al., 2017):** Replaced weight clipping with a gradient penalty, solving capacity underuse and gradient problems caused by hard clipping.</span>\n* <span style=\"font-size: 14px;\">**StyleGAN (Karras et al., 2019):** Introduced a mapping network from noise to style space, and adaptive instance normalization (AdaIN) at each layer. Produces photorealistic faces with disentangled control over pose, hair, and age.</span>\n* <span style=\"font-size: 14px;\">**BigGAN (Brock et al., 2019):** Scaled GANs to ImageNet resolution with class-conditional generation, orthogonal regularization, and the truncation trick.</span>\n\n<span style=\"font-size: 14px;\">Despite these advances, every variant shares the same core: a generator that transforms noise, a discriminator that classifies, and an adversarial loss that couples them.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n<span style=\"font-size: 14px;\">**1. Sharing $W_G$ and $W_D$ or using a single weight matrix.**</span>\n\n<span style=\"font-size: 14px;\">$W_G$ has shape $(\\texttt{noise\\_dim}, \\texttt{data\\_dim})$ and $W_D$ has shape $(\\texttt{data\\_dim}, 1)$. They serve different functions and have different shapes. Using one matrix for both means updating G also changes D, destroying the adversarial dynamic.</span>\n\n<span style=\"font-size: 14px;\">**2. Wrong train_step order.**</span>\n\n<span style=\"font-size: 14px;\">The forward pass must run G first (to produce fakes), then D on both real and fake. In full training, the convention is: update D first, then G. Reversing this means G optimizes against a stale D.</span>\n\n<span style=\"font-size: 14px;\">**3. Forgetting to clip probabilities before taking log.**</span>\n\n<span style=\"font-size: 14px;\">If $D(x) = 0$ exactly, $\\log(D(x)) = -\\infty$ and the loss becomes NaN. Clipping to $[\\epsilon, 1-\\epsilon]$ with $\\epsilon = 10^{-8}$ prevents this without materially changing the loss values.</span>\n\n<span style=\"font-size: 14px;\">**4. Wrong initialization scale.**</span>\n\n<span style=\"font-size: 14px;\">Using $\\mathcal{N}(0, 1)$ instead of $\\mathcal{N}(0, 0.01)$ causes immediate saturation in both tanh and sigmoid. Training never starts because gradients vanish at the flat regions of both activation functions.</span>\n\n<span style=\"font-size: 14px;\">**5. Confusing G's output with D's output.**</span>\n\n<span style=\"font-size: 14px;\">G outputs data-shaped tensors of shape $(\\texttt{batch}, \\texttt{data\\_dim})$ in $[-1, 1]$. D outputs probabilities of shape $(\\texttt{batch}, 1)$ in $(0, 1)$. Treating G's multi-dimensional output as a probability or feeding D's scalar back into the wrong stage is a common shape error.</span>\n\n<span style=\"font-size: 14px;\">**6. Using the wrong G loss form.**</span>\n\n<span style=\"font-size: 14px;\">The minimax form $\\log(1 - D(G(z)))$ and the non-saturating form $-\\log(D(G(z)))$ are not equivalent. This implementation uses the non-saturating form. The minimax form produces vanishing gradients when D is strong, making G unable to learn.</span>",
+  "hints": [
+    "Reuse the generated batch when computing fake probabilities and losses.",
+    "Keep the probability arrays two-dimensional with shape (B, 1).",
+    "Clip probabilities only for the logarithms."
+  ],
+  "constraints": "- z has shape $(B, N)$ and real_data has shape $(B, D)$.\n- G_W has shape $(N, D)$ and G_b has shape $(D)$.\n- D_W has shape $(D, 1)$.\n- $1 \\le B \\le 4$, $1 \\le N \\le 4$, and $1 \\le D \\le 5$.\n- All inputs contain finite real values.",
+  "difficulty": "Hard",
+  "starterCode": "import numpy as np\n\ndef gan_forward(\n    z: np.ndarray,\n    real_data: np.ndarray,\n    G_W: np.ndarray,\n    G_b: np.ndarray,\n    D_W: np.ndarray,\n) -> dict:\n    \"\"\"\n    Returns generated samples, probabilities, and both GAN losses.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-03T21:50:31.928Z",
+  "updatedAt": "2026-04-04T12:04:51.253Z",
+  "topicId": "gan-full-network",
+  "paperSnippet": "\"In practice, the minimax game can be implemented with a simple training loop: update D, then update G. The two networks improve together through adversarial training.\"",
+  "visualizationComponent": "GANArchViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Complete GAN System** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef gan_forward(\n    z: np.ndarray,\n    real_data: np.ndarray,\n    G_W: np.ndarray,\n    G_b: np.ndarray,\n    D_W: np.ndarray,\n) -> dict:\n    z_arr = np.asarray(z, dtype=float)\n    xr = np.asarray(real_data, dtype=float)\n    gw = np.asarray(G_W, dtype=float)\n    gb = np.asarray(G_b, dtype=float)\n    dw = np.asarray(D_W, dtype=float)\n    \n    fake_data = np.tanh(z_arr @ gw + gb)\n    p_real = 1.0 / (1.0 + np.exp(-np.clip(xr @ dw, -500, 500)))\n    p_fake = 1.0 / (1.0 + np.exp(-np.clip(fake_data @ dw, -500, 500)))\n    \n    d_loss = -float(np.mean(np.log(np.maximum(p_real, 1e-12)) + np.log(np.maximum(1.0 - p_fake, 1e-12))))\n    g_loss = -float(np.mean(np.log(np.maximum(p_fake, 1e-12))))\n    return {\n        \"generated_samples\": np.round(fake_data, 6).tolist(),\n        \"real_probabilities\": np.round(p_real, 6).tolist(),\n        \"fake_probabilities\": np.round(p_fake, 6).tolist(),\n        \"discriminator_loss\": float(np.round(d_loss, 6)),\n        \"generator_loss\": float(np.round(g_loss, 6))\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "public-1",
+      "name": "Two-sample forward pass",
+      "inputs": {
+        "z": [
+          [
+            1,
+            -0.5
+          ],
+          [
+            0.3,
+            0.8
+          ]
+        ],
+        "D_W": [
+          [
+            0.5
+          ],
+          [
+            -0.2
+          ],
+          [
+            0.3
+          ]
+        ],
+        "G_W": [
+          [
+            0.3,
+            -0.1,
+            0.5
+          ],
+          [
+            0.2,
+            0.4,
+            -0.3
+          ]
+        ],
+        "G_b": [
+          0.1,
+          0,
+          -0.1
+        ],
+        "real_data": [
+          [
+            0.7,
+            -0.2,
+            0.4
+          ],
+          [
+            0.1,
+            0.9,
+            -0.3
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.291313,
+            -0.291313,
+            0.50052
+          ],
+          [
+            0.336376,
+            0.282135,
+            -0.187746
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.624806
+          ],
+          [
+            0.445221
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.587605
+          ],
+          [
+            0.513856
+          ]
+        ],
+        "discriminator_loss": 1.443261,
+        "generator_loss": 0.598756
+      }
+    },
+    {
+      "id": "public-2",
+      "name": "Single-sample forward pass",
+      "inputs": {
+        "z": [
+          [
+            -0.2,
+            0.6,
+            0.1
+          ]
+        ],
+        "D_W": [
+          [
+            0.7
+          ],
+          [
+            -0.2
+          ]
+        ],
+        "G_W": [
+          [
+            0.2,
+            -0.4
+          ],
+          [
+            0.5,
+            0.3
+          ],
+          [
+            -0.1,
+            0.6
+          ]
+        ],
+        "G_b": [
+          0.05,
+          -0.05
+        ],
+        "real_data": [
+          [
+            0.4,
+            -0.5
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.291313,
+            0.263625
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.593873
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.537727
+          ]
+        ],
+        "discriminator_loss": 1.292688,
+        "generator_loss": 0.620405
+      }
+    },
+    {
+      "id": "public-3",
+      "name": "Zero noise and weights",
+      "inputs": {
+        "z": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "D_W": [
+          [
+            0.4
+          ],
+          [
+            -0.4
+          ]
+        ],
+        "G_W": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "G_b": [
+          0,
+          0
+        ],
+        "real_data": [
+          [
+            1,
+            -1
+          ],
+          [
+            -1,
+            1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.689974
+          ],
+          [
+            0.310026
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.5
+          ],
+          [
+            0.5
+          ]
+        ],
+        "discriminator_loss": 1.464248,
+        "generator_loss": 0.693147
+      }
+    },
+    {
+      "id": "gan-full-network-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "z": [
+          [
+            2,
+            -1.0
+          ],
+          [
+            0.6,
+            1.6
+          ]
+        ],
+        "D_W": [
+          [
+            1.0
+          ],
+          [
+            -0.4
+          ],
+          [
+            0.6
+          ]
+        ],
+        "G_W": [
+          [
+            0.6,
+            -0.2,
+            1.0
+          ],
+          [
+            0.4,
+            0.8,
+            -0.6
+          ]
+        ],
+        "G_b": [
+          0.2,
+          0,
+          -0.2
+        ],
+        "real_data": [
+          [
+            1.4,
+            -0.4,
+            0.8
+          ],
+          [
+            0.2,
+            1.8,
+            -0.6
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.761594,
+            -0.833655,
+            0.983675
+          ],
+          [
+            0.833655,
+            0.82104,
+            -0.507977
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.884933
+          ],
+          [
+            0.293178
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.8436
+          ],
+          [
+            0.549946
+          ]
+        ],
+        "discriminator_loss": 2.001472,
+        "generator_loss": 0.384006
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "z": [
+          [
+            0,
+            -0.25
+          ],
+          [
+            0.15,
+            0.4
+          ]
+        ],
+        "D_W": [
+          [
+            0.25
+          ],
+          [
+            -0.1
+          ],
+          [
+            0.15
+          ]
+        ],
+        "G_W": [
+          [
+            0.15,
+            -0.05,
+            0.25
+          ],
+          [
+            0.1,
+            0.2,
+            -0.15
+          ]
+        ],
+        "G_b": [
+          0.05,
+          0,
+          -0.05
+        ],
+        "real_data": [
+          [
+            0.35,
+            -0.1,
+            0.2
+          ],
+          [
+            0.05,
+            0.45,
+            -0.15
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.024995,
+            -0.049958,
+            -0.012499
+          ],
+          [
+            0.112028,
+            0.072373,
+            -0.072373
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.531832
+          ],
+          [
+            0.486253
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.502342
+          ],
+          [
+            0.502478
+          ]
+        ],
+        "discriminator_loss": 1.374206,
+        "generator_loss": 0.688338
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "z": [
+          [
+            -1,
+            0.5
+          ],
+          [
+            -0.3,
+            -0.8
+          ]
+        ],
+        "D_W": [
+          [
+            -0.5
+          ],
+          [
+            0.2
+          ],
+          [
+            -0.3
+          ]
+        ],
+        "G_W": [
+          [
+            -0.3,
+            0.1,
+            -0.5
+          ],
+          [
+            -0.2,
+            -0.4,
+            0.3
+          ]
+        ],
+        "G_b": [
+          -0.1,
+          0,
+          0.1
+        ],
+        "real_data": [
+          [
+            -0.7,
+            0.2,
+            -0.4
+          ],
+          [
+            -0.1,
+            -0.9,
+            0.3
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.099668,
+            -0.291313,
+            0.635149
+          ],
+          [
+            0.148885,
+            0.282135,
+            0.01
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.624806
+          ],
+          [
+            0.445221
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.42589
+          ],
+          [
+            0.494746
+          ]
+        ],
+        "discriminator_loss": 1.258563,
+        "generator_loss": 0.778643
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "z": [
+          [
+            3,
+            -1.5
+          ],
+          [
+            0.9,
+            2.4
+          ]
+        ],
+        "D_W": [
+          [
+            1.5
+          ],
+          [
+            -0.6
+          ],
+          [
+            0.9
+          ]
+        ],
+        "G_W": [
+          [
+            0.9,
+            -0.3,
+            1.5
+          ],
+          [
+            0.6,
+            1.2,
+            -0.9
+          ]
+        ],
+        "G_b": [
+          0.3,
+          0,
+          -0.3
+        ],
+        "real_data": [
+          [
+            2.1,
+            -0.6,
+            1.2
+          ],
+          [
+            0.3,
+            2.7,
+            -0.9
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.970452,
+            -0.991007,
+            0.99997
+          ],
+          [
+            0.98788,
+            0.989244,
+            -0.804062
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.989949
+          ],
+          [
+            0.121319
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.950276
+          ],
+          [
+            0.541062
+          ]
+        ],
+        "discriminator_loss": 2.949767,
+        "generator_loss": 0.332612
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "z": [
+          [
+            2.0,
+            0.5
+          ],
+          [
+            1.3,
+            1.8
+          ]
+        ],
+        "D_W": [
+          [
+            1.5
+          ],
+          [
+            0.8
+          ],
+          [
+            1.3
+          ]
+        ],
+        "G_W": [
+          [
+            1.3,
+            0.9,
+            1.5
+          ],
+          [
+            1.2,
+            1.4,
+            0.7
+          ]
+        ],
+        "G_b": [
+          1.1,
+          1.0,
+          0.9
+        ],
+        "real_data": [
+          [
+            1.7,
+            0.8,
+            1.4
+          ],
+          [
+            1.1,
+            1.9,
+            0.7
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.999632,
+            0.998178,
+            0.999593
+          ],
+          [
+            0.9999,
+            0.999831,
+            0.999462
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.993373
+          ],
+          [
+            0.983374
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.973337
+          ],
+          [
+            0.973377
+          ]
+        ],
+        "discriminator_loss": 3.636949,
+        "generator_loss": 0.027004
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "z": [
+          [
+            -1.0,
+            -2.5
+          ],
+          [
+            -1.7,
+            -1.2
+          ]
+        ],
+        "D_W": [
+          [
+            -1.5
+          ],
+          [
+            -2.2
+          ],
+          [
+            -1.7
+          ]
+        ],
+        "G_W": [
+          [
+            -1.7,
+            -2.1,
+            -1.5
+          ],
+          [
+            -1.8,
+            -1.6,
+            -2.3
+          ]
+        ],
+        "G_b": [
+          -1.9,
+          -2.0,
+          -2.1
+        ],
+        "real_data": [
+          [
+            -1.3,
+            -2.2,
+            -1.6
+          ],
+          [
+            -1.9,
+            -1.1,
+            -2.3
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.999632,
+            0.999451,
+            0.999933
+          ],
+          [
+            0.996334,
+            0.998141,
+            0.996748
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.999926
+          ],
+          [
+            0.999897
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.004505
+          ],
+          [
+            0.004564
+          ]
+        ],
+        "discriminator_loss": 0.004633,
+        "generator_loss": 5.396049
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "z": [
+          [
+            -0.5,
+            1
+          ],
+          [
+            0.8,
+            0.3
+          ]
+        ],
+        "D_W": [
+          [
+            0.5
+          ],
+          [
+            -0.2
+          ],
+          [
+            0.3
+          ]
+        ],
+        "G_W": [
+          [
+            0.5,
+            -0.1,
+            0.3
+          ],
+          [
+            -0.3,
+            0.4,
+            0.2
+          ]
+        ],
+        "G_b": [
+          -0.1,
+          0,
+          0.1
+        ],
+        "real_data": [
+          [
+            0.4,
+            -0.2,
+            0.7
+          ],
+          [
+            -0.3,
+            0.9,
+            0.1
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            -0.57167,
+            0.421899,
+            0.148885
+          ],
+          [
+            0.206966,
+            0.039979,
+            0.379949
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.610639
+          ],
+          [
+            0.425557
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.419324
+          ],
+          [
+            0.552177
+          ]
+        ],
+        "discriminator_loss": 1.347262,
+        "generator_loss": 0.731499
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "z": [
+          [
+            -1,
+            0.5
+          ],
+          [
+            -0.3,
+            -0.8
+          ]
+        ],
+        "D_W": [
+          [
+            -0.5
+          ],
+          [
+            0.2
+          ],
+          [
+            -0.3
+          ]
+        ],
+        "G_W": [
+          [
+            -0.3,
+            0.1,
+            -0.5
+          ],
+          [
+            -0.2,
+            -0.4,
+            0.3
+          ]
+        ],
+        "G_b": [
+          -0.1,
+          0,
+          0.1
+        ],
+        "real_data": [
+          [
+            -0.7,
+            0.2,
+            -0.4
+          ],
+          [
+            -0.1,
+            -0.9,
+            0.3
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.099668,
+            -0.291313,
+            0.635149
+          ],
+          [
+            0.148885,
+            0.282135,
+            0.01
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.624806
+          ],
+          [
+            0.445221
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.42589
+          ],
+          [
+            0.494746
+          ]
+        ],
+        "discriminator_loss": 1.258563,
+        "generator_loss": 0.778643
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "z": [
+          [
+            10,
+            -5.0
+          ],
+          [
+            3.0,
+            8.0
+          ]
+        ],
+        "D_W": [
+          [
+            5.0
+          ],
+          [
+            -2.0
+          ],
+          [
+            3.0
+          ]
+        ],
+        "G_W": [
+          [
+            3.0,
+            -1.0,
+            5.0
+          ],
+          [
+            2.0,
+            4.0,
+            -3.0
+          ]
+        ],
+        "G_b": [
+          1.0,
+          0,
+          -1.0
+        ],
+        "real_data": [
+          [
+            7.0,
+            -2.0,
+            4.0
+          ],
+          [
+            1.0,
+            9.0,
+            -3.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            1.0,
+            -1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            -1.0
+          ]
+        ],
+        "real_probabilities": [
+          [
+            1.0
+          ],
+          [
+            0.0
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.999955
+          ],
+          [
+            0.5
+          ]
+        ],
+        "discriminator_loss": 16.346596,
+        "generator_loss": 0.346596
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "z": [
+          [
+            0,
+            -0.05
+          ],
+          [
+            0.03,
+            0.08
+          ]
+        ],
+        "D_W": [
+          [
+            0.05
+          ],
+          [
+            -0.02
+          ],
+          [
+            0.03
+          ]
+        ],
+        "G_W": [
+          [
+            0.03,
+            -0.01,
+            0.05
+          ],
+          [
+            0.02,
+            0.04,
+            -0.03
+          ]
+        ],
+        "G_b": [
+          0.01,
+          0,
+          -0.01
+        ],
+        "real_data": [
+          [
+            0.07,
+            -0.02,
+            0.04
+          ],
+          [
+            0.01,
+            0.09,
+            -0.03
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.009,
+            -0.002,
+            -0.0085
+          ],
+          [
+            0.012499,
+            0.0029,
+            -0.0109
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.501275
+          ],
+          [
+            0.49945
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.500059
+          ],
+          [
+            0.50006
+          ]
+        ],
+        "discriminator_loss": 1.38569,
+        "generator_loss": 0.693028
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "z": [
+          [
+            6.0,
+            4.5
+          ],
+          [
+            5.3,
+            5.8
+          ]
+        ],
+        "D_W": [
+          [
+            5.5
+          ],
+          [
+            4.8
+          ],
+          [
+            5.3
+          ]
+        ],
+        "G_W": [
+          [
+            5.3,
+            4.9,
+            5.5
+          ],
+          [
+            5.2,
+            5.4,
+            4.7
+          ]
+        ],
+        "G_b": [
+          5.1,
+          5.0,
+          4.9
+        ],
+        "real_data": [
+          [
+            5.7,
+            4.8,
+            5.4
+          ],
+          [
+            5.1,
+            5.9,
+            4.7
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            1.0
+          ]
+        ],
+        "real_probabilities": [
+          [
+            1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "discriminator_loss": 15.6,
+        "generator_loss": 0.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "z": [
+          [
+            2,
+            -0.75
+          ],
+          [
+            0.45,
+            1.2
+          ]
+        ],
+        "D_W": [
+          [
+            0.75
+          ],
+          [
+            -0.3
+          ],
+          [
+            0.45
+          ]
+        ],
+        "G_W": [
+          [
+            0.45,
+            -0.15,
+            0.75
+          ],
+          [
+            0.3,
+            0.6,
+            -0.45
+          ]
+        ],
+        "G_b": [
+          0.15,
+          0,
+          -0.15
+        ],
+        "real_data": [
+          [
+            1.05,
+            -0.3,
+            0.6
+          ],
+          [
+            0.15,
+            1.35,
+            -0.45
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.677782,
+            -0.635149,
+            0.933828
+          ],
+          [
+            0.612242,
+            0.573351,
+            -0.338591
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.759054
+          ],
+          [
+            0.378716
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.753822
+          ],
+          [
+            0.533652
+          ]
+        ],
+        "discriminator_loss": 1.705587,
+        "generator_loss": 0.455305
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "z": [
+          [
+            -2,
+            1.0
+          ],
+          [
+            -0.6,
+            -1.6
+          ]
+        ],
+        "D_W": [
+          [
+            -1.0
+          ],
+          [
+            0.4
+          ],
+          [
+            -0.6
+          ]
+        ],
+        "G_W": [
+          [
+            -0.6,
+            0.2,
+            -1.0
+          ],
+          [
+            -0.4,
+            -0.8,
+            0.6
+          ]
+        ],
+        "G_b": [
+          -0.2,
+          0,
+          0.2
+        ],
+        "real_data": [
+          [
+            -1.4,
+            0.4,
+            -0.8
+          ],
+          [
+            -0.2,
+            -1.8,
+            0.6
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.53705,
+            -0.833655,
+            0.992632
+          ],
+          [
+            0.664037,
+            0.82104,
+            -0.158649
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.884933
+          ],
+          [
+            0.293178
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.187538
+          ],
+          [
+            0.44018
+          ]
+        ],
+        "discriminator_loss": 1.068522,
+        "generator_loss": 1.247174
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "z": [
+          [
+            0,
+            -0.125
+          ],
+          [
+            0.075,
+            0.2
+          ]
+        ],
+        "D_W": [
+          [
+            0.125
+          ],
+          [
+            -0.05
+          ],
+          [
+            0.075
+          ]
+        ],
+        "G_W": [
+          [
+            0.075,
+            -0.025,
+            0.125
+          ],
+          [
+            0.05,
+            0.1,
+            -0.075
+          ]
+        ],
+        "G_b": [
+          0.025,
+          0,
+          -0.025
+        ],
+        "real_data": [
+          [
+            0.175,
+            -0.05,
+            0.1
+          ],
+          [
+            0.025,
+            0.225,
+            -0.075
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.018748,
+            -0.012499,
+            -0.015624
+          ],
+          [
+            0.040603,
+            0.018123,
+            -0.030615
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.507968
+          ],
+          [
+            0.496563
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.500449
+          ],
+          [
+            0.500468
+          ]
+        ],
+        "discriminator_loss": 1.382756,
+        "generator_loss": 0.69223
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "z": [
+          [
+            0.0,
+            -1.5
+          ],
+          [
+            -0.7,
+            -0.19999999999999996
+          ]
+        ],
+        "D_W": [
+          [
+            -0.5
+          ],
+          [
+            -1.2
+          ],
+          [
+            -0.7
+          ]
+        ],
+        "G_W": [
+          [
+            -0.7,
+            -1.1,
+            -0.5
+          ],
+          [
+            -0.8,
+            -0.6,
+            -1.3
+          ]
+        ],
+        "G_b": [
+          -0.9,
+          -1.0,
+          -1.1
+        ],
+        "real_data": [
+          [
+            -0.30000000000000004,
+            -1.2,
+            -0.6
+          ],
+          [
+            -0.9,
+            -0.09999999999999998,
+            -1.3
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.291313,
+            -0.099668,
+            0.691069
+          ],
+          [
+            -0.244919,
+            -0.109558,
+            -0.454216
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.881843
+          ],
+          [
+            0.814573
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.37524
+          ],
+          [
+            0.639197
+          ]
+        ],
+        "discriminator_loss": 0.910322,
+        "generator_loss": 0.713866
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "z": [
+          [
+            4,
+            -2.0
+          ],
+          [
+            1.2,
+            3.2
+          ]
+        ],
+        "D_W": [
+          [
+            2.0
+          ],
+          [
+            -0.8
+          ],
+          [
+            1.2
+          ]
+        ],
+        "G_W": [
+          [
+            1.2,
+            -0.4,
+            2.0
+          ],
+          [
+            0.8,
+            1.6,
+            -1.2
+          ]
+        ],
+        "G_b": [
+          0.4,
+          0,
+          -0.4
+        ],
+        "real_data": [
+          [
+            2.8,
+            -0.8,
+            1.6
+          ],
+          [
+            0.4,
+            3.6,
+            -1.2
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.998508,
+            -0.999865,
+            1.0
+          ],
+          [
+            0.999699,
+            0.999813,
+            -0.950795
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.999714
+          ],
+          [
+            0.028748
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.981959
+          ],
+          [
+            0.514644
+          ]
+        ],
+        "discriminator_loss": 4.143721,
+        "generator_loss": 0.341243
+      },
+      "isPublic": false
+    },
+    {
+      "id": "gan-full-network-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "z": [
+          [
+            1,
+            -0.375
+          ],
+          [
+            0.225,
+            0.6
+          ]
+        ],
+        "D_W": [
+          [
+            0.375
+          ],
+          [
+            -0.15
+          ],
+          [
+            0.225
+          ]
+        ],
+        "G_W": [
+          [
+            0.225,
+            -0.075,
+            0.375
+          ],
+          [
+            0.15,
+            0.3,
+            -0.225
+          ]
+        ],
+        "G_b": [
+          0.075,
+          0,
+          -0.075
+        ],
+        "real_data": [
+          [
+            0.525,
+            -0.15,
+            0.3
+          ],
+          [
+            0.075,
+            0.675,
+            -0.225
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "generated_samples": [
+          [
+            0.239035,
+            -0.185333,
+            0.366501
+          ],
+          [
+            0.212344,
+            0.161693,
+            -0.124968
+          ]
+        ],
+        "real_probabilities": [
+          [
+            0.571231
+          ],
+          [
+            0.469102
+          ]
+        ],
+        "fake_probabilities": [
+          [
+            0.549809
+          ],
+          [
+            0.506814
+          ]
+        ],
+        "discriminator_loss": 1.410925,
+        "generator_loss": 0.638898
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "gan_forward",
+    "runtime": "numpy",
+    "parameters": [
+      {
+        "name": "z",
+        "type": "array",
+        "example": [
+          [
+            1,
+            -0.5
+          ],
+          [
+            0.3,
+            0.8
+          ]
+        ],
+        "description": "Float64 noise matrix with shape (B, N)."
+      },
+      {
+        "name": "real_data",
+        "type": "array",
+        "example": [
+          [
+            0.7,
+            -0.2,
+            0.4
+          ],
+          [
+            0.1,
+            0.9,
+            -0.3
+          ]
+        ],
+        "description": "Float64 real sample matrix with shape (B, D)."
+      },
+      {
+        "name": "G_W",
+        "type": "array",
+        "example": [
+          [
+            0.3,
+            -0.1,
+            0.5
+          ],
+          [
+            0.2,
+            0.4,
+            -0.3
+          ]
+        ],
+        "description": "Float64 generator weights with shape (N, D)."
+      },
+      {
+        "name": "G_b",
+        "type": "array",
+        "example": [
+          0.1,
+          0,
+          -0.1
+        ],
+        "description": "Float64 generator bias with shape (D)."
+      },
+      {
+        "name": "D_W",
+        "type": "array",
+        "example": [
+          [
+            0.5
+          ],
+          [
+            -0.2
+          ],
+          [
+            0.3
+          ]
+        ],
+        "description": "Float64 discriminator weights with shape (D, 1)."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "gan-full-network",
+    "name": "Complete GAN",
+    "description": "Full adversarial system",
+    "color": "#3b82f6"
+  },
+  "paper": {
+    "id": "gan",
+    "title": "Generative Adversarial Networks (GAN)",
+    "authors": "Goodfellow et al., 2014",
+    "year": 2014,
+    "paperUrl": "https://arxiv.org/abs/1406.2661",
+    "visualizationComponent": "GanArchViz"
+  },
+  "navigation": {
+    "index": 6,
+    "total": 6,
+    "prev": "gan-mode-collapse",
+    "next": null
+  },
+  "cleanTitle": ""
+}

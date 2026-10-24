@@ -1,0 +1,1156 @@
+{
+  "catalogId": "python:inference-scaled-dot-product-attention",
+  "id": "inference-scaled-dot-product-attention",
+  "sourceId": "inference-scaled-dot-product-attention",
+  "slug": "inference-scaled-dot-product-attention",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Implement Scaled Dot-Product Attention",
+  "difficulty": "Easy",
+  "tags": [
+    "Inference",
+    "Transformers",
+    "Linear Algebra"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-attention",
+  "sortOrder": 336,
+  "seoDescription": "Implement batched scaled dot-product attention for self- and cross-attention with optional masks and stable softmax.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Compute batched scaled dot-product attention mapping queries and keys to value projections with optional boolean attention masking.\n\nScaled dot-product attention allows O(1) direct information routing across token pairs.\n\n### Mathematical Formulation\n$$\n\\operatorname{Attention}(Q, K, V, M) = \\operatorname{softmax}\\left( \\frac{Q K^T}{\\sqrt{d_k}} + M \\right) V\n$$\n\n### Step-by-Step Implementation\n1. Compute matrix inner products Q K^T scaled by 1/sqrt(d_k)\n2. Apply optional masking by setting masked positions to large negative values\n3. Apply row-wise softmax normalization and project over Value matrix V\n\n### Returns\nNested list representing attended context tensor.",
+  "theory": "## Understanding the Theory: Implement Scaled Dot-Product Attention\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of discrete words and symbols arranged in sequential order. To process text with neural networks, we convert words into continuous embedding vectors and model their grammatical and semantic relationships. **Implement Scaled Dot-Product Attention** is a core sequence-processing mechanism used in modern Transformer and LLM architectures.\n\nScaled dot-product attention allows O(1) direct information routing across token pairs. In this problem, the goal is to: compute batched scaled dot-product attention mapping queries and keys to value projections with optional boolean attention masking.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\operatorname{Attention}(Q, K, V, M) = \\operatorname{softmax}\\left( \\frac{Q K^T}{\\sqrt{d_k}} + M \\right) V\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute matrix inner products Q K^T scaled by 1/sqrt(d_k)\n2. **Phase 2**: Apply optional masking by setting masked positions to large negative values\n3. **Phase 3**: Apply row-wise softmax normalization and project over Value matrix V\n\n### Practical Machine Learning Applications & Nuances\n* **Self-Attention Mechanics**: Scaled dot-product attention computes all-to-all token interactions dynamically, allowing tokens to gather context from the entire sentence simultaneously.\n* **Position Encodings**: Because self-attention is permutation-invariant, positional encodings (like sinusoidal or Rotary Position Embeddings) inject word order into the representations.\n* **Vocabulary & Subwords**: Algorithms like BPE tokenize text into frequent subwords, allowing models to represent rare words without requiring an infinite vocabulary.",
+  "examples": [
+    "Input: q = [[[1.0, 0.0], [0.0, 1.0]]], k = [[[1.0, 0.0], [0.0, 1.0]]], v = [[[1.0, 2.0], [3.0, 4.0]]]\n\nOutput: [[[1.6605, 2.6605], [2.3395, 3.3395]]]\n\nExplanation: Evaluated inference_scaled_dot_product_attention under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_scaled_dot_product_attention`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_scaled_dot_product_attention`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef inference_scaled_dot_product_attention(q: list, k: list, v: list, mask: list = None) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Implement Scaled Dot-Product Attention** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np, math\n\ndef inference_scaled_dot_product_attention(q: list, k: list, v: list, mask: list = None) -> list:\n    Q, K, V = np.array(q, dtype=np.float64), np.array(k, dtype=np.float64), np.array(v, dtype=np.float64)\n    sc = np.matmul(Q, np.swapaxes(K, -1, -2)) / math.sqrt(Q.shape[-1])\n    if mask is not None: sc = np.where(np.array(mask) == 0, -1e9, sc)\n    ex = np.exp(sc - np.max(sc, axis=-1, keepdims=True))\n    return np.round(np.matmul(ex / np.sum(ex, axis=-1, keepdims=True), V), 4).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Batch 1, Seq 2, Dim 2",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            1.6605,
+            2.6605
+          ],
+          [
+            2.3395,
+            3.3395
+          ]
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "q": [
+          [
+            [
+              2.0,
+              0.0
+            ],
+            [
+              0.0,
+              2.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              2.0,
+              0.1
+            ],
+            [
+              0.1,
+              2.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              2.0,
+              4.0
+            ],
+            [
+              6.0,
+              8.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            2.255,
+            4.255
+          ],
+          [
+            5.745,
+            7.745
+          ]
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "q": [
+          [
+            [
+              0.5,
+              0.0
+            ],
+            [
+              0.0,
+              0.5
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              0.5,
+              0.1
+            ],
+            [
+              0.1,
+              0.5
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              0.5,
+              1.0
+            ],
+            [
+              1.5,
+              2.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.9647,
+            1.4647
+          ],
+          [
+            1.0353,
+            1.5353
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "q": [
+          [
+            [
+              2.0,
+              1.0
+            ],
+            [
+              1.0,
+              2.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.0,
+              0.1
+            ],
+            [
+              0.1,
+              1.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              2.0,
+              3.0
+            ],
+            [
+              4.0,
+              5.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            2.6921,
+            3.6921
+          ],
+          [
+            3.3079,
+            4.3079
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.5,
+              0.0
+            ],
+            [
+              0.0,
+              1.5
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.5,
+              0.1
+            ],
+            [
+              0.1,
+              1.5
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.5,
+              3.0
+            ],
+            [
+              4.5,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            2.0541,
+            3.5541
+          ],
+          [
+            3.9459,
+            5.4459
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "q": [
+          [
+            [
+              3.0,
+              0.0
+            ],
+            [
+              0.0,
+              3.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              3.0,
+              0.1
+            ],
+            [
+              0.1,
+              3.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              3.0,
+              6.0
+            ],
+            [
+              9.0,
+              12.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            3.0128,
+            6.0128
+          ],
+          [
+            8.9872,
+            11.9872
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "q": [
+          [
+            [
+              0.25,
+              0.0
+            ],
+            [
+              0.0,
+              0.25
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              0.25,
+              0.1
+            ],
+            [
+              0.1,
+              0.25
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              0.25,
+              0.5
+            ],
+            [
+              0.75,
+              1.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.4967,
+            0.7467
+          ],
+          [
+            0.5033,
+            0.7533
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "q": [
+          [
+            [
+              3.0,
+              2.0
+            ],
+            [
+              2.0,
+              3.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              2.0,
+              0.1
+            ],
+            [
+              0.1,
+              2.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            3.4139,
+            4.4139
+          ],
+          [
+            4.5861,
+            5.5861
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "q": [
+          [
+            [
+              4.0,
+              0.0
+            ],
+            [
+              0.0,
+              4.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              4.0,
+              0.1
+            ],
+            [
+              0.1,
+              4.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              4.0,
+              8.0
+            ],
+            [
+              12.0,
+              16.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            4.0001,
+            8.0001
+          ],
+          [
+            11.9999,
+            15.9999
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "q": [
+          [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              2.0,
+              1.0
+            ],
+            [
+              4.0,
+              3.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            2.6605,
+            1.6605
+          ],
+          [
+            3.3395,
+            2.3395
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "q": [
+          [
+            [
+              0.75,
+              0.0
+            ],
+            [
+              0.0,
+              0.75
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              0.75,
+              0.1
+            ],
+            [
+              0.1,
+              0.75
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              0.75,
+              1.5
+            ],
+            [
+              2.25,
+              3.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            1.372,
+            2.122
+          ],
+          [
+            1.628,
+            2.378
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "q": [
+          [
+            [
+              5.0,
+              0.0
+            ],
+            [
+              0.0,
+              5.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              5.0,
+              0.1
+            ],
+            [
+              0.1,
+              5.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              5.0,
+              10.0
+            ],
+            [
+              15.0,
+              20.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            15.0,
+            20.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "q": [
+          [
+            [
+              4.0,
+              3.0
+            ],
+            [
+              3.0,
+              4.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              3.0,
+              0.1
+            ],
+            [
+              0.1,
+              3.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              4.0,
+              5.0
+            ],
+            [
+              6.0,
+              7.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            4.228,
+            5.228
+          ],
+          [
+            5.772,
+            6.772
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "q": [
+          [
+            [
+              0.8,
+              0.0
+            ],
+            [
+              0.0,
+              0.8
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              0.8,
+              0.1
+            ],
+            [
+              0.1,
+              0.8
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              0.8,
+              1.6
+            ],
+            [
+              2.4,
+              3.2
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            1.4436,
+            2.2436
+          ],
+          [
+            1.7564,
+            2.5564
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "q": [
+          [
+            [
+              6.0,
+              0.0
+            ],
+            [
+              0.0,
+              6.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              6.0,
+              0.1
+            ],
+            [
+              0.1,
+              6.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              6.0,
+              12.0
+            ],
+            [
+              18.0,
+              24.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            6.0,
+            12.0
+          ],
+          [
+            18.0,
+            24.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "q": [
+          [
+            [
+              5.0,
+              4.0
+            ],
+            [
+              4.0,
+              5.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              4.0,
+              0.1
+            ],
+            [
+              0.1,
+              4.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              5.0,
+              6.0
+            ],
+            [
+              7.0,
+              8.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            5.1193,
+            6.1193
+          ],
+          [
+            6.8807,
+            7.8807
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "q": [
+          [
+            [
+              1.2,
+              0.0
+            ],
+            [
+              0.0,
+              1.2
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              1.2,
+              0.1
+            ],
+            [
+              0.1,
+              1.2
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              1.2,
+              2.4
+            ],
+            [
+              3.6,
+              4.8
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            1.8774,
+            3.0774
+          ],
+          [
+            2.9226,
+            4.1226
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "q": [
+          [
+            [
+              0.4,
+              0.0
+            ],
+            [
+              0.0,
+              0.4
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              0.4,
+              0.1
+            ],
+            [
+              0.1,
+              0.4
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              0.4,
+              0.8
+            ],
+            [
+              1.2,
+              1.6
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.783,
+            1.183
+          ],
+          [
+            0.817,
+            1.217
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "q": [
+          [
+            [
+              8.0,
+              0.0
+            ],
+            [
+              0.0,
+              8.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              8.0,
+              0.1
+            ],
+            [
+              0.1,
+              8.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              8.0,
+              16.0
+            ],
+            [
+              24.0,
+              32.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            8.0,
+            16.0
+          ],
+          [
+            24.0,
+            32.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "inference-scaled-dot-product-attention-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "q": [
+          [
+            [
+              6.0,
+              5.0
+            ],
+            [
+              5.0,
+              6.0
+            ]
+          ]
+        ],
+        "k": [
+          [
+            [
+              5.0,
+              0.1
+            ],
+            [
+              0.1,
+              5.0
+            ]
+          ]
+        ],
+        "v": [
+          [
+            [
+              6.0,
+              7.0
+            ],
+            [
+              8.0,
+              9.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            6.0607,
+            7.0607
+          ],
+          [
+            7.9393,
+            8.9393
+          ]
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_scaled_dot_product_attention",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

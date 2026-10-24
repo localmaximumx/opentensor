@@ -1,0 +1,1269 @@
+{
+  "id": "ddpm-sampling",
+  "title": "DDPM Sampling",
+  "description": "Implement the complete deterministic-input DDPM sampling loop. Begin from the supplied noisy sample x_T and process timesteps T through 1. At loop index i, epsilon_preds[i] is the model prediction for timestep T-i. For steps T through 2, z_values[i] is the supplied stochastic noise.\n\nAt each timestep, compute\n\n$$\n\\mu_t = \\frac{1}{\\sqrt{\\alpha_t}}\\left(x_t-\\frac{\\beta_t}{\\sqrt{1-\\bar{\\alpha}_t}}\\,\\hat{\\epsilon}_t\\right)\n$$\n\nThen update the sample with\n\n$$\nx_{t-1} = \\mu_t + \\sqrt{\\beta_t}\\,z_t\n$$\n\nFor t=1, omit the noise term and set x_0=mu_1. Here, T is the number of beta values, alpha_t=1-beta_t, bar-alpha_t is the cumulative product through t, hat-epsilon_t is the supplied model prediction, and z_t is the supplied stochastic noise. Use NumPy float64 calculations. Return the final x_0 as a nested list with the same shape as x_T, rounded to four decimals.",
+  "seoDescription": "Implement iterative DDPM sampling from Gaussian noise by applying the learned reverse process over all timesteps.",
+  "examples": [
+    "Input: x_T=[[0.5,-0.3]], betas=[0.001,0.0105,0.02], epsilon_preds=[[[0,0]],[[0,0]],[[0,0]]], z_values=[[[0.1,-0.2]],[[0.3,0.1]]]\n\nOutput: [[0.553,-0.323]]\n\nExplanation: Three reverse steps are applied; supplied noise is added during the first two and omitted during the final step.",
+    "Input: x_T=[[1,-1]], betas=[0.001,0.0105,0.02], epsilon_preds=[[[0.5,0.5]],[[0.5,0.5]],[[0.5,0.5]]], z_values=[[[0,0]],[[0,0]]]\n\nOutput: [[0.8935,-1.1386]]",
+    "Input: x_T has shape (2,2), betas=[0.001,0.0105,0.02], epsilon_preds has shape (3,2,2), z_values has shape (2,2,2)\n\nOutput: [[0.1949,-0.4234],[0.632,0.0624]]"
+  ],
+  "requirements": "- Start from the supplied x_T; do not generate a replacement sample.\n- Process beta values in reverse timestep order from T through 1.\n- Pair epsilon_preds in order with timesteps T through 1.\n- Pair z_values in order with timesteps T through 2 and omit noise at t=1.\n- Return the final nested list rounded to four decimals.",
+  "theory": "# <span style=\"font-size: 20px;\">DDPM Sampling</span>\n\n<span style=\"font-size: 14px;\">Sampling is the generative act of a diffusion model: starting from pure Gaussian noise and progressively removing it to produce a clean data sample. In the Denoising Diffusion Probabilistic Model (DDPM) framework introduced by Ho, Jain, and Abbeel (2020), sampling runs the learned reverse Markov chain from timestep $T$ all the way down to timestep $1$, inverting the forward diffusion process that gradually destroyed the data's structure.</span>\n\n<span style=\"font-size: 14px;\">Unlike GANs, which generate samples in a single forward pass through a generator network, DDPM sampling is an iterative procedure. Each step asks the model to predict and subtract a small amount of noise, gradually revealing the underlying data distribution one denoising step at a time.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is / What It Does</span>\n\n<span style=\"font-size: 14px;\">The DDPM sampling pipeline is a complete generation procedure that transforms a random noise vector into a realistic data sample. It consists of three stages: (1) sample initial noise $\\mathbf{x}_T$ from a standard Gaussian, (2) iteratively apply the learned reverse denoising transition from $t = T$ down to $t = 1$, and (3) output the final $\\mathbf{x}_0$ as the generated sample.</span>\n\n<span style=\"font-size: 14px;\">At each step, a neural network $\\epsilon_\\theta(\\mathbf{x}_t, t)$ predicts the noise component present in $\\mathbf{x}_t$. This prediction is used to compute the mean of the reverse transition distribution, from which $\\mathbf{x}_{t-1}$ is sampled. The noise network was trained to minimize the difference between its prediction and the actual noise that was added during the forward process.</span>\n\n<span style=\"font-size: 14px;\">The procedure is stochastic: at every step except the last, fresh Gaussian noise $\\mathbf{z}$ is added to the denoised estimate. This injects randomness that allows the model to explore diverse modes of the data distribution. At $t = 1$, no noise is added because we want the final output to be a clean sample, not a noisy one.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">The noise schedule defines a sequence of values $\\beta_1, \\beta_2, \\dots, \\beta_T$ (small positive constants, typically $\\beta_1 = 10^{-4}$ and $\\beta_T = 0.02$ with linear interpolation). From these, we derive:</span>\n\n* <span style=\"font-size: 14px;\">**$\\alpha_t = 1 - \\beta_t$:** The per-step signal retention factor.</span>\n* <span style=\"font-size: 14px;\">**$\\bar{\\alpha}_t = \\prod_{s=1}^{t} \\alpha_s$:** The cumulative signal retention from step $0$ to step $t$.</span>\n\n<span style=\"font-size: 14px;\">The initial noise sample is drawn from a standard Gaussian:</span>\n\n$$\n\\mathbf{x}_T \\sim \\mathcal{N}(\\mathbf{0}, \\mathbf{I})\n$$\n\n<span style=\"font-size: 14px;\">For each timestep $t$ from $T$ down to $1$, the reverse step computes:</span>\n\n$$\n\\mathbf{x}_{t-1} = \\frac{1}{\\sqrt{\\alpha_t}} \\left( \\mathbf{x}_t - \\frac{1 - \\alpha_t}{\\sqrt{1 - \\bar{\\alpha}_t}} \\, \\epsilon_\\theta(\\mathbf{x}_t, t) \\right) + \\sigma_t \\, \\mathbf{z}\n$$\n\n<span style=\"font-size: 14px;\">where $\\mathbf{z} \\sim \\mathcal{N}(\\mathbf{0}, \\mathbf{I})$ for $t > 1$ and $\\mathbf{z} = \\mathbf{0}$ for $t = 1$.</span>\n\n* <span style=\"font-size: 14px;\">**$\\frac{1}{\\sqrt{\\alpha_t}}$:** Rescales the signal back up to compensate for the contraction applied during the forward process at step $t$.</span>\n* <span style=\"font-size: 14px;\">**$\\frac{1 - \\alpha_t}{\\sqrt{1 - \\bar{\\alpha}_t}}$:** The coefficient that converts the noise prediction $\\epsilon_\\theta$ into the correct noise magnitude to subtract from $\\mathbf{x}_t$.</span>\n* <span style=\"font-size: 14px;\">**$\\epsilon_\\theta(\\mathbf{x}_t, t)$:** The neural network's estimate of the noise component in $\\mathbf{x}_t$. It takes both the noisy input and the timestep as arguments.</span>\n* <span style=\"font-size: 14px;\">**$\\sigma_t$:** The noise scale for the reverse step. Ho et al. set $\\sigma_t^2 = \\beta_t$, matching the forward process variance. An alternative is $\\sigma_t^2 = \\tilde{\\beta}_t = \\frac{1 - \\bar{\\alpha}_{t-1}}{1 - \\bar{\\alpha}_t} \\beta_t$, the posterior variance.</span>\n\n<span style=\"font-size: 14px;\">The term inside the parentheses computes the estimated mean $\\mu_\\theta(\\mathbf{x}_t, t)$ of the reverse distribution $p_\\theta(\\mathbf{x}_{t-1} | \\mathbf{x}_t)$. Adding $\\sigma_t \\mathbf{z}$ samples from that distribution rather than taking the point estimate.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Sampling Algorithm</span>\n\n<span style=\"font-size: 14px;\">The full procedure, following Algorithm 2 from Ho et al. (2020):</span>\n\n<span style=\"font-size: 14px;\">**Step 1.** Sample $\\mathbf{x}_T \\sim \\mathcal{N}(\\mathbf{0}, \\mathbf{I})$. This is a random tensor with the same shape as the desired output (e.g., $3 \\times 64 \\times 64$ for a $64 \\times 64$ RGB image).</span>\n\n<span style=\"font-size: 14px;\">**Step 2.** For $t = T, T-1, \\dots, 1$:</span>\n\n* <span style=\"font-size: 14px;\">If $t > 1$, sample $\\mathbf{z} \\sim \\mathcal{N}(\\mathbf{0}, \\mathbf{I})$. If $t = 1$, set $\\mathbf{z} = \\mathbf{0}$.</span>\n* <span style=\"font-size: 14px;\">Run the neural network forward pass: $\\hat{\\epsilon} = \\epsilon_\\theta(\\mathbf{x}_t, t)$.</span>\n* <span style=\"font-size: 14px;\">Compute the denoised estimate: $\\mathbf{x}_{t-1} = \\frac{1}{\\sqrt{\\alpha_t}} \\left( \\mathbf{x}_t - \\frac{1 - \\alpha_t}{\\sqrt{1 - \\bar{\\alpha}_t}} \\hat{\\epsilon} \\right) + \\sigma_t \\mathbf{z}$.</span>\n\n<span style=\"font-size: 14px;\">**Step 3.** Return $\\mathbf{x}_0$ as the generated sample.</span>\n\n<span style=\"font-size: 14px;\">Each iteration of the loop requires exactly one forward pass through the denoising network. The schedule values $\\alpha_t$, $\\bar{\\alpha}_t$, and $\\sigma_t$ are precomputed once and stored as lookup arrays indexed by $t$. No gradient computation is needed during sampling, so inference mode is used.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why T Steps is Slow</span>\n\n<span style=\"font-size: 14px;\">The default DDPM uses $T = 1000$ timesteps, meaning 1000 sequential neural network forward passes per sample. On a modern GPU, each U-Net pass for a $256 \\times 256$ image takes 20-50 ms, putting total generation time at 20-50 seconds per image.</span>\n\n<span style=\"font-size: 14px;\">The steps are inherently sequential: $\\mathbf{x}_{t-1}$ depends on $\\mathbf{x}_t$, which depends on $\\mathbf{x}_{t+1}$. You cannot parallelize across timesteps for a single sample. Batch parallelism across multiple samples is possible, but per-sample latency remains $T$ forward passes.</span>\n\n<span style=\"font-size: 14px;\">For comparison, a GAN generates a sample in a single forward pass (~5-20 ms). This 1000x slowdown is DDPM's primary practical limitation and the main focus of subsequent research.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">Ho, Jain, and Abbeel (2020) presented DDPM's sampling procedure in Algorithm 2 of \"Denoising Diffusion Probabilistic Models.\" They described it as \"sampling from the model is performed by running the reverse Markov chain, starting from $\\mathbf{x}_T \\sim \\mathcal{N}(\\mathbf{0}, \\mathbf{I})$ and iteratively sampling $\\mathbf{x}_{t-1} \\sim p_\\theta(\\mathbf{x}_{t-1} | \\mathbf{x}_t)$.\"</span>\n\n<span style=\"font-size: 14px;\">The paper achieved an FID of 3.17 and Inception Score of 9.46 on CIFAR-10, competitive with GANs at the time. On LSUN bedrooms ($256 \\times 256$), DDPM produced sharp, coherent room structures.</span>\n\n<span style=\"font-size: 14px;\">Compared to GANs, DDPM offered several advantages despite slower sampling. Training is stable with no adversarial min-max game, no mode collapse, and a simple MSE loss. DDPM also provides better mode coverage, generating more diverse samples rather than concentrating on a few high-quality modes.</span>\n\n<span style=\"font-size: 14px;\">Ho et al. chose $\\sigma_t^2 = \\beta_t$ for the reverse process variance and a linear schedule from $\\beta_1 = 10^{-4}$ to $\\beta_T = 0.02$ with $T = 1000$. Subsequent work (Nichol and Dhariwal, 2021) found that a cosine schedule produces better results, especially for higher-resolution images.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Consider a toy example with $T = 3$ and a single scalar value (1D) to trace through the full sampling loop. We use the following simplified schedule:</span>\n\n* <span style=\"font-size: 14px;\">$\\beta_1 = 0.1, \\quad \\beta_2 = 0.2, \\quad \\beta_3 = 0.3$</span>\n* <span style=\"font-size: 14px;\">$\\alpha_1 = 0.9, \\quad \\alpha_2 = 0.8, \\quad \\alpha_3 = 0.7$</span>\n* <span style=\"font-size: 14px;\">$\\bar{\\alpha}_1 = 0.9, \\quad \\bar{\\alpha}_2 = 0.72, \\quad \\bar{\\alpha}_3 = 0.504$</span>\n* <span style=\"font-size: 14px;\">$\\sigma_t = \\sqrt{\\beta_t}$, so $\\sigma_1 \\approx 0.3162, \\quad \\sigma_2 \\approx 0.4472, \\quad \\sigma_3 \\approx 0.5477$</span>\n\n### <span style=\"font-size: 14px;\">Step 1: Initialize $\\mathbf{x}_3$</span>\n\n<span style=\"font-size: 14px;\">Sample $\\mathbf{x}_3 \\sim \\mathcal{N}(0, 1)$. Suppose we draw $\\mathbf{x}_3 = 1.5$.</span>\n\n### <span style=\"font-size: 14px;\">Step 2: Reverse from $t = 3$ to $t = 2$</span>\n\n<span style=\"font-size: 14px;\">The model predicts $\\epsilon_\\theta(\\mathbf{x}_3, 3) = 0.8$ (its estimate of the noise in $\\mathbf{x}_3$). Sample $\\mathbf{z} \\sim \\mathcal{N}(0, 1)$; suppose $\\mathbf{z} = -0.3$.</span>\n\n$$\n\\mathbf{x}_2 = \\frac{1}{\\sqrt{0.7}} \\left( 1.5 - \\frac{1 - 0.7}{\\sqrt{1 - 0.504}} \\cdot 0.8 \\right) + 0.5477 \\cdot (-0.3)\n$$\n\n$$\n= \\frac{1}{0.8367} \\left( 1.5 - \\frac{0.3}{0.7043} \\cdot 0.8 \\right) - 0.1643\n$$\n\n$$\n= 1.1952 \\times (1.5 - 0.3408) - 0.1643\n$$\n\n$$\n= 1.1952 \\times 1.1592 - 0.1643 = 1.3855 - 0.1643 = 1.2212\n$$\n\n### <span style=\"font-size: 14px;\">Step 3: Reverse from $t = 2$ to $t = 1$</span>\n\n<span style=\"font-size: 14px;\">The model predicts $\\epsilon_\\theta(\\mathbf{x}_2, 2) = 0.5$. Sample $\\mathbf{z} \\sim \\mathcal{N}(0, 1)$; suppose $\\mathbf{z} = 0.1$.</span>\n\n$$\n\\mathbf{x}_1 = \\frac{1}{\\sqrt{0.8}} \\left( 1.2212 - \\frac{1 - 0.8}{\\sqrt{1 - 0.72}} \\cdot 0.5 \\right) + 0.4472 \\cdot 0.1\n$$\n\n$$\n= \\frac{1}{0.8944} \\left( 1.2212 - \\frac{0.2}{0.5292} \\cdot 0.5 \\right) + 0.0447\n$$\n\n$$\n= 1.1180 \\times (1.2212 - 0.1890) + 0.0447\n$$\n\n$$\n= 1.1180 \\times 1.0322 + 0.0447 = 1.1540 + 0.0447 = 1.1987\n$$\n\n### <span style=\"font-size: 14px;\">Step 4: Reverse from $t = 1$ to $t = 0$</span>\n\n<span style=\"font-size: 14px;\">The model predicts $\\epsilon_\\theta(\\mathbf{x}_1, 1) = 0.2$. At $t = 1$, we set $\\mathbf{z} = \\mathbf{0}$ (no noise added).</span>\n\n$$\n\\mathbf{x}_0 = \\frac{1}{\\sqrt{0.9}} \\left( 1.1987 - \\frac{1 - 0.9}{\\sqrt{1 - 0.9}} \\cdot 0.2 \\right) + 0\n$$\n\n$$\n= \\frac{1}{0.9487} \\left( 1.1987 - \\frac{0.1}{0.3162} \\cdot 0.2 \\right)\n$$\n\n$$\n= 1.0541 \\times (1.1987 - 0.0632)\n$$\n\n$$\n= 1.0541 \\times 1.1355 = 1.1968\n$$\n\n<span style=\"font-size: 14px;\">The final generated sample is $\\mathbf{x}_0 \\approx 1.197$. Starting from pure noise ($\\mathbf{x}_3 = 1.5$), the model progressively refined it through 3 denoising steps. With a well-trained model on real data, $\\mathbf{x}_0$ would land in a high-density region of the training distribution.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Role of Stochasticity</span>\n\n<span style=\"font-size: 14px;\">The noise term $\\sigma_t \\mathbf{z}$ added at each reverse step is not an implementation detail but a fundamental part of the generative process. It serves as a source of diversity: different random draws of $\\mathbf{z}$ at each step lead to different final samples, even from the same initial $\\mathbf{x}_T$. Without this noise, the same starting point would always produce the same output.</span>\n\n<span style=\"font-size: 14px;\">The magnitude $\\sigma_t$ controls how much exploration happens at each step. Ho et al. used $\\sigma_t^2 = \\beta_t$, which matches the forward process variance and corresponds to the upper bound of the reverse process entropy. The alternative $\\sigma_t^2 = \\tilde{\\beta}_t$ (the posterior variance) gives a lower bound. Both produce valid samples, but the choice affects sample diversity and quality.</span>\n\n<span style=\"font-size: 14px;\">DDIM (Song, Meng, and Ermon, 2020) showed that the noise term can be removed entirely, yielding a deterministic sampling process. The mapping from $\\mathbf{x}_T$ to $\\mathbf{x}_0$ becomes a fixed bijection, enabling meaningful interpolation in the latent space.</span>\n\n<span style=\"font-size: 14px;\">Temperature scaling provides a continuous control lever. Multiplying $\\sigma_t$ by a factor $\\eta$ (where $\\eta = 1$ recovers DDPM and $\\eta = 0$ gives DDIM) interpolates between stochastic and deterministic sampling. Lower $\\eta$ produces sharper but less diverse samples.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Modern Speedups</span>\n\n<span style=\"font-size: 14px;\">The 1000-step sampling requirement of DDPM motivated extensive research into faster alternatives. These methods reduce the number of neural network evaluations while maintaining sample quality.</span>\n\n<span style=\"font-size: 14px;\">**DDIM (Song et al., 2020)** reinterprets the diffusion process as a non-Markovian chain, enabling sampling with a subset of timesteps. Instead of all 1000 steps, DDIM uses a subsequence like $\\{1, 51, 101, \\dots, 951\\}$ (20 steps) with minimal quality loss. The noise prediction network generalizes across timesteps, so skipping intermediate steps works.</span>\n\n<span style=\"font-size: 14px;\">**DPM-Solver (Lu et al., 2022)** treats the reverse diffusion as an ODE and applies high-order numerical solvers. While DDPM uses first-order Euler-like updates, DPM-Solver uses second and third-order methods that take larger, more accurate steps, achieving strong results in 10-20 steps.</span>\n\n<span style=\"font-size: 14px;\">**Consistency Models (Song et al., 2023)** learn to map any point on the diffusion trajectory directly to $\\mathbf{x}_0$ in a single step, trained either by distilling a pre-trained diffusion model or from scratch.</span>\n\n<span style=\"font-size: 14px;\">**Progressive Distillation (Salimans and Ho, 2022)** trains a student to combine two teacher steps into one, then repeats. Each round halves the step count: 1024, 512, 256, ..., down to 4 steps.</span>\n\n<span style=\"font-size: 14px;\">**Latent Diffusion (Rombach et al., 2022)** runs diffusion in a compressed latent space rather than pixel space. An encoder compresses images (e.g., $512 \\times 512$ to $64 \\times 64$ latents), diffusion operates there, and a decoder maps back to pixels. Stable Diffusion is the most prominent example.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n### <span style=\"font-size: 14px;\">Wrong Loop Direction</span>\n\n<span style=\"font-size: 14px;\">The reverse process must iterate from $t = T$ down to $t = 1$. A common implementation error is looping from $t = 1$ to $t = T$, which runs the forward (noising) direction instead of the reverse (denoising) direction. The result is progressively noisier outputs rather than cleaner ones.</span>\n\n### <span style=\"font-size: 14px;\">Forgetting $\\mathbf{z} = \\mathbf{0}$ at $t = 1$</span>\n\n<span style=\"font-size: 14px;\">At the final step ($t = 1$), no noise should be added. If $\\mathbf{z}$ is sampled normally at $t = 1$, the final output $\\mathbf{x}_0$ will have unnecessary Gaussian noise overlaid on it, producing a visibly grainy image. This is a one-line bug with significant visual impact.</span>\n\n### <span style=\"font-size: 14px;\">Using Wrong Schedule Values</span>\n\n<span style=\"font-size: 14px;\">Confusing $\\alpha_t$ with $\\bar{\\alpha}_t$ is a frequent source of bugs. The reverse step formula uses both: $\\alpha_t$ (the per-step value) appears as $\\frac{1}{\\sqrt{\\alpha_t}}$ and in the numerator $1 - \\alpha_t$, while $\\bar{\\alpha}_t$ (the cumulative product) appears in the denominator $\\sqrt{1 - \\bar{\\alpha}_t}$. Swapping them produces incorrect denoising magnitudes and corrupted samples.</span>\n\n### <span style=\"font-size: 14px;\">Not Starting from Pure Gaussian Noise</span>\n\n<span style=\"font-size: 14px;\">The derivation assumes $\\mathbf{x}_T \\sim \\mathcal{N}(\\mathbf{0}, \\mathbf{I})$. If $\\mathbf{x}_T$ is initialized from a different distribution (e.g., uniform noise, or Gaussian with wrong variance), the reverse process produces samples outside the learned distribution. The variance must be exactly $\\mathbf{I}$, not scaled.</span>\n\n### <span style=\"font-size: 14px;\">Clipping Output Values</span>\n\n<span style=\"font-size: 14px;\">Intermediate $\\mathbf{x}_t$ values can drift outside the expected range (e.g., beyond $[-1, 1]$). Aggressive clipping at every step introduces artifacts. The recommended practice is to clip only the final $\\mathbf{x}_0$, or use dynamic thresholding (Saharia et al., 2022) which rescales outlier values rather than hard clipping.</span>\n\n---",
+  "hints": [
+    "Use enumerate(range(T, 0, -1)) to align each prediction with its timestep.",
+    "Precompute alphas and their cumulative product before the reverse loop.",
+    "Read z_values[i] only when t is greater than 1."
+  ],
+  "constraints": "- x_T is a nonempty nested list of real numbers.\n- betas is a nonempty list of T float values strictly between 0 and 1.\n- epsilon_preds contains T arrays, each with the same shape as x_T.\n- z_values contains T-1 arrays, each with the same shape as x_T.\n- Numerical calculations use NumPy float64.",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef ddpm_sample(x_T: list, betas: list[float], epsilon_preds: list, z_values: list) -> list:\n    \"\"\"\n    Returns the final denoised sample rounded to four decimals.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-23T18:46:11.121Z",
+  "updatedAt": "2026-04-04T12:04:50.773Z",
+  "topicId": "ddpm-sampling",
+  "paperSnippet": "\"Sampling from the model is performed by running the reverse Markov chain, starting from x_T ~ N(0, I) and iteratively sampling x_{t-1} ~ p_Î¸(x_{t-1}|x_t).\"",
+  "visualizationComponent": "DiffusionSamplingViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **DDPM Sampling** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef ddpm_sample(x_T: list, betas: list[float], epsilon_preds: list, z_values: list) -> list:\n    cur_x = np.asarray(x_T, dtype=float)\n    b_list = [float(b) for b in betas]\n    T = len(b_list)\n    \n    for idx, t_step in enumerate(range(T, 0, -1)):\n        ep = np.asarray(epsilon_preds[idx], dtype=float)\n        z = np.asarray(z_values[idx], dtype=float) if idx < len(z_values) else None\n        \n        beta_t = b_list[t_step - 1]\n        alpha_t = 1.0 - beta_t\n        alpha_bar_t = float(np.prod([1.0 - b for b in b_list[:t_step]]))\n        \n        mu_t = (1.0 / np.sqrt(alpha_t)) * (cur_x - (beta_t / np.sqrt(1.0 - alpha_bar_t)) * ep)\n        if t_step > 1 and z is not None:\n            cur_x = mu_t + np.sqrt(beta_t) * z\n        else:\n            cur_x = mu_t\n            \n    return np.round(cur_x, 4).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Zero model, T=3",
+      "inputs": {
+        "x_T": [
+          [
+            0.5,
+            -0.3
+          ]
+        ],
+        "betas": [
+          0.001,
+          0.0105,
+          0.02
+        ],
+        "z_values": [
+          [
+            [
+              0.1,
+              -0.2
+            ]
+          ],
+          [
+            [
+              0.3,
+              0.1
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.553,
+          -0.323
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Constant model, T=3",
+      "inputs": {
+        "x_T": [
+          [
+            1,
+            -1
+          ]
+        ],
+        "betas": [
+          0.001,
+          0.0105,
+          0.02
+        ],
+        "z_values": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0.5,
+              0.5
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.5
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.5
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.8934,
+          -1.1386
+        ]
+      ]
+    },
+    {
+      "id": "test-3",
+      "name": "2x2 shape, T=3",
+      "inputs": {
+        "x_T": [
+          [
+            0.2,
+            -0.4
+          ],
+          [
+            0.6,
+            0.1
+          ]
+        ],
+        "betas": [
+          0.001,
+          0.0105,
+          0.02
+        ],
+        "z_values": [
+          [
+            [
+              0.05,
+              -0.1
+            ],
+            [
+              0.2,
+              -0.15
+            ]
+          ],
+          [
+            [
+              -0.1,
+              0.05
+            ],
+            [
+              0.1,
+              0.1
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0.1,
+              -0.1
+            ],
+            [
+              0.2,
+              0.3
+            ]
+          ],
+          [
+            [
+              0,
+              0.1
+            ],
+            [
+              -0.1,
+              0
+            ]
+          ],
+          [
+            [
+              -0.2,
+              0.3
+            ],
+            [
+              0.1,
+              -0.2
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0.1949,
+          -0.4234
+        ],
+        [
+          0.632,
+          0.0624
+        ]
+      ]
+    },
+    {
+      "id": "ddpm-sampling-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x_T": [
+          [
+            1.0,
+            -0.6
+          ]
+        ],
+        "betas": [
+          0.002,
+          0.021,
+          0.04
+        ],
+        "z_values": [
+          [
+            [
+              0.2,
+              -0.4
+            ]
+          ],
+          [
+            [
+              0.6,
+              0.2
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          1.16,
+          -0.6714
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x_T": [
+          [
+            0.25,
+            -0.15
+          ]
+        ],
+        "betas": [
+          0.0005,
+          0.0053,
+          0.01
+        ],
+        "z_values": [
+          [
+            [
+              0.05,
+              -0.1
+            ]
+          ],
+          [
+            [
+              0.15,
+              0.05
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.2679,
+          -0.1576
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x_T": [
+          [
+            -0.5,
+            0.3
+          ]
+        ],
+        "betas": [
+          -0.001,
+          -0.0105,
+          -0.02
+        ],
+        "z_values": [
+          [
+            [
+              -0.1,
+              0.2
+            ]
+          ],
+          [
+            [
+              -0.3,
+              -0.1
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x_T": [
+          [
+            1.5,
+            -0.9
+          ]
+        ],
+        "betas": [
+          0.003,
+          0.0315,
+          0.06
+        ],
+        "z_values": [
+          [
+            [
+              0.3,
+              -0.6
+            ]
+          ],
+          [
+            [
+              0.9,
+              0.3
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          1.8092,
+          -1.0409
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x_T": [
+          [
+            1.5,
+            0.7
+          ]
+        ],
+        "betas": [
+          1.001,
+          1.0105,
+          1.02
+        ],
+        "z_values": [
+          [
+            [
+              1.1,
+              0.8
+            ]
+          ],
+          [
+            [
+              1.3,
+              1.1
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              1.0,
+              1.0
+            ]
+          ],
+          [
+            [
+              1.0,
+              1.0
+            ]
+          ],
+          [
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x_T": [
+          [
+            -1.5,
+            -2.3
+          ]
+        ],
+        "betas": [
+          -1.999,
+          -1.9895,
+          -1.98
+        ],
+        "z_values": [
+          [
+            [
+              -1.9,
+              -2.2
+            ]
+          ],
+          [
+            [
+              -1.7,
+              -1.9
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              -2.0,
+              -2.0
+            ]
+          ],
+          [
+            [
+              -2.0,
+              -2.0
+            ]
+          ],
+          [
+            [
+              -2.0,
+              -2.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x_T": [
+          [
+            -0.3,
+            0.5
+          ]
+        ],
+        "betas": [
+          0.02,
+          0.0105,
+          0.001
+        ],
+        "z_values": [
+          [
+            [
+              -0.2,
+              0.1
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.3
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          -0.3009,
+          0.5423
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x_T": [
+          [
+            -0.5,
+            0.3
+          ]
+        ],
+        "betas": [
+          -0.001,
+          -0.0105,
+          -0.02
+        ],
+        "z_values": [
+          [
+            [
+              -0.1,
+              0.2
+            ]
+          ],
+          [
+            [
+              -0.3,
+              -0.1
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x_T": [
+          [
+            5.0,
+            -3.0
+          ]
+        ],
+        "betas": [
+          0.01,
+          0.105,
+          0.2
+        ],
+        "z_values": [
+          [
+            [
+              1.0,
+              -2.0
+            ]
+          ],
+          [
+            [
+              3.0,
+              1.0
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          7.3909,
+          -4.1878
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x_T": [
+          [
+            0.05,
+            -0.03
+          ]
+        ],
+        "betas": [
+          0.0001,
+          0.0011,
+          0.002
+        ],
+        "z_values": [
+          [
+            [
+              0.01,
+              -0.02
+            ]
+          ],
+          [
+            [
+              0.03,
+              0.01
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0515,
+          -0.0306
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x_T": [
+          [
+            5.5,
+            4.7
+          ]
+        ],
+        "betas": [
+          5.001,
+          5.0105,
+          5.02
+        ],
+        "z_values": [
+          [
+            [
+              5.1,
+              4.8
+            ]
+          ],
+          [
+            [
+              5.3,
+              5.1
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              5.0,
+              5.0
+            ]
+          ],
+          [
+            [
+              5.0,
+              5.0
+            ]
+          ],
+          [
+            [
+              5.0,
+              5.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x_T": [
+          [
+            0.75,
+            -0.45
+          ]
+        ],
+        "betas": [
+          0.0015,
+          0.0158,
+          0.03
+        ],
+        "z_values": [
+          [
+            [
+              0.15,
+              -0.3
+            ]
+          ],
+          [
+            [
+              0.45,
+              0.15
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.851,
+          -0.4945
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x_T": [
+          [
+            -1.0,
+            0.6
+          ]
+        ],
+        "betas": [
+          -0.002,
+          -0.021,
+          -0.04
+        ],
+        "z_values": [
+          [
+            [
+              -0.2,
+              0.4
+            ]
+          ],
+          [
+            [
+              -0.6,
+              -0.2
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x_T": [
+          [
+            0.125,
+            -0.075
+          ]
+        ],
+        "betas": [
+          0.0003,
+          0.0026,
+          0.005
+        ],
+        "z_values": [
+          [
+            [
+              0.025,
+              -0.05
+            ]
+          ],
+          [
+            [
+              0.075,
+              0.025
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.1311,
+          -0.0776
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x_T": [
+          [
+            -0.5,
+            -1.3
+          ]
+        ],
+        "betas": [
+          -0.999,
+          -0.9895,
+          -0.98
+        ],
+        "z_values": [
+          [
+            [
+              -0.9,
+              -1.2
+            ]
+          ],
+          [
+            [
+              -0.7,
+              -0.9
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              -1.0,
+              -1.0
+            ]
+          ],
+          [
+            [
+              -1.0,
+              -1.0
+            ]
+          ],
+          [
+            [
+              -1.0,
+              -1.0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x_T": [
+          [
+            2.0,
+            -1.2
+          ]
+        ],
+        "betas": [
+          0.004,
+          0.042,
+          0.08
+        ],
+        "z_values": [
+          [
+            [
+              0.4,
+              -0.8
+            ]
+          ],
+          [
+            [
+              1.2,
+              0.4
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.4969,
+          -1.4303
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-sampling-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x_T": [
+          [
+            0.375,
+            -0.225
+          ]
+        ],
+        "betas": [
+          0.0008,
+          0.0079,
+          0.015
+        ],
+        "z_values": [
+          [
+            [
+              0.075,
+              -0.15
+            ]
+          ],
+          [
+            [
+              0.225,
+              0.075
+            ]
+          ]
+        ],
+        "epsilon_preds": [
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0.4087,
+          -0.2395
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "ddpm_sample",
+    "parameters": [
+      {
+        "name": "x_T",
+        "type": "array",
+        "example": "[[0.5, -0.3]]",
+        "description": "Starting noise"
+      },
+      {
+        "name": "betas",
+        "type": "array",
+        "example": "[0.001, 0.0105, 0.02]",
+        "description": "Noise schedule of length T"
+      },
+      {
+        "name": "epsilon_preds",
+        "type": "array",
+        "example": "[[[0, 0]], [[0, 0]], [[0, 0]]]",
+        "description": "Model predictions at each step T..1"
+      },
+      {
+        "name": "z_values",
+        "type": "array",
+        "example": "[[[0.1, -0.2]], [[0.3, 0.1]]]",
+        "description": "Pre-sampled noise for steps T..2 (length T-1)"
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "ddpm-sampling",
+    "name": "Sampling Algorithm",
+    "description": "Iterative denoising from pure noise",
+    "color": "#3b82f6"
+  },
+  "paper": {
+    "id": "ddpm",
+    "title": "Denoising Diffusion Probabilistic Models",
+    "authors": "Ho, Jain & Abbeel, 2020",
+    "year": 2020,
+    "paperUrl": "https://arxiv.org/abs/2006.11239",
+    "visualizationComponent": "DDPMArchViz"
+  },
+  "navigation": {
+    "index": 5,
+    "total": 5,
+    "prev": "ddpm-loss",
+    "next": null
+  },
+  "cleanTitle": ""
+}

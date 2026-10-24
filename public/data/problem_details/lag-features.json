@@ -1,0 +1,603 @@
+{
+  "id": "lag-features",
+  "title": "Lag Features",
+  "description": "Lag features convert a time series into rows that a supervised learning model can use. Each row represents one valid time step and contains earlier observations selected by the requested lags.\n\nFor a time step t and lags l_1 through l_k, construct\n\n$$\n\\operatorname{row}(t) = [x_{t-l_1}, x_{t-l_2}, \\ldots, x_{t-l_k}]\n$$\n\nHere, x_t is the value at time t and l_j is the j-th requested lag. Begin at the largest lag so every referenced observation exists. Return the feature matrix as a list of lists, preserving the supplied lag order.",
+  "seoDescription": "Generate lagged time-series features for specified offsets with defined padding for unavailable history.",
+  "examples": [
+    "Input: series = [10, 20, 30, 40, 50], lags = [1, 2]\n\nOutput: [[20, 10], [30, 20], [40, 30]]\n\nExplanation: At time 2, lag 1 selects 20 and lag 2 selects 10. The same lookup is repeated for each later time.",
+    "Input: series = [1, 2, 3, 4, 5], lags = [1]\n\nOutput: [[1], [2], [3], [4]]"
+  ],
+  "requirements": "* For every valid time step, collect the values at the requested lags.\n* Begin at the maximum lag so every lookup is in bounds.\n* Preserve the order of lags within each row.\n* Return a list of lists.",
+  "theory": "## Understanding the Theory: Lag Features\n\n### Core Intuition: Why Do We Need This?\nTemporal data streams exhibit sequential dependency, seasonality, and long-term trends over time. Forecasting models must capture historical temporal dynamics while strictly enforcing causality to prevent future information leakage. **Lag Features** models historical temporal dependencies or smooths sequential fluctuations.\n\nIn this problem, the objective is to implement **Lag Features** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\operatorname{row}(t) = [x_{t-l_1}, x_{t-l_2}, \\ldots, x_{t-l_k}]\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Causality & Lookahead Bias**: Forecasting models must only condition on past observations; feature engineering must respect strict temporal splits.\n* **Stationarity & Differencing**: Many time series methods require transforming non-stationary trends into stationary series via first-order differencing.\n* **Exponential Weighting**: Assigning exponentially decaying weights prioritizes recent observations while preserving historical momentum.",
+  "hints": [
+    "Start the outer loop at max(lags).",
+    "Build each row with series[t - lag] for lags in their given order."
+  ],
+  "constraints": "* series contains at least max(lags) + 1 values.\n* lags is a nonempty list of positive integers.\n* Every lag is smaller than len(series).\n* Time limit: 300 ms.",
+  "difficulty": "Easy",
+  "starterCode": "def lag_features(series: list, lags: list) -> list:\n    \"\"\"\n    Returns the lag feature matrix.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T21:38:40.788Z",
+  "updatedAt": "2026-08-23T21:10:33.573Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\ndef lag_features(series: list, lags: list) -> list:\n    max_lag = max(lags)\n    out = []\n    for i in range(max_lag, len(series)):\n        out.append([series[i - l] for l in lags])\n    return out\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "LagFeaturesViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Lag 1,2",
+      "inputs": {
+        "lags": [
+          1,
+          2
+        ],
+        "series": [
+          10,
+          20,
+          30,
+          40,
+          50
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          20,
+          10
+        ],
+        [
+          30,
+          20
+        ],
+        [
+          40,
+          30
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Lag 1",
+      "inputs": {
+        "lags": [
+          1
+        ],
+        "series": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          3
+        ],
+        [
+          4
+        ]
+      ]
+    },
+    {
+      "id": "lag-features-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "lags": [
+          2,
+          4
+        ],
+        "series": [
+          20,
+          40,
+          60,
+          80,
+          100
+        ]
+      },
+      "expectedOutput": [
+        [
+          60,
+          20
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "lags": [
+          0,
+          1
+        ],
+        "series": [
+          5,
+          10,
+          15,
+          20,
+          25
+        ]
+      },
+      "expectedOutput": [
+        [
+          10,
+          5
+        ],
+        [
+          15,
+          10
+        ],
+        [
+          20,
+          15
+        ],
+        [
+          25,
+          20
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "lags": [
+          2,
+          3
+        ],
+        "series": [
+          11,
+          21,
+          31,
+          41,
+          51
+        ]
+      },
+      "expectedOutput": [
+        [
+          21,
+          11
+        ],
+        [
+          31,
+          21
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "lags": [
+          2,
+          3
+        ],
+        "series": [
+          15,
+          30,
+          45,
+          60,
+          75
+        ]
+      },
+      "expectedOutput": [
+        [
+          30,
+          15
+        ],
+        [
+          45,
+          30
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "lags": [
+          3,
+          6
+        ],
+        "series": [
+          30,
+          60,
+          90,
+          120,
+          150
+        ]
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "lags": [
+          0,
+          0
+        ],
+        "series": [
+          2,
+          5,
+          8,
+          10,
+          12
+        ]
+      },
+      "expectedOutput": [
+        [
+          2,
+          2
+        ],
+        [
+          5,
+          5
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          12,
+          12
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "lags": [
+          3,
+          4
+        ],
+        "series": [
+          12,
+          22,
+          32,
+          42,
+          52
+        ]
+      },
+      "expectedOutput": [
+        [
+          22,
+          12
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "lags": [
+          4,
+          8
+        ],
+        "series": [
+          40,
+          80,
+          120,
+          160,
+          200
+        ]
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "lags": [
+          2,
+          1
+        ],
+        "series": [
+          50,
+          40,
+          30,
+          20,
+          10
+        ]
+      },
+      "expectedOutput": [
+        [
+          50,
+          40
+        ],
+        [
+          40,
+          30
+        ],
+        [
+          30,
+          20
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "lags": [
+          1,
+          2
+        ],
+        "series": [
+          8,
+          15,
+          22,
+          30,
+          38
+        ]
+      },
+      "expectedOutput": [
+        [
+          15,
+          8
+        ],
+        [
+          22,
+          15
+        ],
+        [
+          30,
+          22
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "lags": [
+          5,
+          10
+        ],
+        "series": [
+          50,
+          100,
+          150,
+          200,
+          250
+        ]
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "lags": [
+          4,
+          5
+        ],
+        "series": [
+          13,
+          23,
+          33,
+          43,
+          53
+        ]
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "lags": [
+          1,
+          2
+        ],
+        "series": [
+          8,
+          16,
+          24,
+          32,
+          40
+        ]
+      },
+      "expectedOutput": [
+        [
+          16,
+          8
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          32,
+          24
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "lags": [
+          6,
+          12
+        ],
+        "series": [
+          60,
+          120,
+          180,
+          240,
+          300
+        ]
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "lags": [
+          5,
+          6
+        ],
+        "series": [
+          14,
+          24,
+          34,
+          44,
+          54
+        ]
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "lags": [
+          1,
+          2
+        ],
+        "series": [
+          12,
+          24,
+          36,
+          48,
+          60
+        ]
+      },
+      "expectedOutput": [
+        [
+          24,
+          12
+        ],
+        [
+          36,
+          24
+        ],
+        [
+          48,
+          36
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "lags": [
+          0,
+          1
+        ],
+        "series": [
+          4,
+          8,
+          12,
+          16,
+          20
+        ]
+      },
+      "expectedOutput": [
+        [
+          8,
+          4
+        ],
+        [
+          12,
+          8
+        ],
+        [
+          16,
+          12
+        ],
+        [
+          20,
+          16
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "lag-features-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "lags": [
+          8,
+          16
+        ],
+        "series": [
+          80,
+          160,
+          240,
+          320,
+          400
+        ]
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "lag_features",
+    "parameters": [
+      {
+        "name": "series",
+        "type": "array",
+        "example": "[10, 20, 30, 40, 50]",
+        "description": "Time series values"
+      },
+      {
+        "name": "lags",
+        "type": "array",
+        "example": "[1, 2]",
+        "description": "List of lag values"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "differencing",
+    "exponential-moving-average",
+    "simple-moving-average",
+    "autocorrelation",
+    "cumulative-returns"
+  ],
+  "tags": [
+    "Time Series",
+    "Feature Engineering"
+  ],
+  "prevId": "differencing",
+  "nextId": "weighted-moving-average",
+  "slug": "lag-features",
+  "cleanTitle": "Lag Features",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/lag-features",
+  "localUrl": "http://localhost:3000/problems/lag-features",
+  "studyPlan": null
+}

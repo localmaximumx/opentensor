@@ -1,0 +1,1076 @@
+{
+  "id": "ds10-batchnorm",
+  "slug": "ds10-batchnorm",
+  "title": "BatchNorm Forward and Backward",
+  "cleanTitle": "BatchNorm Forward and Backward",
+  "type": "code",
+  "difficulty": "Medium",
+  "category": "Assessment",
+  "tags": [
+    "Assessment",
+    "CODE",
+    "Neural Net Internals Sprint"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Compute batch normalization forward outputs and gradients for input, scale, bias, and upstream gradient using the specified batch/feature axes.",
+  "theory": "## Understanding the Theory: BatchNorm Forward and Backward\n\n### Core Intuition: Why Do We Need This?\n**BatchNorm Forward and Backward** represents a fundamental data modeling and statistical reasoning technique in **Neural Net Internals Sprint**. In enterprise machine learning, quantitative analytics, and decision science, algorithms must handle asynchronous logs, missing observations, skewed class distributions, and high-cardinality partitions. A mathematically rigorous implementation guarantees statistically unbiased estimates and idempotent transformations.\n\nUnderstanding the core mechanics enables engineers to diagnose convergence anomalies, optimize memory layouts, and construct maintainable ML pipelines from first principles.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\hat{x}_i = \\frac{x_i - \\mu_B}{\\sqrt{\\sigma_B^2 + \\epsilon}}, \\quad y_i = \\gamma \\hat{x}_i + \\beta, \\quad \\mu_B = \\frac{1}{B} \\sum_{i=1}^B x_i\n$$\n\nIn this formulation:\n* The input features and parameters are projected, normalized, or aggregated according to established algorithmic invariants.\n* Dimensional consistency is preserved across all tensor or matrix axes, ensuring mathematical validity.\n* Intermediate accumulators maintain numerical dynamic range to protect against floating-point anomalies.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Validate input array dimensions, check for empty sequences or invalid bounds, and convert inputs into contiguous buffers.\n2. **Phase 2: Core Algorithmic Transformation**: Execute the foundational mathematical logic using vectorized SIMD array operations or optimized iteration.\n3. **Phase 3: Aggregation & Normalization**: Compute required sums, projections, or ranking reductions while guarding against division by zero.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Format outputs into required data types and verify that returned numerical estimates adhere to expected precision thresholds.\n\n### Practical Machine Learning Applications & Nuances\n* **Statistical Unbiasedness & Degrees of Freedom**: Applying proper Bessel corrections and degrees of freedom safeguards sample statistics against systemic sample bias.\n* **Vectorized Array Operations**: Leveraging contiguous columnar execution avoids slow Python interpreter loop overhead when evaluating million-row datasets.\n* **Null Safety & Edge Case Handling**: Explicit handling of missing data, empty partitions, and single-value inputs prevents runtime exceptions in production batch pipelines.\n* **Algorithmic Complexity**: Operates with optimal asymptotic time and space complexity, ensuring minimal compute overhead.",
+  "examples": [
+    {
+      "inputArgs": [
+        [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ]
+      ],
+      "output": [
+        [
+          [
+            -0.9999950000374997,
+            -0.9999950000374997
+          ],
+          [
+            0.9999950000374997,
+            0.9999950000374997
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "explanation": "Illustrative small example for batchnorm forward and backward."
+    }
+  ],
+  "requirements": [
+    "Implement the mathematical or algorithmic behavior described above.",
+    "Match the function signature and output structure in starterCode.",
+    "Handle boundary inputs and ties consistently with the supplied test cases."
+  ],
+  "hints": [
+    "For softmax, subtract the maximum logit before exponentiation.",
+    "For normalization backward passes, use the chain rule and the mean/variance derivatives."
+  ],
+  "constraints": [
+    "Inputs are small enough for a straightforward reference implementation.",
+    "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+    "Unless otherwise stated, dimensions must be consistent."
+  ],
+  "starterCode": "import math\ndef solve(x, grad, gamma=None, beta=None, eps=1e-5):\n    pass",
+  "solution": "### 💡 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### ⚡ Implementation\n```python\nimport math\ndef solve(x, grad, gamma=None, beta=None, eps=1e-5):\n    # x is batch x features; training batch statistics.\n    n=len(x); d=len(x[0]); gamma=gamma or [1.0]*d; beta=beta or [0.0]*d\n    mu=[sum(row[j] for row in x)/n for j in range(d)]\n    var=[sum((row[j]-mu[j])**2 for row in x)/n for j in range(d)]\n    inv=[1/math.sqrt(v+eps) for v in var]\n    z=[[(row[j]-mu[j])*inv[j] for j in range(d)] for row in x]\n    y=[[z[i][j]*gamma[j]+beta[j] for j in range(d)] for i in range(n)]\n    dx=[[0.0]*d for _ in range(n)]\n    for j in range(d):\n        g=[grad[i][j]*gamma[j] for i in range(n)]\n        sg=sum(g); sgz=sum(g[i]*z[i][j] for i in range(n))\n        for i in range(n): dx[i][j]=inv[j]*(g[i]-sg/n-z[i][j]*sgz/n)\n    return y,dx\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
+  "testCases": [
+    {
+      "id": "case-1",
+      "name": "smoke test",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ],
+        "grad": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999950000374997,
+            -0.9999950000374997
+          ],
+          [
+            0.9999950000374997,
+            0.9999950000374997
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-2",
+      "name": "Case 2",
+      "inputs": {
+        "x": [
+          [
+            2.0,
+            4.0
+          ],
+          [
+            6.0,
+            8.0
+          ]
+        ],
+        "grad": [
+          [
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999987500023437,
+            -0.9999987500023437
+          ],
+          [
+            0.9999987500023437,
+            0.9999987500023437
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          [
+            0.5,
+            1.0
+          ],
+          [
+            1.5,
+            2.0
+          ]
+        ],
+        "grad": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999800005999799,
+            -0.9999800005999799
+          ],
+          [
+            0.9999800005999799,
+            0.9999800005999799
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            -2.0
+          ],
+          [
+            -3.0,
+            -4.0
+          ]
+        ],
+        "grad": [
+          [
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.9999950000374997,
+            0.9999950000374997
+          ],
+          [
+            -0.9999950000374997,
+            -0.9999950000374997
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            3.0,
+            6.0
+          ],
+          [
+            9.0,
+            12.0
+          ]
+        ],
+        "grad": [
+          [
+            3.0,
+            3.0
+          ],
+          [
+            3.0,
+            3.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999994444449074,
+            -0.9999994444449074
+          ],
+          [
+            0.9999994444449074,
+            0.9999994444449074
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            2.0,
+            3.0
+          ],
+          [
+            4.0,
+            5.0
+          ]
+        ],
+        "grad": [
+          [
+            2.0,
+            2.0
+          ],
+          [
+            2.0,
+            2.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999950000374997,
+            -0.9999950000374997
+          ],
+          [
+            0.9999950000374997,
+            0.9999950000374997
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            0.0
+          ],
+          [
+            1.0,
+            2.0
+          ]
+        ],
+        "grad": [
+          [
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999950000374997,
+            -0.9999950000374997
+          ],
+          [
+            0.9999950000374997,
+            0.9999950000374997
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            2.0,
+            1.0
+          ],
+          [
+            4.0,
+            3.0
+          ]
+        ],
+        "grad": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999950000374997,
+            -0.9999950000374997
+          ],
+          [
+            0.9999950000374997,
+            0.9999950000374997
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            -2.0
+          ],
+          [
+            -3.0,
+            -4.0
+          ]
+        ],
+        "grad": [
+          [
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.9999950000374997,
+            0.9999950000374997
+          ],
+          [
+            -0.9999950000374997,
+            -0.9999950000374997
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            10.0,
+            20.0
+          ],
+          [
+            30.0,
+            40.0
+          ]
+        ],
+        "grad": [
+          [
+            10.0,
+            10.0
+          ],
+          [
+            10.0,
+            10.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999999500000036,
+            -0.9999999500000036
+          ],
+          [
+            0.9999999500000036,
+            0.9999999500000036
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.3,
+            0.4
+          ]
+        ],
+        "grad": [
+          [
+            0.1,
+            0.1
+          ],
+          [
+            0.1,
+            0.1
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9995003746877732,
+            -0.9995003746877733
+          ],
+          [
+            0.999500374687773,
+            0.9995003746877728
+          ]
+        ],
+        [
+          [
+            -1.3863923883930525e-16,
+            -2.772784776786105e-16
+          ],
+          [
+            1.3863923883930523e-16,
+            2.7727847767861036e-16
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            6.0,
+            7.0
+          ],
+          [
+            8.0,
+            9.0
+          ]
+        ],
+        "grad": [
+          [
+            6.0,
+            6.0
+          ],
+          [
+            6.0,
+            6.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999950000374997,
+            -0.9999950000374997
+          ],
+          [
+            0.9999950000374997,
+            0.9999950000374997
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            1.5,
+            3.0
+          ],
+          [
+            4.5,
+            6.0
+          ]
+        ],
+        "grad": [
+          [
+            1.5,
+            1.5
+          ],
+          [
+            1.5,
+            1.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999977777851852,
+            -0.9999977777851852
+          ],
+          [
+            0.9999977777851852,
+            0.9999977777851852
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            -2.0,
+            -4.0
+          ],
+          [
+            -6.0,
+            -8.0
+          ]
+        ],
+        "grad": [
+          [
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            0.9999987500023437,
+            0.9999987500023437
+          ],
+          [
+            -0.9999987500023437,
+            -0.9999987500023437
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            0.25,
+            0.5
+          ],
+          [
+            0.75,
+            1.0
+          ]
+        ],
+        "grad": [
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.25
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999200095987203,
+            -0.9999200095987203
+          ],
+          [
+            0.9999200095987203,
+            0.9999200095987203
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            2.0,
+            3.0
+          ]
+        ],
+        "grad": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999950000374997,
+            -0.9999950000374997
+          ],
+          [
+            0.9999950000374997,
+            0.9999950000374997
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            4.0,
+            8.0
+          ],
+          [
+            12.0,
+            16.0
+          ]
+        ],
+        "grad": [
+          [
+            4.0,
+            4.0
+          ],
+          [
+            4.0,
+            4.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999996875001465,
+            -0.9999996875001465
+          ],
+          [
+            0.9999996875001465,
+            0.9999996875001465
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            0.75,
+            1.5
+          ],
+          [
+            2.25,
+            3.0
+          ]
+        ],
+        "grad": [
+          [
+            0.75,
+            0.75
+          ],
+          [
+            0.75,
+            0.75
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999911112296278,
+            -0.9999911112296278
+          ],
+          [
+            0.9999911112296278,
+            0.9999911112296278
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            5.0,
+            10.0
+          ],
+          [
+            15.0,
+            20.0
+          ]
+        ],
+        "grad": [
+          [
+            5.0,
+            5.0
+          ],
+          [
+            5.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999998000000601,
+            -0.9999998000000601
+          ],
+          [
+            0.9999998000000601,
+            0.9999998000000601
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            11.0,
+            12.0
+          ],
+          [
+            13.0,
+            14.0
+          ]
+        ],
+        "grad": [
+          [
+            11.0,
+            11.0
+          ],
+          [
+            11.0,
+            11.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          [
+            -0.9999950000374997,
+            -0.9999950000374997
+          ],
+          [
+            0.9999950000374997,
+            0.9999950000374997
+          ]
+        ],
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "solve",
+    "signature": "def solve(x, grad, gamma=None, beta=None, eps=1e-5):",
+    "returnType": "varies by problem; see example output"
+  },
+  "assessmentNames": [
+    "Neural Net Internals Sprint"
+  ],
+  "source": "assessment",
+  "sourceId": "assessment",
+  "updatedAt": "2026-03-01T00:00:00.000Z"
+}

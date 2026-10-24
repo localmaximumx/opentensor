@@ -1,0 +1,425 @@
+{
+  "id": "re-decode-top-p",
+  "slug": "re-decode-top-p",
+  "title": "Top-P Nucleus Filter",
+  "cleanTitle": "Top-P Nucleus Filter",
+  "type": "code",
+  "difficulty": "Hard",
+  "category": "Assessment",
+  "tags": [
+    "Assessment",
+    "CODE",
+    "Training and Decoding Primitives"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Keep the smallest highest-probability token set whose cumulative probability reaches p, replacing other logits with negative infinity.",
+  "theory": "## Understanding the Theory: Top-P Nucleus Filter\n\n### Core Intuition: Why Do We Need This?\n**Top-P Nucleus Filter** forms a vital mathematical pillar within **Training and Decoding Primitives**. In modern foundation models and frontier LLM architectures, computational efficiency, activation stability, and precise hardware memory alignment govern both pre-training scalability and low-latency autoregressive generation. Flaws in numerical precision or suboptimal tensor transformations can silently corrupt model weights or cause distributed training divergence.\n\nUnderstanding the core mechanics enables engineers to diagnose convergence anomalies, optimize memory layouts, and construct maintainable ML pipelines from first principles.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\sum_{i \\in V^{(p)}} P(x_i \\mid x_{<t}) \\ge p, \\quad \\tilde{P}(x_i) = \\frac{P(x_i)}{\\sum_{j \\in V^{(p)}} P(x_j)}\n$$\n\nIn this formulation:\n* The input features and parameters are projected, normalized, or aggregated according to established algorithmic invariants.\n* Dimensional consistency is preserved across all tensor or matrix axes, ensuring mathematical validity.\n* Intermediate accumulators maintain numerical dynamic range to protect against floating-point anomalies.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Validate input array dimensions, check for empty sequences or invalid bounds, and convert inputs into contiguous buffers.\n2. **Phase 2: Core Algorithmic Transformation**: Execute the foundational mathematical logic using vectorized SIMD array operations or optimized iteration.\n3. **Phase 3: Aggregation & Normalization**: Compute required sums, projections, or ranking reductions while guarding against division by zero.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Format outputs into required data types and verify that returned numerical estimates adhere to expected precision thresholds.\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth & Cache Hierarchy**: High-throughput transformer operators must saturate hardware cache lines and minimize redundant memory reads between DRAM and fast register buffers.\n* **Numerical Stability & Gradient Flow**: Preventing floating-point cancellation, underflow in softmax exponents, and division by zero ensures smooth loss descent across billions of tokens.\n* **Inference Throughput**: Idempotent, stateless tensor updates allow distributed inference engines to execute asynchronous prefill and decoding iterations without race conditions.\n* **Algorithmic Complexity**: Operates with optimal asymptotic time and space complexity, ensuring minimal compute overhead.",
+  "examples": [
+    {
+      "inputArgs": [
+        [
+          1.0,
+          2.0,
+          3.0
+        ],
+        0.8
+      ],
+      "output": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "explanation": "Illustrative small example for top-p nucleus filter."
+    }
+  ],
+  "requirements": [
+    "Implement the mathematical or algorithmic behavior described above.",
+    "Match the function signature and output structure in starterCode.",
+    "Handle boundary inputs and ties consistently with the supplied test cases."
+  ],
+  "hints": [
+    "Implement the small mathematical contract first; do not add production-only model machinery.",
+    "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+  ],
+  "constraints": [
+    "Inputs are small enough for a straightforward reference implementation.",
+    "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+    "Unless otherwise stated, dimensions must be consistent."
+  ],
+  "starterCode": "def solve(logits,p):\n    pass",
+  "solution": "### 💡 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### ⚡ Implementation\n```python\ndef solve(logits,p):\n    import math\n    if not 0<p<=1: raise ValueError(\"p must be in (0,1]\")\n    m=max(logits); ex=[math.exp(x-m) for x in logits]; z=sum(ex); probs=[x/z for x in ex]\n    order=sorted(range(len(logits)),key=lambda i:(-probs[i],i)); keep=set(); cum=0\n    for i in order:\n      keep.add(i); cum+=probs[i]\n      if cum>=p: break\n    return [v if i in keep else float(\"-inf\") for i,v in enumerate(logits)]\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
+  "testCases": [
+    {
+      "id": "case-1",
+      "name": "smoke test",
+      "inputs": {
+        "logits": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "p": 0.8
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-2",
+      "name": "Case 2",
+      "inputs": {
+        "logits": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "p": 1.6
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-3",
+      "name": "Case 3",
+      "inputs": {
+        "logits": [
+          0.5,
+          1.0,
+          1.5
+        ],
+        "p": 0.4
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        1.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-4",
+      "name": "Case 4",
+      "inputs": {
+        "logits": [
+          -1.0,
+          -2.0,
+          -3.0
+        ],
+        "p": -0.8
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-5",
+      "name": "Case 5",
+      "inputs": {
+        "logits": [
+          3.0,
+          6.0,
+          9.0
+        ],
+        "p": 2.4
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-6",
+      "name": "Case 6",
+      "inputs": {
+        "logits": [
+          2.0,
+          3.0,
+          4.0
+        ],
+        "p": 1.8
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-7",
+      "name": "Case 7",
+      "inputs": {
+        "logits": [
+          -1.0,
+          0.0,
+          1.0
+        ],
+        "p": -1.2
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-8",
+      "name": "Case 8",
+      "inputs": {
+        "logits": [
+          3.0,
+          2.0,
+          1.0
+        ],
+        "p": 0.8
+      },
+      "expectedOutput": [
+        3.0,
+        2.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-9",
+      "name": "Case 9",
+      "inputs": {
+        "logits": [
+          -1.0,
+          -2.0,
+          -3.0
+        ],
+        "p": -0.8
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-10",
+      "name": "Case 10",
+      "inputs": {
+        "logits": [
+          10.0,
+          20.0,
+          30.0
+        ],
+        "p": 8.0
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-11",
+      "name": "Case 11",
+      "inputs": {
+        "logits": [
+          0.1,
+          0.2,
+          0.3
+        ],
+        "p": 0.08
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.3
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-12",
+      "name": "Case 12",
+      "inputs": {
+        "logits": [
+          6.0,
+          7.0,
+          8.0
+        ],
+        "p": 5.8
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-13",
+      "name": "Case 13",
+      "inputs": {
+        "logits": [
+          1.5,
+          3.0,
+          4.5
+        ],
+        "p": 1.2
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-14",
+      "name": "Case 14",
+      "inputs": {
+        "logits": [
+          -2.0,
+          -4.0,
+          -6.0
+        ],
+        "p": -1.6
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-15",
+      "name": "Case 15",
+      "inputs": {
+        "logits": [
+          0.25,
+          0.5,
+          0.75
+        ],
+        "p": 0.2
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.75
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-16",
+      "name": "Case 16",
+      "inputs": {
+        "logits": [
+          0.0,
+          1.0,
+          2.0
+        ],
+        "p": -0.19999999999999996
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-17",
+      "name": "Case 17",
+      "inputs": {
+        "logits": [
+          4.0,
+          8.0,
+          12.0
+        ],
+        "p": 3.2
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-18",
+      "name": "Case 18",
+      "inputs": {
+        "logits": [
+          0.75,
+          1.5,
+          2.25
+        ],
+        "p": 0.6
+      },
+      "expectedOutput": [
+        0.0,
+        1.5,
+        2.25
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-19",
+      "name": "Case 19",
+      "inputs": {
+        "logits": [
+          5.0,
+          10.0,
+          15.0
+        ],
+        "p": 4.0
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-20",
+      "name": "Case 20",
+      "inputs": {
+        "logits": [
+          11.0,
+          12.0,
+          13.0
+        ],
+        "p": 10.8
+      },
+      "expectedOutput": [
+        "-inf",
+        2.0,
+        3.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "solve",
+    "signature": "def solve(logits,p):",
+    "returnType": "varies by problem; see example output"
+  },
+  "assessmentNames": [
+    "Training and Decoding Primitives"
+  ],
+  "source": "assessment",
+  "sourceId": "assessment",
+  "updatedAt": "2026-03-01T00:00:00.000Z"
+}

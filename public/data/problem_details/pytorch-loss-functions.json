@@ -1,0 +1,514 @@
+{
+  "catalogId": "python:pytorch-loss-functions",
+  "id": "pytorch-loss-functions",
+  "sourceId": "pytorch-loss-functions",
+  "slug": "pytorch-loss-functions",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Loss Functions",
+  "difficulty": "Medium",
+  "tags": [
+    "Loss Functions"
+  ],
+  "isFree": false,
+  "planId": "pytorch-basics",
+  "planTitle": "PyTorch Sheet",
+  "sectionId": "pytorch-basics-building-blocks",
+  "sortOrder": 87,
+  "seoDescription": "Implement three common loss functions from scratch using PyTorch tensor operations: mean squared error, cross-entropy, and Huber loss.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Implement Mean Squared Error (MSE), Binary Cross-Entropy (BCE), and Huber Loss using pure PyTorch tensor operations.\n\nMSE penalizes large deviations quadratically, BCE measures information divergence, and Huber balances robustness with smoothness.\n\n### Mathematical Formulation\n$$\n\\mathcal{L}_{\\text{MSE}} = \\frac{1}{N}\\sum (\\hat{y} - y)^2, \\quad \\mathcal{L}_{\\text{Huber}} = \\begin{cases} \\frac{1}{2}e^2 & |e| \\le \\delta \\\\ \\delta(|e| - \\frac{1}{2}\\delta) & \\text{otherwise} \\end{cases}\n$$\n\n### Step-by-Step Implementation\n1. Compute element-wise squared error and average for MSE\n2. Calculate clamped logarithmic probability penalties for BCE\n3. Implement piecewise Huber penalty to maintain robustness to outliers\n\n### Returns\nDictionary containing 'mse', 'bce', and 'huber' loss values.",
+  "theory": "## Understanding the Theory: Loss Functions\n\n### Core Intuition: Why Do We Need This?\nNeural networks achieve their remarkable expressive power by stacking linear layers interspersed with non-linear activation functions and normalization layers. Without non-linear activations, any deep network would collapse into a single shallow linear regression. **Loss Functions** ensures signals propagate cleanly through dozens or hundreds of layers without vanishing or exploding.\n\nMSE penalizes large deviations quadratically, BCE measures information divergence, and Huber balances robustness with smoothness. In this problem, the goal is to: implement mean squared error (mse), binary cross-entropy (bce), and huber loss using pure pytorch tensor operations.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\mathcal{L}_{\\text{MSE}} = \\frac{1}{N}\\sum (\\hat{y} - y)^2, \\quad \\mathcal{L}_{\\text{Huber}} = \\begin{cases} \\frac{1}{2}e^2 & |e| \\le \\delta \\\\ \\delta(|e| - \\frac{1}{2}\\delta) & \\text{otherwise} \\end{cases}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute element-wise squared error and average for MSE\n2. **Phase 2**: Calculate clamped logarithmic probability penalties for BCE\n3. **Phase 3**: Implement piecewise Huber penalty to maintain robustness to outliers\n\n### Practical Machine Learning Applications & Nuances\n* **Gradient Flow**: Carefully designed activation functions (like ReLU, GELU, and Swish) maintain strong gradient signals during backpropagation.\n* **Internal Covariate Shift**: Normalization techniques (like LayerNorm and RMSNorm) standardize hidden states across channels or batch dimensions, allowing models to train stably at higher learning rates.\n* **Hardware Friendly**: Modern deep learning frameworks implement these layers using fused GPU kernels to reduce memory round-trips.",
+  "examples": [
+    "Input: pred = [0.8, 0.2, 0.6], target = [1.0, 0.0, 1.0], delta = 0.5\n\nOutput: {\"mse\": 0.08, \"bce\": 0.319038, \"huber\": 0.04}\n\nExplanation: Evaluated pytorch_loss_functions under standard test conditions."
+  ],
+  "requirements": "* Function must be named `pytorch_loss_functions`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `pytorch_loss_functions`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import torch\n\ndef pytorch_loss_functions(pred: list, target: list, delta: float = 1.0) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Loss Functions** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch\n\ndef pytorch_loss_functions(pred: list, target: list, delta: float = 1.0) -> dict:\n    p, t = torch.tensor(pred, dtype=torch.float32), torch.tensor(target, dtype=torch.float32)\n    mse = torch.mean((p - t) ** 2)\n    bce = -torch.mean(t * torch.log(torch.clamp(p, min=1e-8)) + (1.0 - t) * torch.log(torch.clamp(1.0 - p, min=1e-8)))\n    diff = torch.abs(p - t)\n    huber = torch.mean(torch.where(diff <= delta, 0.5 * (diff ** 2), delta * (diff - 0.5 * delta)))\n    return {'mse': round(float(mse.item()), 6), 'bce': round(float(bce.item()), 6), 'huber': round(float(huber.item()), 6)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Basic predictions and labels",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": true
+    },
+    {
+      "id": "pytorch-loss-functions-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    },
+    {
+      "id": "pytorch-loss-functions-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "pred": [
+          0.8,
+          0.2,
+          0.6
+        ],
+        "target": [
+          1.0,
+          0.0,
+          1.0
+        ],
+        "delta": 0.5
+      },
+      "expectedOutput": {
+        "mse": 0.08,
+        "bce": 0.319038,
+        "huber": 0.04
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "pytorch_loss_functions",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

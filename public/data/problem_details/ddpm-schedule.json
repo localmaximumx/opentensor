@@ -1,0 +1,477 @@
+{
+  "id": "ddpm-schedule",
+  "title": "Noise Schedule",
+  "description": "Implement the linear variance schedule used in the original DDPM experiments. For $T$ diffusion steps, create equally spaced values from $\\beta_1$ through $\\beta_T$, including both endpoints.\n\n$$\n\\beta_t = \\beta_1 + \\frac{t-1}{T-1}(\\beta_T-\\beta_1), \\qquad t=1,\\ldots,T.\n$$\n\nHere, $T$ is the number of diffusion steps and $\\beta_t$ is the variance added at step $t$. When $T=1$, return $[\\beta_1]$. Return the schedule as a list of Python floats rounded to six decimals.",
+  "seoDescription": "Generate a DDPM noise schedule with beta values and cumulative alpha products used across diffusion timesteps.",
+  "examples": [
+    "Input: T=5, beta_1=0.0001, beta_T=0.02\n\nOutput: [0.0001,0.005075,0.01005,0.015025,0.02]\n\nExplanation: Five equally spaced variance values include both supplied endpoints.",
+    "Input: T=4, beta_1=0.001, beta_T=0.01\n\nOutput: [0.001,0.004,0.007,0.01]",
+    "Input: T=1, beta_1=0.005, beta_T=0.005\n\nOutput: [0.005]"
+  ],
+  "requirements": "- Use NumPy.\n- Include beta_1 and beta_T as the schedule endpoints when T is greater than one.\n- Produce exactly T beta values.\n- Return a list of Python floats rounded to six decimals.",
+  "theory": "# <span style=\"font-size: 20px;\">Noise Schedule</span>\n\n<span style=\"font-size: 14px;\">The noise schedule is the sequence of variance values $\\beta_1, \\beta_2, \\dots, \\beta_T$ that controls how much Gaussian noise is injected at each timestep of the forward diffusion process. In Denoising Diffusion Probabilistic Models (Ho, Gulrajani, and Abbeel, 2020), this schedule is the backbone of the generative framework. Every downstream quantity -- noisy training samples, signal-to-noise ratio, and network prediction targets -- derives from this sequence of scalars.</span>\n\n<span style=\"font-size: 14px;\">A poorly chosen schedule either wastes steps where the data is already destroyed, or fails to fully corrupt the input into pure noise by the final timestep.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is / What It Does</span>\n\n<span style=\"font-size: 14px;\">The noise schedule defines the forward process $q(x_t | x_{t-1})$ at every timestep. At each step $t$, Gaussian noise scaled by $\\beta_t$ is added and the signal is scaled by $\\sqrt{1 - \\beta_t}$. Over $T$ steps, this transforms any data distribution into an isotropic Gaussian.</span>\n\n* <span style=\"font-size: 14px;\">**Forward corruption rate:** Larger $\\beta_t$ means more noise per step, faster signal destruction.</span>\n* <span style=\"font-size: 14px;\">**Reverse denoising difficulty:** Larger $\\beta_t$ means each reverse step must remove more noise, making prediction harder.</span>\n\n<span style=\"font-size: 14px;\">The schedule is a fixed hyperparameter, not learned. From $\\beta_t$, two derived quantities govern all computations:</span>\n\n* <span style=\"font-size: 14px;\">**$\\alpha_t = 1 - \\beta_t$:** The signal retention factor at step $t$.</span>\n* <span style=\"font-size: 14px;\">**$\\bar{\\alpha}_t = \\prod_{s=1}^{t} \\alpha_s$:** The cumulative signal retention from step 0 to step $t$. This lets you jump directly from clean data $x_0$ to noisy data $x_t$ without iterating through intermediate steps.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">The forward process at each step:</span>\n\n$$\nq(x_t | x_{t-1}) = \\mathcal{N}(x_t; \\sqrt{1 - \\beta_t}\\, x_{t-1},\\; \\beta_t \\mathbf{I})\n$$\n\n<span style=\"font-size: 14px;\">The marginal $q(x_t | x_0)$ has a closed form via $\\bar{\\alpha}_t$:</span>\n\n$$\nq(x_t | x_0) = \\mathcal{N}(x_t; \\sqrt{\\bar{\\alpha}_t}\\, x_0,\\; (1 - \\bar{\\alpha}_t) \\mathbf{I})\n$$\n\n<span style=\"font-size: 14px;\">Any noisy sample at step $t$ can be written as:</span>\n\n$$\nx_t = \\sqrt{\\bar{\\alpha}_t}\\, x_0 + \\sqrt{1 - \\bar{\\alpha}_t}\\, \\epsilon, \\quad \\epsilon \\sim \\mathcal{N}(0, \\mathbf{I})\n$$\n\n<span style=\"font-size: 14px;\">The derived quantities:</span>\n\n* <span style=\"font-size: 14px;\">**Signal retention per step:** $\\alpha_t = 1 - \\beta_t$</span>\n* <span style=\"font-size: 14px;\">**Cumulative signal retention:** $\\bar{\\alpha}_t = \\prod_{s=1}^{t} \\alpha_s = \\alpha_1 \\cdot \\alpha_2 \\cdots \\alpha_t$</span>\n* <span style=\"font-size: 14px;\">**Noise coefficient:** $\\sqrt{1 - \\bar{\\alpha}_t}$ scales the noise at step $t$.</span>\n* <span style=\"font-size: 14px;\">**Signal coefficient:** $\\sqrt{\\bar{\\alpha}_t}$ scales the clean data at step $t$.</span>\n\n<span style=\"font-size: 14px;\">The linear schedule defines $\\beta_t$ by interpolation:</span>\n\n$$\n\\beta_t = \\beta_1 + \\frac{t - 1}{T - 1}(\\beta_T - \\beta_1)\n$$\n\n<span style=\"font-size: 14px;\">where $\\beta_1 = 10^{-4}$, $\\beta_T = 0.02$, and $T = 1000$.</span>\n\n<span style=\"font-size: 14px;\">The cosine schedule from Nichol and Dhariwal (2021) defines $\\bar{\\alpha}_t$ directly:</span>\n\n$$\n\\bar{\\alpha}_t = \\frac{f(t)}{f(0)}, \\quad f(t) = \\cos\\left(\\frac{t/T + s}{1 + s} \\cdot \\frac{\\pi}{2}\\right)^2\n$$\n\n<span style=\"font-size: 14px;\">where $s = 0.008$ is a small offset preventing $\\beta_t$ from being too small near $t = 0$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Linear Schedule</span>\n\n<span style=\"font-size: 14px;\">Ho et al. chose the simplest possible schedule: linear interpolation of $\\beta_t$ from $\\beta_1 = 10^{-4}$ to $\\beta_T = 0.02$ over $T = 1000$ steps.</span>\n\n* <span style=\"font-size: 14px;\">**$\\beta_1 = 10^{-4}$ (very small start):** At $t = 1$, almost no noise is added. The first forward step barely perturbs the data.</span>\n* <span style=\"font-size: 14px;\">**$\\beta_T = 0.02$ (moderate end):** After 1000 cumulative steps, $\\bar{\\alpha}_T$ is driven close to zero -- $x_T$ is nearly pure Gaussian noise.</span>\n* <span style=\"font-size: 14px;\">**$T = 1000$ steps:** Each reverse step is a small, learnable denoising task. Fewer steps would require larger $\\beta_t$ jumps.</span>\n\n<span style=\"font-size: 14px;\">With these values, $\\bar{\\alpha}_t$ starts near 1 and decays monotonically. Early on, each $\\alpha_t \\approx 0.9999$ so the product barely budges. In the middle, $\\bar{\\alpha}_t$ drops steadily. Near the end, it approaches zero rapidly.</span>\n\n<span style=\"font-size: 14px;\">The linear schedule has a known asymmetry: $\\bar{\\alpha}_t$ spends many early timesteps near 1 and late timesteps near 0. The useful transition zone is concentrated in the middle third. The model wastes capacity on near-trivial early denoising and near-impossible late denoising.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Cosine Schedule</span>\n\n<span style=\"font-size: 14px;\">Nichol and Dhariwal (2021) identified the linear schedule's inefficiency: too many timesteps are spent where $\\bar{\\alpha}_t$ is near 1 or near 0. Their solution: define $\\bar{\\alpha}_t$ directly via a cosine function, then extract $\\beta_t$.</span>\n\n$$\n\\bar{\\alpha}_t = \\frac{f(t)}{f(0)}, \\quad f(t) = \\cos\\left(\\frac{t/T + s}{1 + s} \\cdot \\frac{\\pi}{2}\\right)^2\n$$\n\n<span style=\"font-size: 14px;\">Key properties:</span>\n\n* <span style=\"font-size: 14px;\">**At $t = 0$:** $f(0)/f(0) = 1$, so $\\bar{\\alpha}_0 = 1$ (pure signal).</span>\n* <span style=\"font-size: 14px;\">**At $t = T$:** The cosine argument approaches $\\pi/2$, so $\\bar{\\alpha}_T \\to 0$ (pure noise).</span>\n* <span style=\"font-size: 14px;\">**Offset $s = 0.008$:** Prevents $\\beta_t$ from being too small near $t = 0$, ensuring non-trivial noise from the first step.</span>\n* <span style=\"font-size: 14px;\">**Cosine shape:** The squared cosine produces an S-shaped $\\bar{\\alpha}_t$ curve that transitions smoothly from 1 to 0.</span>\n\n<span style=\"font-size: 14px;\">Once $\\bar{\\alpha}_t$ is defined, $\\beta_t$ is recovered as:</span>\n\n$$\n\\beta_t = 1 - \\frac{\\bar{\\alpha}_t}{\\bar{\\alpha}_{t-1}}\n$$\n\n<span style=\"font-size: 14px;\">Nichol and Dhariwal clip $\\beta_t$ to a maximum of $0.999$ to prevent numerical instability near the end of the schedule. The practical benefit: the SNR decreases more gradually, more timesteps are spent in the informative middle range, and sample quality improves.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What $\\bar{\\alpha}_t$ Represents</span>\n\n<span style=\"font-size: 14px;\">$\\bar{\\alpha}_t$ captures total signal retention from $x_0$ to $x_t$. It is the most important quantity in the diffusion framework.</span>\n\n* <span style=\"font-size: 14px;\">**$\\bar{\\alpha}_t$ near 1:** The sample is mostly clean data. The noise component $\\sqrt{1 - \\bar{\\alpha}_t}\\, \\epsilon$ is small.</span>\n* <span style=\"font-size: 14px;\">**$\\bar{\\alpha}_t$ near 0.5:** Equal parts signal and noise variance. The model must extract structure from a heavily corrupted input.</span>\n* <span style=\"font-size: 14px;\">**$\\bar{\\alpha}_t$ near 0:** Almost pure noise. The original data is nearly unrecoverable.</span>\n\n<span style=\"font-size: 14px;\">The formal signal-to-noise ratio (SNR) at timestep $t$:</span>\n\n$$\n\\text{SNR}(t) = \\frac{\\bar{\\alpha}_t}{1 - \\bar{\\alpha}_t}\n$$\n\n<span style=\"font-size: 14px;\">The DDPM loss can be rewritten in terms of SNR, and the timestep weighting implicitly controls focus on different noise levels.</span>\n\n* <span style=\"font-size: 14px;\">**High SNR (early timesteps):** The model learns fine details and high-frequency features.</span>\n* <span style=\"font-size: 14px;\">**Low SNR (late timesteps):** The model learns coarse, global structure.</span>\n* <span style=\"font-size: 14px;\">**Schedule determines the SNR curve:** Switching from linear to cosine shifts which SNR regions get more timesteps.</span>\n\n<span style=\"font-size: 14px;\">The coefficients satisfy $\\bar{\\alpha}_t + (1 - \\bar{\\alpha}_t) = 1$, so total variance is preserved at every timestep. This variance-preserving property makes the forward process well-behaved.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">Ho et al. (2020) made deliberately simple choices to show diffusion models could compete with GANs.</span>\n\n* <span style=\"font-size: 14px;\">**$T = 1000$:** Ensures each reverse step is a small perturbation. The paper: \"We set $T = 1000$ for all experiments.\"</span>\n* <span style=\"font-size: 14px;\">**Linear $\\beta_t$ from $10^{-4}$ to $0.02$:** The paper: \"We set the forward process variances to constants increasing linearly from $\\beta_1 = 10^{-4}$ to $\\beta_T = 0.02$.\"</span>\n* <span style=\"font-size: 14px;\">**Fixed schedule (not learned):** They explored learning $\\Sigma_\\theta$ but found fixing it to $\\beta_t \\mathbf{I}$ or $\\tilde{\\beta}_t \\mathbf{I}$ worked well.</span>\n\n<span style=\"font-size: 14px;\">The simplified training loss:</span>\n\n$$\nL_{\\text{simple}} = \\mathbb{E}_{t, x_0, \\epsilon}\\left[\\|\\epsilon - \\epsilon_\\theta(x_t, t)\\|^2\\right]\n$$\n\n<span style=\"font-size: 14px;\">where $t \\sim \\text{Uniform}\\{1, \\dots, T\\}$. The schedule enters through $x_t = \\sqrt{\\bar{\\alpha}_t}\\, x_0 + \\sqrt{1 - \\bar{\\alpha}_t}\\, \\epsilon$. Uniform $t$ sampling with the linear schedule over-trains on easy and hard regions, under-trains on the informative middle. Nichol and Dhariwal later showed this is suboptimal.</span>\n\n<span style=\"font-size: 14px;\">Despite its simplicity, the linear schedule yielded an FID of 3.17 on CIFAR-10, establishing diffusion models as competitive.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Linear schedule with $\\beta_1 = 10^{-4}$, $\\beta_T = 0.02$, $T = 1000$. The step size:</span>\n\n$$\n\\Delta\\beta = \\frac{\\beta_T - \\beta_1}{T - 1} = \\frac{0.02 - 0.0001}{999} \\approx 1.99 \\times 10^{-5}\n$$\n\n<span style=\"font-size: 14px;\">**Early timesteps (t = 1, 2, 3):**</span>\n\n* <span style=\"font-size: 14px;\">**$t = 1$:** $\\beta_1 = 0.0001$, $\\alpha_1 = 0.9999$, $\\bar{\\alpha}_1 = 0.9999$</span>\n* <span style=\"font-size: 14px;\">**$t = 2$:** $\\beta_2 = 0.0001199$, $\\alpha_2 = 0.9998801$, $\\bar{\\alpha}_2 = 0.9999 \\times 0.9998801 = 0.9997801$</span>\n* <span style=\"font-size: 14px;\">**$t = 3$:** $\\beta_3 = 0.0001399$, $\\alpha_3 = 0.9998601$, $\\bar{\\alpha}_3 = 0.9997801 \\times 0.9998601 = 0.9996403$</span>\n\n<span style=\"font-size: 14px;\">After 3 steps, $\\bar{\\alpha}_3 \\approx 0.9996$. In the sampling equation, the noise coefficient is only $\\sqrt{0.0004} = 0.02$. The noisy image is visually indistinguishable from the original.</span>\n\n<span style=\"font-size: 14px;\">**Late timesteps (t = 999, 1000):**</span>\n\n* <span style=\"font-size: 14px;\">**$t = 999$:** $\\beta_{999} = 0.01990$, $\\alpha_{999} = 0.98010$</span>\n* <span style=\"font-size: 14px;\">**$t = 1000$:** $\\beta_{1000} = 0.02000$, $\\alpha_{1000} = 0.98000$</span>\n\n<span style=\"font-size: 14px;\">The cumulative product at $t = 1000$ is computed via log-sum:</span>\n\n$$\n\\log \\bar{\\alpha}_{1000} = \\sum_{s=1}^{1000} \\log(1 - \\beta_s) \\approx -10.0\n$$\n\n<span style=\"font-size: 14px;\">This gives $\\bar{\\alpha}_{1000} \\approx e^{-10.0} \\approx 4.5 \\times 10^{-5}$. The sampling equation becomes $x_{1000} \\approx 0.0067\\, x_0 + 0.9999\\, \\epsilon$, which is nearly pure noise.</span>\n\n<span style=\"font-size: 14px;\">**The decay profile across timesteps:**</span>\n\n* <span style=\"font-size: 14px;\">**$t = 100$:** $\\bar{\\alpha}_{100} \\approx 0.990$ (1% noise variance)</span>\n* <span style=\"font-size: 14px;\">**$t = 250$:** $\\bar{\\alpha}_{250} \\approx 0.940$ (6% noise variance)</span>\n* <span style=\"font-size: 14px;\">**$t = 500$:** $\\bar{\\alpha}_{500} \\approx 0.725$ (27.5% noise variance)</span>\n* <span style=\"font-size: 14px;\">**$t = 750$:** $\\bar{\\alpha}_{750} \\approx 0.300$ (70% noise variance)</span>\n* <span style=\"font-size: 14px;\">**$t = 900$:** $\\bar{\\alpha}_{900} \\approx 0.045$ (95.5% noise variance)</span>\n* <span style=\"font-size: 14px;\">**$t = 1000$:** $\\bar{\\alpha}_{1000} \\approx 0.00005$ (99.995% noise variance)</span>\n\n<span style=\"font-size: 14px;\">This shows the asymmetry: the first 250 steps only destroy 6% of the signal, while steps 750-1000 are spent where the signal is already 95%+ destroyed. The cosine schedule redistributes timesteps to spend more time in $\\bar{\\alpha}_t \\in [0.1, 0.9]$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Modern Context</span>\n\n<span style=\"font-size: 14px;\">The linear schedule was a starting point. Subsequent work produced many alternatives.</span>\n\n* <span style=\"font-size: 14px;\">**Cosine schedule (Nichol and Dhariwal, 2021):** The most widely adopted improvement. Smoother SNR decay leads to better FID scores. Used in Improved DDPM and many subsequent models.</span>\n* <span style=\"font-size: 14px;\">**Sigmoid schedule:** Uses a sigmoid to define $\\bar{\\alpha}_t$, providing a tunable inflection point controlling where the fastest signal destruction occurs.</span>\n* <span style=\"font-size: 14px;\">**Learned schedules:** Some approaches learn $\\beta_t$ jointly with model parameters, though this has not become standard.</span>\n* <span style=\"font-size: 14px;\">**Continuous-time diffusion (Song et al., 2021):** Replaces the discrete schedule with a continuous SDE, $\\beta(t)$ for $t \\in [0, 1]$, unifying DDPM and score-matching.</span>\n* <span style=\"font-size: 14px;\">**Flow matching (Lipman et al., 2023):** Defines straight-line paths $x_t = (1-t)\\, x_0 + t\\, \\epsilon$ with no $\\beta_t$ schedule at all.</span>\n* <span style=\"font-size: 14px;\">**Resolution-dependent schedules:** Chen (2023) showed optimal schedules depend on resolution. Higher-resolution images need slower noise addition.</span>\n* <span style=\"font-size: 14px;\">**Timestep spacing for fast sampling:** With fewer steps (e.g., DDIM with 50 steps), which timesteps to evaluate is itself a schedule design question.</span>\n\n<span style=\"font-size: 14px;\">The trend is toward either simpler schedules (flow matching removes them entirely) or adaptive ones (continuous-time solvers choose step sizes). Ho et al.'s linear schedule remains a baseline and pedagogical reference.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n### <span style=\"font-size: 14px;\">$\\bar{\\alpha}_T$ Not Reaching Near Zero</span>\n\n<span style=\"font-size: 14px;\">If $\\bar{\\alpha}_T$ is not close to zero, $q(x_T | x_0)$ differs from $\\mathcal{N}(0, \\mathbf{I})$. The reverse process starts from this prior, so any mismatch causes systematic bias. With Ho et al.'s schedule, $\\bar{\\alpha}_{1000} \\approx 4.5 \\times 10^{-5}$, small enough to avoid this.</span>\n\n### <span style=\"font-size: 14px;\">Numerical Underflow in Cumulative Products</span>\n\n<span style=\"font-size: 14px;\">Computing $\\prod_{s=1}^{t} (1 - \\beta_s)$ as a running product in float32 can underflow to zero for large $t$, making the loss gradient degenerate. Fix: compute $\\log \\bar{\\alpha}_t = \\sum \\log(1 - \\beta_s)$ in log-space and exponentiate only when needed, or use float64.</span>\n\n### <span style=\"font-size: 14px;\">Off-by-One in Timestep Indexing</span>\n\n<span style=\"font-size: 14px;\">Some implementations index from 0 to $T-1$, others from 1 to $T$. The formula assumes 1-based indexing. Using 0-based without adjusting shifts the entire schedule. Always verify $\\beta$ at the first index equals $\\beta_1$ and at the last equals $\\beta_T$.</span>\n\n### <span style=\"font-size: 14px;\">Confusing $\\beta_t$ with $\\alpha_t$</span>\n\n<span style=\"font-size: 14px;\">$\\beta_t$ is noise variance; $\\alpha_t = 1 - \\beta_t$ is signal retention. Passing $\\beta_t$ where $\\alpha_t$ is expected inverts the noise level -- the model sees pure noise at $t = 1$ and clean data at $t = T$. Training loss explodes immediately.</span>\n\n### <span style=\"font-size: 14px;\">Wrong $T$ Value</span>\n\n<span style=\"font-size: 14px;\">If training uses $T = 1000$ but sampling uses $T = 500$ without recomputing the schedule, every $\\bar{\\alpha}_t$ is wrong. Fix: retrain with the new $T$ or use DDIM-style timestep skipping (subset of the original 1000 steps).</span>\n\n### <span style=\"font-size: 14px;\">$\\beta_t$ Too Large</span>\n\n<span style=\"font-size: 14px;\">Large $\\beta_t$ values (e.g., $> 0.1$) break the Gaussian approximation in the reverse process. The cosine schedule clips $\\beta_t$ at 0.999 for this reason.</span>\n\n---",
+  "hints": [
+    "np.linspace includes both endpoints by default.",
+    "Convert the rounded array to a Python list."
+  ],
+  "constraints": "- T is a positive integer.\n- beta_1 and beta_T are floats strictly between 0 and 1.\n- beta_1 is no greater than beta_T.\n- beta_1 equals beta_T when T is one.",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef linear_beta_schedule(T: int,\n                         beta_1: float = 0.0001,\n                         beta_T: float = 0.02) -> list[float]:\n    \"\"\"\n    Returns T linearly spaced beta values.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-23T18:46:11.011Z",
+  "updatedAt": "2026-04-04T12:04:50.928Z",
+  "topicId": "ddpm-schedule",
+  "paperSnippet": "\"We set the forward process variances to constants increasing linearly from Î²_1 = 10^â4 to Î²_T = 0.02.\"",
+  "visualizationComponent": "NoiseScheduleViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Noise Schedule** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef linear_beta_schedule(T: int,\n                         beta_1: float = 0.0001,\n                         beta_T: float = 0.02) -> list[float]:\n    sched = np.linspace(float(beta_1), float(beta_T), int(T), dtype=float)\n    return np.round(sched, 6).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "schedule-public-1",
+      "name": "Linear schedule 1",
+      "inputs": {
+        "T": 5,
+        "beta_1": 0.0001,
+        "beta_T": 0.02
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        0.0001,
+        0.005075,
+        0.01005,
+        0.015025,
+        0.02
+      ]
+    },
+    {
+      "id": "schedule-public-2",
+      "name": "Linear schedule 2",
+      "inputs": {
+        "T": 4,
+        "beta_1": 0.001,
+        "beta_T": 0.01
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        0.001,
+        0.004,
+        0.007,
+        0.01
+      ]
+    },
+    {
+      "id": "schedule-public-3",
+      "name": "Linear schedule 3",
+      "inputs": {
+        "T": 1,
+        "beta_1": 0.005,
+        "beta_T": 0.005
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        0.005
+      ]
+    },
+    {
+      "id": "ddpm-schedule-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "T": 10,
+        "beta_1": 0.0002,
+        "beta_T": 0.04
+      },
+      "expectedOutput": [
+        0.0002,
+        0.004622,
+        0.009044,
+        0.013467,
+        0.017889,
+        0.022311,
+        0.026733,
+        0.031156,
+        0.035578,
+        0.04
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "T": 2,
+        "beta_1": 0.0001,
+        "beta_T": 0.01
+      },
+      "expectedOutput": [
+        0.0001,
+        0.01
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "T": -5,
+        "beta_1": -0.0001,
+        "beta_T": -0.02
+      },
+      "expectedOutput": [
+        0.0001,
+        0.005075,
+        0.01005,
+        0.015025,
+        0.02
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "T": 15,
+        "beta_1": 0.0003,
+        "beta_T": 0.06
+      },
+      "expectedOutput": [
+        0.0003,
+        0.004564,
+        0.008829,
+        0.013093,
+        0.017357,
+        0.021621,
+        0.025886,
+        0.03015,
+        0.034414,
+        0.038679,
+        0.042943,
+        0.047207,
+        0.051471,
+        0.055736,
+        0.06
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "T": 6.0,
+        "beta_1": 1.0001,
+        "beta_T": 1.02
+      },
+      "expectedOutput": [
+        1.0001,
+        1.00408,
+        1.00806,
+        1.01204,
+        1.01602,
+        1.02
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "T": 3.0,
+        "beta_1": -1.9999,
+        "beta_T": -1.98
+      },
+      "expectedOutput": [
+        -1.9999,
+        -1.98995,
+        -1.98
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "T": 5,
+        "beta_1": 0.0001,
+        "beta_T": 0.02
+      },
+      "expectedOutput": [
+        0.0001,
+        0.005075,
+        0.01005,
+        0.015025,
+        0.02
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "T": -5,
+        "beta_1": -0.0001,
+        "beta_T": -0.02
+      },
+      "expectedOutput": [
+        0.0001,
+        0.005075,
+        0.01005,
+        0.015025,
+        0.02
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "T": 50,
+        "beta_1": 0.001,
+        "beta_T": 0.2
+      },
+      "expectedOutput": [
+        0.001,
+        0.005061,
+        0.009122,
+        0.013184,
+        0.017245,
+        0.021306,
+        0.025367,
+        0.029429,
+        0.03349,
+        0.037551,
+        0.041612,
+        0.045673,
+        0.049735,
+        0.053796,
+        0.057857,
+        0.061918,
+        0.06598,
+        0.070041,
+        0.074102,
+        0.078163,
+        0.082224,
+        0.086286,
+        0.090347,
+        0.094408,
+        0.098469,
+        0.102531,
+        0.106592,
+        0.110653,
+        0.114714,
+        0.118776,
+        0.122837,
+        0.126898,
+        0.130959,
+        0.13502,
+        0.139082,
+        0.143143,
+        0.147204,
+        0.151265,
+        0.155327,
+        0.159388,
+        0.163449,
+        0.16751,
+        0.171571,
+        0.175633,
+        0.179694,
+        0.183755,
+        0.187816,
+        0.191878,
+        0.195939,
+        0.2
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "T": 0,
+        "beta_1": 0.0,
+        "beta_T": 0.002
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "T": 10.0,
+        "beta_1": 5.0001,
+        "beta_T": 5.02
+      },
+      "expectedOutput": [
+        5.0001,
+        5.002311,
+        5.004522,
+        5.006733,
+        5.008944,
+        5.011156,
+        5.013367,
+        5.015578,
+        5.017789,
+        5.02
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "T": 8,
+        "beta_1": 0.0002,
+        "beta_T": 0.03
+      },
+      "expectedOutput": [
+        0.0002,
+        0.004457,
+        0.008714,
+        0.012971,
+        0.017229,
+        0.021486,
+        0.025743,
+        0.03
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "T": -10,
+        "beta_1": -0.0002,
+        "beta_T": -0.04
+      },
+      "expectedOutput": [
+        0.0001,
+        0.005075,
+        0.01005,
+        0.015025,
+        0.02
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "T": 1,
+        "beta_1": 0.0,
+        "beta_T": 0.005
+      },
+      "expectedOutput": [
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "T": 4.0,
+        "beta_1": -0.9999,
+        "beta_T": -0.98
+      },
+      "expectedOutput": [
+        -0.9999,
+        -0.993267,
+        -0.986633,
+        -0.98
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "T": 20,
+        "beta_1": 0.0004,
+        "beta_T": 0.08
+      },
+      "expectedOutput": [
+        0.0004,
+        0.004589,
+        0.008779,
+        0.012968,
+        0.017158,
+        0.021347,
+        0.025537,
+        0.029726,
+        0.033916,
+        0.038105,
+        0.042295,
+        0.046484,
+        0.050674,
+        0.054863,
+        0.059053,
+        0.063242,
+        0.067432,
+        0.071621,
+        0.075811,
+        0.08
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "ddpm-schedule-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "T": 4,
+        "beta_1": 0.0001,
+        "beta_T": 0.015
+      },
+      "expectedOutput": [
+        0.0001,
+        0.005067,
+        0.010033,
+        0.015
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "linear_beta_schedule",
+    "runtime": "numpy",
+    "parameters": [
+      {
+        "name": "T",
+        "type": "number",
+        "example": 5,
+        "description": "Number of diffusion timesteps."
+      },
+      {
+        "name": "beta_1",
+        "type": "number",
+        "example": 0.0001,
+        "description": "First variance value."
+      },
+      {
+        "name": "beta_T",
+        "type": "number",
+        "example": 0.02,
+        "description": "Final variance value."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "ddpm-schedule",
+    "name": "Noise Schedule",
+    "description": "Linear and cosine Î² schedules",
+    "color": "#f59e0b"
+  },
+  "paper": {
+    "id": "ddpm",
+    "title": "Denoising Diffusion Probabilistic Models",
+    "authors": "Ho, Jain & Abbeel, 2020",
+    "year": 2020,
+    "paperUrl": "https://arxiv.org/abs/2006.11239",
+    "visualizationComponent": "DDPMArchViz"
+  },
+  "navigation": {
+    "index": 3,
+    "total": 5,
+    "prev": "ddpm-reverse",
+    "next": "ddpm-loss"
+  },
+  "cleanTitle": ""
+}

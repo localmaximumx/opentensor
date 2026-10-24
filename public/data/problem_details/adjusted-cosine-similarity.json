@@ -1,0 +1,605 @@
+{
+  "id": "adjusted-cosine-similarity",
+  "title": "Adjusted Cosine Similarity",
+  "description": "Adjusted cosine similarity compares two items after removing each user's average rating. A zero entry in ratings_matrix means unrated. Compute each user's mean from all of that user's nonzero ratings, but include a user in the similarity only when both requested items are rated.\n\n$$\n\\operatorname{sim}(i,j) = \\frac{\\sum_{u \\in U_{ij}}(r_{ui}-\\overline{r}_u)(r_{uj}-\\overline{r}_u)}{\\sqrt{\\sum_{u \\in U_{ij}}(r_{ui}-\\overline{r}_u)^2}\\sqrt{\\sum_{u \\in U_{ij}}(r_{uj}-\\overline{r}_u)^2}}\n$$\n\nThe sums include only users who rated both requested items. For each included user, subtract that user's mean observed rating from both item ratings before computing the similarity. Return 0.0 when the denominator is zero.",
+  "seoDescription": "Compute adjusted cosine similarity for item-based collaborative filtering using co-rated users and mean-centered ratings.",
+  "examples": [
+    "Input: ratings_matrix = [[5, 3, 0], [4, 0, 2], [0, 1, 4]], item_i = 0, item_j = 1\n\nOutput: -1.0\n\nExplanation: Only user 0 rated both items, and its centered ratings are 1 and -1.",
+    "Input: ratings_matrix = [[5, 1], [4, 2], [3, 3]], item_i = 0, item_j = 1\n\nOutput: -1.0"
+  ],
+  "requirements": "* Compute each user mean from nonzero ratings only.\n* Include only users who rated both requested items.\n* Center both ratings by that user mean before computing cosine similarity.\n* Return 0.0 when the denominator is zero.",
+  "theory": "## Understanding the Theory: Adjusted Cosine Similarity\n\n### Core Intuition: Why Do We Need This?\nRecommender systems surface relevant content, products, or information from catalogs containing millions of items. Evaluating recommendations requires ranking-sensitive metrics that emphasize placing the most relevant items near the top of the recommendation list. **Adjusted Cosine Similarity** calculates ranking quality, user-item affinities, or top-K relevance scores.\n\nIn this problem, the objective is to implement **Adjusted Cosine Similarity** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\operatorname{sim}(i,j) = \\frac{\\sum_{u \\in U_{ij}}(r_{ui}-\\overline{r}_u)(r_{uj}-\\overline{r}_u)}{\\sqrt{\\sum_{u \\in U_{ij}}(r_{ui}-\\overline{r}_u)^2}\\sqrt{\\sum_{u \\in U_{ij}}(r_{uj}-\\overline{r}_u)^2}}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Position Discounting**: Users rarely scroll past the top items; ranking metrics heavily penalize placing relevant recommendations further down the list.\n* **Sparsity & Cold Start**: User-item interaction matrices are over 99% empty; embeddings and matrix factorization discover latent features to generalize to unseen interactions.\n* **Online vs. Offline Evaluation**: Offline ranking metrics (like NDCG@K and Recall@K) correlate strongly with online user engagement and click-through rates.",
+  "hints": [
+    "Accumulate the centered cross-product and the two centered square sums separately.",
+    "Take the square root of each square sum before multiplying the denominator terms."
+  ],
+  "constraints": "* ratings_matrix is rectangular, and zero means unrated.\n* item_i and item_j are valid column indices.\n* Return a float from -1.0 through 1.0.\n* Time limit: 300 ms.",
+  "difficulty": "Medium",
+  "starterCode": "def adjusted_cosine_similarity(ratings_matrix: list, item_i: int, item_j: int) -> float:\n    \"\"\"\n    Returns the adjusted cosine similarity between the requested items.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T22:50:39.004Z",
+  "updatedAt": "2026-08-23T21:26:37.964Z",
+  "solution": "### 💡 Intuition & Approach\nSubtracts each user average rating from item ratings before evaluating the cosine angle to remove rating scale bias across harsh and generous raters.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef adjusted_cosine_similarity(ratings_matrix: list, item_i: int, item_j: int) -> float:\n    R = np.array(ratings_matrix, dtype=float)\n    user_means = []\n    for row in R:\n        rated = row[row > 0]\n        user_means.append(np.mean(rated) if len(rated) > 0 else 0.0)\n    user_means = np.array(user_means)\n\n    co_rated = (R[:, item_i] > 0) & (R[:, item_j] > 0)\n    if not np.any(co_rated):\n        return 0.0\n\n    u_diff_i = R[co_rated, item_i] - user_means[co_rated]\n    u_diff_j = R[co_rated, item_j] - user_means[co_rated]\n\n    num = np.sum(u_diff_i * u_diff_j)\n    denom = np.sqrt(np.sum(u_diff_i ** 2)) * np.sqrt(np.sum(u_diff_j ** 2))\n    if denom == 0:\n        return 0.0\n    return float(round(num / denom, 4))\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "AdjustedCosineSimilarityViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "One common user - negative correlation",
+      "inputs": {
+        "item_i": 0,
+        "item_j": 1,
+        "ratings_matrix": [
+          [
+            5,
+            3,
+            0
+          ],
+          [
+            4,
+            0,
+            2
+          ],
+          [
+            0,
+            1,
+            4
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": -1.0
+    },
+    {
+      "id": "test-2",
+      "name": "Perfect negative correlation",
+      "inputs": {
+        "item_i": 0,
+        "item_j": 1,
+        "ratings_matrix": [
+          [
+            5,
+            1
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": -1.0
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "item_i": 0,
+        "item_j": 2,
+        "ratings_matrix": [
+          [
+            10,
+            6,
+            0
+          ],
+          [
+            8,
+            0,
+            4
+          ],
+          [
+            0,
+            2,
+            8
+          ]
+        ]
+      },
+      "expectedOutput": -1.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "item_i": 0,
+        "item_j": 0,
+        "ratings_matrix": [
+          [
+            2,
+            2,
+            0
+          ],
+          [
+            2,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            2
+          ]
+        ]
+      },
+      "expectedOutput": 1.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "item_i": 0,
+        "item_j": -1,
+        "ratings_matrix": [
+          [
+            -5,
+            -3,
+            0
+          ],
+          [
+            -4,
+            0,
+            -2
+          ],
+          [
+            0,
+            -1,
+            -4
+          ]
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "item_i": 0,
+        "item_j": 3,
+        "ratings_matrix": [
+          [
+            15,
+            9,
+            0
+          ],
+          [
+            12,
+            0,
+            6
+          ],
+          [
+            0,
+            3,
+            12
+          ]
+        ]
+      },
+      "expectedOutput": -1.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "item_i": 1.0,
+        "item_j": 2.0,
+        "ratings_matrix": [
+          [
+            6.0,
+            4.0,
+            1.0
+          ],
+          [
+            5.0,
+            1.0,
+            3.0
+          ],
+          [
+            1.0,
+            2.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": -1.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "item_i": -2.0,
+        "item_j": -1.0,
+        "ratings_matrix": [
+          [
+            3.0,
+            1.0,
+            -2.0
+          ],
+          [
+            2.0,
+            -2.0,
+            0.0
+          ],
+          [
+            -2.0,
+            -1.0,
+            2.0
+          ]
+        ]
+      },
+      "expectedOutput": -1.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "item_i": 0,
+        "item_j": 1,
+        "ratings_matrix": [
+          [
+            0,
+            3,
+            5
+          ],
+          [
+            2,
+            0,
+            4
+          ],
+          [
+            4,
+            1,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": -1.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "item_i": 0,
+        "item_j": -1,
+        "ratings_matrix": [
+          [
+            -5,
+            -3,
+            0
+          ],
+          [
+            -4,
+            0,
+            -2
+          ],
+          [
+            0,
+            -1,
+            -4
+          ]
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "item_i": 0,
+        "item_j": 10,
+        "ratings_matrix": [
+          [
+            50,
+            30,
+            0
+          ],
+          [
+            40,
+            0,
+            20
+          ],
+          [
+            0,
+            10,
+            40
+          ]
+        ]
+      },
+      "expectedOutput": -1.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "item_i": 0,
+        "item_j": 0,
+        "ratings_matrix": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "item_i": 5.0,
+        "item_j": 6.0,
+        "ratings_matrix": [
+          [
+            10.0,
+            8.0,
+            5.0
+          ],
+          [
+            9.0,
+            5.0,
+            7.0
+          ],
+          [
+            5.0,
+            6.0,
+            9.0
+          ]
+        ]
+      },
+      "expectedOutput": -1.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "item_i": 0,
+        "item_j": 2,
+        "ratings_matrix": [
+          [
+            8,
+            4,
+            0
+          ],
+          [
+            6,
+            0,
+            3
+          ],
+          [
+            0,
+            2,
+            6
+          ]
+        ]
+      },
+      "expectedOutput": -1.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "item_i": 0,
+        "item_j": -2,
+        "ratings_matrix": [
+          [
+            -10,
+            -6,
+            0
+          ],
+          [
+            -8,
+            0,
+            -4
+          ],
+          [
+            0,
+            -2,
+            -8
+          ]
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "item_i": 0,
+        "item_j": 0,
+        "ratings_matrix": [
+          [
+            1,
+            1,
+            0
+          ],
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1
+          ]
+        ]
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "item_i": -1.0,
+        "item_j": 0.0,
+        "ratings_matrix": [
+          [
+            4.0,
+            2.0,
+            -1.0
+          ],
+          [
+            3.0,
+            -1.0,
+            1.0
+          ],
+          [
+            -1.0,
+            0.0,
+            3.0
+          ]
+        ]
+      },
+      "expectedOutput": -1.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "item_i": 0,
+        "item_j": 4,
+        "ratings_matrix": [
+          [
+            20,
+            12,
+            0
+          ],
+          [
+            16,
+            0,
+            8
+          ],
+          [
+            0,
+            4,
+            16
+          ]
+        ]
+      },
+      "expectedOutput": -1.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "item_i": 0,
+        "item_j": 1,
+        "ratings_matrix": [
+          [
+            4,
+            2,
+            0
+          ],
+          [
+            3,
+            0,
+            2
+          ],
+          [
+            0,
+            1,
+            3
+          ]
+        ]
+      },
+      "expectedOutput": -1.0,
+      "isPublic": false
+    },
+    {
+      "id": "adjusted-cosine-similarity-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "item_i": 0,
+        "item_j": 5,
+        "ratings_matrix": [
+          [
+            25,
+            15,
+            0
+          ],
+          [
+            20,
+            0,
+            10
+          ],
+          [
+            0,
+            5,
+            20
+          ]
+        ]
+      },
+      "expectedOutput": -1.0,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "adjusted_cosine_similarity",
+    "parameters": [
+      {
+        "name": "ratings_matrix",
+        "type": "array",
+        "example": "[[5, 3, 0], [4, 0, 2], [0, 1, 4]]",
+        "description": "2D list of ratings (users x items), 0 means unrated"
+      },
+      {
+        "name": "item_i",
+        "type": "number",
+        "example": "0",
+        "description": "Column index of first item"
+      },
+      {
+        "name": "item_j",
+        "type": "number",
+        "example": "1",
+        "description": "Column index of second item"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "cosine-similarity",
+    "user-based-cf-prediction",
+    "item-cf-predict",
+    "rating-normalization",
+    "pearson-correlation"
+  ],
+  "tags": [
+    "Recommender Systems"
+  ],
+  "prevId": "catalog-coverage",
+  "nextId": "hit-rate-at-k",
+  "slug": "adjusted-cosine-similarity",
+  "cleanTitle": "Adjusted Cosine Similarity",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/adjusted-cosine-similarity",
+  "localUrl": "http://localhost:3000/problems/adjusted-cosine-similarity",
+  "studyPlan": null
+}

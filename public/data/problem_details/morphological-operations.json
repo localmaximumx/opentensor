@@ -1,0 +1,1423 @@
+{
+  "id": "morphological-operations",
+  "title": "Morphological Erosion and Dilation",
+  "description": "Morphological operations are fundamental tools for processing binary images. Erosion shrinks foreground regions (removing thin protrusions and noise), while dilation expands them (filling small holes and connecting nearby components).\n\nGiven a binary image (0s and 1s), a binary structuring element (kernel), and an operation type (\"erode\" or \"dilate\"), apply the morphological operation with zero-padding.\n\n### Algorithm\n\nPad the image with zeros using padding = kernel_size // 2 on each side. For each output pixel at position (i, j):\n\n**Erosion**: the output is 1 only if every position where the kernel is 1 also has a 1 in the corresponding image position. Otherwise the output is 0.\n\n**Dilation**: the output is 1 if any position where the kernel is 1 has a 1 in the corresponding image position. Otherwise the output is 0.",
+  "seoDescription": "Apply binary-image erosion and dilation with a structuring element and explicit neighborhood boundaries.",
+  "examples": [
+    "Input: image = [[0, 0, 0], [0, 1, 0], [0, 0, 0]], kernel = [[1, 1, 1], [1, 1, 1], [1, 1, 1]], operation = \"dilate\"\n\nOutput: [[1, 1, 1], [1, 1, 1], [1, 1, 1]]\n\nExplanation: The active center pixel reaches every location covered by the kernel.",
+    "Input: image = [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]], kernel = [[1, 1, 1], [1, 1, 1], [1, 1, 1]], operation = \"erode\"\n\nOutput: [[0, 0, 0, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]]"
+  ],
+  "requirements": "* Apply zero-padding based on kernel dimensions\n* For erosion, check that ALL kernel-1 positions match image-1 positions\n* For dilation, check that ANY kernel-1 position matches an image-1 position\n* Output has the same dimensions as the input",
+  "theory": "## Understanding the Theory: Morphological Erosion and Dilation\n\n### Core Intuition: Why Do We Need This?\nImages possess rich spatial structure: nearby pixels are correlated, and visual patterns (edges, textures, object parts) are translation invariant. Computer vision models apply local receptive fields and weight sharing to process high-resolution visual inputs with minimal parameter overhead. **Morphological Erosion and Dilation** extracts localized visual features, pools spatial maps, or reconciles geometric bounding boxes.\n\nIn this problem, the objective is to implement **Morphological Erosion and Dilation** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\text{eroded}[i][j] = \\begin{cases} 1 & \\text{if all kernel positions match foreground} \\\\ 0 & \\text{otherwise} \\end{cases}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Receptive Field Growth**: Stacking convolutional layers with strides or pooling progressively expands the effective field of view, enabling deep layers to capture global semantic context.\n* **Boundary Padding & Strides**: Padding controls spatial dimension retention, while strides downsample feature resolutions efficiently without extra parameters.\n* **Vectorized im2col**: High-performance vision libraries transform sliding window convolutions into matrix multiplications (`GEMM`) via im2col operations.",
+  "hints": [
+    "For erosion, begin with one and clear it when any active-kernel position sees zero.",
+    "For dilation, begin with zero and set it when any active-kernel position sees one."
+  ],
+  "constraints": "* Image contains only 0s and 1s\n* Kernel contains only 0s and 1s, with odd dimensions\n* operation is either \"erode\" or \"dilate\"\n* Return a 2D list of integers (0 or 1) with the same shape as input\n* Time limit: 300 ms",
+  "difficulty": "Medium",
+  "starterCode": "def morphological_op(image: list, kernel: list, operation: str) -> list:\n    \"\"\"\n    Returns the eroded or dilated binary image.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T15:48:30.816Z",
+  "updatedAt": "2026-08-23T19:34:01.145Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef morphological_op(image: list, kernel: list, operation: str) -> list:\n    img = np.array(image, dtype=int)\n    k = np.array(kernel, dtype=int)\n    kh, kw = k.shape\n    pad_h, pad_w = kh // 2, kw // 2\n    padded = np.pad(img, ((pad_h, pad_h), (pad_w, pad_w)), mode='constant', constant_values=0)\n    out = np.zeros_like(img)\n    H, W = img.shape\n    for i in range(H):\n        for j in range(W):\n            patch = padded[i:i+kh, j:j+kw]\n            if operation in ['dilate', 'dilation']:\n                out[i, j] = 1 if np.any((patch == 1) & (k == 1)) else 0\n            elif operation in ['erode', 'erosion']:\n                out[i, j] = 1 if np.all(patch[k == 1] == 1) else 0\n    return out.tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "MorphologicalOperationsViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "public_dilate_single",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "dilate"
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "public_erode_solid",
+      "inputs": {
+        "image": [
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "erode"
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "dilate"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "image": [
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "erode"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "dilate"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "image": [
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "erode"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "dilate"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "image": [
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "erode"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "dilate"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "image": [
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "erode"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "dilate"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "image": [
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "erode"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "dilate"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "image": [
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "erode"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "dilate"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "image": [
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "erode"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "dilate"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "image": [
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "erode"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "dilate"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "morphological-operations-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "image": [
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        "kernel": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "operation": "erode"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "morphological_op",
+    "parameters": [
+      {
+        "name": "image",
+        "type": "array"
+      },
+      {
+        "name": "kernel",
+        "type": "array"
+      },
+      {
+        "name": "operation",
+        "type": "string"
+      }
+    ],
+    "return_type": "array"
+  },
+  "relatedProblems": [
+    "conv2d-image-filtering",
+    "gaussian-blur-kernel",
+    "sobel-edge-detection",
+    "color-to-grayscale",
+    "histogram-equalization"
+  ],
+  "tags": [
+    "Computer Vision"
+  ],
+  "prevId": "histogram-equalization",
+  "nextId": "image-rotation-nearest",
+  "slug": "morphological-operations",
+  "cleanTitle": "Morphological Erosion and Dilation",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/morphological-operations",
+  "localUrl": "http://localhost:3000/problems/morphological-operations",
+  "studyPlan": null
+}

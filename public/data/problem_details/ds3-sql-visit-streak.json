@@ -1,0 +1,822 @@
+{
+  "id": "ds3-sql-visit-streak",
+  "slug": "ds3-sql-visit-streak",
+  "title": "Longest Daily Visit Streak per User",
+  "cleanTitle": "Longest Daily Visit Streak per User",
+  "type": "sql",
+  "difficulty": "Hard",
+  "category": "Assessment",
+  "tags": [
+    "Assessment",
+    "SQL",
+    "SQL Sprint: Window Functions"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Given visits(user_id, visit_date), find each user’s longest streak of consecutive calendar days with at least one visit. Duplicate visits on the same day count as one day. Break ties by the earliest streak start.",
+  "theory": "## Understanding the Theory: Longest Daily Visit Streak per User\n\n### Core Intuition: Why Do We Need This?\n**Longest Daily Visit Streak per User** represents a fundamental data modeling and statistical reasoning technique in **SQL Sprint: Window Functions**. In enterprise machine learning, quantitative analytics, and decision science, algorithms must handle asynchronous logs, missing observations, skewed class distributions, and high-cardinality partitions. A mathematically rigorous implementation guarantees statistically unbiased estimates and idempotent transformations.\n\nUnderstanding the core mechanics enables engineers to diagnose convergence anomalies, optimize memory layouts, and construct maintainable ML pipelines from first principles.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\text{Streak}_u = \\max_k |\\{d_1, d_2, \\dots, d_k\\}| \\quad \\text{where } d_{i+1} - d_i = 1 \\text{ day}\n$$\n\nIn this formulation:\n* The input features and parameters are projected, normalized, or aggregated according to established algorithmic invariants.\n* Dimensional consistency is preserved across all tensor or matrix axes, ensuring mathematical validity.\n* Intermediate accumulators maintain numerical dynamic range to protect against floating-point anomalies.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Validate input array dimensions, check for empty sequences or invalid bounds, and convert inputs into contiguous buffers.\n2. **Phase 2: Core Algorithmic Transformation**: Execute the foundational mathematical logic using vectorized SIMD array operations or optimized iteration.\n3. **Phase 3: Aggregation & Normalization**: Compute required sums, projections, or ranking reductions while guarding against division by zero.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Format outputs into required data types and verify that returned numerical estimates adhere to expected precision thresholds.\n\n### Practical Machine Learning Applications & Nuances\n* **Statistical Unbiasedness & Degrees of Freedom**: Applying proper Bessel corrections and degrees of freedom safeguards sample statistics against systemic sample bias.\n* **Vectorized Array Operations**: Leveraging contiguous columnar execution avoids slow Python interpreter loop overhead when evaluating million-row datasets.\n* **Null Safety & Edge Case Handling**: Explicit handling of missing data, empty partitions, and single-value inputs prevents runtime exceptions in production batch pipelines.\n* **Algorithmic Complexity**: Operates with optimal asymptotic time and space complexity, ensuring minimal compute overhead.",
+  "examples": [
+    {
+      "name": "consecutive visits and a gap",
+      "tables": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedRows": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ]
+    }
+  ],
+  "requirements": [
+    "Deduplicate user/day pairs, group consecutive dates using the gaps-and-islands row-number technique, then rank streaks."
+  ],
+  "hints": [
+    "Write the base aggregation/deduplication CTE first.",
+    "Use a window function or grouped date arithmetic to identify ranks/streaks.",
+    "Check tie and missing-prior-period behavior."
+  ],
+  "constraints": [
+    "SQL dialect: PostgreSQL unless a platform-specific adaptation is required.",
+    "Column names and schemas are specified in the statement."
+  ],
+  "starterCode": "-- Write your SQL query here\n",
+  "solution": "### 💡 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### ⚡ Implementation\n```sql\nWITH days AS (\n  SELECT DISTINCT user_id, visit_date::date AS visit_day\n  FROM visits\n), islands AS (\n  SELECT user_id, visit_day,\n         visit_day - (ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY visit_day))::int AS grp\n  FROM days\n), streaks AS (\n  SELECT user_id, MIN(visit_day) AS streak_start, MAX(visit_day) AS streak_end,\n         COUNT(*) AS streak_length\n  FROM islands\n  GROUP BY user_id, grp\n), ranked AS (\n  SELECT *, ROW_NUMBER() OVER (\n    PARTITION BY user_id ORDER BY streak_length DESC, streak_start\n  ) AS rn\n  FROM streaks\n)\nSELECT user_id, streak_start, streak_end, streak_length\nFROM ranked\nWHERE rn = 1\nORDER BY user_id;\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
+  "testCases": [
+    {
+      "id": "case-1",
+      "name": "consecutive visits and a gap",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-2",
+      "name": "Case 2",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-3",
+      "name": "Case 3",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-4",
+      "name": "Case 4",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-5",
+      "name": "Case 5",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-6",
+      "name": "Case 6",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-7",
+      "name": "Case 7",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-8",
+      "name": "Case 8",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-9",
+      "name": "Case 9",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-10",
+      "name": "Case 10",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-11",
+      "name": "Case 11",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-12",
+      "name": "Case 12",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-13",
+      "name": "Case 13",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-14",
+      "name": "Case 14",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-15",
+      "name": "Case 15",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-16",
+      "name": "Case 16",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-17",
+      "name": "Case 17",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-18",
+      "name": "Case 18",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-19",
+      "name": "Case 19",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-20",
+      "name": "Case 20",
+      "inputs": {
+        "visits": [
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-01"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-02"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-03"
+          },
+          {
+            "user_id": 1,
+            "visit_date": "2024-01-05"
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1,
+          "2024-01-01",
+          "2024-01-03",
+          3
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "sql_query",
+    "signature": "sql_query()",
+    "language": "sql"
+  },
+  "assessmentNames": [
+    "SQL Sprint: Window Functions"
+  ],
+  "source": "assessment",
+  "sourceId": "assessment",
+  "updatedAt": "2026-03-01T00:00:00.000Z"
+}

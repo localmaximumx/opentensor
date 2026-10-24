@@ -1,0 +1,1255 @@
+{
+  "catalogId": "python:dl-lenet-5",
+  "id": "dl-lenet-5",
+  "sourceId": "dl-lenet-5",
+  "slug": "dl-lenet-5",
+  "source": "python",
+  "category": "numpy",
+  "title": "LeNet Forward Pass",
+  "difficulty": "Hard",
+  "tags": [
+    "Neural Networks",
+    "Computer Vision"
+  ],
+  "isFree": false,
+  "planId": "cracking-dl",
+  "planTitle": "Cracking Deep Learning",
+  "sectionId": "cracking-dl-convolutional-networks",
+  "sortOrder": 289,
+  "seoDescription": "Implement the forward pass of a simplified LeNet-style convolutional neural network using only NumPy.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Implement the forward pass of a LeNet architecture comprising 2D spatial convolution, Tanh activation, average pooling, and dense projection.\n\nYann LeCun's LeNet-5 established the classic paradigm of alternating convolutions and pooling layers for document recognition.\n\n### Mathematical Formulation\n$$\n\\mathbf{y} = \\mathbf{W}_{\\text{fc}} \\operatorname{AvgPool}\\left( \\tanh(\\mathbf{X} * \\mathbf{W}_{\\text{conv}}) \\right)\n$$\n\n### Step-by-Step Implementation\n1. Convolve 2D image with spatial filter kernel\n2. Apply hyperbolic tangent (tanh) non-linearity\n3. Perform 2x2 non-overlapping average pooling and project via dense weights\n\n### Returns\nList of output class logits.",
+  "theory": "## Understanding the Theory: LeNet Forward Pass\n\n### Core Intuition: Why Do We Need This?\nNeural networks achieve their remarkable expressive power by stacking linear layers interspersed with non-linear activation functions and normalization layers. Without non-linear activations, any deep network would collapse into a single shallow linear regression. **LeNet Forward Pass** ensures signals propagate cleanly through dozens or hundreds of layers without vanishing or exploding.\n\nYann LeCun's LeNet-5 established the classic paradigm of alternating convolutions and pooling layers for document recognition. In this problem, the goal is to: implement the forward pass of a lenet architecture comprising 2d spatial convolution, tanh activation, average pooling, and dense projection.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\mathbf{y} = \\mathbf{W}_{\\text{fc}} \\operatorname{AvgPool}\\left( \\tanh(\\mathbf{X} * \\mathbf{W}_{\\text{conv}}) \\right)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Convolve 2D image with spatial filter kernel\n2. **Phase 2**: Apply hyperbolic tangent (tanh) non-linearity\n3. **Phase 3**: Perform 2x2 non-overlapping average pooling and project via dense weights\n\n### Practical Machine Learning Applications & Nuances\n* **Gradient Flow**: Carefully designed activation functions (like ReLU, GELU, and Swish) maintain strong gradient signals during backpropagation.\n* **Internal Covariate Shift**: Normalization techniques (like LayerNorm and RMSNorm) standardize hidden states across channels or batch dimensions, allowing models to train stably at higher learning rates.\n* **Hardware Friendly**: Modern deep learning frameworks implement these layers using fused GPU kernels to reduce memory round-trips.",
+  "examples": [
+    "Input: image = [[1.0, 1.0, 0.0, 0.0], [1.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 1.0], [0.0, 0.0, 1.0, 1.0]], conv_weight = [[1.0, 0.0, -1.0], [1.0, 0.0, -1.0], [1.0, 0.0, -1.0]], dense_weight = [[0.5, -0.5]]\n\nOutput: [0.0, 0.0]\n\nExplanation: Evaluated dl_lenet_5 under standard test conditions."
+  ],
+  "requirements": "* Function must be named `dl_lenet_5`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `dl_lenet_5`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef dl_lenet_5(image: list, conv_weight: list, dense_weight: list) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **LeNet Forward Pass** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef dl_lenet_5(image: list, conv_weight: list, dense_weight: list) -> list:\n    img, cw, dw = np.array(image, dtype=np.float64), np.array(conv_weight, dtype=np.float64), np.array(dense_weight, dtype=np.float64)\n    H, W = img.shape; K = cw.shape[0]\n    oh, ow = H - K + 1, W - K + 1\n    act = np.tanh(np.array([[np.sum(img[i:i+K, j:j+K]*cw) for j in range(ow)] for i in range(oh)]))\n    ph, pw = oh // 2, ow // 2\n    pooled = np.array([[np.mean(act[2*i:2*i+2, 2*j:2*j+2]) for j in range(pw)] for i in range(ph)])\n    return np.round(np.dot(pooled.flatten(), dw), 4).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "4x4 image with 3x3 conv to 2 classes",
+      "inputs": {
+        "image": [
+          [
+            1.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            1.0,
+            0.0,
+            -1.0
+          ],
+          [
+            1.0,
+            0.0,
+            -1.0
+          ],
+          [
+            1.0,
+            0.0,
+            -1.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            0.5,
+            -0.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "dl-lenet-5-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "image": [
+          [
+            2.0,
+            2.0,
+            0.0,
+            0.0
+          ],
+          [
+            2.0,
+            2.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            2.0,
+            2.0
+          ],
+          [
+            0.0,
+            0.0,
+            2.0,
+            2.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            2.0,
+            0.0,
+            -2.0
+          ],
+          [
+            2.0,
+            0.0,
+            -2.0
+          ],
+          [
+            2.0,
+            0.0,
+            -2.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            1.0,
+            -1.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "dl-lenet-5-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "image": [
+          [
+            0.5,
+            0.5,
+            0.0,
+            0.0
+          ],
+          [
+            0.5,
+            0.5,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.5,
+            0.5
+          ],
+          [
+            0.0,
+            0.0,
+            0.5,
+            0.5
+          ]
+        ],
+        "conv_weight": [
+          [
+            0.5,
+            0.0,
+            -0.5
+          ],
+          [
+            0.5,
+            0.0,
+            -0.5
+          ],
+          [
+            0.5,
+            0.0,
+            -0.5
+          ]
+        ],
+        "dense_weight": [
+          [
+            0.25,
+            -0.25
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "image": [
+          [
+            -1.0,
+            -1.0,
+            -0.0,
+            -0.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -0.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -0.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -0.0,
+            -0.0,
+            -1.0,
+            -1.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            -1.0,
+            -0.0,
+            1.0
+          ],
+          [
+            -1.0,
+            -0.0,
+            1.0
+          ],
+          [
+            -1.0,
+            -0.0,
+            1.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            -0.5,
+            0.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "image": [
+          [
+            3.0,
+            3.0,
+            0.0,
+            0.0
+          ],
+          [
+            3.0,
+            3.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            3.0,
+            3.0
+          ],
+          [
+            0.0,
+            0.0,
+            3.0,
+            3.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            3.0,
+            0.0,
+            -3.0
+          ],
+          [
+            3.0,
+            0.0,
+            -3.0
+          ],
+          [
+            3.0,
+            0.0,
+            -3.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            1.5,
+            -1.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "image": [
+          [
+            2.0,
+            2.0,
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            2.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            2.0,
+            2.0
+          ],
+          [
+            1.0,
+            1.0,
+            2.0,
+            2.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            2.0,
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            1.0,
+            0.0
+          ],
+          [
+            2.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            1.5,
+            0.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        1.5,
+        0.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "image": [
+          [
+            -1.0,
+            -1.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -1.0,
+            -1.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            -1.0,
+            -2.0,
+            -3.0
+          ],
+          [
+            -1.0,
+            -2.0,
+            -3.0
+          ],
+          [
+            -1.0,
+            -2.0,
+            -3.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            -1.5,
+            -2.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -1.5,
+        -2.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "image": [
+          [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            -1.0,
+            0.0,
+            1.0
+          ],
+          [
+            -1.0,
+            0.0,
+            1.0
+          ],
+          [
+            -1.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            -0.5,
+            0.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "image": [
+          [
+            -1.0,
+            -1.0,
+            -0.0,
+            -0.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -0.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -0.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -0.0,
+            -0.0,
+            -1.0,
+            -1.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            -1.0,
+            -0.0,
+            1.0
+          ],
+          [
+            -1.0,
+            -0.0,
+            1.0
+          ],
+          [
+            -1.0,
+            -0.0,
+            1.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            -0.5,
+            0.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "image": [
+          [
+            10.0,
+            10.0,
+            0.0,
+            0.0
+          ],
+          [
+            10.0,
+            10.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            10.0,
+            10.0
+          ],
+          [
+            0.0,
+            0.0,
+            10.0,
+            10.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            10.0,
+            0.0,
+            -10.0
+          ],
+          [
+            10.0,
+            0.0,
+            -10.0
+          ],
+          [
+            10.0,
+            0.0,
+            -10.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            5.0,
+            -5.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "image": [
+          [
+            0.1,
+            0.1,
+            0.0,
+            0.0
+          ],
+          [
+            0.1,
+            0.1,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.1,
+            0.1
+          ],
+          [
+            0.0,
+            0.0,
+            0.1,
+            0.1
+          ]
+        ],
+        "conv_weight": [
+          [
+            0.1,
+            0.0,
+            -0.1
+          ],
+          [
+            0.1,
+            0.0,
+            -0.1
+          ],
+          [
+            0.1,
+            0.0,
+            -0.1
+          ]
+        ],
+        "dense_weight": [
+          [
+            0.05,
+            -0.05
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "image": [
+          [
+            6.0,
+            6.0,
+            5.0,
+            5.0
+          ],
+          [
+            6.0,
+            6.0,
+            5.0,
+            5.0
+          ],
+          [
+            5.0,
+            5.0,
+            6.0,
+            6.0
+          ],
+          [
+            5.0,
+            5.0,
+            6.0,
+            6.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            6.0,
+            5.0,
+            4.0
+          ],
+          [
+            6.0,
+            5.0,
+            4.0
+          ],
+          [
+            6.0,
+            5.0,
+            4.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            5.5,
+            4.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        5.5,
+        4.5
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "image": [
+          [
+            1.5,
+            1.5,
+            0.0,
+            0.0
+          ],
+          [
+            1.5,
+            1.5,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.5,
+            1.5
+          ],
+          [
+            0.0,
+            0.0,
+            1.5,
+            1.5
+          ]
+        ],
+        "conv_weight": [
+          [
+            1.5,
+            0.0,
+            -1.5
+          ],
+          [
+            1.5,
+            0.0,
+            -1.5
+          ],
+          [
+            1.5,
+            0.0,
+            -1.5
+          ]
+        ],
+        "dense_weight": [
+          [
+            0.75,
+            -0.75
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "image": [
+          [
+            -2.0,
+            -2.0,
+            -0.0,
+            -0.0
+          ],
+          [
+            -2.0,
+            -2.0,
+            -0.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -0.0,
+            -2.0,
+            -2.0
+          ],
+          [
+            -0.0,
+            -0.0,
+            -2.0,
+            -2.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            -2.0,
+            -0.0,
+            2.0
+          ],
+          [
+            -2.0,
+            -0.0,
+            2.0
+          ],
+          [
+            -2.0,
+            -0.0,
+            2.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            -1.0,
+            1.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "image": [
+          [
+            0.25,
+            0.25,
+            0.0,
+            0.0
+          ],
+          [
+            0.25,
+            0.25,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.25,
+            0.25
+          ],
+          [
+            0.0,
+            0.0,
+            0.25,
+            0.25
+          ]
+        ],
+        "conv_weight": [
+          [
+            0.25,
+            0.0,
+            -0.25
+          ],
+          [
+            0.25,
+            0.0,
+            -0.25
+          ],
+          [
+            0.25,
+            0.0,
+            -0.25
+          ]
+        ],
+        "dense_weight": [
+          [
+            0.125,
+            -0.125
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "image": [
+          [
+            0.0,
+            0.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            0.0,
+            0.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            0.0,
+            -1.0,
+            -2.0
+          ],
+          [
+            0.0,
+            -1.0,
+            -2.0
+          ],
+          [
+            0.0,
+            -1.0,
+            -2.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            -0.5,
+            -1.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        -0.4993,
+        -1.4979
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "image": [
+          [
+            4.0,
+            4.0,
+            0.0,
+            0.0
+          ],
+          [
+            4.0,
+            4.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            4.0,
+            4.0
+          ],
+          [
+            0.0,
+            0.0,
+            4.0,
+            4.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            4.0,
+            0.0,
+            -4.0
+          ],
+          [
+            4.0,
+            0.0,
+            -4.0
+          ],
+          [
+            4.0,
+            0.0,
+            -4.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            2.0,
+            -2.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "image": [
+          [
+            0.75,
+            0.75,
+            0.0,
+            0.0
+          ],
+          [
+            0.75,
+            0.75,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.75,
+            0.75
+          ],
+          [
+            0.0,
+            0.0,
+            0.75,
+            0.75
+          ]
+        ],
+        "conv_weight": [
+          [
+            0.75,
+            0.0,
+            -0.75
+          ],
+          [
+            0.75,
+            0.0,
+            -0.75
+          ],
+          [
+            0.75,
+            0.0,
+            -0.75
+          ]
+        ],
+        "dense_weight": [
+          [
+            0.375,
+            -0.375
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "image": [
+          [
+            5.0,
+            5.0,
+            0.0,
+            0.0
+          ],
+          [
+            5.0,
+            5.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            5.0,
+            5.0
+          ],
+          [
+            0.0,
+            0.0,
+            5.0,
+            5.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            5.0,
+            0.0,
+            -5.0
+          ],
+          [
+            5.0,
+            0.0,
+            -5.0
+          ],
+          [
+            5.0,
+            0.0,
+            -5.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            2.5,
+            -2.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-lenet-5-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "image": [
+          [
+            11.0,
+            11.0,
+            10.0,
+            10.0
+          ],
+          [
+            11.0,
+            11.0,
+            10.0,
+            10.0
+          ],
+          [
+            10.0,
+            10.0,
+            11.0,
+            11.0
+          ],
+          [
+            10.0,
+            10.0,
+            11.0,
+            11.0
+          ]
+        ],
+        "conv_weight": [
+          [
+            11.0,
+            10.0,
+            9.0
+          ],
+          [
+            11.0,
+            10.0,
+            9.0
+          ],
+          [
+            11.0,
+            10.0,
+            9.0
+          ]
+        ],
+        "dense_weight": [
+          [
+            10.5,
+            9.5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        10.5,
+        9.5
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "dl_lenet_5",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

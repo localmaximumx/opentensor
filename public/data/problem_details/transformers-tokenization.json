@@ -1,0 +1,309 @@
+{
+  "id": "transformers-tokenization",
+  "title": "Tokenization",
+  "description": "Implement a deterministic word-level tokenizer used as preparation for the Transformer exercises. This is a simplified tokenizer, not the subword system used in the original paper.\n\nbuild_vocab must assign IDs 0 through 3 to PAD, UNK, BOS, and EOS, then assign IDs to lowercased training words in sorted order. encode lowercases and whitespace-splits text, using UNK for unseen words. decode maps IDs back to tokens, using UNK for unknown IDs. Return a list of integer IDs from encode and a space-separated string from decode.",
+  "seoDescription": "Build a word-level Transformer tokenizer with fixed special-token IDs, sorted vocabulary entries, encoding, and decoding.",
+  "examples": [
+    "Input: text = \"hello world\"\n\nOutput: [5, 9]\n\nExplanation: Vocab from [\"hello world\", \"this is a test\", \"hello test\"]. After 4 special tokens, sorted words: a=4, hello=5, is=6, test=7, this=8, world=9",
+    "Input: text = \"hello unknown\"\n\nOutput: [5, 1]",
+    "Input: text = \"foo bar baz\"\n\nOutput: [1, 1, 1]"
+  ],
+  "requirements": "- Implement build_vocab, encode, and decode.\n- Preserve the four fixed special-token IDs.\n- Lowercase text before vocabulary collection and encoding.\n- Add ordinary vocabulary words in sorted order.\n- Set vocab_size after building.",
+  "theory": "# <span style=\"font-size: 20px;\">Word-Level Tokenization</span>\n\n<span style=\"font-size: 14px;\">Tokenization is the process of converting raw text into a sequence of discrete integer IDs that a neural network can process. It is the very first stage of every NLP pipeline, bridging the gap between human-readable strings and the numerical tensors that models operate on. Word-level tokenization, the simplest strategy, treats each whitespace-delimited word as an atomic token.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">A word-level tokenizer performs two complementary operations. **Encoding** takes a raw string, normalizes it by lowercasing, splits it on whitespace, and maps each resulting word to a unique integer ID via a fixed vocabulary lookup. **Decoding** reverses the process, converting a sequence of integer IDs back into a human-readable string by looking up each ID in the reverse mapping and joining the words with spaces.</span>\n\n<span style=\"font-size: 14px;\">The vocabulary is built in advance from a training corpus. Every unique word receives a permanent integer ID. Words encountered at inference time that were never seen during training are mapped to a special unknown token. This is the core tradeoff: simplicity at the cost of a rigid vocabulary that cannot handle novel words. The tokenizer maintains a deterministic bijective mapping:</span>\n\n$$\n\\texttt{word\\_to\\_id}: \\text{string} \\rightarrow \\text{integer} \\qquad \\texttt{id\\_to\\_word}: \\text{integer} \\rightarrow \\text{string}\n$$\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">The encoding function for a single word $w$, given vocabulary $V$, is:</span>\n\n$$\n\\text{encode}(w) = \\begin{cases} \\texttt{word\\_to\\_id}[w] & \\text{if } w \\in V \\\\ 1 & \\text{otherwise (UNK)} \\end{cases}\n$$\n\n<span style=\"font-size: 14px;\">The four special tokens occupy the first four IDs with fixed assignments:</span>\n\n$$\n\\texttt{<PAD>} = 0, \\quad \\texttt{<UNK>} = 1, \\quad \\texttt{<BOS>} = 2, \\quad \\texttt{<EOS>} = 3\n$$\n\n<span style=\"font-size: 14px;\">Regular vocabulary words receive IDs starting from $4$. If the unique words from the training corpus, sorted alphabetically, are $w_0, w_1, \\ldots, w_{n-1}$, then:</span>\n\n$$\n\\texttt{word\\_to\\_id}[w_i] = i + 4 \\quad \\text{for } i = 0, 1, \\ldots, n-1\n$$\n\n<span style=\"font-size: 14px;\">The total vocabulary size is $|V| = n + 4$, where $n$ is the count of unique training words and $4$ accounts for special tokens.</span>\n\n<span style=\"font-size: 14px;\">The decoding function for a single ID $k$ is simply the inverse lookup:</span>\n\n$$\n\\text{decode}(k) = \\texttt{id\\_to\\_word}[k]\n$$\n\n<span style=\"font-size: 14px;\">For a full sentence, encoding maps the lowercased, whitespace-split word list through $\\text{encode}$ element-wise, and decoding maps IDs through $\\text{decode}$ then joins with spaces.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Vocabulary Building</span>\n\n<span style=\"font-size: 14px;\">Building the vocabulary is a deterministic, multi-step procedure that must be followed in exact order to produce consistent ID assignments.</span>\n\n<span style=\"font-size: 14px;\">**Step 1 - Initialize special tokens.** Reserve the first four IDs: `<PAD>` = 0, `<UNK>` = 1, `<BOS>` = 2, `<EOS>` = 3. These are hardcoded constants, never derived from training data.</span>\n\n<span style=\"font-size: 14px;\">**Step 2 - Lowercase all text.** Every training sentence is converted to lowercase so that \"The\", \"the\", and \"THE\" all map to the same token. Without this, the vocabulary contains spurious duplicates differing only in capitalization.</span>\n\n<span style=\"font-size: 14px;\">**Step 3 - Split on whitespace.** Each lowercased sentence is split into words using whitespace as the delimiter. Punctuation attached to a word (like \"hello,\") remains part of that token.</span>\n\n<span style=\"font-size: 14px;\">**Step 4 - Collect unique words.** Iterate through every word across all training sentences and collect the set of unique words. Duplicates are eliminated.</span>\n\n<span style=\"font-size: 14px;\">**Step 5 - Sort alphabetically.** The unique words are sorted in lexicographic order. Sorting is critical for reproducibility; without it, hash randomization or insertion order could produce different ID assignments across runs.</span>\n\n<span style=\"font-size: 14px;\">**Step 6 - Assign IDs.** Walk through the sorted list and assign IDs starting from $4$. The first word alphabetically gets ID $4$, the second $5$, and so on.</span>\n\n<span style=\"font-size: 14px;\">The result is a forward dictionary `word_to_id` and a reverse dictionary `id_to_word`, both including the special tokens.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Special Tokens</span>\n\n<span style=\"font-size: 14px;\">Special tokens serve structural roles that regular words cannot. Each exists for a specific engineering reason rooted in how neural networks process sequences.</span>\n\n### <span style=\"font-size: 14px;\">PAD (ID = 0)</span>\n\n<span style=\"font-size: 14px;\">Neural networks process batches of sequences simultaneously, but sequences rarely have the same length. **Padding** fills shorter sequences so all can be stacked into a single tensor. PAD is assigned ID $0$ by convention, which interacts cleanly with masking: a binary mask of non-padding positions is simply a check for non-zero IDs. During attention, padding positions are masked out.</span>\n\n### <span style=\"font-size: 14px;\">UNK (ID = 1)</span>\n\n<span style=\"font-size: 14px;\">The **unknown token** is a fallback for any word not in the vocabulary. Every out-of-vocabulary (OOV) word collapses to the same UNK ID, destroying all information about the original word. This information loss is the central weakness of word-level tokenization.</span>\n\n### <span style=\"font-size: 14px;\">BOS (ID = 2)</span>\n\n<span style=\"font-size: 14px;\">The **beginning-of-sequence** token marks where a sequence starts. In autoregressive models, BOS serves as the initial input token the model conditions on to generate the first real word. Without it, the model cannot distinguish \"the first token of a new sequence\" from a continuation token.</span>\n\n### <span style=\"font-size: 14px;\">EOS (ID = 3)</span>\n\n<span style=\"font-size: 14px;\">The **end-of-sequence** token marks where a sequence terminates. In autoregressive generation, predicting EOS tells the decoding algorithm to stop. In the original Transformer, EOS on the source side signals input completion, and EOS on the target side signals the end of translation.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Encoding: Text to IDs</span>\n\n<span style=\"font-size: 14px;\">Encoding converts a raw text string into a list of integer IDs in three steps.</span>\n\n<span style=\"font-size: 14px;\">**Step 1 - Lowercase.** Convert the entire input to lowercase, matching the normalization applied during vocabulary building.</span>\n\n<span style=\"font-size: 14px;\">**Step 2 - Split.** Split the lowercased string on whitespace to produce a list of word strings.</span>\n\n<span style=\"font-size: 14px;\">**Step 3 - Lookup.** For each word, look it up in `word_to_id`. If found, use its ID. If not found, use the UNK ID ($1$).</span>\n\n<span style=\"font-size: 14px;\">The output is a list of integers with the same length as the number of words. BOS and EOS are not automatically added; whether to wrap the sequence with them depends on the downstream model.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Decoding: IDs to Text</span>\n\n<span style=\"font-size: 14px;\">Decoding converts a list of integer IDs back into a human-readable string.</span>\n\n<span style=\"font-size: 14px;\">**Step 1 - Lookup.** For each ID, look it up in `id_to_word` to retrieve the corresponding string. Special token IDs map to their string representations (`<PAD>`, `<UNK>`, `<BOS>`, `<EOS>`).</span>\n\n<span style=\"font-size: 14px;\">**Step 2 - Join.** Concatenate all retrieved strings with a single space between each pair.</span>\n\n<span style=\"font-size: 14px;\">Decoding is not a perfect inverse of encoding. Any word that was mapped to UNK during encoding decodes as the literal string `<UNK>`, not the original word. The original word is irrecoverably lost.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">The original Transformer paper, \"Attention Is All You Need\" (Vaswani et al., 2017), did not use word-level tokenization. The authors employed **Byte Pair Encoding (BPE)** with a shared source-target vocabulary of approximately 37,000 tokens for English-German translation and 32,000 tokens for English-French.</span>\n\n<span style=\"font-size: 14px;\">The choice was deliberate. Machine translation handles two languages simultaneously, and word-level vocabularies for both combined would be enormous. BPE compresses the vocabulary by representing rare words as sequences of common subword units, eliminating the OOV problem entirely.</span>\n\n<span style=\"font-size: 14px;\">Notably, Vaswani et al. used a shared vocabulary: a single BPE vocabulary learned from concatenated bilingual data. This allowed encoder and decoder to share the same embedding matrix, reducing parameters and exploiting cross-lingual subword overlap.</span>\n\n<span style=\"font-size: 14px;\">Word-level tokenization remains foundational as the conceptual baseline from which all subword methods depart. Every subword tokenizer still produces integer ID sequences, manages special tokens, and maintains encode/decode symmetry.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Consider two training sentences:</span>\n\n* <span style=\"font-size: 14px;\">**Sentence 1:** \"The cat sat on the mat\"</span>\n* <span style=\"font-size: 14px;\">**Sentence 2:** \"The dog sat on the log\"</span>\n\n### <span style=\"font-size: 14px;\">Building the Vocabulary</span>\n\n<span style=\"font-size: 14px;\">**Lowercase:** Both sentences become \"the cat sat on the mat\" and \"the dog sat on the log\".</span>\n\n<span style=\"font-size: 14px;\">**Collect unique words:** {cat, dog, log, mat, on, sat, the}. \"the\" appears four times but counts once.</span>\n\n<span style=\"font-size: 14px;\">**Sort alphabetically:** [cat, dog, log, mat, on, sat, the].</span>\n\n<span style=\"font-size: 14px;\">**Assign IDs starting from 4:**</span>\n\n* <span style=\"font-size: 14px;\">**`<PAD>`** = 0</span>\n* <span style=\"font-size: 14px;\">**`<UNK>`** = 1</span>\n* <span style=\"font-size: 14px;\">**`<BOS>`** = 2</span>\n* <span style=\"font-size: 14px;\">**`<EOS>`** = 3</span>\n* <span style=\"font-size: 14px;\">**cat** = 4</span>\n* <span style=\"font-size: 14px;\">**dog** = 5</span>\n* <span style=\"font-size: 14px;\">**log** = 6</span>\n* <span style=\"font-size: 14px;\">**mat** = 7</span>\n* <span style=\"font-size: 14px;\">**on** = 8</span>\n* <span style=\"font-size: 14px;\">**sat** = 9</span>\n* <span style=\"font-size: 14px;\">**the** = 10</span>\n\n<span style=\"font-size: 14px;\">Total vocabulary size: $7 + 4 = 11$.</span>\n\n### <span style=\"font-size: 14px;\">Encoding a Known Sentence</span>\n\n<span style=\"font-size: 14px;\">**Input:** \"The cat sat on the mat\"</span>\n\n<span style=\"font-size: 14px;\">**Lowercase:** \"the cat sat on the mat\"</span>\n\n<span style=\"font-size: 14px;\">**Split:** [\"the\", \"cat\", \"sat\", \"on\", \"the\", \"mat\"]</span>\n\n<span style=\"font-size: 14px;\">**Lookup each word:** [10, 4, 9, 8, 10, 7]</span>\n\n<span style=\"font-size: 14px;\">Every word exists in the vocabulary, so no UNK tokens appear.</span>\n\n### <span style=\"font-size: 14px;\">Encoding a Sentence With Unknown Words</span>\n\n<span style=\"font-size: 14px;\">**Input:** \"The bird sat on the log\"</span>\n\n<span style=\"font-size: 14px;\">**Lowercase:** \"the bird sat on the log\"</span>\n\n<span style=\"font-size: 14px;\">**Split:** [\"the\", \"bird\", \"sat\", \"on\", \"the\", \"log\"]</span>\n\n<span style=\"font-size: 14px;\">**Lookup:** \"the\" = 10, \"bird\" not in vocabulary = 1 (UNK), \"sat\" = 9, \"on\" = 8, \"the\" = 10, \"log\" = 6.</span>\n\n<span style=\"font-size: 14px;\">**Result:** [10, 1, 9, 8, 10, 6]</span>\n\n<span style=\"font-size: 14px;\">\"bird\" was never seen during training, so it collapses to UNK.</span>\n\n### <span style=\"font-size: 14px;\">Decoding</span>\n\n<span style=\"font-size: 14px;\">**Input IDs:** [10, 1, 9, 8, 10, 6]</span>\n\n<span style=\"font-size: 14px;\">**Lookup:** 10 = \"the\", 1 = \"`<UNK>`\", 9 = \"sat\", 8 = \"on\", 10 = \"the\", 6 = \"log\".</span>\n\n<span style=\"font-size: 14px;\">**Join with spaces:** \"the `<UNK>` sat on the log\"</span>\n\n<span style=\"font-size: 14px;\">\"bird\" has been replaced by `<UNK>`, demonstrating the irreversible information loss.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Word-Level vs Subword Tokenization</span>\n\n<span style=\"font-size: 14px;\">Word-level and subword tokenization make fundamentally different tradeoffs along the granularity spectrum.</span>\n\n### <span style=\"font-size: 14px;\">Word-Level Tokenization</span>\n\n* <span style=\"font-size: 14px;\">**Vocabulary size:** Grows with the corpus. English has over 170,000 words in active use. A 100,000+ token vocabulary means the embedding matrix alone consumes hundreds of megabytes.</span>\n* <span style=\"font-size: 14px;\">**OOV problem:** Any word not in the vocabulary maps to UNK. Catastrophic for morphologically rich languages (Turkish, Finnish), proper nouns, and typos.</span>\n* <span style=\"font-size: 14px;\">**Token semantics:** Each token is a complete word, making the vocabulary human-interpretable.</span>\n* <span style=\"font-size: 14px;\">**Sequence length:** Produces the shortest sequences (one token per word), minimizing the $O(n^2)$ attention cost.</span>\n\n### <span style=\"font-size: 14px;\">Subword Tokenization (BPE, WordPiece, Unigram)</span>\n\n* <span style=\"font-size: 14px;\">**Vocabulary size:** Typically 30,000 to 50,000 tokens regardless of corpus size. GPT-2 uses 50,257 BPE tokens; BERT uses 30,522 WordPiece tokens.</span>\n* <span style=\"font-size: 14px;\">**No OOV problem:** Any word decomposes into known subword units. \"transformerification\" becomes [\"transform\", \"##eri\", \"##fication\"] rather than UNK.</span>\n* <span style=\"font-size: 14px;\">**Morphological sharing:** \"run\", \"running\", \"runner\" share the subword \"run\", enabling generalization across variants.</span>\n* <span style=\"font-size: 14px;\">**Sequence length:** Longer sequences than word-level because rare words split into multiple pieces, increasing the $n$ in $O(n^2)$ attention.</span>\n\n<span style=\"font-size: 14px;\">The Transformer paper chose BPE because translation demands robustness to rare words across two languages. A word-level tokenizer for English-German would need 200,000+ tokens, still suffer OOV on proper nouns, and waste capacity on rare words. BPE with 37,000 shared tokens solved all three problems.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n* <span style=\"font-size: 14px;\">**Forgetting to lowercase before vocabulary lookup.** If the vocabulary was built from lowercased text but encoding skips lowercasing, \"The\" will not match \"the\" and maps to UNK. This is a silent failure: the model runs but receives degraded input with inflated UNK rates.</span>\n\n* <span style=\"font-size: 14px;\">**Wrong sort order producing inconsistent IDs.** If unique words are not sorted before assigning IDs, the mapping becomes non-deterministic. Python's `set` has no guaranteed iteration order. Two runs on the same data could produce different vocabularies.</span>\n\n* <span style=\"font-size: 14px;\">**Not handling unknown words during encoding.** If the encoding function does a direct dictionary access without a fallback, it crashes with a KeyError on the first OOV word. The correct implementation uses `.get()` with the UNK ID as default.</span>\n\n* <span style=\"font-size: 14px;\">**Off-by-one in IDs after special tokens.** The first regular word must receive ID $4$, because IDs $0$ through $3$ are reserved. A common bug is starting enumeration at $0$, overwriting special token IDs. This causes collisions where a regular word shares an ID with PAD or UNK, silently corrupting all encoding.</span>\n\n* <span style=\"font-size: 14px;\">**Case sensitivity in the reverse mapping.** The `id_to_word` dictionary should map IDs to lowercased words. If built from original non-lowercased text, the round-trip property breaks: decode(encode(lowercase(text))) will not equal lowercase(text).</span>\n\n* <span style=\"font-size: 14px;\">**Treating special token strings as regular words.** If the training corpus contains literal strings like \"`<PAD>`\" or \"`<UNK>`\", they should not be added to the regular vocabulary a second time, or duplicate entries at different IDs make encoding ambiguous.</span>\n\n* <span style=\"font-size: 14px;\">**Assuming punctuation is handled.** Basic word-level tokenization splits only on whitespace. \"hello, world!\" produces [\"hello,\", \"world!\"], not [\"hello\", \",\", \"world\", \"!\"]. Punctuation-attached words become distinct vocabulary entries, causing unexpected bloat.</span>\n\n---",
+  "hints": [
+    "Insert the four special tokens before collecting ordinary words.",
+    "Use a set to collect lowercased whitespace-separated words, then sort it.",
+    "Use dictionary get with the UNK ID or token as the fallback."
+  ],
+  "constraints": "- texts is a list of strings.\n- encode returns a list of integers.\n- decode returns one space-separated string.\n- Valid inputs are guaranteed.",
+  "difficulty": "Medium",
+  "starterCode": "class SimpleTokenizer:\n    def __init__(self):\n        self.word_to_id = {}\n        self.id_to_word = {}\n        self.vocab_size = 0\n        self.pad_token = \"<PAD>\"\n        self.unk_token = \"<UNK>\"\n        self.bos_token = \"<BOS>\"\n        self.eos_token = \"<EOS>\"\n\n    def build_vocab(self, texts: list[str]) -> None:\n        \"\"\"\n        Builds the vocabulary in place.\n        \"\"\"\n        pass\n\n    def encode(self, text: str) -> list[int]:\n        \"\"\"\n        Returns token IDs for the input text.\n        \"\"\"\n        pass\n\n    def decode(self, ids: list[int]) -> str:\n        \"\"\"\n        Returns the decoded, space-separated text.\n        \"\"\"\n        pass",
+  "createdAt": "2026-01-02T22:12:25.836Z",
+  "updatedAt": "2026-04-16T22:33:10.390Z",
+  "topicId": "transformer-tokenization",
+  "paperSnippet": "\"Tokenization converts raw text into discrete tokens that can be processed by neural networks. In this work, we implement a word-level tokenizer that maps each word to a unique integer ID, along with special tokens for padding, unknown words, and sequence boundaries. While word-level tokenization is simple and interpretable, modern Transformer models typically rely on subword methods such as Byte-Pair Encoding (BPE) to balance vocabulary size and sequence length. The original Transformer model uses a shared sourceâtarget subword vocabulary of approximately 37K tokens, enabling efficient parameter sharing between embeddings and output projections\"",
+  "visualizationComponent": "TokenizationViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Tokenization** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nclass SimpleTokenizer:\n    def __init__(self):\n        self.word_to_id = {\"<PAD>\": 0, \"<UNK>\": 1, \"<BOS>\": 2, \"<EOS>\": 3}\n        self.id_to_word = {0: \"<PAD>\", 1: \"<UNK>\", 2: \"<BOS>\", 3: \"<EOS>\"}\n        self.vocab_size = 4\n        self.pad_token = \"<PAD>\"\n        self.unk_token = \"<UNK>\"\n        self.bos_token = \"<BOS>\"\n        self.eos_token = \"<EOS>\"\n        self.build_vocab([\"hello world\", \"this is a test\", \"hello test\"])\n\n    def build_vocab(self, texts: list[str]) -> None:\n        words = set()\n        for text in texts:\n            for w in text.lower().split():\n                if w not in self.word_to_id:\n                    words.add(w)\n        for w in sorted(words):\n            idx = len(self.word_to_id)\n            self.word_to_id[w] = idx\n            self.id_to_word[idx] = w\n        self.vocab_size = len(self.word_to_id)\n\n    def encode(self, text: str) -> list[int]:\n        unk_id = self.word_to_id[\"<UNK>\"]\n        return [self.word_to_id.get(w, unk_id) for w in text.lower().split()]\n\n    def decode(self, ids: list[int]) -> str:\n        return \" \".join([self.id_to_word.get(i, self.unk_token) for i in ids])\n\n_tok = SimpleTokenizer()\ndef encode(text: str) -> list[int]:\n    return _tok.encode(text)\n\ndef decode(ids: list[int]) -> str:\n    return _tok.decode(ids)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "public-1",
+      "name": "Encode known words",
+      "inputs": {
+        "text": "hello world"
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        5,
+        9
+      ]
+    },
+    {
+      "id": "public-2",
+      "name": "Encode unknown word",
+      "inputs": {
+        "text": "hello unknown"
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        5,
+        1
+      ]
+    },
+    {
+      "id": "public-3",
+      "name": "Encode all unknown",
+      "inputs": {
+        "text": "foo bar baz"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "text": "hello world"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        5,
+        9
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "text": "hello unknown"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        5,
+        1
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "text": "foo bar baz"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "text": "hello world"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        5,
+        9
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "text": "hello unknown"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        5,
+        1
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "text": "foo bar baz"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "text": "hello world"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        5,
+        9
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "text": "hello unknown"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        5,
+        1
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "text": "foo bar baz"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "text": "hello world"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        5,
+        9
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "text": "hello unknown"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        5,
+        1
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "text": "foo bar baz"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "text": "hello world"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        5,
+        9
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "text": "hello unknown"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        5,
+        1
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "text": "foo bar baz"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "text": "hello world"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        5,
+        9
+      ]
+    },
+    {
+      "id": "transformers-tokenization-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "text": "hello unknown"
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        5,
+        1
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "encode",
+    "parameters": [
+      {
+        "name": "text",
+        "type": "string",
+        "example": "hello world",
+        "description": "Text to encode"
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "transformer-tokenization",
+    "name": "Tokenization",
+    "description": "Convert text to token IDs",
+    "color": "#10b981"
+  },
+  "paper": {
+    "id": "transformer",
+    "title": "Attention Is All You Need",
+    "authors": "Vaswani et al., 2017",
+    "year": 2017,
+    "paperUrl": "https://arxiv.org/abs/1706.03762",
+    "visualizationComponent": "TransformerArchViz"
+  },
+  "navigation": {
+    "index": 1,
+    "total": 8,
+    "prev": null,
+    "next": "transformers-embedding"
+  },
+  "cleanTitle": ""
+}

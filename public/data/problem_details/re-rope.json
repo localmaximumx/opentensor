@@ -1,0 +1,467 @@
+{
+  "id": "re-rope",
+  "slug": "re-rope",
+  "title": "Rotary Position Embedding",
+  "cleanTitle": "Rotary Position Embedding",
+  "type": "code",
+  "difficulty": "Medium",
+  "category": "Assessment",
+  "tags": [
+    "Assessment",
+    "CODE",
+    "LLM Internals"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Apply rotary positional embeddings to adjacent feature pairs using position-dependent sinusoidal angles.",
+  "theory": "## Understanding the Theory: Rotary Position Embedding\n\n### Core Intuition: Why Do We Need This?\n**Rotary Position Embedding** forms a vital mathematical pillar within **LLM Internals**. In modern foundation models and frontier LLM architectures, computational efficiency, activation stability, and precise hardware memory alignment govern both pre-training scalability and low-latency autoregressive generation. Flaws in numerical precision or suboptimal tensor transformations can silently corrupt model weights or cause distributed training divergence.\n\nUnderstanding the core mechanics enables engineers to diagnose convergence anomalies, optimize memory layouts, and construct maintainable ML pipelines from first principles.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nR_{\\Theta, m}^d x = x \\odot \\cos(m \\theta) + \\tilde{x} \\odot \\sin(m \\theta)\n$$\n\nIn this formulation:\n* The input features and parameters are projected, normalized, or aggregated according to established algorithmic invariants.\n* Dimensional consistency is preserved across all tensor or matrix axes, ensuring mathematical validity.\n* Intermediate accumulators maintain numerical dynamic range to protect against floating-point anomalies.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Validate input array dimensions, check for empty sequences or invalid bounds, and convert inputs into contiguous buffers.\n2. **Phase 2: Core Algorithmic Transformation**: Execute the foundational mathematical logic using vectorized SIMD array operations or optimized iteration.\n3. **Phase 3: Aggregation & Normalization**: Compute required sums, projections, or ranking reductions while guarding against division by zero.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Format outputs into required data types and verify that returned numerical estimates adhere to expected precision thresholds.\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth & Cache Hierarchy**: High-throughput transformer operators must saturate hardware cache lines and minimize redundant memory reads between DRAM and fast register buffers.\n* **Numerical Stability & Gradient Flow**: Preventing floating-point cancellation, underflow in softmax exponents, and division by zero ensures smooth loss descent across billions of tokens.\n* **Inference Throughput**: Idempotent, stateless tensor updates allow distributed inference engines to execute asynchronous prefill and decoding iterations without race conditions.\n* **Algorithmic Complexity**: Operates with optimal asymptotic time and space complexity, ensuring minimal compute overhead.",
+  "examples": [
+    {
+      "inputArgs": [
+        [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        1
+      ],
+      "output": [
+        0.5403023058681398,
+        0.8414709848078965,
+        0.9999500004166653,
+        0.009999833334166664
+      ],
+      "explanation": "Illustrative small example for rotary position embedding."
+    }
+  ],
+  "requirements": [
+    "Implement the mathematical or algorithmic behavior described above.",
+    "Match the function signature and output structure in starterCode.",
+    "Handle boundary inputs and ties consistently with the supplied test cases."
+  ],
+  "hints": [
+    "Implement the small mathematical contract first; do not add production-only model machinery.",
+    "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+  ],
+  "constraints": [
+    "Inputs are small enough for a straightforward reference implementation.",
+    "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+    "Unless otherwise stated, dimensions must be consistent."
+  ],
+  "starterCode": "import math\ndef solve(x, position, theta=10000.0):\n    pass",
+  "solution": "### 💡 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### ⚡ Implementation\n```python\nimport math\ndef solve(x, position, theta=10000.0):\n    # x has even length; pairwise 2D rotation, frequency theta^(-2i/d)\n    d=len(x); out=[0.0]*d\n    for i in range(0,d,2):\n      freq=theta**(-i/d); a=position*freq; c=math.cos(a); s=math.sin(a)\n      out[i]=x[i]*c-x[i+1]*s; out[i+1]=x[i]*s+x[i+1]*c\n    return out\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
+  "testCases": [
+    {
+      "id": "case-1",
+      "name": "smoke test",
+      "inputs": {
+        "x": [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "position": 1
+      },
+      "expectedOutput": [
+        0.5403023058681398,
+        0.8414709848078965,
+        0.9999500004166653,
+        0.009999833334166664
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-2",
+      "name": "Case 2",
+      "inputs": {
+        "x": [
+          2.0,
+          0.0,
+          2.0,
+          0.0
+        ],
+        "position": 2
+      },
+      "expectedOutput": [
+        -0.8322936730942848,
+        1.8185948536513634,
+        1.9996000133331555,
+        0.03999733338666616
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          0.5,
+          0.0,
+          0.5,
+          0.0
+        ],
+        "position": 0
+      },
+      "expectedOutput": [
+        0.5,
+        0.0,
+        0.5,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          -1.0,
+          -0.0,
+          -1.0,
+          -0.0
+        ],
+        "position": -1
+      },
+      "expectedOutput": [
+        -0.5403023058681398,
+        0.8414709848078965,
+        -0.9999500004166653,
+        0.009999833334166664
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          3.0,
+          0.0,
+          3.0,
+          0.0
+        ],
+        "position": 3
+      },
+      "expectedOutput": [
+        -2.9699774898013365,
+        0.4233600241796016,
+        2.9986501012469624,
+        0.08998650060748697
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          2.0,
+          1.0,
+          2.0,
+          1.0
+        ],
+        "position": 2.0
+      },
+      "expectedOutput": [
+        -1.7415910999199666,
+        1.402448017104221,
+        1.9796013466398223,
+        1.0397973400532439
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          -1.0,
+          -2.0,
+          -1.0,
+          -2.0
+        ],
+        "position": -1.0
+      },
+      "expectedOutput": [
+        -2.2232442754839328,
+        -0.23913362692838303,
+        -1.0199496670849986,
+        -1.9899001674991639
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "position": 1
+      },
+      "expectedOutput": [
+        -0.8414709848078965,
+        0.5403023058681398,
+        -0.009999833334166664,
+        0.9999500004166653
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          -1.0,
+          -0.0,
+          -1.0,
+          -0.0
+        ],
+        "position": -1
+      },
+      "expectedOutput": [
+        -0.5403023058681398,
+        0.8414709848078965,
+        -0.9999500004166653,
+        0.009999833334166664
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          10.0,
+          0.0,
+          10.0,
+          0.0
+        ],
+        "position": 10
+      },
+      "expectedOutput": [
+        -8.390715290764524,
+        -5.440211108893697,
+        9.950041652780259,
+        0.9983341664682815
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          0.1,
+          0.0,
+          0.1,
+          0.0
+        ],
+        "position": 0
+      },
+      "expectedOutput": [
+        0.1,
+        0.0,
+        0.1,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          6.0,
+          5.0,
+          6.0,
+          5.0
+        ],
+        "position": 6.0
+      },
+      "expectedOutput": [
+        7.158099210896825,
+        3.1243584440582746,
+        5.689383207214002,
+        5.350786738552689
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          1.5,
+          0.0,
+          1.5,
+          0.0
+        ],
+        "position": 2
+      },
+      "expectedOutput": [
+        -0.6242202548207136,
+        1.3639461402385225,
+        1.4997000099998665,
+        0.02999800003999962
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          -2.0,
+          -0.0,
+          -2.0,
+          -0.0
+        ],
+        "position": -2
+      },
+      "expectedOutput": [
+        0.8322936730942848,
+        1.8185948536513634,
+        -1.9996000133331555,
+        0.03999733338666616
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          0.25,
+          0.0,
+          0.25,
+          0.0
+        ],
+        "position": 0
+      },
+      "expectedOutput": [
+        0.25,
+        0.0,
+        0.25,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          0.0,
+          -1.0,
+          0.0,
+          -1.0
+        ],
+        "position": 0.0
+      },
+      "expectedOutput": [
+        0.0,
+        -1.0,
+        0.0,
+        -1.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          4.0,
+          0.0,
+          4.0,
+          0.0
+        ],
+        "position": 4
+      },
+      "expectedOutput": [
+        -2.6145744834544478,
+        -3.027209981231713,
+        3.9968004266439117,
+        0.15995733674653664
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          0.75,
+          0.0,
+          0.75,
+          0.0
+        ],
+        "position": 1
+      },
+      "expectedOutput": [
+        0.4052267294011048,
+        0.6311032386059223,
+        0.749962500312499,
+        0.007499875000624998
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          5.0,
+          0.0,
+          5.0,
+          0.0
+        ],
+        "position": 5
+      },
+      "expectedOutput": [
+        1.4183109273161312,
+        -4.794621373315692,
+        4.993751301974831,
+        0.24989584635339165
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          11.0,
+          10.0,
+          11.0,
+          10.0
+        ],
+        "position": 11.0
+      },
+      "expectedOutput": [
+        10.048584743375594,
+        -10.95563529217723,
+        9.835734069151917,
+        11.147122288775892
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "solve",
+    "signature": "def solve(x, position, theta=10000.0):",
+    "returnType": "varies by problem; see example output"
+  },
+  "assessmentNames": [
+    "LLM Internals"
+  ],
+  "source": "assessment",
+  "sourceId": "assessment",
+  "updatedAt": "2026-03-01T00:00:00.000Z"
+}

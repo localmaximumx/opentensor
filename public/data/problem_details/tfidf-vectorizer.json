@@ -1,0 +1,919 @@
+{
+  "id": "tfidf-vectorizer",
+  "title": "Implement TF-IDF Vectorizer",
+  "description": "Build a TF-IDF representation from text documents. Convert text to lowercase, split on whitespace, and sort the unique vocabulary alphabetically.\n\n$$\n\\operatorname{tf}(t,d) = \\frac{\\operatorname{count}(t,d)}{|d|}\n$$\n\n$$\n\\operatorname{idf}(t) = \\log\\left(\\frac{N}{\\operatorname{df}(t)}\\right)\n$$\n\n$$\n\\operatorname{tfidf}(t,d) = \\operatorname{tf}(t,d)\\operatorname{idf}(t)\n$$\n\nHere, $t$ is a term, $d$ is a document, $|d|$ is its token count, $N$ is the number of documents, and $\\operatorname{df}(t)$ is the number of documents containing $t$. Return a dictionary with tfidf_matrix, a NumPy array of shape $(N,V)$, and vocabulary, the sorted list of $V$ terms.",
+  "seoDescription": "Build TF-IDF document vectors from token counts and inverse document frequency across a text corpus.",
+  "examples": [
+    "Input: documents = [\"the cat sat\", \"the cat ran\", \"the dog sat\"]\n\nOutput: {\"tfidf_matrix\": [[0.135155, 0.0, 0.0, 0.135155, 0.0], [0.135155, 0.0, 0.366204, 0.0, 0.0], [0.0, 0.366204, 0.0, 0.135155, 0.0]], \"vocabulary\": [\"cat\", \"dog\", \"ran\", \"sat\", \"the\"]}\n\nExplanation: The vocabulary fixes the column order, then every document receives one TF-IDF weight per vocabulary term.",
+    "Input: documents = [\"machine learning is great\", \"cooking pasta is fun\"]\n\nOutput: {\"tfidf_matrix\": [[0.0, 0.0, 0.173287, 0.0, 0.173287, 0.173287, 0.0], [0.173287, 0.173287, 0.0, 0.0, 0.0, 0.0, 0.173287]], \"vocabulary\": [\"cooking\", \"fun\", \"great\", \"is\", \"learning\", \"machine\", \"pasta\"]}"
+  ],
+  "requirements": "* Tokenize with lowercase conversion and whitespace splitting\n* Sort the unique vocabulary alphabetically\n* Use unsmoothed natural-log IDF\n* Return exactly tfidf_matrix and vocabulary in a dictionary\n* tfidf_matrix must be a NumPy array",
+  "theory": "## Understanding the Theory: Implement TF-IDF Vectorizer\n\n### Core Intuition: Why Do We Need This?\nLinear algebra is the foundational mathematical language of artificial intelligence. Image pixels, word embeddings, and hidden representations are all structured as multi-dimensional vectors and matrices. **Implement TF-IDF Vectorizer** allows machine learning practitioners to project representations into informative subspaces, rotate coordinate frames, or decompose complex transformations into simpler geometric building blocks.\n\nIn this problem, the objective is to implement **Implement TF-IDF Vectorizer** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\operatorname{tf}(t,d) = \\frac{\\operatorname{count}(t,d)}{|d|}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Dimensionality & Subspaces**: Orthogonal projections and low-rank factorizations compress massive feature vectors while preserving maximum variance.\n* **Condition Numbers & Inversion**: Inverting ill-conditioned matrices (matrices with near-zero determinants) causes numerical explosion; regularization (e.g. Ridge / Tikhonov) stabilizes these systems.\n* **Tensor Core Acceleration**: Modern hardware accelerators (GPUs and TPUs) are specialized matrix multiplication engines; formulating operations linearly maximizes throughput.",
+  "hints": [
+    "Use Counter(tokens) for term counts and Counter.update(set(tokens)) for document frequencies.",
+    "Create a token-to-column dictionary with enumerate(vocabulary).",
+    "Initialize the output with np.zeros((len(documents), len(vocabulary)))."
+  ],
+  "constraints": "* documents is a nonempty list of nonempty strings\n* The vocabulary contains at most $50{,}000$ terms\n* Use NumPy and the Python standard library only",
+  "difficulty": "Hard",
+  "starterCode": "import math\nfrom collections import Counter\nimport numpy as np\n\ndef tfidf_vectorizer(documents: list[str]) -> dict:\n    \"\"\"\n    Returns a dictionary with tfidf_matrix and vocabulary.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-10-30T23:00:02.228Z",
+  "updatedAt": "2026-03-05T20:47:30.374Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport math\nfrom collections import Counter\n\ndef tfidf_vectorizer(documents: list[str]) -> dict:\n    tokenized = [doc.lower().split() for doc in documents]\n    vocab = sorted(list(set(w for doc in tokenized for w in doc)))\n    N = len(documents)\n    df = Counter()\n    for doc in tokenized:\n        for w in set(doc):\n            df[w] += 1\n    matrix = []\n    for doc in tokenized:\n        counts = Counter(doc)\n        total = len(doc)\n        row = []\n        for w in vocab:\n            tf = counts[w] / total if total > 0 else 0.0\n            idf = math.log(N / df[w]) if df[w] > 0 else 0.0\n            row.append(round(tf * idf, 6))\n        matrix.append(row)\n    return {'tfidf_matrix': matrix, 'vocabulary': vocab}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "TfidfViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Basic 3 docs",
+      "inputs": {
+        "documents": [
+          "the cat sat",
+          "the cat ran",
+          "the dog sat"
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.135155,
+            0.0,
+            0.0,
+            0.135155,
+            0.0
+          ],
+          [
+            0.135155,
+            0.0,
+            0.366204,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.366204,
+            0.0,
+            0.135155,
+            0.0
+          ]
+        ],
+        "vocabulary": [
+          "cat",
+          "dog",
+          "ran",
+          "sat",
+          "the"
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Two distinct docs",
+      "inputs": {
+        "documents": [
+          "machine learning is great",
+          "cooking pasta is fun"
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.0,
+            0.0,
+            0.173287,
+            0.0,
+            0.173287,
+            0.173287,
+            0.0
+          ],
+          [
+            0.173287,
+            0.173287,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.173287
+          ]
+        ],
+        "vocabulary": [
+          "cooking",
+          "fun",
+          "great",
+          "is",
+          "learning",
+          "machine",
+          "pasta"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "documents": [
+          "the cat sat",
+          "the cat ran",
+          "the dog sat"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.135155,
+            0.0,
+            0.0,
+            0.135155,
+            0.0
+          ],
+          [
+            0.135155,
+            0.0,
+            0.366204,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.366204,
+            0.0,
+            0.135155,
+            0.0
+          ]
+        ],
+        "vocabulary": [
+          "cat",
+          "dog",
+          "ran",
+          "sat",
+          "the"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "documents": [
+          "machine learning is great",
+          "cooking pasta is fun"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.0,
+            0.0,
+            0.173287,
+            0.0,
+            0.173287,
+            0.173287,
+            0.0
+          ],
+          [
+            0.173287,
+            0.173287,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.173287
+          ]
+        ],
+        "vocabulary": [
+          "cooking",
+          "fun",
+          "great",
+          "is",
+          "learning",
+          "machine",
+          "pasta"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "documents": [
+          "the cat sat",
+          "the cat ran",
+          "the dog sat"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.135155,
+            0.0,
+            0.0,
+            0.135155,
+            0.0
+          ],
+          [
+            0.135155,
+            0.0,
+            0.366204,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.366204,
+            0.0,
+            0.135155,
+            0.0
+          ]
+        ],
+        "vocabulary": [
+          "cat",
+          "dog",
+          "ran",
+          "sat",
+          "the"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "documents": [
+          "machine learning is great",
+          "cooking pasta is fun"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.0,
+            0.0,
+            0.173287,
+            0.0,
+            0.173287,
+            0.173287,
+            0.0
+          ],
+          [
+            0.173287,
+            0.173287,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.173287
+          ]
+        ],
+        "vocabulary": [
+          "cooking",
+          "fun",
+          "great",
+          "is",
+          "learning",
+          "machine",
+          "pasta"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "documents": [
+          "the cat sat",
+          "the cat ran",
+          "the dog sat"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.135155,
+            0.0,
+            0.0,
+            0.135155,
+            0.0
+          ],
+          [
+            0.135155,
+            0.0,
+            0.366204,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.366204,
+            0.0,
+            0.135155,
+            0.0
+          ]
+        ],
+        "vocabulary": [
+          "cat",
+          "dog",
+          "ran",
+          "sat",
+          "the"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "documents": [
+          "machine learning is great",
+          "cooking pasta is fun"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.0,
+            0.0,
+            0.173287,
+            0.0,
+            0.173287,
+            0.173287,
+            0.0
+          ],
+          [
+            0.173287,
+            0.173287,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.173287
+          ]
+        ],
+        "vocabulary": [
+          "cooking",
+          "fun",
+          "great",
+          "is",
+          "learning",
+          "machine",
+          "pasta"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "documents": [
+          "the cat sat",
+          "the cat ran",
+          "the dog sat"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.135155,
+            0.0,
+            0.0,
+            0.135155,
+            0.0
+          ],
+          [
+            0.135155,
+            0.0,
+            0.366204,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.366204,
+            0.0,
+            0.135155,
+            0.0
+          ]
+        ],
+        "vocabulary": [
+          "cat",
+          "dog",
+          "ran",
+          "sat",
+          "the"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "documents": [
+          "machine learning is great",
+          "cooking pasta is fun"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.0,
+            0.0,
+            0.173287,
+            0.0,
+            0.173287,
+            0.173287,
+            0.0
+          ],
+          [
+            0.173287,
+            0.173287,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.173287
+          ]
+        ],
+        "vocabulary": [
+          "cooking",
+          "fun",
+          "great",
+          "is",
+          "learning",
+          "machine",
+          "pasta"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "documents": [
+          "the cat sat",
+          "the cat ran",
+          "the dog sat"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.135155,
+            0.0,
+            0.0,
+            0.135155,
+            0.0
+          ],
+          [
+            0.135155,
+            0.0,
+            0.366204,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.366204,
+            0.0,
+            0.135155,
+            0.0
+          ]
+        ],
+        "vocabulary": [
+          "cat",
+          "dog",
+          "ran",
+          "sat",
+          "the"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "documents": [
+          "machine learning is great",
+          "cooking pasta is fun"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.0,
+            0.0,
+            0.173287,
+            0.0,
+            0.173287,
+            0.173287,
+            0.0
+          ],
+          [
+            0.173287,
+            0.173287,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.173287
+          ]
+        ],
+        "vocabulary": [
+          "cooking",
+          "fun",
+          "great",
+          "is",
+          "learning",
+          "machine",
+          "pasta"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "documents": [
+          "the cat sat",
+          "the cat ran",
+          "the dog sat"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.135155,
+            0.0,
+            0.0,
+            0.135155,
+            0.0
+          ],
+          [
+            0.135155,
+            0.0,
+            0.366204,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.366204,
+            0.0,
+            0.135155,
+            0.0
+          ]
+        ],
+        "vocabulary": [
+          "cat",
+          "dog",
+          "ran",
+          "sat",
+          "the"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "documents": [
+          "machine learning is great",
+          "cooking pasta is fun"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.0,
+            0.0,
+            0.173287,
+            0.0,
+            0.173287,
+            0.173287,
+            0.0
+          ],
+          [
+            0.173287,
+            0.173287,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.173287
+          ]
+        ],
+        "vocabulary": [
+          "cooking",
+          "fun",
+          "great",
+          "is",
+          "learning",
+          "machine",
+          "pasta"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "documents": [
+          "the cat sat",
+          "the cat ran",
+          "the dog sat"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.135155,
+            0.0,
+            0.0,
+            0.135155,
+            0.0
+          ],
+          [
+            0.135155,
+            0.0,
+            0.366204,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.366204,
+            0.0,
+            0.135155,
+            0.0
+          ]
+        ],
+        "vocabulary": [
+          "cat",
+          "dog",
+          "ran",
+          "sat",
+          "the"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "documents": [
+          "machine learning is great",
+          "cooking pasta is fun"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.0,
+            0.0,
+            0.173287,
+            0.0,
+            0.173287,
+            0.173287,
+            0.0
+          ],
+          [
+            0.173287,
+            0.173287,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.173287
+          ]
+        ],
+        "vocabulary": [
+          "cooking",
+          "fun",
+          "great",
+          "is",
+          "learning",
+          "machine",
+          "pasta"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "documents": [
+          "the cat sat",
+          "the cat ran",
+          "the dog sat"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.135155,
+            0.0,
+            0.0,
+            0.135155,
+            0.0
+          ],
+          [
+            0.135155,
+            0.0,
+            0.366204,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.366204,
+            0.0,
+            0.135155,
+            0.0
+          ]
+        ],
+        "vocabulary": [
+          "cat",
+          "dog",
+          "ran",
+          "sat",
+          "the"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "documents": [
+          "machine learning is great",
+          "cooking pasta is fun"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.0,
+            0.0,
+            0.173287,
+            0.0,
+            0.173287,
+            0.173287,
+            0.0
+          ],
+          [
+            0.173287,
+            0.173287,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.173287
+          ]
+        ],
+        "vocabulary": [
+          "cooking",
+          "fun",
+          "great",
+          "is",
+          "learning",
+          "machine",
+          "pasta"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "documents": [
+          "the cat sat",
+          "the cat ran",
+          "the dog sat"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.135155,
+            0.0,
+            0.0,
+            0.135155,
+            0.0
+          ],
+          [
+            0.135155,
+            0.0,
+            0.366204,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.366204,
+            0.0,
+            0.135155,
+            0.0
+          ]
+        ],
+        "vocabulary": [
+          "cat",
+          "dog",
+          "ran",
+          "sat",
+          "the"
+        ]
+      }
+    },
+    {
+      "id": "tfidf-vectorizer-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "documents": [
+          "machine learning is great",
+          "cooking pasta is fun"
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "tfidf_matrix": [
+          [
+            0.0,
+            0.0,
+            0.173287,
+            0.0,
+            0.173287,
+            0.173287,
+            0.0
+          ],
+          [
+            0.173287,
+            0.173287,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.173287
+          ]
+        ],
+        "vocabulary": [
+          "cooking",
+          "fun",
+          "great",
+          "is",
+          "learning",
+          "machine",
+          "pasta"
+        ]
+      }
+    }
+  ],
+  "functionMetadata": {
+    "name": "tfidf_vectorizer",
+    "parameters": [
+      {
+        "name": "documents",
+        "type": "array",
+        "example": "[\"the cat sat\", \"the cat ran\", \"the dog sat\"]",
+        "description": "List of text documents (strings)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "bag-of-words",
+    "bleu-score",
+    "word-count-dict",
+    "bm25",
+    "cosine-similarity"
+  ],
+  "tags": [
+    "NLP",
+    "Linear Algebra",
+    "Feature Engineering"
+  ],
+  "prevId": "matrix-normalization",
+  "nextId": "bm25",
+  "slug": "tfidf-vectorizer",
+  "cleanTitle": "Implement TF-IDF Vectorizer",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/tfidf-vectorizer",
+  "localUrl": "http://localhost:3000/problems/tfidf-vectorizer",
+  "studyPlan": null
+}

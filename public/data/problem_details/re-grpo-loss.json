@@ -1,0 +1,383 @@
+{
+  "id": "re-grpo-loss",
+  "slug": "re-grpo-loss",
+  "title": "GRPO Clipped Surrogate Loss",
+  "cleanTitle": "GRPO Clipped Surrogate Loss",
+  "type": "code",
+  "difficulty": "Medium",
+  "category": "Assessment",
+  "tags": [
+    "Assessment",
+    "CODE",
+    "Post-Training and Alignment"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Compute the clipped GRPO policy surrogate objective from token/group advantages and the ratio between new and old policy probabilities.",
+  "theory": "## Understanding the Theory: GRPO Clipped Surrogate Loss\n\n### Core Intuition: Why Do We Need This?\n**GRPO Clipped Surrogate Loss** forms a vital mathematical pillar within **Post-Training and Alignment**. In modern foundation models and frontier LLM architectures, computational efficiency, activation stability, and precise hardware memory alignment govern both pre-training scalability and low-latency autoregressive generation. Flaws in numerical precision or suboptimal tensor transformations can silently corrupt model weights or cause distributed training divergence.\n\nUnderstanding the core mechanics enables engineers to diagnose convergence anomalies, optimize memory layouts, and construct maintainable ML pipelines from first principles.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\mathcal{L}_{\\text{GRPO}} = -\\frac{1}{G} \\sum_{i=1}^G \\min\\left( \\frac{\\pi_\\theta(o_i \\mid q)}{\\pi_{\\text{old}}(o_i \\mid q)} \\hat{A}_i, \\; \\text{clip}\\left(\\frac{\\pi_\\theta(o_i \\mid q)}{\\pi_{\\text{old}}(o_i \\mid q)}, 1-\\epsilon, 1+\\epsilon\\right) \\hat{A}_i \\right)\n$$\n\nIn this formulation:\n* The input features and parameters are projected, normalized, or aggregated according to established algorithmic invariants.\n* Dimensional consistency is preserved across all tensor or matrix axes, ensuring mathematical validity.\n* Intermediate accumulators maintain numerical dynamic range to protect against floating-point anomalies.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Validate input array dimensions, check for empty sequences or invalid bounds, and convert inputs into contiguous buffers.\n2. **Phase 2: Core Algorithmic Transformation**: Execute the foundational mathematical logic using vectorized SIMD array operations or optimized iteration.\n3. **Phase 3: Aggregation & Normalization**: Compute required sums, projections, or ranking reductions while guarding against division by zero.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Format outputs into required data types and verify that returned numerical estimates adhere to expected precision thresholds.\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth & Cache Hierarchy**: High-throughput transformer operators must saturate hardware cache lines and minimize redundant memory reads between DRAM and fast register buffers.\n* **Numerical Stability & Gradient Flow**: Preventing floating-point cancellation, underflow in softmax exponents, and division by zero ensures smooth loss descent across billions of tokens.\n* **Inference Throughput**: Idempotent, stateless tensor updates allow distributed inference engines to execute asynchronous prefill and decoding iterations without race conditions.\n* **Algorithmic Complexity**: Operates with optimal asymptotic time and space complexity, ensuring minimal compute overhead.",
+  "examples": [
+    {
+      "inputArgs": [
+        [
+          1.0,
+          -1.0
+        ],
+        [
+          1.2,
+          0.8
+        ]
+      ],
+      "output": -0.19999999999999996,
+      "explanation": "Illustrative small example for grpo clipped surrogate loss."
+    }
+  ],
+  "requirements": [
+    "Implement the mathematical or algorithmic behavior described above.",
+    "Match the function signature and output structure in starterCode.",
+    "Handle boundary inputs and ties consistently with the supplied test cases."
+  ],
+  "hints": [
+    "Implement the small mathematical contract first; do not add production-only model machinery.",
+    "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+  ],
+  "constraints": [
+    "Inputs are small enough for a straightforward reference implementation.",
+    "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+    "Unless otherwise stated, dimensions must be consistent."
+  ],
+  "starterCode": "def solve(advantages, ratios, eps=0.2):\n    pass",
+  "solution": "### 💡 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### ⚡ Implementation\n```python\ndef solve(advantages, ratios, eps=0.2):\n    return -sum(min(r*a, max(1-eps,min(1+eps,r))*a) for a,r in zip(advantages,ratios))/len(advantages)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
+  "testCases": [
+    {
+      "id": "case-1",
+      "name": "smoke test",
+      "inputs": {
+        "advantages": [
+          1.0,
+          -1.0
+        ],
+        "ratios": [
+          1.2,
+          0.8
+        ]
+      },
+      "expectedOutput": -0.19999999999999996,
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-2",
+      "name": "Case 2",
+      "inputs": {
+        "advantages": [
+          2.0,
+          -2.0
+        ],
+        "ratios": [
+          2.4,
+          1.6
+        ]
+      },
+      "expectedOutput": 0.40000000000000013,
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-3",
+      "name": "Case 3",
+      "inputs": {
+        "advantages": [
+          0.5,
+          -0.5
+        ],
+        "ratios": [
+          0.6,
+          0.4
+        ]
+      },
+      "expectedOutput": 0.05000000000000002,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-4",
+      "name": "Case 4",
+      "inputs": {
+        "advantages": [
+          -1.0,
+          1.0
+        ],
+        "ratios": [
+          -1.2,
+          -0.8
+        ]
+      },
+      "expectedOutput": 0.8,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-5",
+      "name": "Case 5",
+      "inputs": {
+        "advantages": [
+          3.0,
+          -3.0
+        ],
+        "ratios": [
+          3.6,
+          2.4
+        ]
+      },
+      "expectedOutput": 1.7999999999999998,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-6",
+      "name": "Case 6",
+      "inputs": {
+        "advantages": [
+          2.0,
+          0.0
+        ],
+        "ratios": [
+          2.2,
+          1.8
+        ]
+      },
+      "expectedOutput": -1.2,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-7",
+      "name": "Case 7",
+      "inputs": {
+        "advantages": [
+          -1.0,
+          -3.0
+        ],
+        "ratios": [
+          -0.8,
+          -1.2
+        ]
+      },
+      "expectedOutput": 1.6,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-8",
+      "name": "Case 8",
+      "inputs": {
+        "advantages": [
+          -1.0,
+          1.0
+        ],
+        "ratios": [
+          0.8,
+          1.2
+        ]
+      },
+      "expectedOutput": -0.19999999999999996,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-9",
+      "name": "Case 9",
+      "inputs": {
+        "advantages": [
+          -1.0,
+          1.0
+        ],
+        "ratios": [
+          -1.2,
+          -0.8
+        ]
+      },
+      "expectedOutput": 0.8,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-10",
+      "name": "Case 10",
+      "inputs": {
+        "advantages": [
+          10.0,
+          -10.0
+        ],
+        "ratios": [
+          12.0,
+          8.0
+        ]
+      },
+      "expectedOutput": 34.0,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-11",
+      "name": "Case 11",
+      "inputs": {
+        "advantages": [
+          0.1,
+          -0.1
+        ],
+        "ratios": [
+          0.12,
+          0.08
+        ]
+      },
+      "expectedOutput": 0.03400000000000001,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-12",
+      "name": "Case 12",
+      "inputs": {
+        "advantages": [
+          6.0,
+          4.0
+        ],
+        "ratios": [
+          6.2,
+          5.8
+        ]
+      },
+      "expectedOutput": -6.0,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-13",
+      "name": "Case 13",
+      "inputs": {
+        "advantages": [
+          1.5,
+          -1.5
+        ],
+        "ratios": [
+          1.8,
+          1.2
+        ]
+      },
+      "expectedOutput": -0.0,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-14",
+      "name": "Case 14",
+      "inputs": {
+        "advantages": [
+          -2.0,
+          2.0
+        ],
+        "ratios": [
+          -2.4,
+          -1.6
+        ]
+      },
+      "expectedOutput": 2.4000000000000004,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-15",
+      "name": "Case 15",
+      "inputs": {
+        "advantages": [
+          0.25,
+          -0.25
+        ],
+        "ratios": [
+          0.3,
+          0.2
+        ]
+      },
+      "expectedOutput": 0.0625,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-16",
+      "name": "Case 16",
+      "inputs": {
+        "advantages": [
+          0.0,
+          -2.0
+        ],
+        "ratios": [
+          0.19999999999999996,
+          -0.19999999999999996
+        ]
+      },
+      "expectedOutput": 0.8,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-17",
+      "name": "Case 17",
+      "inputs": {
+        "advantages": [
+          4.0,
+          -4.0
+        ],
+        "ratios": [
+          4.8,
+          3.2
+        ]
+      },
+      "expectedOutput": 4.0,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-18",
+      "name": "Case 18",
+      "inputs": {
+        "advantages": [
+          0.75,
+          -0.75
+        ],
+        "ratios": [
+          0.9,
+          0.6
+        ]
+      },
+      "expectedOutput": -0.03749999999999998,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-19",
+      "name": "Case 19",
+      "inputs": {
+        "advantages": [
+          5.0,
+          -5.0
+        ],
+        "ratios": [
+          6.0,
+          4.0
+        ]
+      },
+      "expectedOutput": 7.0,
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-20",
+      "name": "Case 20",
+      "inputs": {
+        "advantages": [
+          11.0,
+          9.0
+        ],
+        "ratios": [
+          11.2,
+          10.8
+        ]
+      },
+      "expectedOutput": -12.0,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "solve",
+    "signature": "def solve(advantages, ratios, eps=0.2):",
+    "returnType": "varies by problem; see example output"
+  },
+  "assessmentNames": [
+    "Post-Training and Alignment"
+  ],
+  "source": "assessment",
+  "sourceId": "assessment",
+  "updatedAt": "2026-03-01T00:00:00.000Z"
+}

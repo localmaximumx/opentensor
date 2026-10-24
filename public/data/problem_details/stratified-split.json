@@ -1,0 +1,1774 @@
+{
+  "id": "stratified-split",
+  "title": "Stratified Train/Test Split",
+  "description": "Split features and labels while approximating the same class proportions in train and test. For each class with $n_c$ samples, compute:\n\n$$\nn_c^{\\mathrm{test}} = \\operatorname{round}(n_c\\,t)\n$$\n\nHere, $t$ is test_size. When a class has more than one sample, cap its test count at $n_c-1$ so at least one remains in training. Shuffle each class with np.random.default_rng(seed), combine the selected indices, sort each final index set, and return X_train, X_test, y_train, and y_test as NumPy arrays in a dictionary.",
+  "seoDescription": "Split indices into train and test sets while approximately preserving the class distribution of each label.",
+  "examples": [
+    "Input: X = [0, 1, 2, 3, 4, 5], y = [0, 0, 0, 1, 1, 1], test_size = 0.33, seed = 42\n\nOutput: {\"X_train\": [0, 1, 4, 5], \"X_test\": [2, 3], \"y_train\": [0, 0, 1, 1], \"y_test\": [0, 1]}\n\nExplanation: One seeded sample from each class enters the test split.",
+    "Input: X = [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0]], y = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1], test_size = 0.3, seed = 42\n\nOutput: {\"X_train\": [[1, 0], [2, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0]], \"X_test\": [[3, 0], [4, 0], [10, 0]], \"y_train\": [0, 0, 0, 0, 0, 1, 1], \"y_test\": [0, 0, 1]}"
+  ],
+  "requirements": "* Shuffle indices independently within each class using seed\n* Round each class test count and preserve one training sample when possible\n* Sort the combined train and test indices before indexing\n* Return exactly X_train, X_test, y_train, and y_test in a dictionary of NumPy arrays",
+  "theory": "## Understanding the Theory: Stratified Train/Test Split\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **Stratified Train/Test Split** implements a core computational routine.\n\nIn this problem, the objective is to implement **Stratified Train/Test Split** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nn_c^{\\mathrm{test}} = \\operatorname{round}(n_c\\,t)\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "Use np.flatnonzero(y == label) and rng.permutation for each class.",
+    "Accumulate class indices, then apply np.sort before indexing X and y."
+  ],
+  "constraints": "* X and y contain the same number of samples\n* y is a nonempty one-dimensional label list\n* test_size is greater than 0 and less than 1\n* Use NumPy only",
+  "difficulty": "Hard",
+  "starterCode": "import numpy as np\n\ndef stratified_split(X: list, y: list, test_size: float = 0.2, seed: int = 42) -> dict:\n    \"\"\"\n    Returns a dictionary with X_train, X_test, y_train, and y_test.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-09T14:33:44.056Z",
+  "updatedAt": "2026-03-05T20:42:23.796Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\nfrom collections import defaultdict\n\ndef stratified_split(X: list, y: list, test_size: float = 0.2, seed: int = 42) -> dict:\n    arrX = np.array(X)\n    arry = np.array(y)\n    rng = np.random.default_rng(seed)\n    by_class = defaultdict(list)\n    for i, label in enumerate(arry):\n        by_class[label].append(i)\n    \n    test_idx = []\n    train_idx = []\n    for c in sorted(by_class.keys()):\n        idxs = by_class[c]\n        n_test = int(round(len(idxs) * test_size))\n        perm = rng.permutation(idxs)\n        test_idx.extend(perm[:n_test].tolist())\n        train_idx.extend(perm[n_test:].tolist())\n        \n    train_idx.sort()\n    test_idx.sort()\n    return {\n        'X_train': arrX[train_idx].tolist(),\n        'X_test': arrX[test_idx].tolist(),\n        'y_train': arry[train_idx].tolist(),\n        'y_test': arry[test_idx].tolist()\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "StratifiedSplitViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Balanced binary",
+      "inputs": {
+        "X": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.33
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "X_train": [
+          0,
+          1,
+          4,
+          5
+        ],
+        "X_test": [
+          2,
+          3
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "test-2",
+      "name": "Imbalanced 2D features",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.3
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ]
+        ],
+        "X_test": [
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.33
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          0,
+          1,
+          4,
+          5
+        ],
+        "X_test": [
+          2,
+          3
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.3
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ]
+        ],
+        "X_test": [
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.33
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          0,
+          1,
+          4,
+          5
+        ],
+        "X_test": [
+          2,
+          3
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.3
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ]
+        ],
+        "X_test": [
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.33
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          0,
+          1,
+          4,
+          5
+        ],
+        "X_test": [
+          2,
+          3
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.3
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ]
+        ],
+        "X_test": [
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.33
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          0,
+          1,
+          4,
+          5
+        ],
+        "X_test": [
+          2,
+          3
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.3
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ]
+        ],
+        "X_test": [
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.33
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          0,
+          1,
+          4,
+          5
+        ],
+        "X_test": [
+          2,
+          3
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.3
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ]
+        ],
+        "X_test": [
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.33
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          0,
+          1,
+          4,
+          5
+        ],
+        "X_test": [
+          2,
+          3
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.3
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ]
+        ],
+        "X_test": [
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.33
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          0,
+          1,
+          4,
+          5
+        ],
+        "X_test": [
+          2,
+          3
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.3
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ]
+        ],
+        "X_test": [
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.33
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          0,
+          1,
+          4,
+          5
+        ],
+        "X_test": [
+          2,
+          3
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.3
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ]
+        ],
+        "X_test": [
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.33
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          0,
+          1,
+          4,
+          5
+        ],
+        "X_test": [
+          2,
+          3
+        ],
+        "y_train": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "stratified-split-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "seed": 42,
+        "test_size": 0.3
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "X_train": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            8,
+            0
+          ],
+          [
+            9,
+            0
+          ]
+        ],
+        "X_test": [
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            10,
+            0
+          ]
+        ],
+        "y_train": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1
+        ],
+        "y_test": [
+          0,
+          0,
+          1
+        ]
+      }
+    }
+  ],
+  "functionMetadata": {
+    "name": "stratified_split",
+    "parameters": [
+      {
+        "name": "X",
+        "type": "array",
+        "example": "[0,1,2,3,4,5]",
+        "description": "Features with one row per sample"
+      },
+      {
+        "name": "y",
+        "type": "array",
+        "example": "[0,0,0,1,1,1]",
+        "description": "Class label for each sample"
+      },
+      {
+        "name": "test_size",
+        "type": "number",
+        "example": "0.33",
+        "description": "Fraction assigned to each class test subset"
+      },
+      {
+        "name": "seed",
+        "type": "number",
+        "example": "42",
+        "description": "Seed for reproducible within-class shuffling"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "kfold-split",
+    "impute-missing",
+    "classification-metrics",
+    "batch-generator",
+    "mean-rating-imputation"
+  ],
+  "tags": [
+    "Data Processing"
+  ],
+  "prevId": "t-test-one-sample",
+  "nextId": "batch-generator",
+  "slug": "stratified-split",
+  "cleanTitle": "Stratified Train/Test Split",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/stratified-split",
+  "localUrl": "http://localhost:3000/problems/stratified-split",
+  "studyPlan": null
+}

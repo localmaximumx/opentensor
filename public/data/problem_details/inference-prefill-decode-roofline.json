@@ -1,0 +1,395 @@
+{
+  "catalogId": "python:inference-prefill-decode-roofline",
+  "id": "inference-prefill-decode-roofline",
+  "sourceId": "inference-prefill-decode-roofline",
+  "slug": "inference-prefill-decode-roofline",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Analyze Prefill and Decode with the Roofline Model",
+  "difficulty": "Medium",
+  "tags": [
+    "Inference",
+    "GPU Programming"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-quantization",
+  "sortOrder": 749,
+  "seoDescription": "Analyze the prefill and decode phases of transformer inference using the roofline performance model.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Determine whether operational intensity places execution in memory-bandwidth-bound or compute-bound roofline regime.\n\nPrefill phase enjoys high operational intensity (compute-bound matrix multiplication), whereas autoregressive decoding processes tokens one-by-one (memory-bound).\n\n### Mathematical Formulation\n$$\nI = \\frac{\\text{FLOPs}}{\\text{Bytes}}, \\quad I_{\\text{ridge}} = \\frac{\\Pi_{\\text{peak}}}{\\beta_{\\text{mem}}}, \\quad P = \\min\\left(\\Pi_{\\text{peak}}, I \\cdot \\beta_{\\text{mem}}\\right)\n$$\n\n### Step-by-Step Implementation\n1. Compute arithmetic operational intensity FLOPs / Byte\n2. Determine hardware ridge point knee = peak_tflops / peak_bandwidth\n3. Classify bottleneck regime and evaluate maximum achievable TFLOPs\n\n### Returns\nDictionary with 'operational_intensity_flops_per_byte', 'ridge_point', 'is_compute_bound', and 'achievable_tflops'.",
+  "theory": "## Understanding the Theory: Analyze Prefill and Decode with the Roofline Model\n\n### Core Intuition: Why Do We Need This?\nRunning large AI models in production requires massive computing power. During text generation, memory bandwidth (fetching weights and past key-value caches from VRAM) is often the primary bottleneck rather than raw arithmetic compute. **Analyze Prefill and Decode with the Roofline Model** optimizes hardware efficiency, memory consumption, or request serving throughput.\n\nPrefill phase enjoys high operational intensity (compute-bound matrix multiplication), whereas autoregressive decoding processes tokens one-by-one (memory-bound). In this problem, the goal is to: determine whether operational intensity places execution in memory-bandwidth-bound or compute-bound roofline regime.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nI = \\frac{\\text{FLOPs}}{\\text{Bytes}}, \\quad I_{\\text{ridge}} = \\frac{\\Pi_{\\text{peak}}}{\\beta_{\\text{mem}}}, \\quad P = \\min\\left(\\Pi_{\\text{peak}}, I \\cdot \\beta_{\\text{mem}}\\right)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute arithmetic operational intensity FLOPs / Byte\n2. **Phase 2**: Determine hardware ridge point knee = peak_tflops / peak_bandwidth\n3. **Phase 3**: Classify bottleneck regime and evaluate maximum achievable TFLOPs\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth Bottleneck**: Quantizing weights to INT8 or INT4 cuts memory traffic in half or quarters, dramatically increasing token generation speeds.\n* **Serving Systems**: Dynamic batching and PagedAttention maximize GPU utilization by grouping requests arriving at different times.\n* **Latency vs. Throughput**: In production serving, systems engineers balance Time-To-First-Token (TTFT) against overall tokens-per-second throughput.",
+  "examples": [
+    "Input: flops = 1000000000000.0, memory_bytes = 1000000000.0, peak_tflops = 312.0, peak_mem_bandwidth_gb_s = 2039.0\n\nOutput: {\"operational_intensity_flops_per_byte\": 1000.0, \"ridge_point\": 153.02, \"is_compute_bound\": 1, \"achievable_tflops\": 312.0}\n\nExplanation: Evaluated inference_prefill_decode_roofline under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_prefill_decode_roofline`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_prefill_decode_roofline`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "def inference_prefill_decode_roofline(flops: float, memory_bytes: float, peak_tflops: float = 312.0, peak_mem_bandwidth_gb_s: float = 2039.0) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Analyze Prefill and Decode with the Roofline Model** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef inference_prefill_decode_roofline(flops: float, memory_bytes: float, peak_tflops: float = 312.0, peak_mem_bandwidth_gb_s: float = 2039.0) -> dict:\n    oi = flops / max(1e-12, memory_bytes)\n    ridge = (peak_tflops * 1e12) / (peak_mem_bandwidth_gb_s * 1e9)\n    comp_bound = oi >= ridge\n    achiev = min(peak_tflops, (oi * peak_mem_bandwidth_gb_s * 1e9) / 1e12)\n    return {'operational_intensity_flops_per_byte': round(float(oi), 2), 'ridge_point': round(float(ridge), 2), 'is_compute_bound': comp_bound, 'achievable_tflops': round(float(achiev), 2)}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Prefill high intensity",
+      "inputs": {
+        "flops": 1000000000000.0,
+        "memory_bytes": 1000000000.0,
+        "peak_tflops": 312.0,
+        "peak_mem_bandwidth_gb_s": 2039.0
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": 1,
+        "achievable_tflops": 312.0
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "flops": 2000000000000.0,
+        "memory_bytes": 2000000000.0,
+        "peak_tflops": 624.0,
+        "peak_mem_bandwidth_gb_s": 4078.0
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 624.0
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "flops": 500000000000.0,
+        "memory_bytes": 500000000.0,
+        "peak_tflops": 156.0,
+        "peak_mem_bandwidth_gb_s": 1019.5
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 156.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "flops": 1000000000001.0,
+        "memory_bytes": 1000000001.0,
+        "peak_tflops": 312.0,
+        "peak_mem_bandwidth_gb_s": 2039.0
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 312.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "flops": 1500000000000.0,
+        "memory_bytes": 1500000000.0,
+        "peak_tflops": 468.0,
+        "peak_mem_bandwidth_gb_s": 3058.5
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 468.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "flops": 3000000000000.0,
+        "memory_bytes": 3000000000.0,
+        "peak_tflops": 936.0,
+        "peak_mem_bandwidth_gb_s": 6117.0
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 936.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "flops": 250000000000.0,
+        "memory_bytes": 250000000.0,
+        "peak_tflops": 78.0,
+        "peak_mem_bandwidth_gb_s": 509.75
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 78.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "flops": 1000000000002.0,
+        "memory_bytes": 1000000002.0,
+        "peak_tflops": 624.0,
+        "peak_mem_bandwidth_gb_s": 4078.0
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 624.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "flops": 4000000000000.0,
+        "memory_bytes": 4000000000.0,
+        "peak_tflops": 1248.0,
+        "peak_mem_bandwidth_gb_s": 8156.0
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 1248.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "flops": 1000000000000.0,
+        "memory_bytes": 1000000000.0,
+        "peak_tflops": 312.0,
+        "peak_mem_bandwidth_gb_s": 2039.0
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 312.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "flops": 750000000000.0,
+        "memory_bytes": 750000000.0,
+        "peak_tflops": 234.0,
+        "peak_mem_bandwidth_gb_s": 1529.25
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 234.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "flops": 5000000000000.0,
+        "memory_bytes": 5000000000.0,
+        "peak_tflops": 1560.0,
+        "peak_mem_bandwidth_gb_s": 10195.0
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 1560.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "flops": 1000000000003.0,
+        "memory_bytes": 1000000003.0,
+        "peak_tflops": 936.0,
+        "peak_mem_bandwidth_gb_s": 6117.0
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 936.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "flops": 800000000000.0,
+        "memory_bytes": 800000000.0,
+        "peak_tflops": 249.60000000000002,
+        "peak_mem_bandwidth_gb_s": 1631.2
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 249.6
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "flops": 6000000000000.0,
+        "memory_bytes": 6000000000.0,
+        "peak_tflops": 1872.0,
+        "peak_mem_bandwidth_gb_s": 12234.0
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 1872.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "flops": 1000000000004.0,
+        "memory_bytes": 1000000004.0,
+        "peak_tflops": 1248.0,
+        "peak_mem_bandwidth_gb_s": 8156.0
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 1248.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "flops": 1200000000000.0,
+        "memory_bytes": 1200000000.0,
+        "peak_tflops": 374.4,
+        "peak_mem_bandwidth_gb_s": 2446.7999999999997
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 374.4
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "flops": 400000000000.0,
+        "memory_bytes": 400000000.0,
+        "peak_tflops": 124.80000000000001,
+        "peak_mem_bandwidth_gb_s": 815.6
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 124.8
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "flops": 8000000000000.0,
+        "memory_bytes": 8000000000.0,
+        "peak_tflops": 2496.0,
+        "peak_mem_bandwidth_gb_s": 16312.0
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 2496.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-prefill-decode-roofline-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "flops": 1000000000005.0,
+        "memory_bytes": 1000000005.0,
+        "peak_tflops": 1560.0,
+        "peak_mem_bandwidth_gb_s": 10195.0
+      },
+      "expectedOutput": {
+        "operational_intensity_flops_per_byte": 1000.0,
+        "ridge_point": 153.02,
+        "is_compute_bound": true,
+        "achievable_tflops": 1560.0
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_prefill_decode_roofline",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

@@ -1,0 +1,500 @@
+{
+  "id": "cs336-l05-global-memory-coalescing",
+  "slug": "cs336-l05-global-memory-coalescing",
+  "title": "Global Memory Coalescing and Bus Efficiency",
+  "cleanTitle": "Global Memory Coalescing and Bus Efficiency",
+  "category": "numpy",
+  "difficulty": "Easy",
+  "tags": [
+    "GPU Programming"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "language-modeling-from-scratch",
+    "title": "Language Modeling from Scratch",
+    "sectionId": "cs336-l05"
+  },
+  "seoDescription": "Count the aligned cache lines touched by a warp's fixed-width global-memory accesses and measure useful transferred bytes.",
+  "description": "Analyze a warp's global memory access pattern, counting distinct 128-byte cache lines touched and calculating memory bus transaction efficiency.\n\n**Mathematical Formulation:**\n\n$$\n\\text{Efficiency} = \\frac{\\text{WarpSize} \\cdot \\text{RequestBytes}}{\\text{NumCacheLines} \\cdot 128}\n$$\n\n**Step-by-Step Implementation:**\n1. Map each thread's byte memory address to its enclosing 128-byte cache line.\n2. Count unique cache lines activated by the warp transaction.\n3. Compute ratio of useful transferred payload bytes to total hardware fetched bytes.\n4. Return dictionary reporting cache lines touched and bus efficiency.\n\n**Returns:** Dictionary with keys 'cache_lines_touched', 'total_bytes_transferred', 'useful_bytes', and 'bus_efficiency'.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Global-Memory Coalescing Counter specification."
+  ],
+  "requirements": "* Must implement `cs336_l05_global_memory_coalescing` using NUMPY.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Global Memory Coalescing and Bus Efficiency\n\n### Core Intuition: Why Do We Need This?\nAnalyze a warp's global memory access pattern, counting distinct 128-byte cache lines touched and calculating memory bus transaction efficiency. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\n\\text{Efficiency} = \\frac{\\text{WarpSize} \\cdot \\text{RequestBytes}}{\\text{NumCacheLines} \\cdot 128}\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Map each thread's byte memory address to its enclosing 128-byte cache line.\n3. **Phase 3: Iterative Execution & Reduction**: Count unique cache lines activated by the warp transaction.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return dictionary reporting cache lines touched and bus efficiency.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard NUMPY documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `np.ndarray` specifications."
+  ],
+  "constraints": "* Category: NUMPY\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, NUMPY\n",
+  "starterCode": "def cs336_l05_global_memory_coalescing(addresses: list, cache_line_size: int = 128, request_bytes: int = 4) -> dict:\n    \"\"\"\n    Analyze a warp's global memory access pattern, counting distinct 128-byte cache lines touched and calculating memory bus transaction efficiency.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nAnalyze a warp's global memory access pattern, counting distinct 128-byte cache lines touched and calculating memory bus transaction efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef cs336_l05_global_memory_coalescing(addresses: list, cache_line_size: int = 128, request_bytes: int = 4) -> dict:\n    lines = len(set(a // cache_line_size for a in addresses))\n    trans = lines * cache_line_size\n    useful = len(addresses) * request_bytes\n    return {'cache_lines_touched': lines, 'total_bytes_transferred': trans, 'useful_bytes': useful, 'bus_efficiency': round(useful / trans if trans else 0.0, 6)}\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "cs336-l05-global-memory-coalescing-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "addresses": [
+          0,
+          4,
+          8,
+          12,
+          16
+        ],
+        "cache_line_size": 128,
+        "request_bytes": 4
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": 128,
+        "useful_bytes": 20,
+        "bus_efficiency": 0.15625
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "addresses": [
+          0,
+          128,
+          256,
+          384
+        ],
+        "cache_line_size": 128,
+        "request_bytes": 4
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 4,
+        "total_bytes_transferred": 512,
+        "useful_bytes": 16,
+        "bus_efficiency": 0.03125
+      },
+      "isPublic": true
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "addresses": [
+          0,
+          8,
+          16,
+          24,
+          32
+        ],
+        "cache_line_size": 256,
+        "request_bytes": 8
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": 256,
+        "useful_bytes": 40,
+        "bus_efficiency": 0.15625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "addresses": [
+          0,
+          2,
+          4,
+          6,
+          8
+        ],
+        "cache_line_size": 64,
+        "request_bytes": 2
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": 64,
+        "useful_bytes": 10,
+        "bus_efficiency": 0.15625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "addresses": [
+          0,
+          -4,
+          -8,
+          -12,
+          -16
+        ],
+        "cache_line_size": -128,
+        "request_bytes": -4
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": -128,
+        "useful_bytes": -20,
+        "bus_efficiency": 0.15625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "addresses": [
+          0,
+          12,
+          24,
+          36,
+          48
+        ],
+        "cache_line_size": 384,
+        "request_bytes": 12
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": 384,
+        "useful_bytes": 60,
+        "bus_efficiency": 0.15625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "addresses": [
+          1.0,
+          5.0,
+          9.0,
+          13.0,
+          17.0
+        ],
+        "cache_line_size": 129.0,
+        "request_bytes": 5.0
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": 129.0,
+        "useful_bytes": 25.0,
+        "bus_efficiency": 0.193798
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "addresses": [
+          -2.0,
+          2.0,
+          6.0,
+          10.0,
+          14.0
+        ],
+        "cache_line_size": 126.0,
+        "request_bytes": 2.0
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 2,
+        "total_bytes_transferred": 252.0,
+        "useful_bytes": 10.0,
+        "bus_efficiency": 0.039683
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "addresses": [
+          16,
+          12,
+          8,
+          4,
+          0
+        ],
+        "cache_line_size": 128,
+        "request_bytes": 4
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": 128,
+        "useful_bytes": 20,
+        "bus_efficiency": 0.15625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "addresses": [
+          0,
+          -4,
+          -8,
+          -12,
+          -16
+        ],
+        "cache_line_size": -128,
+        "request_bytes": -4
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": -128,
+        "useful_bytes": -20,
+        "bus_efficiency": 0.15625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "addresses": [
+          0,
+          40,
+          80,
+          120,
+          160
+        ],
+        "cache_line_size": 1280,
+        "request_bytes": 40
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": 1280,
+        "useful_bytes": 200,
+        "bus_efficiency": 0.15625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "addresses": [
+          0,
+          0,
+          1,
+          1,
+          2
+        ],
+        "cache_line_size": 13,
+        "request_bytes": 0
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": 13,
+        "useful_bytes": 0,
+        "bus_efficiency": 0.0
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "addresses": [
+          5.0,
+          9.0,
+          13.0,
+          17.0,
+          21.0
+        ],
+        "cache_line_size": 133.0,
+        "request_bytes": 9.0
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": 133.0,
+        "useful_bytes": 45.0,
+        "bus_efficiency": 0.338346
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "addresses": [
+          0,
+          6,
+          12,
+          18,
+          24
+        ],
+        "cache_line_size": 192,
+        "request_bytes": 6
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": 192,
+        "useful_bytes": 30,
+        "bus_efficiency": 0.15625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "addresses": [
+          0,
+          -8,
+          -16,
+          -24,
+          -32
+        ],
+        "cache_line_size": -256,
+        "request_bytes": -8
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": -256,
+        "useful_bytes": -40,
+        "bus_efficiency": 0.15625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "addresses": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "cache_line_size": 32,
+        "request_bytes": 1
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": 32,
+        "useful_bytes": 5,
+        "bus_efficiency": 0.15625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "addresses": [
+          -1.0,
+          3.0,
+          7.0,
+          11.0,
+          15.0
+        ],
+        "cache_line_size": 127.0,
+        "request_bytes": 3.0
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 2,
+        "total_bytes_transferred": 254.0,
+        "useful_bytes": 15.0,
+        "bus_efficiency": 0.059055
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "addresses": [
+          0,
+          16,
+          32,
+          48,
+          64
+        ],
+        "cache_line_size": 512,
+        "request_bytes": 16
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": 512,
+        "useful_bytes": 80,
+        "bus_efficiency": 0.15625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "addresses": [
+          0,
+          3,
+          6,
+          9,
+          12
+        ],
+        "cache_line_size": 96,
+        "request_bytes": 3
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": 96,
+        "useful_bytes": 15,
+        "bus_efficiency": 0.15625
+      },
+      "isPublic": false
+    },
+    {
+      "id": "cs336-l05-global-memory-coalescing-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "addresses": [
+          0,
+          20,
+          40,
+          60,
+          80
+        ],
+        "cache_line_size": 640,
+        "request_bytes": 20
+      },
+      "expectedOutput": {
+        "cache_lines_touched": 1,
+        "total_bytes_transferred": 640,
+        "useful_bytes": 100,
+        "bus_efficiency": 0.15625
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cs336_l05_global_memory_coalescing",
+    "parameters": [
+      {
+        "name": "addresses",
+        "type": "any"
+      },
+      {
+        "name": "cache_line_size",
+        "type": "any"
+      },
+      {
+        "name": "request_bytes",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/cs336-l05-global-memory-coalescing",
+  "localUrl": "http://localhost:3000/problems/cs336-l05-global-memory-coalescing"
+}

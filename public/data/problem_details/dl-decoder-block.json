@@ -1,0 +1,835 @@
+{
+  "catalogId": "python:dl-decoder-block",
+  "id": "dl-decoder-block",
+  "sourceId": "dl-decoder-block",
+  "slug": "dl-decoder-block",
+  "source": "python",
+  "category": "numpy",
+  "title": "Transformer Decoder Block",
+  "difficulty": "Hard",
+  "tags": [
+    "Neural Networks",
+    "Transformers"
+  ],
+  "isFree": false,
+  "planId": "cracking-dl",
+  "planTitle": "Cracking Deep Learning",
+  "sectionId": "cracking-dl-transformers",
+  "sortOrder": 564,
+  "seoDescription": "Implement a NumPy Transformer decoder block with masked self-attention, cross-attention, and feed-forward layers.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Compute forward pass of transformer decoder layer featuring autoregressive causal masking and encoder-decoder cross-attention.\n\nCausal masking sets attention scores of future positions to -inf, ensuring position i cannot attend to positions j > i during autoregressive generation.\n\n### Mathematical Formulation\n$$\n\\mathbf{h}_1 = \\mathbf{x} + \\text{CausalSelfAttn}(\\mathbf{x}), \\quad \\mathbf{h}_2 = \\mathbf{h}_1 + \\text{CrossAttn}(\\mathbf{h}_1, \\mathbf{M})\n$$\n\n### Step-by-Step Implementation\n1. Apply causally masked self-attention to input sequence x and add residual connection\n2. Apply cross-attention attending to encoder memory M and add residual connection\n3. Return activated representation matrix rounded to 4 decimal places\n\n### Returns\nNested 2D list of shape (N, D) representing decoder block activations.",
+  "theory": "## Understanding the Theory: Transformer Decoder Block\n\n### Core Intuition: Why Do We Need This?\nNeural networks achieve their remarkable expressive power by stacking linear layers interspersed with non-linear activation functions and normalization layers. Without non-linear activations, any deep network would collapse into a single shallow linear regression. **Transformer Decoder Block** ensures signals propagate cleanly through dozens or hundreds of layers without vanishing or exploding.\n\nCausal masking sets attention scores of future positions to -inf, ensuring position i cannot attend to positions j > i during autoregressive generation. In this problem, the goal is to: compute forward pass of transformer decoder layer featuring autoregressive causal masking and encoder-decoder cross-attention.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\mathbf{h}_1 = \\mathbf{x} + \\text{CausalSelfAttn}(\\mathbf{x}), \\quad \\mathbf{h}_2 = \\mathbf{h}_1 + \\text{CrossAttn}(\\mathbf{h}_1, \\mathbf{M})\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Apply causally masked self-attention to input sequence x and add residual connection\n2. **Phase 2**: Apply cross-attention attending to encoder memory M and add residual connection\n3. **Phase 3**: Return activated representation matrix rounded to 4 decimal places\n\n### Practical Machine Learning Applications & Nuances\n* **Gradient Flow**: Carefully designed activation functions (like ReLU, GELU, and Swish) maintain strong gradient signals during backpropagation.\n* **Internal Covariate Shift**: Normalization techniques (like LayerNorm and RMSNorm) standardize hidden states across channels or batch dimensions, allowing models to train stably at higher learning rates.\n* **Hardware Friendly**: Modern deep learning frameworks implement these layers using fused GPU kernels to reduce memory round-trips.",
+  "examples": [
+    "Input: x = [[1.0, 0.0], [0.5, 0.5]], memory = [[1.0, 1.0], [0.0, 2.0]], W_mask_qkv = null, W_cross_qkv = null\n\nOutput: [[2.8044, 1.1956], [1.8375, 2.1625]]\n\nExplanation: Evaluated dl_decoder_block under standard test conditions."
+  ],
+  "requirements": "* Function must be named `dl_decoder_block`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `dl_decoder_block`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import torch, math\n\ndef dl_decoder_block(x: list, memory: list, W_mask_qkv: list = None, W_cross_qkv: list = None) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Transformer Decoder Block** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch, math\n\ndef dl_decoder_block(x: list, memory: list, W_mask_qkv: list = None, W_cross_qkv: list = None) -> list:\n    t_x, t_mem = torch.tensor(x, dtype=torch.float32), torch.tensor(memory, dtype=torch.float32)\n    N, D = t_x.shape\n    i = torch.arange(N).unsqueeze(1)\n    j = torch.arange(N).unsqueeze(0)\n    mask = torch.where(j > i, float('-inf'), 0.0)\n    h1 = t_x + torch.matmul(torch.softmax(torch.matmul(t_x, t_x.transpose(-2, -1)) / math.sqrt(D) + mask, dim=-1), t_x)\n    h2 = h1 + torch.matmul(torch.softmax(torch.matmul(h1, t_mem.transpose(-2, -1)) / math.sqrt(D), dim=-1), t_mem)\n    return torch.round(h2, decimals=4).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "2 decoder tokens, 2 encoder tokens",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "memory": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          2.8044,
+          1.1956
+        ],
+        [
+          1.8375,
+          2.1625
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "dl-decoder-block-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "x": [
+          [
+            2.0,
+            0.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "memory": [
+          [
+            2.0,
+            2.0
+          ],
+          [
+            0.0,
+            4.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          5.993000030517578,
+          2.006999969482422
+        ],
+        [
+          4.10890007019043,
+          3.8910999298095703
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "dl-decoder-block-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          [
+            0.5,
+            0.0
+          ],
+          [
+            0.25,
+            0.25
+          ]
+        ],
+        "memory": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          1.2936999797821045,
+          0.7063000202178955
+        ],
+        [
+          0.8859999775886536,
+          1.1139999628067017
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.5,
+            -0.5
+          ]
+        ],
+        "memory": [
+          [
+            -1.0,
+            -1.0
+          ],
+          [
+            -0.0,
+            -2.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          -2.8043999671936035,
+          -1.1956000328063965
+        ],
+        [
+          -1.837499976158142,
+          -2.1624999046325684
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            3.0,
+            0.0
+          ],
+          [
+            1.5,
+            1.5
+          ]
+        ],
+        "memory": [
+          [
+            3.0,
+            3.0
+          ],
+          [
+            0.0,
+            6.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          9.0,
+          3.0
+        ],
+        [
+          6.630499839782715,
+          5.369500160217285
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            2.0,
+            1.0
+          ],
+          [
+            1.5,
+            1.5
+          ]
+        ],
+        "memory": [
+          [
+            2.0,
+            2.0
+          ],
+          [
+            1.0,
+            3.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          5.8043999671936035,
+          4.1956000328063965
+        ],
+        [
+          4.837500095367432,
+          5.162499904632568
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            -2.0
+          ],
+          [
+            -1.5,
+            -1.5
+          ]
+        ],
+        "memory": [
+          [
+            -1.0,
+            -1.0
+          ],
+          [
+            -2.0,
+            0.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          -3.1956000328063965,
+          -4.8043999671936035
+        ],
+        [
+          -4.162499904632568,
+          -3.8375000953674316
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "memory": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            0.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          1.1956000328063965,
+          2.8043999671936035
+        ],
+        [
+          2.1624999046325684,
+          1.837499976158142
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.5,
+            -0.5
+          ]
+        ],
+        "memory": [
+          [
+            -1.0,
+            -1.0
+          ],
+          [
+            -0.0,
+            -2.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          -2.8043999671936035,
+          -1.1956000328063965
+        ],
+        [
+          -1.837499976158142,
+          -2.1624999046325684
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            10.0,
+            0.0
+          ],
+          [
+            5.0,
+            5.0
+          ]
+        ],
+        "memory": [
+          [
+            10.0,
+            10.0
+          ],
+          [
+            0.0,
+            20.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          30.0,
+          10.0
+        ],
+        [
+          22.5,
+          17.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            0.1,
+            0.0
+          ],
+          [
+            0.05,
+            0.05
+          ]
+        ],
+        "memory": [
+          [
+            0.1,
+            0.1
+          ],
+          [
+            0.0,
+            0.2
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          0.25040000677108765,
+          0.14959999918937683
+        ],
+        [
+          0.17509999871253967,
+          0.2249000072479248
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            6.0,
+            5.0
+          ],
+          [
+            5.5,
+            5.5
+          ]
+        ],
+        "memory": [
+          [
+            6.0,
+            6.0
+          ],
+          [
+            5.0,
+            7.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          17.804399490356445,
+          16.195600509643555
+        ],
+        [
+          16.837499618530273,
+          17.162500381469727
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            1.5,
+            0.0
+          ],
+          [
+            0.75,
+            0.75
+          ]
+        ],
+        "memory": [
+          [
+            1.5,
+            1.5
+          ],
+          [
+            0.0,
+            3.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          4.440199851989746,
+          1.5598000288009644
+        ],
+        [
+          2.9084999561309814,
+          3.0915000438690186
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            -2.0,
+            -0.0
+          ],
+          [
+            -1.0,
+            -1.0
+          ]
+        ],
+        "memory": [
+          [
+            -2.0,
+            -2.0
+          ],
+          [
+            -0.0,
+            -4.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          -5.993000030517578,
+          -2.006999969482422
+        ],
+        [
+          -4.10890007019043,
+          -3.8910999298095703
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            0.25,
+            0.0
+          ],
+          [
+            0.125,
+            0.125
+          ]
+        ],
+        "memory": [
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.0,
+            0.5
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          0.6305000185966492,
+          0.3695000112056732
+        ],
+        [
+          0.4388999938964844,
+          0.5611000061035156
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            0.0,
+            -1.0
+          ],
+          [
+            -0.5,
+            -0.5
+          ]
+        ],
+        "memory": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            -1.0,
+            1.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          -0.1956000030040741,
+          -1.8043999671936035
+        ],
+        [
+          -1.162500023841858,
+          -0.8374999761581421
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            4.0,
+            0.0
+          ],
+          [
+            2.0,
+            2.0
+          ]
+        ],
+        "memory": [
+          [
+            4.0,
+            4.0
+          ],
+          [
+            0.0,
+            8.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          4.0
+        ],
+        [
+          8.986100196838379,
+          7.013899803161621
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            0.75,
+            0.0
+          ],
+          [
+            0.375,
+            0.375
+          ]
+        ],
+        "memory": [
+          [
+            0.75,
+            0.75
+          ],
+          [
+            0.0,
+            1.5
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          2.0167999267578125,
+          0.9832000136375427
+        ],
+        [
+          1.3496999740600586,
+          1.6503000259399414
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            5.0,
+            0.0
+          ],
+          [
+            2.5,
+            2.5
+          ]
+        ],
+        "memory": [
+          [
+            5.0,
+            5.0
+          ],
+          [
+            0.0,
+            10.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          15.0,
+          5.0
+        ],
+        [
+          11.249300003051758,
+          8.750699996948242
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dl-decoder-block-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            11.0,
+            10.0
+          ],
+          [
+            10.5,
+            10.5
+          ]
+        ],
+        "memory": [
+          [
+            11.0,
+            11.0
+          ],
+          [
+            10.0,
+            12.0
+          ]
+        ],
+        "W_mask_qkv": null,
+        "W_cross_qkv": null
+      },
+      "expectedOutput": [
+        [
+          32.80440139770508,
+          31.195600509643555
+        ],
+        [
+          31.837499618530273,
+          32.162498474121094
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "dl_decoder_block",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

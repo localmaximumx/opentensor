@@ -1,0 +1,938 @@
+{
+  "catalogId": "python:inference-groupwise-int4-quantization",
+  "id": "inference-groupwise-int4-quantization",
+  "sourceId": "inference-groupwise-int4-quantization",
+  "slug": "inference-groupwise-int4-quantization",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Implement Group-Wise INT4 Quantization",
+  "difficulty": "Hard",
+  "tags": [
+    "Quantization",
+    "Inference",
+    "GPU Programming"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-quantization",
+  "sortOrder": 31,
+  "seoDescription": "Quantize two-dimensional weights in contiguous groups with signed INT4 values and one scale per group.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Quantize flat weight vectors in contiguous groups to signed INT4 values with per-group scales.\n\nGroup-wise quantization confines outlier values to individual blocks, preserving LLM attention and MLP layer quality.\n\n### Mathematical Formulation\n$$\ns_g = \\frac{\\max |w_g|}{7}, \\quad q_i = \\operatorname{clip}\\left(\\operatorname{round}\\left(\\frac{w_i}{s_g}\\right), -8, 7\\right)\n$$\n\n### Step-by-Step Implementation\n1. Partition flat weights into groups of size G\n2. Compute scale factor s_g = max(|w|)/7 for each group\n3. Clamp quantized values to [-8, 7] and dequantize\n\n### Returns\nDictionary with 'quantized', 'scales', and 'dequantized'.",
+  "theory": "## Understanding the Theory: Implement Group-Wise INT4 Quantization\n\n### Core Intuition: Why Do We Need This?\nRunning large AI models in production requires massive computing power. During text generation, memory bandwidth (fetching weights and past key-value caches from VRAM) is often the primary bottleneck rather than raw arithmetic compute. **Implement Group-Wise INT4 Quantization** optimizes hardware efficiency, memory consumption, or request serving throughput.\n\nGroup-wise quantization confines outlier values to individual blocks, preserving LLM attention and MLP layer quality. In this problem, the goal is to: quantize flat weight vectors in contiguous groups to signed int4 values with per-group scales.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\ns_g = \\frac{\\max |w_g|}{7}, \\quad q_i = \\operatorname{clip}\\left(\\operatorname{round}\\left(\\frac{w_i}{s_g}\\right), -8, 7\\right)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Partition flat weights into groups of size G\n2. **Phase 2**: Compute scale factor s_g = max(|w|)/7 for each group\n3. **Phase 3**: Clamp quantized values to [-8, 7] and dequantize\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth Bottleneck**: Quantizing weights to INT8 or INT4 cuts memory traffic in half or quarters, dramatically increasing token generation speeds.\n* **Serving Systems**: Dynamic batching and PagedAttention maximize GPU utilization by grouping requests arriving at different times.\n* **Latency vs. Throughput**: In production serving, systems engineers balance Time-To-First-Token (TTFT) against overall tokens-per-second throughput.",
+  "examples": [
+    "Input: weights = [0.7, -0.35, 0.0, 0.14, 2.8, -1.4, 0.0, 0.7], group_size = 4\n\nOutput: {\"quantized\": [7, -4, 0, 1, 7, -4, 0, 2], \"scales\": [0.1, 0.4], \"dequantized\": [0.7, -0.4, 0.0, 0.1, 2.8, -1.6, 0.0, 0.8]}\n\nExplanation: Evaluated inference_groupwise_int4_quantization under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_groupwise_int4_quantization`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_groupwise_int4_quantization`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef inference_groupwise_int4_quantization(weights: list, group_size: int = 4) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Implement Group-Wise INT4 Quantization** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef inference_groupwise_int4_quantization(weights: list, group_size: int = 4) -> dict:\n    w = np.array(weights, dtype=np.float64).flatten()\n    gs = int(group_size)\n    num_groups = int(np.ceil(len(w) / gs))\n    scales, quantized, dequant = [], [], []\n    for g in range(num_groups):\n        grp = w[g*gs : (g+1)*gs]\n        sc = max(float(np.max(np.abs(grp)) / 7.0), 1e-8)\n        q = np.clip(np.round(grp / sc), -8, 7).astype(int)\n        scales.append(round(sc, 6))\n        quantized.extend(q.tolist())\n        dequant.extend(np.round(q * sc, 6).tolist())\n    return {'quantized': quantized, 'scales': scales, 'dequantized': dequant}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "8 weights group size 4",
+      "inputs": {
+        "weights": [
+          0.7,
+          -0.35,
+          0.0,
+          0.14,
+          2.8,
+          -1.4,
+          0.0,
+          0.7
+        ],
+        "group_size": 4
+      },
+      "expectedOutput": {
+        "quantized": [
+          7,
+          -4,
+          0,
+          1,
+          7,
+          -4,
+          0,
+          2
+        ],
+        "scales": [
+          0.1,
+          0.4
+        ],
+        "dequantized": [
+          0.7,
+          -0.4,
+          0.0,
+          0.1,
+          2.8,
+          -1.6,
+          0.0,
+          0.8
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "weights": [
+          1.4,
+          -0.7,
+          0.0,
+          0.28,
+          5.6,
+          -2.8,
+          0.0,
+          1.4
+        ],
+        "group_size": 8
+      },
+      "expectedOutput": {
+        "quantized": [
+          2,
+          -1,
+          0,
+          0,
+          7,
+          -4,
+          0,
+          2
+        ],
+        "scales": [
+          0.8
+        ],
+        "dequantized": [
+          1.6,
+          -0.8,
+          0.0,
+          0.0,
+          5.6,
+          -3.2,
+          0.0,
+          1.6
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "weights": [
+          0.35,
+          -0.175,
+          0.0,
+          0.07,
+          1.4,
+          -0.7,
+          0.0,
+          0.35
+        ],
+        "group_size": 2
+      },
+      "expectedOutput": {
+        "quantized": [
+          7,
+          -4,
+          0,
+          7,
+          7,
+          -4,
+          0,
+          7
+        ],
+        "scales": [
+          0.05,
+          0.01,
+          0.2,
+          0.05
+        ],
+        "dequantized": [
+          0.35,
+          -0.2,
+          0.0,
+          0.07,
+          1.4,
+          -0.8,
+          0.0,
+          0.35
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "weights": [
+          1.7,
+          0.65,
+          1.0,
+          1.14,
+          3.8,
+          -0.4,
+          1.0,
+          1.7
+        ],
+        "group_size": 4
+      },
+      "expectedOutput": {
+        "quantized": [
+          7,
+          3,
+          4,
+          5,
+          7,
+          -1,
+          2,
+          3
+        ],
+        "scales": [
+          0.242857,
+          0.542857
+        ],
+        "dequantized": [
+          1.7,
+          0.728571,
+          0.971429,
+          1.214286,
+          3.8,
+          -0.542857,
+          1.085714,
+          1.628571
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "weights": [
+          1.05,
+          -0.525,
+          0.0,
+          0.21,
+          4.2,
+          -2.1,
+          0.0,
+          1.05
+        ],
+        "group_size": 6
+      },
+      "expectedOutput": {
+        "quantized": [
+          2,
+          -1,
+          0,
+          0,
+          7,
+          -4,
+          0,
+          7
+        ],
+        "scales": [
+          0.6,
+          0.15
+        ],
+        "dequantized": [
+          1.2,
+          -0.6,
+          0.0,
+          0.0,
+          4.2,
+          -2.4,
+          0.0,
+          1.05
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "weights": [
+          2.1,
+          -1.05,
+          0.0,
+          0.42,
+          8.4,
+          -4.2,
+          0.0,
+          2.1
+        ],
+        "group_size": 12
+      },
+      "expectedOutput": {
+        "quantized": [
+          2,
+          -1,
+          0,
+          0,
+          7,
+          -4,
+          0,
+          2
+        ],
+        "scales": [
+          1.2
+        ],
+        "dequantized": [
+          2.4,
+          -1.2,
+          0.0,
+          0.0,
+          8.4,
+          -4.8,
+          0.0,
+          2.4
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "weights": [
+          0.175,
+          -0.0875,
+          0.0,
+          0.035,
+          0.7,
+          -0.35,
+          0.0,
+          0.175
+        ],
+        "group_size": 1
+      },
+      "expectedOutput": {
+        "quantized": [
+          7,
+          -7,
+          0,
+          7,
+          7,
+          -7,
+          0,
+          7
+        ],
+        "scales": [
+          0.025,
+          0.0125,
+          0.0,
+          0.005,
+          0.1,
+          0.05,
+          0.0,
+          0.025
+        ],
+        "dequantized": [
+          0.175,
+          -0.0875,
+          0.0,
+          0.035,
+          0.7,
+          -0.35,
+          0.0,
+          0.175
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "weights": [
+          2.7,
+          1.65,
+          2.0,
+          2.14,
+          4.8,
+          0.6,
+          2.0,
+          2.7
+        ],
+        "group_size": 8
+      },
+      "expectedOutput": {
+        "quantized": [
+          4,
+          2,
+          3,
+          3,
+          7,
+          1,
+          3,
+          4
+        ],
+        "scales": [
+          0.685714
+        ],
+        "dequantized": [
+          2.742857,
+          1.371429,
+          2.057143,
+          2.057143,
+          4.8,
+          0.685714,
+          2.057143,
+          2.742857
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "weights": [
+          2.8,
+          -1.4,
+          0.0,
+          0.56,
+          11.2,
+          -5.6,
+          0.0,
+          2.8
+        ],
+        "group_size": 16
+      },
+      "expectedOutput": {
+        "quantized": [
+          2,
+          -1,
+          0,
+          0,
+          7,
+          -4,
+          0,
+          2
+        ],
+        "scales": [
+          1.6
+        ],
+        "dequantized": [
+          3.2,
+          -1.6,
+          0.0,
+          0.0,
+          11.2,
+          -6.4,
+          0.0,
+          3.2
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "weights": [
+          0.7,
+          0.0,
+          -1.4,
+          2.8,
+          0.14,
+          0.0,
+          -0.35,
+          0.7
+        ],
+        "group_size": 4
+      },
+      "expectedOutput": {
+        "quantized": [
+          2,
+          0,
+          -4,
+          7,
+          1,
+          0,
+          -4,
+          7
+        ],
+        "scales": [
+          0.4,
+          0.1
+        ],
+        "dequantized": [
+          0.8,
+          0.0,
+          -1.6,
+          2.8,
+          0.1,
+          0.0,
+          -0.4,
+          0.7
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "weights": [
+          0.525,
+          -0.2625,
+          0.0,
+          0.105,
+          2.1,
+          -1.05,
+          0.0,
+          0.525
+        ],
+        "group_size": 3
+      },
+      "expectedOutput": {
+        "quantized": [
+          7,
+          -4,
+          0,
+          0,
+          7,
+          -4,
+          0,
+          7
+        ],
+        "scales": [
+          0.075,
+          0.3,
+          0.075
+        ],
+        "dequantized": [
+          0.525,
+          -0.3,
+          0.0,
+          0.0,
+          2.1,
+          -1.2,
+          0.0,
+          0.525
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "weights": [
+          3.5,
+          -1.75,
+          0.0,
+          0.7,
+          14.0,
+          -7.0,
+          0.0,
+          3.5
+        ],
+        "group_size": 20
+      },
+      "expectedOutput": {
+        "quantized": [
+          2,
+          -1,
+          0,
+          0,
+          7,
+          -4,
+          0,
+          2
+        ],
+        "scales": [
+          2.0
+        ],
+        "dequantized": [
+          4.0,
+          -2.0,
+          0.0,
+          0.0,
+          14.0,
+          -8.0,
+          0.0,
+          4.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "weights": [
+          3.7,
+          2.65,
+          3.0,
+          3.14,
+          5.8,
+          1.6,
+          3.0,
+          3.7
+        ],
+        "group_size": 12
+      },
+      "expectedOutput": {
+        "quantized": [
+          4,
+          3,
+          4,
+          4,
+          7,
+          2,
+          4,
+          4
+        ],
+        "scales": [
+          0.828571
+        ],
+        "dequantized": [
+          3.314286,
+          2.485714,
+          3.314286,
+          3.314286,
+          5.8,
+          1.657143,
+          3.314286,
+          3.314286
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "weights": [
+          0.56,
+          -0.28,
+          0.0,
+          0.112,
+          2.24,
+          -1.12,
+          0.0,
+          0.56
+        ],
+        "group_size": 3
+      },
+      "expectedOutput": {
+        "quantized": [
+          7,
+          -4,
+          0,
+          0,
+          7,
+          -4,
+          0,
+          7
+        ],
+        "scales": [
+          0.08,
+          0.32,
+          0.08
+        ],
+        "dequantized": [
+          0.56,
+          -0.32,
+          0.0,
+          0.0,
+          2.24,
+          -1.28,
+          0.0,
+          0.56
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "weights": [
+          4.2,
+          -2.1,
+          0.0,
+          0.84,
+          16.8,
+          -8.4,
+          0.0,
+          4.2
+        ],
+        "group_size": 24
+      },
+      "expectedOutput": {
+        "quantized": [
+          2,
+          -1,
+          0,
+          0,
+          7,
+          -4,
+          0,
+          2
+        ],
+        "scales": [
+          2.4
+        ],
+        "dequantized": [
+          4.8,
+          -2.4,
+          0.0,
+          0.0,
+          16.8,
+          -9.6,
+          0.0,
+          4.8
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "weights": [
+          4.7,
+          3.65,
+          4.0,
+          4.14,
+          6.8,
+          2.6,
+          4.0,
+          4.7
+        ],
+        "group_size": 16
+      },
+      "expectedOutput": {
+        "quantized": [
+          5,
+          4,
+          4,
+          4,
+          7,
+          3,
+          4,
+          5
+        ],
+        "scales": [
+          0.971429
+        ],
+        "dequantized": [
+          4.857143,
+          3.885714,
+          3.885714,
+          3.885714,
+          6.8,
+          2.914286,
+          3.885714,
+          4.857143
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "weights": [
+          0.84,
+          -0.42,
+          0.0,
+          0.168,
+          3.36,
+          -1.68,
+          0.0,
+          0.84
+        ],
+        "group_size": 5
+      },
+      "expectedOutput": {
+        "quantized": [
+          2,
+          -1,
+          0,
+          0,
+          7,
+          -7,
+          0,
+          4
+        ],
+        "scales": [
+          0.48,
+          0.24
+        ],
+        "dequantized": [
+          0.96,
+          -0.48,
+          0.0,
+          0.0,
+          3.36,
+          -1.68,
+          0.0,
+          0.96
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "weights": [
+          0.28,
+          -0.14,
+          0.0,
+          0.056,
+          1.12,
+          -0.56,
+          0.0,
+          0.28
+        ],
+        "group_size": 2
+      },
+      "expectedOutput": {
+        "quantized": [
+          7,
+          -4,
+          0,
+          7,
+          7,
+          -4,
+          0,
+          7
+        ],
+        "scales": [
+          0.04,
+          0.008,
+          0.16,
+          0.04
+        ],
+        "dequantized": [
+          0.28,
+          -0.16,
+          0.0,
+          0.056,
+          1.12,
+          -0.64,
+          0.0,
+          0.28
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "weights": [
+          5.6,
+          -2.8,
+          0.0,
+          1.12,
+          22.4,
+          -11.2,
+          0.0,
+          5.6
+        ],
+        "group_size": 32
+      },
+      "expectedOutput": {
+        "quantized": [
+          2,
+          -1,
+          0,
+          0,
+          7,
+          -4,
+          0,
+          2
+        ],
+        "scales": [
+          3.2
+        ],
+        "dequantized": [
+          6.4,
+          -3.2,
+          0.0,
+          0.0,
+          22.4,
+          -12.8,
+          0.0,
+          6.4
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-groupwise-int4-quantization-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "weights": [
+          5.7,
+          4.65,
+          5.0,
+          5.14,
+          7.8,
+          3.6,
+          5.0,
+          5.7
+        ],
+        "group_size": 20
+      },
+      "expectedOutput": {
+        "quantized": [
+          5,
+          4,
+          4,
+          5,
+          7,
+          3,
+          4,
+          5
+        ],
+        "scales": [
+          1.114286
+        ],
+        "dequantized": [
+          5.571429,
+          4.457143,
+          4.457143,
+          5.571429,
+          7.8,
+          3.342857,
+          4.457143,
+          5.571429
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_groupwise_int4_quantization",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles",
+    "inference-multi-head-attention"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

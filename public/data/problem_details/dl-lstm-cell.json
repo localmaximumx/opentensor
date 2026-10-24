@@ -1,0 +1,1134 @@
+{
+  "catalogId": "python:dl-lstm-cell",
+  "id": "dl-lstm-cell",
+  "sourceId": "dl-lstm-cell",
+  "slug": "dl-lstm-cell",
+  "source": "python",
+  "category": "numpy",
+  "title": "LSTM Cell",
+  "difficulty": "Hard",
+  "tags": [
+    "Neural Networks"
+  ],
+  "isFree": false,
+  "planId": "cracking-dl",
+  "planTitle": "Cracking Deep Learning",
+  "sectionId": "cracking-dl-recurrent-networks",
+  "sortOrder": 354,
+  "seoDescription": "Implement a Long Short-Term Memory (LSTM) cell that processes a sequence using four gates: forget, input, output, and a candidate cell state.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Compute forget, input, candidate cell, and output gate activations to produce next hidden and cell states in pure NumPy.\n\nThe additive linear cell path c_t = f * c_{t-1} + i * c_cand prevents gradients from exponentially decaying during backpropagation through time.\n\n### Mathematical Formulation\n$$\nf_t = \\sigma(W_f [x_t, h_{t-1}]), \\quad c_t = f_t \\odot c_{t-1} + i_t \\odot \\tanh(W_c [x_t, h_{t-1}]), \\quad h_t = o_t \\odot \\tanh(c_t)\n$$\n\n### Step-by-Step Implementation\n1. Concatenate input feature vector with prior hidden activation state\n2. Compute 4 independent gate activations using Sigmoid and Tanh\n3. Update internal constant error cell state and compute output hidden activations\n\n### Returns\nDictionary with 'h_next', 'c_next', 'forget_gate', and 'input_gate'.",
+  "theory": "## Understanding the Theory: LSTM Cell\n\n### Core Intuition: Why Do We Need This?\nNeural networks achieve their remarkable expressive power by stacking linear layers interspersed with non-linear activation functions and normalization layers. Without non-linear activations, any deep network would collapse into a single shallow linear regression. **LSTM Cell** ensures signals propagate cleanly through dozens or hundreds of layers without vanishing or exploding.\n\nThe additive linear cell path c_t = f * c_{t-1} + i * c_cand prevents gradients from exponentially decaying during backpropagation through time. In this problem, the goal is to: compute forget, input, candidate cell, and output gate activations to produce next hidden and cell states in pure numpy.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nf_t = \\sigma(W_f [x_t, h_{t-1}]), \\quad c_t = f_t \\odot c_{t-1} + i_t \\odot \\tanh(W_c [x_t, h_{t-1}]), \\quad h_t = o_t \\odot \\tanh(c_t)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Concatenate input feature vector with prior hidden activation state\n2. **Phase 2**: Compute 4 independent gate activations using Sigmoid and Tanh\n3. **Phase 3**: Update internal constant error cell state and compute output hidden activations\n\n### Practical Machine Learning Applications & Nuances\n* **Gradient Flow**: Carefully designed activation functions (like ReLU, GELU, and Swish) maintain strong gradient signals during backpropagation.\n* **Internal Covariate Shift**: Normalization techniques (like LayerNorm and RMSNorm) standardize hidden states across channels or batch dimensions, allowing models to train stably at higher learning rates.\n* **Hardware Friendly**: Modern deep learning frameworks implement these layers using fused GPU kernels to reduce memory round-trips.",
+  "examples": [
+    "Input: x = [1.0], h_prev = [0.0], c_prev = [0.0], W_f = [[0.5, 0.5]], W_i = [[0.5, 0.5]], W_c = [[0.5, 0.5]], W_o = [[0.5, 0.5]]\n\nOutput: {\"h_next\": [0.1743], \"c_next\": [0.2876], \"forget_gate\": [0.6225], \"input_gate\": [0.6225]}\n\nExplanation: Evaluated dl_lstm_cell under standard test conditions."
+  ],
+  "requirements": "* Function must be named `dl_lstm_cell`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `dl_lstm_cell`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef dl_lstm_cell(x: list, h_prev: list, c_prev: list, W_f: list, W_i: list, W_c: list, W_o: list) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **LSTM Cell** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef dl_lstm_cell(x: list, h_prev: list, c_prev: list, W_f: list, W_i: list, W_c: list, W_o: list) -> dict:\n    concat = np.concatenate([np.array(x, dtype=np.float64), np.array(h_prev, dtype=np.float64)])\n    def sigm(z): return 1.0 / (1.0 + np.exp(-np.clip(z, -20.0, 20.0)))\n    f = sigm(np.dot(np.array(W_f, dtype=np.float64), concat))\n    i = sigm(np.dot(np.array(W_i, dtype=np.float64), concat))\n    c_c = np.tanh(np.dot(np.array(W_c, dtype=np.float64), concat))\n    o = sigm(np.dot(np.array(W_o, dtype=np.float64), concat))\n    cn = f * np.array(c_prev, dtype=np.float64) + i * c_c\n    hn = o * np.tanh(cn)\n    return {'h_next': np.round(hn, 4).tolist(), 'c_next': np.round(cn, 4).tolist(), 'forget_gate': np.round(f, 4).tolist(), 'input_gate': np.round(i, 4).tolist()}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Input dim 1 hidden dim 1",
+      "inputs": {
+        "x": [
+          1.0
+        ],
+        "h_prev": [
+          0.0
+        ],
+        "c_prev": [
+          0.0
+        ],
+        "W_f": [
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "W_i": [
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "W_c": [
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "W_o": [
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.1743
+        ],
+        "c_next": [
+          0.2876
+        ],
+        "forget_gate": [
+          0.6225
+        ],
+        "input_gate": [
+          0.6225
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "dl-lstm-cell-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "x": [
+          2.0
+        ],
+        "h_prev": [
+          0.0
+        ],
+        "c_prev": [
+          0.0
+        ],
+        "W_f": [
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "W_i": [
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "W_c": [
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "W_o": [
+          [
+            1.0,
+            1.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.6083
+        ],
+        "c_next": [
+          0.8491
+        ],
+        "forget_gate": [
+          0.8808
+        ],
+        "input_gate": [
+          0.8808
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "dl-lstm-cell-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          0.5
+        ],
+        "h_prev": [
+          0.0
+        ],
+        "c_prev": [
+          0.0
+        ],
+        "W_f": [
+          [
+            0.25,
+            0.25
+          ]
+        ],
+        "W_i": [
+          [
+            0.25,
+            0.25
+          ]
+        ],
+        "W_c": [
+          [
+            0.25,
+            0.25
+          ]
+        ],
+        "W_o": [
+          [
+            0.25,
+            0.25
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.035
+        ],
+        "c_next": [
+          0.0661
+        ],
+        "forget_gate": [
+          0.5312
+        ],
+        "input_gate": [
+          0.5312
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          -1.0
+        ],
+        "h_prev": [
+          -0.0
+        ],
+        "c_prev": [
+          -0.0
+        ],
+        "W_f": [
+          [
+            -0.5,
+            -0.5
+          ]
+        ],
+        "W_i": [
+          [
+            -0.5,
+            -0.5
+          ]
+        ],
+        "W_c": [
+          [
+            -0.5,
+            -0.5
+          ]
+        ],
+        "W_o": [
+          [
+            -0.5,
+            -0.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.1743
+        ],
+        "c_next": [
+          0.2876
+        ],
+        "forget_gate": [
+          0.6225
+        ],
+        "input_gate": [
+          0.6225
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          3.0
+        ],
+        "h_prev": [
+          0.0
+        ],
+        "c_prev": [
+          0.0
+        ],
+        "W_f": [
+          [
+            1.5,
+            1.5
+          ]
+        ],
+        "W_i": [
+          [
+            1.5,
+            1.5
+          ]
+        ],
+        "W_c": [
+          [
+            1.5,
+            1.5
+          ]
+        ],
+        "W_o": [
+          [
+            1.5,
+            1.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.7485
+        ],
+        "c_next": [
+          0.9888
+        ],
+        "forget_gate": [
+          0.989
+        ],
+        "input_gate": [
+          0.989
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          2.0
+        ],
+        "h_prev": [
+          1.0
+        ],
+        "c_prev": [
+          1.0
+        ],
+        "W_f": [
+          [
+            1.5,
+            1.5
+          ]
+        ],
+        "W_i": [
+          [
+            1.5,
+            1.5
+          ]
+        ],
+        "W_c": [
+          [
+            1.5,
+            1.5
+          ]
+        ],
+        "W_o": [
+          [
+            1.5,
+            1.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.9518
+        ],
+        "c_next": [
+          1.9778
+        ],
+        "forget_gate": [
+          0.989
+        ],
+        "input_gate": [
+          0.989
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          -1.0
+        ],
+        "h_prev": [
+          -2.0
+        ],
+        "c_prev": [
+          -2.0
+        ],
+        "W_f": [
+          [
+            -1.5,
+            -1.5
+          ]
+        ],
+        "W_i": [
+          [
+            -1.5,
+            -1.5
+          ]
+        ],
+        "W_c": [
+          [
+            -1.5,
+            -1.5
+          ]
+        ],
+        "W_o": [
+          [
+            -1.5,
+            -1.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          -0.7487
+        ],
+        "c_next": [
+          -0.9893
+        ],
+        "forget_gate": [
+          0.989
+        ],
+        "input_gate": [
+          0.989
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          1.0
+        ],
+        "h_prev": [
+          0.0
+        ],
+        "c_prev": [
+          0.0
+        ],
+        "W_f": [
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "W_i": [
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "W_c": [
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "W_o": [
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.1743
+        ],
+        "c_next": [
+          0.2876
+        ],
+        "forget_gate": [
+          0.6225
+        ],
+        "input_gate": [
+          0.6225
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          -1.0
+        ],
+        "h_prev": [
+          -0.0
+        ],
+        "c_prev": [
+          -0.0
+        ],
+        "W_f": [
+          [
+            -0.5,
+            -0.5
+          ]
+        ],
+        "W_i": [
+          [
+            -0.5,
+            -0.5
+          ]
+        ],
+        "W_c": [
+          [
+            -0.5,
+            -0.5
+          ]
+        ],
+        "W_o": [
+          [
+            -0.5,
+            -0.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.1743
+        ],
+        "c_next": [
+          0.2876
+        ],
+        "forget_gate": [
+          0.6225
+        ],
+        "input_gate": [
+          0.6225
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          10.0
+        ],
+        "h_prev": [
+          0.0
+        ],
+        "c_prev": [
+          0.0
+        ],
+        "W_f": [
+          [
+            5.0,
+            5.0
+          ]
+        ],
+        "W_i": [
+          [
+            5.0,
+            5.0
+          ]
+        ],
+        "W_c": [
+          [
+            5.0,
+            5.0
+          ]
+        ],
+        "W_o": [
+          [
+            5.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.7616
+        ],
+        "c_next": [
+          1.0
+        ],
+        "forget_gate": [
+          1.0
+        ],
+        "input_gate": [
+          1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          0.1
+        ],
+        "h_prev": [
+          0.0
+        ],
+        "c_prev": [
+          0.0
+        ],
+        "W_f": [
+          [
+            0.05,
+            0.05
+          ]
+        ],
+        "W_i": [
+          [
+            0.05,
+            0.05
+          ]
+        ],
+        "W_c": [
+          [
+            0.05,
+            0.05
+          ]
+        ],
+        "W_o": [
+          [
+            0.05,
+            0.05
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.0013
+        ],
+        "c_next": [
+          0.0025
+        ],
+        "forget_gate": [
+          0.5012
+        ],
+        "input_gate": [
+          0.5012
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          6.0
+        ],
+        "h_prev": [
+          5.0
+        ],
+        "c_prev": [
+          5.0
+        ],
+        "W_f": [
+          [
+            5.5,
+            5.5
+          ]
+        ],
+        "W_i": [
+          [
+            5.5,
+            5.5
+          ]
+        ],
+        "W_c": [
+          [
+            5.5,
+            5.5
+          ]
+        ],
+        "W_o": [
+          [
+            5.5,
+            5.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          1.0
+        ],
+        "c_next": [
+          6.0
+        ],
+        "forget_gate": [
+          1.0
+        ],
+        "input_gate": [
+          1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          1.5
+        ],
+        "h_prev": [
+          0.0
+        ],
+        "c_prev": [
+          0.0
+        ],
+        "W_f": [
+          [
+            0.75,
+            0.75
+          ]
+        ],
+        "W_i": [
+          [
+            0.75,
+            0.75
+          ]
+        ],
+        "W_c": [
+          [
+            0.75,
+            0.75
+          ]
+        ],
+        "W_o": [
+          [
+            0.75,
+            0.75
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.4113
+        ],
+        "c_next": [
+          0.611
+        ],
+        "forget_gate": [
+          0.7549
+        ],
+        "input_gate": [
+          0.7549
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          -2.0
+        ],
+        "h_prev": [
+          -0.0
+        ],
+        "c_prev": [
+          -0.0
+        ],
+        "W_f": [
+          [
+            -1.0,
+            -1.0
+          ]
+        ],
+        "W_i": [
+          [
+            -1.0,
+            -1.0
+          ]
+        ],
+        "W_c": [
+          [
+            -1.0,
+            -1.0
+          ]
+        ],
+        "W_o": [
+          [
+            -1.0,
+            -1.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.6083
+        ],
+        "c_next": [
+          0.8491
+        ],
+        "forget_gate": [
+          0.8808
+        ],
+        "input_gate": [
+          0.8808
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          0.25
+        ],
+        "h_prev": [
+          0.0
+        ],
+        "c_prev": [
+          0.0
+        ],
+        "W_f": [
+          [
+            0.125,
+            0.125
+          ]
+        ],
+        "W_i": [
+          [
+            0.125,
+            0.125
+          ]
+        ],
+        "W_c": [
+          [
+            0.125,
+            0.125
+          ]
+        ],
+        "W_o": [
+          [
+            0.125,
+            0.125
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.0081
+        ],
+        "c_next": [
+          0.0159
+        ],
+        "forget_gate": [
+          0.5078
+        ],
+        "input_gate": [
+          0.5078
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          0.0
+        ],
+        "h_prev": [
+          -1.0
+        ],
+        "c_prev": [
+          -1.0
+        ],
+        "W_f": [
+          [
+            -0.5,
+            -0.5
+          ]
+        ],
+        "W_i": [
+          [
+            -0.5,
+            -0.5
+          ]
+        ],
+        "W_c": [
+          [
+            -0.5,
+            -0.5
+          ]
+        ],
+        "W_o": [
+          [
+            -0.5,
+            -0.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          -0.201
+        ],
+        "c_next": [
+          -0.3348
+        ],
+        "forget_gate": [
+          0.6225
+        ],
+        "input_gate": [
+          0.6225
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          4.0
+        ],
+        "h_prev": [
+          0.0
+        ],
+        "c_prev": [
+          0.0
+        ],
+        "W_f": [
+          [
+            2.0,
+            2.0
+          ]
+        ],
+        "W_i": [
+          [
+            2.0,
+            2.0
+          ]
+        ],
+        "W_c": [
+          [
+            2.0,
+            2.0
+          ]
+        ],
+        "W_o": [
+          [
+            2.0,
+            2.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.7612
+        ],
+        "c_next": [
+          0.9997
+        ],
+        "forget_gate": [
+          0.9997
+        ],
+        "input_gate": [
+          0.9997
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          0.75
+        ],
+        "h_prev": [
+          0.0
+        ],
+        "c_prev": [
+          0.0
+        ],
+        "W_f": [
+          [
+            0.375,
+            0.375
+          ]
+        ],
+        "W_i": [
+          [
+            0.375,
+            0.375
+          ]
+        ],
+        "W_c": [
+          [
+            0.375,
+            0.375
+          ]
+        ],
+        "W_o": [
+          [
+            0.375,
+            0.375
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.0883
+        ],
+        "c_next": [
+          0.1562
+        ],
+        "forget_gate": [
+          0.5699
+        ],
+        "input_gate": [
+          0.5699
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          5.0
+        ],
+        "h_prev": [
+          0.0
+        ],
+        "c_prev": [
+          0.0
+        ],
+        "W_f": [
+          [
+            2.5,
+            2.5
+          ]
+        ],
+        "W_i": [
+          [
+            2.5,
+            2.5
+          ]
+        ],
+        "W_c": [
+          [
+            2.5,
+            2.5
+          ]
+        ],
+        "W_o": [
+          [
+            2.5,
+            2.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          0.7616
+        ],
+        "c_next": [
+          1.0
+        ],
+        "forget_gate": [
+          1.0
+        ],
+        "input_gate": [
+          1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "dl-lstm-cell-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          11.0
+        ],
+        "h_prev": [
+          10.0
+        ],
+        "c_prev": [
+          10.0
+        ],
+        "W_f": [
+          [
+            10.5,
+            10.5
+          ]
+        ],
+        "W_i": [
+          [
+            10.5,
+            10.5
+          ]
+        ],
+        "W_c": [
+          [
+            10.5,
+            10.5
+          ]
+        ],
+        "W_o": [
+          [
+            10.5,
+            10.5
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "h_next": [
+          1.0
+        ],
+        "c_next": [
+          11.0
+        ],
+        "forget_gate": [
+          1.0
+        ],
+        "input_gate": [
+          1.0
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "dl_lstm_cell",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

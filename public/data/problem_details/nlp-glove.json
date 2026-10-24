@@ -1,0 +1,474 @@
+{
+  "catalogId": "python:nlp-glove",
+  "id": "nlp-glove",
+  "sourceId": "nlp-glove",
+  "slug": "nlp-glove",
+  "source": "python",
+  "category": "numpy",
+  "title": "GloVe",
+  "difficulty": "Hard",
+  "tags": [
+    "NLP"
+  ],
+  "isFree": false,
+  "planId": "cracking-nlp",
+  "planTitle": "Cracking NLP",
+  "sectionId": "cracking-nlp-embeddings-representations",
+  "sortOrder": 559,
+  "seoDescription": "Build a vocabulary V sorted alphabetically, and construct a co-occurrence matrix X with 1/d distance weighting within window size w.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Calculate the weighted least squares objective for a single word pair in GloVe embedding model.\n\nGloVe combines global co-occurrence statistics with local context window benefits by linearizing log-probabilities of word co-occurrence ratios.\n\n### Mathematical Formulation\n$$\nJ = f(X_{ij}) \\left( \\mathbf{w}_i^T \\tilde{\\mathbf{w}}_j + b_i + \\tilde{b}_j - \\ln X_{ij} \\right)^2, \\quad f(x) = \\min\\left(1, \\left(\\frac{x}{x_{\\max}}\\right)^\\alpha\\right)\n$$\n\n### Step-by-Step Implementation\n1. Compute weighting factor f(X_ij) bounded by 1.0\n2. Evaluate dot product w_i^T w_j plus word and context biases b_i and b_j\n3. Subtract log co-occurrence count ln(X_ij), square difference, and scale by f(X_ij)\n\n### Returns\nFloat representing pair loss rounded to 6 decimal places.",
+  "theory": "## Understanding the Theory: GloVe\n\n### Core Intuition: Why Do We Need This?\nNatural language consists of discrete words and symbols arranged in sequential order. To process text with neural networks, we convert words into continuous embedding vectors and model their grammatical and semantic relationships. **GloVe** is a core sequence-processing mechanism used in modern Transformer and LLM architectures.\n\nGloVe combines global co-occurrence statistics with local context window benefits by linearizing log-probabilities of word co-occurrence ratios. In this problem, the goal is to: calculate the weighted least squares objective for a single word pair in glove embedding model.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nJ = f(X_{ij}) \\left( \\mathbf{w}_i^T \\tilde{\\mathbf{w}}_j + b_i + \\tilde{b}_j - \\ln X_{ij} \\right)^2, \\quad f(x) = \\min\\left(1, \\left(\\frac{x}{x_{\\max}}\\right)^\\alpha\\right)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute weighting factor f(X_ij) bounded by 1.0\n2. **Phase 2**: Evaluate dot product w_i^T w_j plus word and context biases b_i and b_j\n3. **Phase 3**: Subtract log co-occurrence count ln(X_ij), square difference, and scale by f(X_ij)\n\n### Practical Machine Learning Applications & Nuances\n* **Self-Attention Mechanics**: Scaled dot-product attention computes all-to-all token interactions dynamically, allowing tokens to gather context from the entire sentence simultaneously.\n* **Position Encodings**: Because self-attention is permutation-invariant, positional encodings (like sinusoidal or Rotary Position Embeddings) inject word order into the representations.\n* **Vocabulary & Subwords**: Algorithms like BPE tokenize text into frequent subwords, allowing models to represent rare words without requiring an infinite vocabulary.",
+  "examples": [
+    "Input: X_ij = 50.0, w_i = [0.5, -0.2], w_j = [0.4, 0.1], b_i = 0.1, b_j = -0.05, x_max = 100.0, alpha = 0.75\n\nOutput: 8.061215\n\nExplanation: Evaluated nlp_glove under standard test conditions."
+  ],
+  "requirements": "* Function must be named `nlp_glove`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `nlp_glove`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import math, numpy as np\n\ndef nlp_glove(X_ij: float, w_i: list, w_j: list, b_i: float, b_j: float, x_max: float = 100.0, alpha: float = 0.75) -> float:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **GloVe** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport math, numpy as np\n\ndef nlp_glove(X_ij: float, w_i: list, w_j: list, b_i: float, b_j: float, x_max: float = 100.0, alpha: float = 0.75) -> float:\n    fx = (X_ij / x_max)**alpha if X_ij < x_max else 1.0\n    diff = np.dot(np.array(w_i, dtype=float), np.array(w_j, dtype=float)) + b_i + b_j - math.log(X_ij)\n    return round(float(fx * (diff**2)), 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Co-occurrence count 50",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": true
+    },
+    {
+      "id": "nlp-glove-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    },
+    {
+      "id": "nlp-glove-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X_ij": 50.0,
+        "w_i": [
+          0.5,
+          -0.2
+        ],
+        "w_j": [
+          0.4,
+          0.1
+        ],
+        "b_i": 0.1,
+        "b_j": -0.05,
+        "x_max": 100.0,
+        "alpha": 0.75
+      },
+      "expectedOutput": 8.061215,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "nlp_glove",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

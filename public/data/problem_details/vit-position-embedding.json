@@ -1,0 +1,1037 @@
+{
+  "id": "vit-position-embedding",
+  "title": "Position Embedding",
+  "description": "Add one learned position vector to every token position. The supplied position embedding has a batch dimension of one, so the same position vectors are broadcast across every sequence.\n\n$$\nz_{b,n,d} = x_{b,n,d} + e_{n,d}.\n$$\n\nHere, $b$ indexes the batch, $n$ indexes token position, $d$ indexes the embedding coordinate, $x$ is patches, and $e$ is pos_embed. Return the result as a float64 NumPy array with the same shape as patches.",
+  "seoDescription": "Add learned positional embeddings to Vision Transformer patch-token sequences while preserving batch dimensions.",
+  "examples": [
+    "Input: patches = [[[1,2],[3,4]]], pos_embed = [[[0.1,0.2],[0.3,0.4]]]\n\nOutput: [[[1.1,2.2],[3.3,4.4]]]\n\nExplanation: The position array broadcasts across the batch while preserving token and embedding axes.",
+    "Input: patches = [[[1,0],[0,1]],[[2,1],[1,2]]], pos_embed = [[[0.5,-0.5],[1,-1]]]\n\nOutput: [[[1.5,-0.5],[1,0]],[[2.5,0.5],[2,1]]]",
+    "Input: patches = [[[0,1,2]]], pos_embed = [[[-1,-2,-3]]]\n\nOutput: [[[-1,-1,-1]]]"
+  ],
+  "requirements": "- Use NumPy.\n- Add the supplied position vectors elementwise.\n- Broadcast pos_embed across the batch only.\n- Preserve the token count and embedding width.\n- Return a float64 NumPy array with the same shape as patches.",
+  "theory": "# <span style=\"font-size: 20px;\">Position Embedding</span>\n\n<span style=\"font-size: 14px;\">Position embeddings inject spatial location information into the token sequence of a Vision Transformer (ViT). Because self-attention is permutation-invariant -- it produces the same output regardless of token order -- the model has no inherent way to distinguish patches from different locations. Position embeddings, a core component in Dosovitskiy et al. (2020), solve this by adding a learnable vector to each token so the model can reason about spatial origin.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">A position embedding in ViT is a learnable parameter matrix $E_{\\text{pos}} \\in \\mathbb{R}^{1 \\times N \\times D}$ that is added element-wise to the sequence of patch embeddings (plus the CLS token) before the sequence enters the Transformer encoder. Each row of $E_{\\text{pos}}$ corresponds to one position in the sequence and holds a $D$-dimensional vector encoding \"this is position $i$\". Because the matrix is learned during training rather than computed from a fixed formula, the model discovers whatever positional representation is most useful for the task.</span>\n\n<span style=\"font-size: 14px;\">The critical detail is what $N$ represents. An image of resolution $H \\times W$ is divided into non-overlapping patches of size $P \\times P$, yielding $\\frac{H}{P} \\times \\frac{W}{P}$ patch tokens. A CLS token is prepended, so $N = \\frac{H}{P} \\times \\frac{W}{P} + 1$. The position embedding must cover all $N$ positions -- one for the CLS token and one for every patch.</span>\n\n<span style=\"font-size: 14px;\">The shape $(1, N, D)$ means the position embedding is shared across every image in a batch. The leading dimension of 1 allows broadcasting to replicate the same positional information across the batch dimension $B$, so a batch of shape $(B, N, D)$ receives identical position vectors regardless of batch size.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">The position embedding is applied in a single addition immediately after patch embedding and CLS token prepending:</span>\n\n$$\nz_0 = x_{\\text{patches}} + E_{\\text{pos}}\n$$\n\n<span style=\"font-size: 14px;\">where:</span>\n\n* <span style=\"font-size: 14px;\">$x_{\\text{patches}} \\in \\mathbb{R}^{B \\times N \\times D}$ is the sequence of embedded patches with the CLS token prepended.</span>\n* <span style=\"font-size: 14px;\">$E_{\\text{pos}} \\in \\mathbb{R}^{1 \\times N \\times D}$ is the learnable position embedding matrix, initialized once and updated by gradient descent.</span>\n* <span style=\"font-size: 14px;\">$z_0 \\in \\mathbb{R}^{B \\times N \\times D}$ is the input to the first Transformer encoder layer, carrying both content and position information.</span>\n\n<span style=\"font-size: 14px;\">The addition broadcasts $E_{\\text{pos}}$ from $(1, N, D)$ to $(B, N, D)$. For every image $b$, position $i$, and feature $j$:</span>\n\n$$\nz_0[b, i, j] = x_{\\text{patches}}[b, i, j] + E_{\\text{pos}}[0, i, j]\n$$\n\n<span style=\"font-size: 14px;\">This is pure element-wise addition -- no concatenation, no multiplication. Position information is blended directly into the same representation space as the content information.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why Position Embeddings Are Necessary</span>\n\n<span style=\"font-size: 14px;\">Self-attention computes weighted sums over all tokens. The attention weight between token $i$ and token $j$ depends only on their content vectors $q_i$ and $k_j$, not on their positions. If all patch embeddings were randomly shuffled, the attention outputs would be the shuffled version of the original outputs -- the model produces the same prediction for any permutation of patches.</span>\n\n<span style=\"font-size: 14px;\">This property is called **permutation invariance**:</span>\n\n$$\n\\text{Attention}(\\pi(X)) = \\pi(\\text{Attention}(X))\n$$\n\n<span style=\"font-size: 14px;\">For vision, this means the model cannot distinguish an intact image from one with randomly rearranged patches. Spatial structure carries essential information -- objects have shape, parts have relative positions, edges are continuous -- and without position encoding all of this is lost.</span>\n\n<span style=\"font-size: 14px;\">Adding $E_{\\text{pos}}$ breaks permutation invariance. After the addition, token $i$ carries $x_i + E_{\\text{pos}}[i]$ and token $j$ carries $x_j + E_{\\text{pos}}[j]$. Even if $x_i = x_j$ (two identical patches), their representations differ because $E_{\\text{pos}}[i] \\neq E_{\\text{pos}}[j]$. The attention mechanism can now differentiate based on spatial origin.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">1D vs 2D Position Embeddings</span>\n\n<span style=\"font-size: 14px;\">Patches originate from a 2D grid, so a natural question is whether position embeddings should encode 2D coordinates (row, column) rather than a flat 1D index. Dosovitskiy et al. (2020) explicitly tested both.</span>\n\n<span style=\"font-size: 14px;\">**1D position embeddings** assign a single learnable vector to each position in the flattened sequence. A $4 \\times 4$ grid produces positions $0, 1, 2, \\ldots, 15$ (plus CLS). No explicit row or column encoding exists -- the model must learn 2D structure from data.</span>\n\n<span style=\"font-size: 14px;\">**2D position embeddings** use two separate embedding tables: one for row index and one for column index. Each patch at grid position $(r, c)$ receives the sum of row embedding $r$ and column embedding $c$. This explicitly encodes the 2D grid and reduces unique embeddings from $\\frac{H}{P} \\times \\frac{W}{P}$ to $\\frac{H}{P} + \\frac{W}{P}$.</span>\n\n<span style=\"font-size: 14px;\">The paper's finding: **1D and 2D position embeddings perform nearly identically**. No significant accuracy difference was observed across model sizes and datasets. The authors chose 1D for simplicity -- a single parameter matrix versus two tables with a combining step.</span>\n\n<span style=\"font-size: 14px;\">This result makes sense in hindsight. Learned 1D embeddings implicitly recover 2D structure during training. When visualized, nearby patches in the 2D grid have similar embedding vectors and a clear row-column pattern emerges, despite the flat parameterization.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Learned vs Fixed Position Encodings</span>\n\n<span style=\"font-size: 14px;\">Different Transformer architectures handle position information differently. ViT's learned additive embeddings are one point in a broader design space.</span>\n\n<span style=\"font-size: 14px;\">**Sinusoidal (fixed) encoding** from the original Transformer (Vaswani et al., 2017) uses deterministic sine and cosine functions:</span>\n\n$$\nPE(pos, 2i) = \\sin\\!\\left(\\frac{pos}{10000^{2i/d}}\\right), \\quad PE(pos, 2i+1) = \\cos\\!\\left(\\frac{pos}{10000^{2i/d}}\\right)\n$$\n\n<span style=\"font-size: 14px;\">These require no training and generalize to longer sequences, but embed a fixed inductive bias about position structure that may not be optimal for all tasks.</span>\n\n<span style=\"font-size: 14px;\">**Learned position embeddings** are a parameter matrix updated by backpropagation. ViT uses this approach, initializing with $\\text{randn} \\times 0.02$. The downside is no extrapolation: if the model trains with $N = 197$ positions, it has no embedding for position 197 or beyond.</span>\n\n<span style=\"font-size: 14px;\">**Rotary Position Embedding (RoPE)** (Su et al., 2021) encodes position by rotating query and key vectors so their dot product depends on relative distance $m - n$. Used in LLaMA, Mistral, and most modern LLMs.</span>\n\n<span style=\"font-size: 14px;\">Dosovitskiy et al. (2020) found learned and sinusoidal encodings performed equally for ViT, so they chose the simpler learned approach.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Broadcasting Mechanism</span>\n\n<span style=\"font-size: 14px;\">The addition $x_{\\text{patches}} + E_{\\text{pos}}$ relies on broadcasting -- dimensions of size 1 are automatically expanded to match the other operand. Dimension by dimension from right to left:</span>\n\n* <span style=\"font-size: 14px;\">**Dimension 2 (features):** Both have size $D$. Match.</span>\n* <span style=\"font-size: 14px;\">**Dimension 1 (sequence):** Both have size $N$. Match.</span>\n* <span style=\"font-size: 14px;\">**Dimension 0 (batch):** $E_{\\text{pos}}$ has size 1, $x_{\\text{patches}}$ has size $B$. Size-1 broadcasts: $E_{\\text{pos}}$ is conceptually replicated $B$ times.</span>\n\n<span style=\"font-size: 14px;\">Every image in the batch receives exactly the same position embeddings. This is correct: position is a property of the grid structure, not of individual images. No memory is allocated for the replication -- broadcasting is a view operation, not a copy.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">Dosovitskiy et al. (2020) in \"An Image is Worth 16x16 Words\" state: \"Position embeddings are added to the patch embeddings to retain positional information. We use standard learnable 1D position embeddings.\" The word \"standard\" is deliberate -- the authors position this as the simplest option, not a novel contribution. The paper's thesis is that a standard Transformer with minimal vision-specific modifications can match convolutional networks given sufficient data.</span>\n\n<span style=\"font-size: 14px;\">The paper provides a visualization of the learned position embeddings (Figure 7) revealing that despite 1D parameterization, the embeddings exhibit clear 2D structure: each position has highest cosine similarity with positions from the same row and column of the patch grid. The model autonomously discovers spatial layout during training.</span>\n\n<span style=\"font-size: 14px;\">Removing position embeddings entirely dropped accuracy from approximately 79.4% to approximately 64.2% on ImageNet for ViT-B/16 trained on ImageNet-21k -- a roughly 15-point drop confirming that position information is essential, not optional.</span>\n\n---\n\n## Numerical Example ($B=2, N=5, D=3$)\n\n<span style=\"font-size: 14px;\">Consider a batch of 2 images, each with 4 patches and a CLS token ($N = 5$), embedding dimension $D = 3$.</span>\n\n<span style=\"font-size: 14px;\">**Patch embeddings** $x_{\\text{patches}} \\in \\mathbb{R}^{2 \\times 5 \\times 3}$:</span>\n\n<span style=\"font-size: 14px;\">Image 0: $[[0.10, 0.20, 0.30],\\; [0.40, 0.50, 0.60],\\; [0.70, 0.80, 0.90],\\; [1.00, 1.10, 1.20],\\; [1.30, 1.40, 1.50]]$</span>\n\n<span style=\"font-size: 14px;\">Image 1: $[[0.01, 0.02, 0.03],\\; [0.04, 0.05, 0.06],\\; [0.07, 0.08, 0.09],\\; [0.10, 0.11, 0.12],\\; [0.13, 0.14, 0.15]]$</span>\n\n<span style=\"font-size: 14px;\">**Position embedding** $E_{\\text{pos}} \\in \\mathbb{R}^{1 \\times 5 \\times 3}$ (note small magnitudes from $\\text{randn} \\times 0.02$):</span>\n\n<span style=\"font-size: 14px;\">$[[0.02, -0.01, 0.03],\\; [0.01, 0.02, -0.02],\\; [-0.01, 0.03, 0.01],\\; [0.03, -0.02, 0.02],\\; [-0.02, 0.01, -0.01]]$</span>\n\n<span style=\"font-size: 14px;\">**Result for image 0:**</span>\n\n* <span style=\"font-size: 14px;\">CLS: $[0.10, 0.20, 0.30] + [0.02, -0.01, 0.03] = [0.12, 0.19, 0.33]$</span>\n* <span style=\"font-size: 14px;\">Patch 1: $[0.40, 0.50, 0.60] + [0.01, 0.02, -0.02] = [0.41, 0.52, 0.58]$</span>\n* <span style=\"font-size: 14px;\">Patch 2: $[0.70, 0.80, 0.90] + [-0.01, 0.03, 0.01] = [0.69, 0.83, 0.91]$</span>\n* <span style=\"font-size: 14px;\">Patch 3: $[1.00, 1.10, 1.20] + [0.03, -0.02, 0.02] = [1.03, 1.08, 1.22]$</span>\n* <span style=\"font-size: 14px;\">Patch 4: $[1.30, 1.40, 1.50] + [-0.02, 0.01, -0.01] = [1.28, 1.41, 1.49]$</span>\n\n<span style=\"font-size: 14px;\">**Result for image 1:**</span>\n\n* <span style=\"font-size: 14px;\">CLS: $[0.01, 0.02, 0.03] + [0.02, -0.01, 0.03] = [0.03, 0.01, 0.06]$</span>\n* <span style=\"font-size: 14px;\">Patch 1: $[0.04, 0.05, 0.06] + [0.01, 0.02, -0.02] = [0.05, 0.07, 0.04]$</span>\n* <span style=\"font-size: 14px;\">Patch 2: $[0.07, 0.08, 0.09] + [-0.01, 0.03, 0.01] = [0.06, 0.11, 0.10]$</span>\n* <span style=\"font-size: 14px;\">Patch 3: $[0.10, 0.11, 0.12] + [0.03, -0.02, 0.02] = [0.13, 0.09, 0.14]$</span>\n* <span style=\"font-size: 14px;\">Patch 4: $[0.13, 0.14, 0.15] + [-0.02, 0.01, -0.01] = [0.11, 0.15, 0.14]$</span>\n\n<span style=\"font-size: 14px;\">Both images received the same position offsets. The CLS token at position 0 always gets $[0.02, -0.01, 0.03]$, patch 1 always gets $[0.01, 0.02, -0.02]$, and so on. Position information is content-independent.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What Position Embeddings Learn</span>\n\n<span style=\"font-size: 14px;\">Although initialized randomly, training shapes position embeddings into a structured representation reflecting 2D image geometry. Dosovitskiy et al. (2020) visualized this by computing cosine similarity between each pair of position embedding vectors, revealing several patterns:</span>\n\n* <span style=\"font-size: 14px;\">**Local similarity:** Each position embedding is most similar to embeddings of adjacent positions in the 2D grid. A patch at $(2, 3)$ has higher similarity with $(2, 2)$, $(2, 4)$, $(1, 3)$, and $(3, 3)$ than with distant patches.</span>\n* <span style=\"font-size: 14px;\">**Row-column structure:** The similarity pattern shows horizontal and vertical bands, indicating separate row and column representations emerge despite using a single 1D table.</span>\n* <span style=\"font-size: 14px;\">**CLS token distinctness:** The CLS position embedding has low similarity with all patch positions, consistent with its role as a special aggregation token.</span>\n* <span style=\"font-size: 14px;\">**Smooth gradients:** Similarity decreases gradually with distance, meaning the model encodes spatial proximity, not just position identity.</span>\n\n<span style=\"font-size: 14px;\">This emergent structure explains why 1D and 2D embeddings produce equivalent results: the 1D parameterization is expressive enough to recover 2D structure on its own.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n* <span style=\"font-size: 14px;\">**Wrong value of N (forgetting CLS adds one position).** If an image produces $14 \\times 14 = 196$ patches and a CLS token is prepended, $N = 197$, not 196. A position embedding of shape $(1, 196, D)$ added to a sequence of length 197 causes a shape mismatch. The CLS token at position 0 needs its own embedding vector.</span>\n* <span style=\"font-size: 14px;\">**Wrong tensor shape.** Creating $E_{\\text{pos}}$ with shape $(N, D)$ instead of $(1, N, D)$ may cause incorrect broadcasting or errors depending on the framework. The canonical ViT implementation uses $(1, N, D)$ to make broadcasting semantics explicit.</span>\n* <span style=\"font-size: 14px;\">**Concatenating instead of adding.** A common error is concatenating position as additional features, producing shape $(B, N, 2D)$ instead of $(B, N, D)$. This doubles the feature dimension, breaks the input size expected by the encoder, and does not match the ViT architecture. Position embeddings are always added.</span>\n* <span style=\"font-size: 14px;\">**Not using broadcasting.** Manually tiling or repeating $E_{\\text{pos}}$ $B$ times wastes memory by allocating $B$ copies of identical data. Worse, storing the tiled tensor as a parameter can cause incorrect gradient accumulation. Broadcasting avoids both issues.</span>\n* <span style=\"font-size: 14px;\">**Wrong resolution at inference.** Learned position embeddings have a fixed $N$ from the training resolution. Training on $224 \\times 224$ with $P = 16$ gives $N = 197$. Feeding $384 \\times 384$ at inference produces 577 patches, but the model only has 197 position embeddings. The fix is 2D bicubic interpolation of the patch grid embeddings from $14 \\times 14$ to $24 \\times 24$, with the CLS embedding handled separately. Forgetting this causes a crash or silent accuracy degradation.</span>\n* <span style=\"font-size: 14px;\">**Applying position embeddings after the encoder.** The purpose of position embeddings is to let attention layers use spatial information. Adding position after the encoder means all self-attention operates without spatial signal, degrading the model to an unordered bag-of-patches representation.</span>\n\n---",
+  "hints": [
+    "NumPy broadcasts the leading size-one dimension across the batch.",
+    "Use elementwise addition without reshaping either input."
+  ],
+  "constraints": "- patches has shape (B, N, D) and dtype float64.\n- pos_embed has shape (1, N, D) and dtype float64.\n- B, N, and D are positive.",
+  "difficulty": "Easy",
+  "starterCode": "import numpy as np\n\ndef add_position_embedding(patches: np.ndarray,\n                           pos_embed: np.ndarray) -> np.ndarray:\n    \"\"\"\n    Returns the float64 tokens after adding position embeddings.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-10T22:03:53.652Z",
+  "updatedAt": "2026-04-04T12:04:55.883Z",
+  "topicId": "vit-position-embedding",
+  "paperSnippet": "\"Position embeddings are added to the patch embeddings to retain positional information. We use standard learnable 1D position embeddings.\"",
+  "visualizationComponent": "PositionEmbeddingViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Position Embedding** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef add_position_embedding(patches: np.ndarray,\n                           pos_embed: np.ndarray) -> np.ndarray:\n    p = np.asarray(patches, dtype=float)\n    pe = np.asarray(pos_embed, dtype=float)\n    return np.round(p + pe, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Fractional positions",
+      "inputs": {
+        "patches": [
+          [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            1.1,
+            2.2
+          ],
+          [
+            3.3,
+            4.4
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Broadcast across batch",
+      "inputs": {
+        "patches": [
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              2,
+              1
+            ],
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              0.5,
+              -0.5
+            ],
+            [
+              1,
+              -1
+            ]
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          [
+            1.5,
+            -0.5
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        [
+          [
+            2.5,
+            0.5
+          ],
+          [
+            2.0,
+            1.0
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "test-3",
+      "name": "Negative positions",
+      "inputs": {
+        "patches": [
+          [
+            [
+              0,
+              1,
+              2
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              -1,
+              -2,
+              -3
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "patches": [
+          [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            1.1,
+            2.2
+          ],
+          [
+            3.3,
+            4.4
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "patches": [
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              2,
+              1
+            ],
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              0.5,
+              -0.5
+            ],
+            [
+              1,
+              -1
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            1.5,
+            -0.5
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        [
+          [
+            2.5,
+            0.5
+          ],
+          [
+            2.0,
+            1.0
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "patches": [
+          [
+            [
+              0,
+              1,
+              2
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              -1,
+              -2,
+              -3
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "patches": [
+          [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            1.1,
+            2.2
+          ],
+          [
+            3.3,
+            4.4
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "patches": [
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              2,
+              1
+            ],
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              0.5,
+              -0.5
+            ],
+            [
+              1,
+              -1
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            1.5,
+            -0.5
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        [
+          [
+            2.5,
+            0.5
+          ],
+          [
+            2.0,
+            1.0
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "patches": [
+          [
+            [
+              0,
+              1,
+              2
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              -1,
+              -2,
+              -3
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "patches": [
+          [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            1.1,
+            2.2
+          ],
+          [
+            3.3,
+            4.4
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "patches": [
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              2,
+              1
+            ],
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              0.5,
+              -0.5
+            ],
+            [
+              1,
+              -1
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            1.5,
+            -0.5
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        [
+          [
+            2.5,
+            0.5
+          ],
+          [
+            2.0,
+            1.0
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "patches": [
+          [
+            [
+              0,
+              1,
+              2
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              -1,
+              -2,
+              -3
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "patches": [
+          [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            1.1,
+            2.2
+          ],
+          [
+            3.3,
+            4.4
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "patches": [
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              2,
+              1
+            ],
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              0.5,
+              -0.5
+            ],
+            [
+              1,
+              -1
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            1.5,
+            -0.5
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        [
+          [
+            2.5,
+            0.5
+          ],
+          [
+            2.0,
+            1.0
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "patches": [
+          [
+            [
+              0,
+              1,
+              2
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              -1,
+              -2,
+              -3
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "patches": [
+          [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            1.1,
+            2.2
+          ],
+          [
+            3.3,
+            4.4
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "patches": [
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              2,
+              1
+            ],
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              0.5,
+              -0.5
+            ],
+            [
+              1,
+              -1
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            1.5,
+            -0.5
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        [
+          [
+            2.5,
+            0.5
+          ],
+          [
+            2.0,
+            1.0
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "patches": [
+          [
+            [
+              0,
+              1,
+              2
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              -1,
+              -2,
+              -3
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "patches": [
+          [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            1.1,
+            2.2
+          ],
+          [
+            3.3,
+            4.4
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "vit-position-embedding-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "patches": [
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              2,
+              1
+            ],
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "pos_embed": [
+          [
+            [
+              0.5,
+              -0.5
+            ],
+            [
+              1,
+              -1
+            ]
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            1.5,
+            -0.5
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        [
+          [
+            2.5,
+            0.5
+          ],
+          [
+            2.0,
+            1.0
+          ]
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "add_position_embedding",
+    "runtime": "numpy",
+    "parameters": [
+      {
+        "name": "patches",
+        "type": "array",
+        "example": [
+          [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ]
+        ],
+        "description": "Float64 token embeddings."
+      },
+      {
+        "name": "pos_embed",
+        "type": "array",
+        "example": [
+          [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ]
+        ],
+        "description": "Float64 position embeddings."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "vit-position-embedding",
+    "name": "Position Embedding",
+    "description": "Add learnable position information to patches",
+    "color": "#8b5cf6"
+  },
+  "paper": {
+    "id": "vit",
+    "title": "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
+    "authors": "Dosovitskiy et al., 2020",
+    "year": 2020,
+    "paperUrl": "https://arxiv.org/abs/2010.11929",
+    "visualizationComponent": "ViTArchViz"
+  },
+  "navigation": {
+    "index": 2,
+    "total": 6,
+    "prev": "vit-patch-embedding",
+    "next": "vit-class-token"
+  },
+  "cleanTitle": ""
+}

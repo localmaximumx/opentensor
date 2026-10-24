@@ -1,0 +1,551 @@
+{
+  "id": "glm-group-router",
+  "slug": "glm-group-router",
+  "title": "Group Router",
+  "cleanTitle": "Group Router",
+  "paperId": "glm45",
+  "paperTitle": "GLM-4.5",
+  "topicName": "Group Router",
+  "difficulty": "Medium",
+  "category": "Deep Learning",
+  "tags": [
+    "Group Router",
+    "Research"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Score expert groups by each group's maximum logit and return the top groups.",
+  "theory": "## Group Router\n\nScore expert groups by each group's maximum logit and return the top groups.\n\n**Context:** This component is associated with GLM-4.5 and helps illustrate a building block of transformer language models. The interface below is an educational reconstruction from the title and metadata, not a claim to reproduce every production-architecture detail.",
+  "examples": [
+    {
+      "input": [
+        [
+          1.0,
+          2.0,
+          3.0,
+          0.0
+        ],
+        2,
+        1
+      ],
+      "output": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      }
+    },
+    {
+      "input": [
+        [
+          0.0,
+          1.0,
+          2.0,
+          3.0
+        ],
+        2,
+        1
+      ],
+      "output": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      }
+    }
+  ],
+  "requirements": [
+    "Implement the function contract represented by the starter code.",
+    "Preserve the documented output structure and array dimensions.",
+    "Use numerically stable operations where relevant and reject invalid dimensions or routing parameters."
+  ],
+  "hints": [
+    "Write down the expected shape of every input and output before coding.",
+    "For attention, subtract the maximum score before exponentiating for stable softmax.",
+    "Check both numerical values and output dimensions against the test cases."
+  ],
+  "constraints": [
+    "Reference implementation uses Python 3 and NumPy.",
+    "Inputs are JSON-compatible lists or scalars.",
+    "This is a simplified educational contract, not a drop-in implementation of a complete production model."
+  ],
+  "starterCode": "# Group Router — reconstructed educational contract\nimport numpy as np\n\ndef solution(logits, group_size, top_groups):\n    # TODO: implement the operation described in the problem statement\n    pass\n",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Group Router** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\ndef solution(logits, group_size, top_groups):\n    x=np.asarray(logits,dtype=float)\n    if group_size<1 or x.shape[-1]%group_size: raise ValueError(\"expert count must be divisible by group_size\")\n    groups=x.reshape(x.shape[:-1]+(-1,group_size))\n    # Rank each group by its maximum expert logit.\n    group_scores=groups.max(axis=-1)\n    if top_groups<1 or top_groups>group_scores.shape[-1]: raise ValueError(\"invalid top_groups\")\n    ids=np.argsort(group_scores,axis=-1)[...,-top_groups:][...,::-1]\n    return {\"group_indices\":ids.tolist(),\"group_scores\":np.take_along_axis(group_scores,ids,axis=-1).tolist()}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "case-1",
+      "name": "smoke test",
+      "inputs": {
+        "logits": [
+          1.0,
+          2.0,
+          3.0,
+          0.0
+        ],
+        "group_size": 2,
+        "top_groups": 1
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "case-2",
+      "name": "edge case 1",
+      "inputs": {
+        "logits": [
+          0.0,
+          1.0,
+          2.0,
+          3.0
+        ],
+        "group_size": 2,
+        "top_groups": 1
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "glm-group-router-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "logits": [
+          2.0,
+          4.0,
+          6.0,
+          0.0
+        ],
+        "group_size": 4,
+        "top_groups": 2
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "logits": [
+          0.5,
+          1.0,
+          1.5,
+          0.0
+        ],
+        "group_size": 1,
+        "top_groups": 0
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "logits": [
+          -1.0,
+          -2.0,
+          -3.0,
+          -0.0
+        ],
+        "group_size": -2,
+        "top_groups": -1
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "logits": [
+          3.0,
+          6.0,
+          9.0,
+          0.0
+        ],
+        "group_size": 6,
+        "top_groups": 3
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "logits": [
+          2.0,
+          3.0,
+          4.0,
+          1.0
+        ],
+        "group_size": 3.0,
+        "top_groups": 2.0
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "logits": [
+          -1.0,
+          0.0,
+          1.0,
+          -2.0
+        ],
+        "group_size": 0.0,
+        "top_groups": -1.0
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "logits": [
+          0.0,
+          3.0,
+          2.0,
+          1.0
+        ],
+        "group_size": 2,
+        "top_groups": 1
+      },
+      "expectedOutput": {
+        "group_indices": [
+          0
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "logits": [
+          -1.0,
+          -2.0,
+          -3.0,
+          -0.0
+        ],
+        "group_size": -2,
+        "top_groups": -1
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "logits": [
+          10.0,
+          20.0,
+          30.0,
+          0.0
+        ],
+        "group_size": 20,
+        "top_groups": 10
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "logits": [
+          0.1,
+          0.2,
+          0.3,
+          0.0
+        ],
+        "group_size": 0,
+        "top_groups": 0
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "logits": [
+          6.0,
+          7.0,
+          8.0,
+          5.0
+        ],
+        "group_size": 7.0,
+        "top_groups": 6.0
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "logits": [
+          1.5,
+          3.0,
+          4.5,
+          0.0
+        ],
+        "group_size": 3,
+        "top_groups": 2
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "logits": [
+          -2.0,
+          -4.0,
+          -6.0,
+          -0.0
+        ],
+        "group_size": -4,
+        "top_groups": -2
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "logits": [
+          0.25,
+          0.5,
+          0.75,
+          0.0
+        ],
+        "group_size": 0,
+        "top_groups": 0
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "logits": [
+          0.0,
+          1.0,
+          2.0,
+          -1.0
+        ],
+        "group_size": 1.0,
+        "top_groups": 0.0
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "logits": [
+          4.0,
+          8.0,
+          12.0,
+          0.0
+        ],
+        "group_size": 8,
+        "top_groups": 4
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "logits": [
+          0.75,
+          1.5,
+          2.25,
+          0.0
+        ],
+        "group_size": 2,
+        "top_groups": 1
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          2.25
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "glm-group-router-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "logits": [
+          5.0,
+          10.0,
+          15.0,
+          0.0
+        ],
+        "group_size": 10,
+        "top_groups": 5
+      },
+      "expectedOutput": {
+        "group_indices": [
+          1
+        ],
+        "group_scores": [
+          3.0
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "solution",
+    "signature": "solution(logits, group_size, top_groups)",
+    "language": "python",
+    "dependencies": [
+      "numpy"
+    ]
+  },
+  "source": "research",
+  "sourceId": "glm45",
+  "updatedAt": "2026-03-01T00:00:00.000Z"
+}

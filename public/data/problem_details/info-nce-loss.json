@@ -1,0 +1,650 @@
+{
+  "id": "info-nce-loss",
+  "title": "Implement InfoNCE Loss",
+  "description": "Compute one-directional InfoNCE loss for two aligned embedding batches. Build the similarity logits:\n\n$$\nS = \\frac{Z_1Z_2^{\\mathsf T}}{\\tau}\n$$\n\nTreat entries $S_{ii}$ as positive pairs and every entry in row $i$ as a candidate:\n\n$$\nL = -\\frac{1}{N}\\sum_{i=1}^{N}\\log\\left(\\frac{e^{S_{ii}}}{\\sum_{j=1}^{N}e^{S_{ij}}}\\right)\n$$\n\nHere, $N$ is batch size, $\\tau$ is temperature, and row $i$ of $Z_1$ is paired with row $i$ of $Z_2$. Subtract each row maximum before exponentiation and return the mean loss as a Python float.",
+  "seoDescription": "Compute InfoNCE contrastive loss from query and key embeddings using temperature-scaled similarities.",
+  "examples": [
+    "Input: Z1 = [[1, 0], [0, 1]], Z2 = [[1, 0], [0, 1]], temperature = 0.1\n\nOutput: 0.000045\n\nExplanation: Each diagonal similarity is much larger than the competing similarity in its row.",
+    "Input: Z1 = [[1, 0], [0, 1]], Z2 = [[0, 1], [1, 0]], temperature = 0.1\n\nOutput: 10.000045",
+    "Input: Z1 = [[1, 0], [0, 1]], Z2 = [[1, 0], [0, 1]], temperature = 1.0\n\nOutput: 0.313262"
+  ],
+  "requirements": "* Compute all pairwise dot-product logits\n* Use diagonal entries as positive pairs\n* Stabilize each row before exponentiation\n* Return the mean row loss as a Python float",
+  "theory": "## Understanding the Theory: Implement InfoNCE Loss\n\n### Core Intuition: Why Do We Need This?\nIn computational mathematics and deep learning engineering, modular algorithms form the building blocks of larger AI systems. Writing vectorized, numerically sound functions ensures algorithms scale efficiently from small prototypes to production distributed clusters. **Implement InfoNCE Loss** implements a core computational routine.\n\nIn this problem, the objective is to implement **Implement InfoNCE Loss** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nS = \\frac{Z_1Z_2^{\\mathsf T}}{\\tau}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Vectorization**: Leveraging array operations over contiguous memory blocks executes instructions via SIMD instructions, running orders of magnitude faster than Python loops.\n* **Numerical Robustness**: Guarding against floating-point underflow and division by zero ensures pipelines remain stable during long training runs.\n* **Memory Management**: In-place operations and pre-allocated buffers minimize garbage collection overhead in production pipelines.",
+  "hints": [
+    "Use Z1 @ Z2.T / temperature to build the logits.",
+    "Subtract np.max(logits, axis=1, keepdims=True) before exponentiation.",
+    "Use np.diag(shifted) for the positive-pair logits."
+  ],
+  "constraints": "* Z1 and Z2 have the same numeric shape (N,D)\n* N is between 1 and 256\n* D is between 1 and 512\n* temperature is positive\n* Use NumPy only",
+  "difficulty": "Hard",
+  "starterCode": "import numpy as np\n\ndef info_nce_loss(Z1: list, Z2: list, temperature: float = 0.1) -> float:\n    \"\"\"\n    Returns the loss as a float.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2025-11-05T19:02:27.617Z",
+  "updatedAt": "2026-03-05T19:56:34.239Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef info_nce_loss(Z1: list, Z2: list, temperature: float = 0.1) -> float:\n    z1 = np.array(Z1, dtype=float)\n    z2 = np.array(Z2, dtype=float)\n    sim = (z1 @ z2.T) / temperature\n    exp_sim = np.exp(sim - np.max(sim, axis=1, keepdims=True))\n    probs = np.diag(exp_sim) / np.sum(exp_sim, axis=1)\n    return float(round(-np.mean(np.log(probs)), 6))\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "InfoNCELossViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Identity embeddings",
+      "inputs": {
+        "Z1": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "Z2": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "temperature": 0.1
+      },
+      "isPublic": true,
+      "expectedOutput": 4.5e-05
+    },
+    {
+      "id": "test-2",
+      "name": "Misaligned pairs",
+      "inputs": {
+        "Z1": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "Z2": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "temperature": 0.1
+      },
+      "isPublic": true,
+      "expectedOutput": 10.000045
+    },
+    {
+      "id": "test-3",
+      "name": "High temperature",
+      "inputs": {
+        "Z1": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "Z2": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "temperature": 1
+      },
+      "isPublic": false,
+      "expectedOutput": 0.313262
+    },
+    {
+      "id": "info-nce-loss-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "Z1": [
+          [
+            2,
+            0
+          ],
+          [
+            0,
+            2
+          ]
+        ],
+        "Z2": [
+          [
+            2,
+            0
+          ],
+          [
+            0,
+            2
+          ]
+        ],
+        "temperature": 0.2
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "Z1": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "Z2": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "temperature": 0.05
+      },
+      "expectedOutput": 0.693147,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "Z1": [
+          [
+            2,
+            1
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "Z2": [
+          [
+            2,
+            1
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "temperature": 1.1
+      },
+      "expectedOutput": 0.338535,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "Z1": [
+          [
+            2,
+            0
+          ],
+          [
+            0,
+            2
+          ]
+        ],
+        "Z2": [
+          [
+            2,
+            0
+          ],
+          [
+            0,
+            2
+          ]
+        ],
+        "temperature": 0.15
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "Z1": [
+          [
+            3,
+            0
+          ],
+          [
+            0,
+            3
+          ]
+        ],
+        "Z2": [
+          [
+            3,
+            0
+          ],
+          [
+            0,
+            3
+          ]
+        ],
+        "temperature": 0.3
+      },
+      "expectedOutput": 0.0,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "Z1": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "Z2": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "temperature": 0.025
+      },
+      "expectedOutput": 0.693147,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "Z1": [
+          [
+            3,
+            2
+          ],
+          [
+            2,
+            3
+          ]
+        ],
+        "Z2": [
+          [
+            3,
+            2
+          ],
+          [
+            2,
+            3
+          ]
+        ],
+        "temperature": 2.1
+      },
+      "expectedOutput": 0.483133,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "Z1": [
+          [
+            4,
+            0
+          ],
+          [
+            0,
+            4
+          ]
+        ],
+        "Z2": [
+          [
+            4,
+            0
+          ],
+          [
+            0,
+            4
+          ]
+        ],
+        "temperature": 0.4
+      },
+      "expectedOutput": -0.0,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "Z1": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "Z2": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "temperature": 0.1
+      },
+      "expectedOutput": 4.5e-05,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "Z1": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "Z2": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "temperature": 0.075
+      },
+      "expectedOutput": 2e-06,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "Z1": [
+          [
+            5,
+            0
+          ],
+          [
+            0,
+            5
+          ]
+        ],
+        "Z2": [
+          [
+            5,
+            0
+          ],
+          [
+            0,
+            5
+          ]
+        ],
+        "temperature": 0.5
+      },
+      "expectedOutput": -0.0,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "Z1": [
+          [
+            4,
+            3
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "Z2": [
+          [
+            4,
+            3
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "temperature": 3.1
+      },
+      "expectedOutput": 0.544808,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "Z1": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "Z2": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "temperature": 0.08
+      },
+      "expectedOutput": 4e-06,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "Z1": [
+          [
+            6,
+            0
+          ],
+          [
+            0,
+            6
+          ]
+        ],
+        "Z2": [
+          [
+            6,
+            0
+          ],
+          [
+            0,
+            6
+          ]
+        ],
+        "temperature": 0.6
+      },
+      "expectedOutput": -0.0,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "Z1": [
+          [
+            5,
+            4
+          ],
+          [
+            4,
+            5
+          ]
+        ],
+        "Z2": [
+          [
+            5,
+            4
+          ],
+          [
+            4,
+            5
+          ]
+        ],
+        "temperature": 4.1
+      },
+      "expectedOutput": 0.578614,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "Z1": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "Z2": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "temperature": 0.12
+      },
+      "expectedOutput": 0.00024,
+      "isPublic": false
+    },
+    {
+      "id": "info-nce-loss-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "Z1": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "Z2": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "temperature": 0.04
+      },
+      "expectedOutput": 0.693147,
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "info_nce_loss",
+    "parameters": [
+      {
+        "name": "Z1",
+        "type": "array",
+        "example": "[[1, 0], [0, 1]]",
+        "description": "First embedding batch (N, D)"
+      },
+      {
+        "name": "Z2",
+        "type": "array",
+        "example": "[[1, 0], [0, 1]]",
+        "description": "Second embedding batch (N, D)"
+      },
+      {
+        "name": "temperature",
+        "type": "number",
+        "example": "0.1",
+        "description": "Temperature parameter (default 0.1)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "contrastive-loss",
+    "triplet-loss",
+    "cosine-embedding-loss",
+    "cross-entropy-loss",
+    "softmax-function"
+  ],
+  "tags": [
+    "Loss Functions"
+  ],
+  "prevId": "triplet-loss",
+  "nextId": "focal-loss",
+  "slug": "info-nce-loss",
+  "cleanTitle": "Implement InfoNCE Loss",
+  "category": "numpy",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/info-nce-loss",
+  "localUrl": "http://localhost:3000/problems/info-nce-loss",
+  "studyPlan": null
+}

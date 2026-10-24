@@ -1,0 +1,596 @@
+{
+  "id": "histogram-equalization",
+  "title": "Histogram Equalization",
+  "description": "Histogram equalization improves image contrast by redistributing pixel intensities so they span the full [0, 255] range more uniformly. It is one of the most commonly used image enhancement techniques.\n\nGiven a 2D grayscale image with integer pixel values in [0, 255], apply histogram equalization and return the transformed image.\n\n### Algorithm\n\n1. Compute the histogram: count the frequency of each intensity value (0 through 255).\n2. Compute the cumulative distribution function (CDF): cdf[i] = sum of hist[0] through hist[i].\n3. Find cdf_min, the smallest non-zero value in the CDF (the CDF of the darkest pixel that actually appears).\n4. Map each pixel value v to a new value using:\n\n$$\nnew\\_val = round\\left(\\frac{cdf[v] - cdf_{min}}{total\\_pixels - cdf_{min}} \\times 255\\right)\n$$\n\nIf all pixels have the same value (total_pixels equals cdf_min), map every pixel to 0.",
+  "seoDescription": "Equalize a grayscale image histogram using its cumulative distribution to remap pixel intensities.",
+  "examples": [
+    "Input: image = [[0, 1], [2, 3]]\n\nOutput: [[0, 85], [170, 255]]\n\nExplanation: Four equally frequent intensities are spread across the full output range.",
+    "Input: image = [[100, 100], [100, 100]]\n\nOutput: [[0, 0], [0, 0]]"
+  ],
+  "requirements": "* Build a 256-bin histogram and its cumulative sum\n* Use round() (not floor or ceil) when mapping to new values\n* Handle the edge case where all pixels are the same value",
+  "theory": "## Understanding the Theory: Histogram Equalization\n\n### Core Intuition: Why Do We Need This?\nImages possess rich spatial structure: nearby pixels are correlated, and visual patterns (edges, textures, object parts) are translation invariant. Computer vision models apply local receptive fields and weight sharing to process high-resolution visual inputs with minimal parameter overhead. **Histogram Equalization** extracts localized visual features, pools spatial maps, or reconciles geometric bounding boxes.\n\nIn this problem, the objective is to implement **Histogram Equalization** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nnew\\_val = round\\left(\\frac{cdf[v] - cdf_{min}}{total\\_pixels - cdf_{min}} \\times 255\\right)\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Receptive Field Growth**: Stacking convolutional layers with strides or pooling progressively expands the effective field of view, enabling deep layers to capture global semantic context.\n* **Boundary Padding & Strides**: Padding controls spatial dimension retention, while strides downsample feature resolutions efficiently without extra parameters.\n* **Vectorized im2col**: High-performance vision libraries transform sliding window convolutions into matrix multiplications (`GEMM`) via im2col operations.",
+  "hints": [
+    "Build a 256-bin histogram, then convert it into a cumulative count array.",
+    "Use the first positive cumulative count as the lower endpoint of the mapping."
+  ],
+  "constraints": "* Image has at least one pixel\n* Pixel values are integers in [0, 255]\n* Return a 2D list of integers with the same shape as input\n* Time limit: 300 ms",
+  "difficulty": "Medium",
+  "starterCode": "def histogram_equalize(image: list) -> list:\n    \"\"\"\n    Returns the histogram-equalized grayscale image.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T15:48:26.403Z",
+  "updatedAt": "2026-08-23T19:34:01.145Z",
+  "solution": "### 💡 Intuition & Approach\nFlattens probability density distribution of pixel intensity frequencies to enhance dynamic contrast.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef hist_equalize(image: list) -> list:\n    img = np.array(image, dtype=int)\n    hist, _ = np.histogram(img.flatten(), bins=256, range=[0, 256])\n    cdf = hist.cumsum()\n    cdf_masked = np.ma.masked_equal(cdf, 0)\n    cdf_scaled = (cdf_masked - cdf_masked.min()) * 255 / (cdf_masked.max() - cdf_masked.min())\n    cdf_final = np.ma.filled(cdf_scaled, 0).astype('uint8')\n    return cdf_final[img].tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "HistogramEqualizationViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Sequential",
+      "inputs": {
+        "image": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0,
+          85
+        ],
+        [
+          170,
+          255
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "All same",
+      "inputs": {
+        "image": [
+          [
+            100,
+            100
+          ],
+          [
+            100,
+            100
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "histogram-equalization-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "image": [
+          [
+            0,
+            2
+          ],
+          [
+            4,
+            6
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          85
+        ],
+        [
+          170,
+          255
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          0
+        ],
+        [
+          127,
+          255
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "image": [
+          [
+            0,
+            -1
+          ],
+          [
+            -2,
+            -3
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "image": [
+          [
+            0,
+            3
+          ],
+          [
+            6,
+            9
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          85
+        ],
+        [
+          170,
+          255
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "image": [
+          [
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          85
+        ],
+        [
+          170,
+          255
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "image": [
+          [
+            -2.0,
+            -1.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          255,
+          255
+        ],
+        [
+          0,
+          255
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "image": [
+          [
+            1,
+            0
+          ],
+          [
+            3,
+            2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          85,
+          0
+        ],
+        [
+          255,
+          170
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "image": [
+          [
+            0,
+            -1
+          ],
+          [
+            -2,
+            -3
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "image": [
+          [
+            0,
+            10
+          ],
+          [
+            20,
+            30
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          85
+        ],
+        [
+          170,
+          255
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "image": [
+          [
+            5.0,
+            6.0
+          ],
+          [
+            7.0,
+            8.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          85
+        ],
+        [
+          170,
+          255
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "image": [
+          [
+            0,
+            2
+          ],
+          [
+            3,
+            4
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          85
+        ],
+        [
+          170,
+          255
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "image": [
+          [
+            0,
+            -2
+          ],
+          [
+            -4,
+            -6
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          255
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "image": [
+          [
+            -1.0,
+            0.0
+          ],
+          [
+            1.0,
+            2.0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          255,
+          0
+        ],
+        [
+          127,
+          255
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "image": [
+          [
+            0,
+            4
+          ],
+          [
+            8,
+            12
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          85
+        ],
+        [
+          170,
+          255
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "image": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          85
+        ],
+        [
+          255,
+          255
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "histogram-equalization-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "image": [
+          [
+            0,
+            5
+          ],
+          [
+            10,
+            15
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          0,
+          85
+        ],
+        [
+          170,
+          255
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "histogram_equalize",
+    "parameters": [
+      {
+        "name": "image",
+        "type": "array",
+        "example": "[[0, 1], [2, 3]]",
+        "description": "2D grayscale image with values in [0, 255]"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "image-histogram",
+    "color-to-grayscale",
+    "gaussian-blur-kernel",
+    "conv2d-image-filtering",
+    "sobel-edge-detection"
+  ],
+  "tags": [
+    "Computer Vision"
+  ],
+  "prevId": "sobel-edge-detection",
+  "nextId": "morphological-operations",
+  "slug": "histogram-equalization",
+  "cleanTitle": "Histogram Equalization",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/histogram-equalization",
+  "localUrl": "http://localhost:3000/problems/histogram-equalization",
+  "studyPlan": null
+}

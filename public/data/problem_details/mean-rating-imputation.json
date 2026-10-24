@@ -1,0 +1,903 @@
+{
+  "id": "mean-rating-imputation",
+  "title": "Mean Rating Imputation",
+  "description": "A user-item rating matrix is often sparse, with zero representing a missing rating. Mean imputation fills each missing entry using observed ratings from either the same user or the same item.\n\nIn user mode, replace each zero in a row with the mean of that row's nonzero ratings. In item mode, replace each zero in a column with the mean of that column's nonzero ratings. If a user or item has no observed ratings, use 0.0 as its mean. Return a new matrix and leave ratings_matrix unchanged.",
+  "seoDescription": "Fill missing user-item ratings with the required row or column mean while preserving observed ratings.",
+  "examples": [
+    "Input: ratings_matrix = [[5, 3, 0], [4, 0, 2], [0, 1, 5]], mode = \"user\"\n\nOutput: [[5, 3, 4.0], [4, 3.0, 2], [3.0, 1, 5]]\n\nExplanation: Each zero is replaced by the mean of the nonzero ratings in its row.",
+    "Input: ratings_matrix = [[5, 3, 0], [4, 0, 2], [0, 1, 5]], mode = \"item\"\n\nOutput: [[5, 3, 3.5], [4, 2.0, 2], [4.5, 1, 5]]"
+  ],
+  "requirements": "* Treat zero as a missing rating.\n* In user mode, impute each zero with its user mean.\n* In item mode, impute each zero with its item mean.\n* Use 0.0 when the corresponding user or item has no observed ratings.\n* Return a new matrix with the same shape.",
+  "theory": "## Understanding the Theory: Mean Rating Imputation\n\n### Core Intuition: Why Do We Need This?\nRecommender systems surface relevant content, products, or information from catalogs containing millions of items. Evaluating recommendations requires ranking-sensitive metrics that emphasize placing the most relevant items near the top of the recommendation list. **Mean Rating Imputation** calculates ranking quality, user-item affinities, or top-K relevance scores.\n\nIn this problem, the objective is to implement **Mean Rating Imputation** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\hat{r}_{ui} = \\mu = \\frac{1}{|\\Omega|} \\sum_{(u,i) \\in \\Omega} r_{ui}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Position Discounting**: Users rarely scroll past the top items; ranking metrics heavily penalize placing relevant recommendations further down the list.\n* **Sparsity & Cold Start**: User-item interaction matrices are over 99% empty; embeddings and matrix factorization discover latent features to generalize to unseen interactions.\n* **Online vs. Offline Evaluation**: Offline ranking metrics (like NDCG@K and Recall@K) correlate strongly with online user engagement and click-through rates.",
+  "hints": [
+    "For user mode, compute one mean from each row before replacing its zeros.",
+    "For item mode, compute all column means before filling the copied matrix."
+  ],
+  "constraints": "* ratings_matrix is a nonempty rectangular matrix.\n* mode is either user or item.\n* Ratings are nonnegative numbers.\n* Time limit: 300 ms.",
+  "difficulty": "Medium",
+  "starterCode": "def mean_rating_imputation(ratings_matrix: list, mode: str) -> list:\n    \"\"\"\n    Returns a copy with missing ratings replaced by user or item means.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T22:50:45.825Z",
+  "updatedAt": "2026-08-23T21:21:00.873Z",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef mean_rating_imputation(ratings_matrix: list, mode: str) -> list:\n    arr = np.array([[np.nan if v == 0 else float(v) for v in row] for row in ratings_matrix])\n    if mode == 'user':\n        for i in range(arr.shape[0]):\n            row = arr[i]\n            valid = row[~np.isnan(row)]\n            row[np.isnan(row)] = np.mean(valid) if len(valid) > 0 else 0.0\n    else:\n        for j in range(arr.shape[1]):\n            col = arr[:, j]\n            valid = col[~np.isnan(col)]\n            col[np.isnan(col)] = np.mean(valid) if len(valid) > 0 else 0.0\n    return np.round(arr, 6).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "visualizationComponent": "MeanRatingImputationViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "User mean",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            5,
+            3,
+            0
+          ],
+          [
+            4,
+            0,
+            2
+          ],
+          [
+            0,
+            1,
+            5
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          5,
+          3,
+          4.0
+        ],
+        [
+          4,
+          3.0,
+          2
+        ],
+        [
+          3.0,
+          1,
+          5
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Item mean",
+      "inputs": {
+        "mode": "item",
+        "ratings_matrix": [
+          [
+            5,
+            3,
+            0
+          ],
+          [
+            4,
+            0,
+            2
+          ],
+          [
+            0,
+            1,
+            5
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          5,
+          3,
+          3.5
+        ],
+        [
+          4,
+          2.0,
+          2
+        ],
+        [
+          4.5,
+          1,
+          5
+        ]
+      ]
+    },
+    {
+      "id": "mean-rating-imputation-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            10,
+            6,
+            1
+          ],
+          [
+            8,
+            1,
+            4
+          ],
+          [
+            1,
+            2,
+            10
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          10.0,
+          6.0,
+          1.0
+        ],
+        [
+          8.0,
+          1.0,
+          4.0
+        ],
+        [
+          1.0,
+          2.0,
+          10.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            2,
+            2,
+            1
+          ],
+          [
+            2,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          2.0,
+          1.0
+        ],
+        [
+          2.0,
+          1.0,
+          1.0
+        ],
+        [
+          1.0,
+          1.0,
+          2.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            5,
+            3,
+            1
+          ],
+          [
+            4,
+            1,
+            2
+          ],
+          [
+            1,
+            1,
+            5
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          5.0,
+          3.0,
+          1.0
+        ],
+        [
+          4.0,
+          1.0,
+          2.0
+        ],
+        [
+          1.0,
+          1.0,
+          5.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            8,
+            4,
+            1
+          ],
+          [
+            6,
+            1,
+            3
+          ],
+          [
+            1,
+            2,
+            8
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          8.0,
+          4.0,
+          1.0
+        ],
+        [
+          6.0,
+          1.0,
+          3.0
+        ],
+        [
+          1.0,
+          2.0,
+          8.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            15,
+            9,
+            1
+          ],
+          [
+            12,
+            1,
+            6
+          ],
+          [
+            1,
+            3,
+            15
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          15.0,
+          9.0,
+          1.0
+        ],
+        [
+          12.0,
+          1.0,
+          6.0
+        ],
+        [
+          1.0,
+          3.0,
+          15.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          1.0,
+          1.0
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            10,
+            6,
+            1
+          ],
+          [
+            8,
+            1,
+            4
+          ],
+          [
+            1,
+            2,
+            10
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          10.0,
+          6.0,
+          1.0
+        ],
+        [
+          8.0,
+          1.0,
+          4.0
+        ],
+        [
+          1.0,
+          2.0,
+          10.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            20,
+            12,
+            1
+          ],
+          [
+            16,
+            1,
+            8
+          ],
+          [
+            1,
+            4,
+            20
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          20.0,
+          12.0,
+          1.0
+        ],
+        [
+          16.0,
+          1.0,
+          8.0
+        ],
+        [
+          1.0,
+          4.0,
+          20.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "mode": "resu",
+        "ratings_matrix": [
+          [
+            0,
+            3,
+            5
+          ],
+          [
+            2,
+            0,
+            4
+          ],
+          [
+            5,
+            1,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          3.5,
+          3.0,
+          5.0
+        ],
+        [
+          2.0,
+          2.0,
+          4.0
+        ],
+        [
+          5.0,
+          1.0,
+          4.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            4,
+            2,
+            1
+          ],
+          [
+            3,
+            1,
+            2
+          ],
+          [
+            1,
+            1,
+            4
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          4.0,
+          2.0,
+          1.0
+        ],
+        [
+          3.0,
+          1.0,
+          2.0
+        ],
+        [
+          1.0,
+          1.0,
+          4.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            25,
+            15,
+            1
+          ],
+          [
+            20,
+            1,
+            10
+          ],
+          [
+            1,
+            5,
+            25
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          25.0,
+          15.0,
+          1.0
+        ],
+        [
+          20.0,
+          1.0,
+          10.0
+        ],
+        [
+          1.0,
+          5.0,
+          25.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            15,
+            9,
+            1
+          ],
+          [
+            12,
+            1,
+            6
+          ],
+          [
+            1,
+            3,
+            15
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          15.0,
+          9.0,
+          1.0
+        ],
+        [
+          12.0,
+          1.0,
+          6.0
+        ],
+        [
+          1.0,
+          3.0,
+          15.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            4,
+            2,
+            1
+          ],
+          [
+            3,
+            1,
+            2
+          ],
+          [
+            1,
+            1,
+            4
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          4.0,
+          2.0,
+          1.0
+        ],
+        [
+          3.0,
+          1.0,
+          2.0
+        ],
+        [
+          1.0,
+          1.0,
+          4.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            30,
+            18,
+            1
+          ],
+          [
+            24,
+            1,
+            12
+          ],
+          [
+            1,
+            6,
+            30
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          30.0,
+          18.0,
+          1.0
+        ],
+        [
+          24.0,
+          1.0,
+          12.0
+        ],
+        [
+          1.0,
+          6.0,
+          30.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            20,
+            12,
+            1
+          ],
+          [
+            16,
+            1,
+            8
+          ],
+          [
+            1,
+            4,
+            20
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          20.0,
+          12.0,
+          1.0
+        ],
+        [
+          16.0,
+          1.0,
+          8.0
+        ],
+        [
+          1.0,
+          4.0,
+          20.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            6,
+            4,
+            1
+          ],
+          [
+            5,
+            1,
+            2
+          ],
+          [
+            1,
+            1,
+            6
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          6.0,
+          4.0,
+          1.0
+        ],
+        [
+          5.0,
+          1.0,
+          2.0
+        ],
+        [
+          1.0,
+          1.0,
+          6.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            2,
+            1,
+            1
+          ],
+          [
+            2,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            2
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          1.0,
+          1.0
+        ],
+        [
+          2.0,
+          1.0,
+          1.0
+        ],
+        [
+          1.0,
+          1.0,
+          2.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "mean-rating-imputation-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "mode": "user",
+        "ratings_matrix": [
+          [
+            40,
+            24,
+            1
+          ],
+          [
+            32,
+            1,
+            16
+          ],
+          [
+            1,
+            8,
+            40
+          ]
+        ]
+      },
+      "expectedOutput": [
+        [
+          40.0,
+          24.0,
+          1.0
+        ],
+        [
+          32.0,
+          1.0,
+          16.0
+        ],
+        [
+          1.0,
+          8.0,
+          40.0
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "mean_rating_imputation",
+    "parameters": [
+      {
+        "name": "ratings_matrix",
+        "type": "array",
+        "example": "[[5,3,0],[4,0,2],[0,1,5]]",
+        "description": "2D ratings matrix where 0 means missing"
+      },
+      {
+        "name": "mode",
+        "type": "string",
+        "example": "user",
+        "description": "'user' for row means or 'item' for column means"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "impute-missing",
+    "rating-normalization",
+    "baseline-predictor",
+    "matrix-factorization-sgd-step",
+    "zscore-standardization"
+  ],
+  "tags": [
+    "Recommender Systems",
+    "Data Processing"
+  ],
+  "prevId": "hit-rate-at-k",
+  "nextId": "novelty-score",
+  "slug": "mean-rating-imputation",
+  "cleanTitle": "Mean Rating Imputation",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/mean-rating-imputation",
+  "localUrl": "http://localhost:3000/problems/mean-rating-imputation",
+  "studyPlan": null
+}

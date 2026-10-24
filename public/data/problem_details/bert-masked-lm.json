@@ -1,0 +1,1264 @@
+{
+  "id": "bert-masked-lm",
+  "title": "Masked Language Modeling",
+  "description": "Apply BERT's deterministic 80-10-10 masking rule to positions selected for masked-language-model training. The supplied replace_probs value chooses the action at each selected position:\n\n$$\n\\widetilde{x}_{i} =\n\\begin{cases}\n\\text{mask token}, & r_i < 0.8 \\\\\n\\text{random token}, & 0.8 \\le r_i < 0.9 \\\\\nx_i, & r_i \\ge 0.9\n\\end{cases}\n$$\n\nHere, $x_i$ is the original token ID and $r_i$ is the supplied replacement probability. Unselected tokens remain unchanged. Labels contain the original token ID at selected positions and -100 elsewhere. Return a Python dictionary with exactly masked_ids and labels. Both values must be int64 NumPy arrays with the same shape as token_ids.",
+  "seoDescription": "Implement BERT masked language modeling with the 80-10-10 replacement strategy, training labels, and vocabulary logits.",
+  "examples": [
+    "Input: token_ids = [[101,2003,1037,102]], mask_positions = [[false,true,true,false]], replace_probs = [[0,0.5,0.85,0]], random_tokens = [[0,500,200,0]], mask_token_id = 103\n\nOutput: {\"masked_ids\":[[101,103,200,102]],\"labels\":[[-100,2003,1037,-100]]}\n\nExplanation: The first selected token uses the mask ID, while the second uses its supplied random token because its probability lies in [0.8, 0.9).",
+    "Input: token_ids = [[10,20,30]], mask_positions = [[true,true,true]], replace_probs = [[0.1,0.95,0.82]], random_tokens = [[99,99,55]], mask_token_id = 103\n\nOutput: {\"masked_ids\":[[103,20,55]],\"labels\":[[10,20,30]]}",
+    "Input: token_ids = [[5,10,15]], mask_positions = [[false,false,false]], replace_probs = [[0,0,0]], random_tokens = [[0,0,0]], mask_token_id = 103\n\nOutput: {\"masked_ids\":[[5,10,15]],\"labels\":[[-100,-100,-100]]}"
+  ],
+  "requirements": "- Use NumPy and the supplied replacement decisions.\n- Do not sample random values inside the function.\n- Apply the three replacement intervals only at selected positions.\n- Store original IDs in labels only at selected positions.\n- Return exactly the two documented int64 arrays.",
+  "theory": "# <span style=\"font-size: 20px;\">Masked Language Modeling</span>\n\n<span style=\"font-size: 14px;\">Masked Language Modeling (MLM) is the primary pre-training objective of BERT (Devlin et al., 2019). Rather than predicting tokens left-to-right like autoregressive models, MLM randomly masks a subset of input tokens and trains the model to reconstruct them using bidirectional context. This is what allows BERT to attend to both left and right context simultaneously, producing deeply bidirectional representations.</span>\n\n<span style=\"font-size: 14px;\">MLM transforms pre-training into a fill-in-the-blank task. 15% of tokens are selected, corrupted via an 80-10-10 strategy, and the model must recover the original token at each corrupted position. Loss is computed only on masked positions.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is / What It Does</span>\n\n<span style=\"font-size: 14px;\">MLM randomly selects tokens from the input sequence and replaces them with corrupted versions. The model must predict the original token at each selected position using the surrounding context. Because no causal mask restricts attention, the model can use tokens from both the left and right to make its prediction.</span>\n\n<span style=\"font-size: 14px;\">This is fundamentally different from autoregressive models like GPT, where position $t$ can only encode information from positions $1, 2, \\ldots, t-1$. In MLM, masked positions draw from all unmasked positions, both before and after.</span>\n\n<span style=\"font-size: 14px;\">Key properties:</span>\n\n* <span style=\"font-size: 14px;\">**Bidirectional context:** Every token attends to every other token (no causal mask), so masked positions are predicted from full surrounding context.</span>\n* <span style=\"font-size: 14px;\">**Partial prediction:** Only 15% of tokens are predicted per forward pass, making each training step less efficient than autoregressive models (which predict all tokens), but producing richer representations per token.</span>\n* <span style=\"font-size: 14px;\">**Corruption strategy:** Selected tokens are not simply replaced with a [MASK] symbol. The 80-10-10 scheme is used to reduce the gap between pre-training (which uses [MASK]) and fine-tuning (which never sees [MASK]).</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">Let $\\mathbf{x} = (x_1, x_2, \\ldots, x_n)$ be the input token sequence of length $n$. Let $\\mathcal{M} \\subset \\{1, 2, \\ldots, n\\}$ be the set of positions selected for masking, where $|\\mathcal{M}| \\approx 0.15n$.</span>\n\n<span style=\"font-size: 14px;\">**The 80-10-10 masking strategy.** For each position $i \\in \\mathcal{M}$, the corrupted token $\\tilde{x}_i$ is determined as:</span>\n\n$$\n\\tilde{x}_i = \\begin{cases} \\texttt{[MASK]} & \\text{with probability } 0.80 \\\\ x_r \\sim \\text{Uniform}(\\mathcal{V}) & \\text{with probability } 0.10 \\\\ x_i & \\text{with probability } 0.10 \\end{cases}\n$$\n\n<span style=\"font-size: 14px;\">where $\\mathcal{V}$ is the full vocabulary and $x_r$ is a token sampled uniformly at random from $\\mathcal{V}$.</span>\n\n<span style=\"font-size: 14px;\">**The MLM prediction head.** At each masked position $i \\in \\mathcal{M}$, the model takes the final hidden state $\\mathbf{h}_i \\in \\mathbb{R}^{H}$ and projects it to vocabulary-sized logits:</span>\n\n$$\n\\mathbf{z}_i = \\mathbf{h}_i \\mathbf{W} + \\mathbf{b}\n$$\n\n<span style=\"font-size: 14px;\">where $\\mathbf{W} \\in \\mathbb{R}^{H \\times V}$ is the projection weight matrix, $\\mathbf{b} \\in \\mathbb{R}^{V}$ is the bias vector, $H$ is the hidden size, and $V$ is the vocabulary size.</span>\n\n<span style=\"font-size: 14px;\">**The MLM loss.** Cross-entropy is computed only at masked positions:</span>\n\n$$\n\\mathcal{L}_{\\text{MLM}} = -\\frac{1}{|\\mathcal{M}|} \\sum_{i \\in \\mathcal{M}} \\log \\frac{\\exp(\\mathbf{z}_i[x_i])}{\\sum_{v=1}^{V} \\exp(\\mathbf{z}_i[v])}\n$$\n\n<span style=\"font-size: 14px;\">where $\\mathbf{z}_i[x_i]$ is the logit corresponding to the true token $x_i$ at position $i$, and the denominator is the softmax normalizer over the full vocabulary.</span>\n\n<span style=\"font-size: 14px;\">Positions not in $\\mathcal{M}$ are assigned a label of $-100$, which is the standard PyTorch convention for `ignore_index` in `CrossEntropyLoss`. These positions contribute zero gradient and are excluded from the loss computation entirely.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why 80-10-10 (Not 100% [MASK])</span>\n\n<span style=\"font-size: 14px;\">A naive approach would replace every selected token with the [MASK] symbol. This creates a train-test mismatch: during pre-training, the model sees [MASK] tokens everywhere, but during fine-tuning and inference, [MASK] never appears in the input. The model's representations would be optimized for inputs containing [MASK] and degrade on real text.</span>\n\n<span style=\"font-size: 14px;\">The 80-10-10 strategy mitigates this mismatch in three ways:</span>\n\n* <span style=\"font-size: 14px;\">**80% [MASK]:** Gives the model a clear signal that a position needs to be predicted. Without [MASK], the model would not know which positions require reconstruction.</span>\n* <span style=\"font-size: 14px;\">**10% random token:** Forces the model to maintain good representations at every position. The model cannot assume a non-[MASK] token is correct -- it must verify consistency against context, adding robustness.</span>\n* <span style=\"font-size: 14px;\">**10% unchanged:** Teaches the model that even correct-looking tokens might be prediction targets. This biases representations toward encoding the observed token, which helps at fine-tuning time when [MASK] never appears.</span>\n\n<span style=\"font-size: 14px;\">Devlin et al. chose the 80-10-10 split empirically. Ablations showed the exact ratio matters less than having all three components present. Using 100% [MASK] performed measurably worse on downstream tasks.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Why 15% Masking Rate</span>\n\n<span style=\"font-size: 14px;\">The masking rate controls a fundamental tradeoff between training efficiency and prediction quality:</span>\n\n* <span style=\"font-size: 14px;\">**Too low (e.g., 5%):** Very few tokens are predicted per forward pass, meaning each training step provides minimal gradient signal. The model would need many more steps to learn the same representations, making pre-training prohibitively slow and expensive.</span>\n* <span style=\"font-size: 14px;\">**Too high (e.g., 50%):** Too many tokens are masked, destroying most of the context. The model cannot make meaningful predictions because there is not enough surrounding information to reconstruct the masked tokens. The task becomes closer to random guessing than language understanding.</span>\n\n<span style=\"font-size: 14px;\">At 15%, for a typical BERT sequence of 512 tokens, roughly 77 tokens are selected for prediction per sequence. This provides substantial gradient signal per step while preserving 85% of the context for the model to condition on.</span>\n\n<span style=\"font-size: 14px;\">The 15% rate was determined empirically. MLM models converge slower than autoregressive models (which predict 100% of tokens) because only 15% produce loss. This is the fundamental efficiency cost of bidirectional pre-training: richer representations, but fewer prediction targets per step. Later work found slightly higher rates (20-25%) can work for large models, but 15% remains the standard baseline.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">The MLM objective was introduced in \"BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding\" (Devlin, Chang, Lee, and Toutanova, 2019). The core claim is that deeply bidirectional representations outperform both left-to-right (GPT) and shallow bidirectional (ELMo) approaches.</span>\n\n<span style=\"font-size: 14px;\">The paper contrasts MLM with GPT's autoregressive objective, where a causal mask restricts position $t$ to attend only to positions $1$ through $t-1$. BERT removes this mask, allowing full bidirectional attention. The tradeoff is that BERT cannot be used directly for text generation.</span>\n\n<span style=\"font-size: 14px;\">Devlin et al. borrowed the MLM concept from the Cloze task (Taylor, 1953). The paper states: \"We simply mask some percentage of the input tokens at random, and then predict those masked tokens.\" This produced representations that set new state-of-the-art across 11 NLP benchmarks.</span>\n\n<span style=\"font-size: 14px;\">The $-100$ label convention is central to implementation. Every position gets a label: masked positions receive the original token ID, unmasked positions receive $-100$. PyTorch's `CrossEntropyLoss` with `ignore_index=-100` skips these positions, contributing zero gradient. This convention is now standard across all MLM implementations.</span>\n\n<span style=\"font-size: 14px;\">BERT was pre-trained on BooksCorpus (800M words) and English Wikipedia (2500M words) for 1M steps with batch size 256. The MLM objective was combined with Next Sentence Prediction (NSP), though later work (RoBERTa) showed NSP to be unnecessary.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Prediction Head</span>\n\n<span style=\"font-size: 14px;\">The MLM prediction head maps hidden states to vocabulary logits. In BERT's full implementation, it applies a dense layer ($H \\to H$), GELU activation, layer normalization, then a vocabulary projection ($H \\to V$). In simplified form:</span>\n\n$$\n\\mathbf{z}_i = \\mathbf{h}_i \\mathbf{W} + \\mathbf{b}\n$$\n\n<span style=\"font-size: 14px;\">where $\\mathbf{W} \\in \\mathbb{R}^{H \\times V}$ and $\\mathbf{b} \\in \\mathbb{R}^{V}$.</span>\n\n<span style=\"font-size: 14px;\">**Weight tying.** A common optimization ties $\\mathbf{W}$ with the input embedding matrix $\\mathbf{E} \\in \\mathbb{R}^{V \\times H}$, setting $\\mathbf{W} = \\mathbf{E}^\\top$. This saves $V \\times H$ parameters (roughly 23M for BERT-base) and enforces consistency: tokens with similar embeddings produce similar logits. BERT uses weight tying.</span>\n\n<span style=\"font-size: 14px;\">**Training vs. inference.** During pre-training, the prediction head is applied only at masked positions. During fine-tuning, it is discarded -- only the transformer encoder is kept and a new task-specific head is attached.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Consider a sequence of 10 tokens (using token IDs for clarity):</span>\n\n* <span style=\"font-size: 14px;\">**Input token IDs:** $[101, 2023, 2003, 1037, 6251, 2005, 9543, 4083, 1012, 102]$</span>\n* <span style=\"font-size: 14px;\">**Readable form:** [CLS] this is a sentence for masked language . [SEP]</span>\n\n<span style=\"font-size: 14px;\">**Step 1: Select 15% of tokens for masking.**</span>\n\n<span style=\"font-size: 14px;\">$0.15 \\times 10 = 1.5$, rounded to 2 tokens. Suppose positions 4 and 6 are selected (0-indexed). Position 4 has token ID 6251 (\"sentence\") and position 6 has token ID 9543 (\"masked\").</span>\n\n<span style=\"font-size: 14px;\">Note: positions 0 and 9 are [CLS] and [SEP] -- special tokens are typically excluded from masking candidates, so the actual candidate pool is positions 1-8.</span>\n\n<span style=\"font-size: 14px;\">**Step 2: Apply 80-10-10 for each selected position.**</span>\n\n<span style=\"font-size: 14px;\">For position 4 (token 6251, \"sentence\"):</span>\n\n* <span style=\"font-size: 14px;\">**Draw:** random value 0.35 -- falls in the 80% range (0.0 to 0.8).</span>\n* <span style=\"font-size: 14px;\">**Action:** Replace with [MASK] (token ID 103).</span>\n\n<span style=\"font-size: 14px;\">For position 6 (token 9543, \"masked\"):</span>\n\n* <span style=\"font-size: 14px;\">**Draw:** random value 0.87 -- falls in the 10% random range (0.8 to 0.9).</span>\n* <span style=\"font-size: 14px;\">**Action:** Replace with a random token from the vocabulary. Suppose the random token is 7592 (\"playing\").</span>\n\n<span style=\"font-size: 14px;\">**Step 3: Construct the three output arrays.**</span>\n\n<span style=\"font-size: 14px;\">**masked_ids** (the corrupted input fed to the model):</span>\n\n$$\n[101, 2023, 2003, 1037, \\mathbf{103}, 2005, \\mathbf{7592}, 4083, 1012, 102]\n$$\n\n<span style=\"font-size: 14px;\">Position 4 changed from 6251 to 103 ([MASK]). Position 6 changed from 9543 to 7592 (random token).</span>\n\n<span style=\"font-size: 14px;\">**labels** (targets for loss computation):</span>\n\n$$\n[-100, -100, -100, -100, \\mathbf{6251}, -100, \\mathbf{9543}, -100, -100, -100]\n$$\n\n<span style=\"font-size: 14px;\">Only positions 4 and 6 have real labels (the original token IDs). All other positions are $-100$, meaning they are ignored in the cross-entropy loss.</span>\n\n<span style=\"font-size: 14px;\">**mask** (boolean array indicating which positions are prediction targets):</span>\n\n$$\n[\\text{False}, \\text{False}, \\text{False}, \\text{False}, \\mathbf{\\text{True}}, \\text{False}, \\mathbf{\\text{True}}, \\text{False}, \\text{False}, \\text{False}]\n$$\n\n<span style=\"font-size: 14px;\">**Step 4: Forward pass and loss.**</span>\n\n<span style=\"font-size: 14px;\">The model processes masked_ids through the encoder. At positions 4 and 6, the prediction head computes logits $\\mathbf{z}_4$ and $\\mathbf{z}_6$. Cross-entropy loss is computed against labels 6251 and 9543 respectively. The MLM loss is the average of these two.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Modern Context</span>\n\n<span style=\"font-size: 14px;\">MLM was the dominant pre-training objective from 2018 to roughly 2020, but the landscape has shifted significantly since then:</span>\n\n* <span style=\"font-size: 14px;\">**GPT-style next-token prediction:** Autoregressive pre-training scales more effectively because every token produces a loss signal (not just 15%). This approach now dominates large-scale pre-training.</span>\n* <span style=\"font-size: 14px;\">**SpanBERT (Joshi et al., 2020):** Masks contiguous spans instead of random tokens, forcing the model to reason about longer-range dependencies. Outperforms BERT on span extraction tasks like question answering.</span>\n* <span style=\"font-size: 14px;\">**ELECTRA (Clark et al., 2020):** Replaces MLM with replaced token detection. A small generator produces plausible replacements, and the discriminator classifies every token as real or replaced, receiving gradient at all positions. Significantly more sample-efficient than BERT.</span>\n* <span style=\"font-size: 14px;\">**T5 (Raffel et al., 2020):** Uses span corruption with sentinel tokens and an encoder-decoder architecture, combining bidirectional encoding with autoregressive span generation.</span>\n* <span style=\"font-size: 14px;\">**RoBERTa (Liu et al., 2019):** Keeps MLM but applies dynamic masking (regenerated each epoch) rather than fixed preprocessing-time masks, improving performance with no architectural changes.</span>\n\n<span style=\"font-size: 14px;\">Despite these advances, MLM remains foundational for understanding bidirectional pre-training and the tradeoffs relative to autoregressive models.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Common Pitfalls</span>\n\n* <span style=\"font-size: 14px;\">**Computing loss on all positions instead of only masked ones.** If you compute cross-entropy over the entire sequence, unmasked positions dominate the loss and drown out the actual learning signal. Always use `ignore_index=-100` or explicitly index into masked positions.</span>\n* <span style=\"font-size: 14px;\">**Wrong masking rate.** Too low means slow convergence; too high destroys context. Stick to 15% unless you have ablation results justifying a different rate.</span>\n* <span style=\"font-size: 14px;\">**Forgetting the 10% random and 10% unchanged.** Replacing all selected tokens with [MASK] produces worse downstream performance due to train-test mismatch. Always implement the full 80-10-10 strategy.</span>\n* <span style=\"font-size: 14px;\">**Using [MASK] at inference or fine-tuning.** The [MASK] token exists only for pre-training. Including it in fine-tuning inputs causes unpredictable behavior.</span>\n* <span style=\"font-size: 14px;\">**Label -100 not handled properly.** If your loss function does not support `ignore_index`, the model tries to predict a nonexistent token, causing numerical errors or crashes.</span>\n* <span style=\"font-size: 14px;\">**Masking special tokens.** [CLS], [SEP], and padding tokens should never be masked. Exclude them from the candidate pool before selecting the 15%.</span>\n* <span style=\"font-size: 14px;\">**Static vs. dynamic masking.** Original BERT used static masking (fixed during preprocessing). RoBERTa showed dynamic masking (regenerated each epoch) improves performance.</span>\n\n---",
+  "hints": [
+    "Initialize labels with np.full_like(token_ids, -100).",
+    "Use boolean masks for the three replacement intervals.",
+    "Copy token_ids before changing selected positions."
+  ],
+  "constraints": "- token_ids and random_tokens have the same shape (B, S) and dtype int64.\n- mask_positions has shape (B, S) and dtype boolean.\n- replace_probs has shape (B, S), dtype float64, and values in [0, 1].\n- mask_token_id is an integer.\n- B and S are positive.",
+  "difficulty": "Medium",
+  "starterCode": "import numpy as np\n\ndef apply_mlm_mask(token_ids: np.ndarray, mask_positions: np.ndarray,\n                   replace_probs: np.ndarray, random_tokens: np.ndarray,\n                   mask_token_id: int = 103) -> dict:\n    \"\"\"\n    Returns masked_ids and labels as int64 arrays in a dictionary.\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-03T18:27:22.480Z",
+  "updatedAt": "2026-07-03T17:25:32.060Z",
+  "topicId": "bert-masked-lm",
+  "paperSnippet": "\"We simply mask some percentage of the input tokens at random, and then predict those masked tokens. We refer to this procedure as a 'masked LM' (MLM). We always replace 80% with [MASK], 10% with random token, 10% unchanged.\"",
+  "visualizationComponent": "MaskedLMViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Masked Language Modeling** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef apply_mlm_mask(token_ids: np.ndarray, mask_positions: np.ndarray,\n                   replace_probs: np.ndarray, random_tokens: np.ndarray,\n                   mask_token_id: int) -> dict:\n    tok = np.array(token_ids, dtype=int)\n    mask_pos = np.array(mask_positions, dtype=bool)\n    probs = np.array(replace_probs, dtype=float)\n    rand_tok = np.array(random_tokens, dtype=int)\n    mask_id = int(mask_token_id)\n    \n    masked_ids = tok.copy()\n    labels = np.full_like(tok, -100)\n    \n    B, S = tok.shape\n    for b in range(B):\n        for s in range(S):\n            if mask_pos[b, s]:\n                labels[b, s] = tok[b, s]\n                p = probs[b, s]\n                if p < 0.8:\n                    masked_ids[b, s] = mask_id\n                elif p < 0.9:\n                    masked_ids[b, s] = rand_tok[b, s]\n                else:\n                    masked_ids[b, s] = tok[b, s]\n                    \n    return {\n        \"masked_ids\": masked_ids.tolist(),\n        \"labels\": labels.tolist()\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "public-1",
+      "name": "All replacement branches",
+      "inputs": {
+        "token_ids": [
+          [
+            101,
+            2003,
+            1037,
+            102
+          ]
+        ],
+        "mask_token_id": 103,
+        "random_tokens": [
+          [
+            0,
+            500,
+            200,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            0.5,
+            0.85,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            false,
+            true,
+            true,
+            false
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            101,
+            103,
+            200,
+            102
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            2003,
+            1037,
+            -100
+          ]
+        ]
+      }
+    },
+    {
+      "id": "public-2",
+      "name": "Keep selected token",
+      "inputs": {
+        "token_ids": [
+          [
+            10,
+            20,
+            30
+          ]
+        ],
+        "mask_token_id": 103,
+        "random_tokens": [
+          [
+            99,
+            99,
+            55
+          ]
+        ],
+        "replace_probs": [
+          [
+            0.1,
+            0.95,
+            0.82
+          ]
+        ],
+        "mask_positions": [
+          [
+            true,
+            true,
+            true
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            103,
+            20,
+            55
+          ]
+        ],
+        "labels": [
+          [
+            10,
+            20,
+            30
+          ]
+        ]
+      }
+    },
+    {
+      "id": "public-3",
+      "name": "No selected positions",
+      "inputs": {
+        "token_ids": [
+          [
+            5,
+            10,
+            15
+          ]
+        ],
+        "mask_token_id": 103,
+        "random_tokens": [
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            false,
+            false,
+            false
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            5,
+            10,
+            15
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            -100,
+            -100
+          ]
+        ]
+      }
+    },
+    {
+      "id": "bert-masked-lm-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "token_ids": [
+          [
+            202,
+            4006,
+            2074,
+            204
+          ]
+        ],
+        "mask_token_id": 206,
+        "random_tokens": [
+          [
+            0,
+            1000,
+            400,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            1.0,
+            1.7,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            0,
+            2,
+            2,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            202,
+            4006,
+            2074,
+            204
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            4006,
+            2074,
+            -100
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "token_ids": [
+          [
+            50,
+            1002,
+            518,
+            51
+          ]
+        ],
+        "mask_token_id": 52,
+        "random_tokens": [
+          [
+            0,
+            250,
+            100,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            0.25,
+            0.425,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            50,
+            1002,
+            518,
+            51
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            -100,
+            -100,
+            -100
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "token_ids": [
+          [
+            -101,
+            -2003,
+            -1037,
+            -102
+          ]
+        ],
+        "mask_token_id": -103,
+        "random_tokens": [
+          [
+            0,
+            -500,
+            -200,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            -0.5,
+            -0.85,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            0,
+            -1,
+            -1,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            -101,
+            -103,
+            -103,
+            -102
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            -2003,
+            -1037,
+            -100
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "token_ids": [
+          [
+            303,
+            6009,
+            3111,
+            306
+          ]
+        ],
+        "mask_token_id": 309,
+        "random_tokens": [
+          [
+            0,
+            1500,
+            600,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            1.5,
+            2.55,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            0,
+            3,
+            3,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            303,
+            6009,
+            3111,
+            306
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            6009,
+            3111,
+            -100
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "token_ids": [
+          [
+            102.0,
+            2004.0,
+            1038.0,
+            103.0
+          ]
+        ],
+        "mask_token_id": 104.0,
+        "random_tokens": [
+          [
+            1.0,
+            501.0,
+            201.0,
+            1.0
+          ]
+        ],
+        "replace_probs": [
+          [
+            1.0,
+            1.5,
+            1.85,
+            1.0
+          ]
+        ],
+        "mask_positions": [
+          [
+            1.0,
+            2.0,
+            2.0,
+            1.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            102,
+            2004,
+            1038,
+            103
+          ]
+        ],
+        "labels": [
+          [
+            102,
+            2004,
+            1038,
+            103
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "token_ids": [
+          [
+            99.0,
+            2001.0,
+            1035.0,
+            100.0
+          ]
+        ],
+        "mask_token_id": 101.0,
+        "random_tokens": [
+          [
+            -2.0,
+            498.0,
+            198.0,
+            -2.0
+          ]
+        ],
+        "replace_probs": [
+          [
+            -2.0,
+            -1.5,
+            -1.15,
+            -2.0
+          ]
+        ],
+        "mask_positions": [
+          [
+            -2.0,
+            -1.0,
+            -1.0,
+            -2.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            101,
+            101,
+            101,
+            101
+          ]
+        ],
+        "labels": [
+          [
+            99,
+            2001,
+            1035,
+            100
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "token_ids": [
+          [
+            102,
+            1037,
+            2003,
+            101
+          ]
+        ],
+        "mask_token_id": 103,
+        "random_tokens": [
+          [
+            0,
+            200,
+            500,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            0.85,
+            0.5,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            false,
+            true,
+            true,
+            false
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            102,
+            200,
+            103,
+            101
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            1037,
+            2003,
+            -100
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "token_ids": [
+          [
+            -101,
+            -2003,
+            -1037,
+            -102
+          ]
+        ],
+        "mask_token_id": -103,
+        "random_tokens": [
+          [
+            0,
+            -500,
+            -200,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            -0.5,
+            -0.85,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            0,
+            -1,
+            -1,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            -101,
+            -103,
+            -103,
+            -102
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            -2003,
+            -1037,
+            -100
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "token_ids": [
+          [
+            1010,
+            20030,
+            10370,
+            1020
+          ]
+        ],
+        "mask_token_id": 1030,
+        "random_tokens": [
+          [
+            0,
+            5000,
+            2000,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            5.0,
+            8.5,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            0,
+            10,
+            10,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            1010,
+            20030,
+            10370,
+            1020
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            20030,
+            10370,
+            -100
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "token_ids": [
+          [
+            10,
+            200,
+            104,
+            10
+          ]
+        ],
+        "mask_token_id": 10,
+        "random_tokens": [
+          [
+            0,
+            50,
+            20,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            0.05,
+            0.085,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            10,
+            200,
+            104,
+            10
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            -100,
+            -100,
+            -100
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "token_ids": [
+          [
+            106.0,
+            2008.0,
+            1042.0,
+            107.0
+          ]
+        ],
+        "mask_token_id": 108.0,
+        "random_tokens": [
+          [
+            5.0,
+            505.0,
+            205.0,
+            5.0
+          ]
+        ],
+        "replace_probs": [
+          [
+            5.0,
+            5.5,
+            5.85,
+            5.0
+          ]
+        ],
+        "mask_positions": [
+          [
+            5.0,
+            6.0,
+            6.0,
+            5.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            106,
+            2008,
+            1042,
+            107
+          ]
+        ],
+        "labels": [
+          [
+            106,
+            2008,
+            1042,
+            107
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "token_ids": [
+          [
+            152,
+            3004,
+            1556,
+            153
+          ]
+        ],
+        "mask_token_id": 154,
+        "random_tokens": [
+          [
+            0,
+            750,
+            300,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            0.75,
+            1.275,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            0,
+            2,
+            2,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            152,
+            154,
+            1556,
+            153
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            3004,
+            1556,
+            -100
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "token_ids": [
+          [
+            -202,
+            -4006,
+            -2074,
+            -204
+          ]
+        ],
+        "mask_token_id": -206,
+        "random_tokens": [
+          [
+            0,
+            -1000,
+            -400,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            -1.0,
+            -1.7,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            0,
+            -2,
+            -2,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            -202,
+            -206,
+            -206,
+            -204
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            -4006,
+            -2074,
+            -100
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "token_ids": [
+          [
+            25,
+            501,
+            259,
+            26
+          ]
+        ],
+        "mask_token_id": 26,
+        "random_tokens": [
+          [
+            0,
+            125,
+            50,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            0.125,
+            0.2125,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            25,
+            501,
+            259,
+            26
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            -100,
+            -100,
+            -100
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "token_ids": [
+          [
+            100.0,
+            2002.0,
+            1036.0,
+            101.0
+          ]
+        ],
+        "mask_token_id": 102.0,
+        "random_tokens": [
+          [
+            -1.0,
+            499.0,
+            199.0,
+            -1.0
+          ]
+        ],
+        "replace_probs": [
+          [
+            -1.0,
+            -0.5,
+            -0.15000000000000002,
+            -1.0
+          ]
+        ],
+        "mask_positions": [
+          [
+            -1.0,
+            0.0,
+            0.0,
+            -1.0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            102,
+            2002,
+            1036,
+            102
+          ]
+        ],
+        "labels": [
+          [
+            100,
+            -100,
+            -100,
+            101
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "token_ids": [
+          [
+            404,
+            8012,
+            4148,
+            408
+          ]
+        ],
+        "mask_token_id": 412,
+        "random_tokens": [
+          [
+            0,
+            2000,
+            800,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            2.0,
+            3.4,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            0,
+            4,
+            4,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            404,
+            8012,
+            4148,
+            408
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            8012,
+            4148,
+            -100
+          ]
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "bert-masked-lm-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "token_ids": [
+          [
+            76,
+            1502,
+            778,
+            76
+          ]
+        ],
+        "mask_token_id": 77,
+        "random_tokens": [
+          [
+            0,
+            375,
+            150,
+            0
+          ]
+        ],
+        "replace_probs": [
+          [
+            0,
+            0.375,
+            0.6375,
+            0
+          ]
+        ],
+        "mask_positions": [
+          [
+            0,
+            1,
+            1,
+            0
+          ]
+        ]
+      },
+      "expectedOutput": {
+        "masked_ids": [
+          [
+            76,
+            77,
+            77,
+            76
+          ]
+        ],
+        "labels": [
+          [
+            -100,
+            1502,
+            778,
+            -100
+          ]
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "apply_mlm_mask",
+    "runtime": "numpy",
+    "parameters": [
+      {
+        "name": "token_ids",
+        "type": "array",
+        "example": [
+          [
+            101,
+            2003,
+            1037,
+            102
+          ]
+        ],
+        "description": "Int64 token IDs with shape (B, S)."
+      },
+      {
+        "name": "mask_positions",
+        "type": "array",
+        "example": [
+          [
+            false,
+            true,
+            true,
+            false
+          ]
+        ],
+        "description": "Boolean selection mask with shape (B, S)."
+      },
+      {
+        "name": "replace_probs",
+        "type": "array",
+        "example": [
+          [
+            0,
+            0.5,
+            0.85,
+            0
+          ]
+        ],
+        "description": "Float64 replacement decisions with shape (B, S)."
+      },
+      {
+        "name": "random_tokens",
+        "type": "array",
+        "example": [
+          [
+            0,
+            500,
+            200,
+            0
+          ]
+        ],
+        "description": "Int64 replacement IDs with shape (B, S)."
+      },
+      {
+        "name": "mask_token_id",
+        "type": "number",
+        "example": 103,
+        "description": "Integer mask-token ID."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "bert-masked-lm",
+    "name": "Masked Language Modeling",
+    "description": "15% masking with 80-10-10 strategy",
+    "color": "#8b5cf6"
+  },
+  "paper": {
+    "id": "bert",
+    "title": "BERT: Pre-training of Deep Bidirectional Transformers",
+    "authors": "Devlin et al., 2018",
+    "year": 2018,
+    "paperUrl": "https://arxiv.org/abs/1810.04805",
+    "visualizationComponent": "BertArchViz"
+  },
+  "navigation": {
+    "index": 3,
+    "total": 6,
+    "prev": "bert-segment-embedding",
+    "next": "bert-nsp"
+  },
+  "cleanTitle": ""
+}

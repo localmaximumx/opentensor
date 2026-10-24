@@ -1,0 +1,644 @@
+{
+  "id": "k3-situ-glu",
+  "title": "SiTU-GLU",
+  "description": "SiTU-GLU smoothly caps both multiplicative branches of a gated feed-forward activation. For gate projection $g=W_gx$, up projection $u=W_ux$, and positive caps $\\beta_1$ and $\\beta_2$, the activation is\n\n$$\n\\left[\\beta_1\\tanh\\left(\\frac{g}{\\beta_1}\\right)\\odot\\operatorname{sigmoid}(g)\\right]\n\\odot\n\\left[\\beta_2\\tanh\\left(\\frac{u}{\\beta_2}\\right)\\right].\n$$\n\nThe scaled hyperbolic tangent stays approximately linear near zero while bounding each branch at large magnitude. The gate and up caps are independent. Return the gated activation as one tensor.",
+  "seoDescription": "Implement Kimi K3 SiTU-GLU by combining sigmoid-tanh gated activations with an elementwise linear branch.",
+  "examples": [
+    "Input: input_tensor = [[0]], gate_projection = [[1]], up_projection = [[1]], gate_cap = 4, up_cap = 25\n\nOutput: tensor([[0.0]])\n\nExplanation: Both projected branches are zero, so their bounded product is also zero.",
+    "Input: input_tensor = [[1,-0.5],[0.25,2]], gate_projection = [[1,0.5],[-0.25,0.75]], up_projection = [[0.5,-1],[1.25,0.25]], gate_cap = 4, up_cap = 25\n\nOutput: tensor of shape (2, 2)",
+    "Input: input_tensor = [[[8,-6],[3,5]]], gate_projection = [[1,0],[0,1]], up_projection = [[0.5,0.5],[-0.5,1]], gate_cap = 2, up_cap = 3\n\nOutput: tensor of shape (1, 2, 2)"
+  ],
+  "requirements": "- Return one tensor whose leading dimensions match the input and whose last dimension matches the projections.\n- Preserve the floating-point dtype and device of the input tensor.\n- Apply the two cap values independently.\n- Do not mutate any input tensor.",
+  "theory": "# SiTU-GLU\n\nSiTU-GLU is a gated feed-forward activation designed to behave like a familiar smooth GLU near ordinary values while preventing very large activations. It applies a smooth cap to both multiplicative branches, so neither branch can make their product grow without limit.\n\n## Begin with a gated activation\n\nA gated linear unit has two learned projections of the same input. One branch decides what should pass, while the other carries transformed content. The two branches are multiplied element by element.\n\nSwiGLU uses a Swish-style gate branch and a linear up branch. This works well in many transformers, but both branches can grow with large positive inputs. Their product can therefore become very large, especially inside a deep routed expert path.\n\nSiTU-GLU keeps the same general structure while smoothly limiting the two branches:\n\n$$\n\\left[\\beta_1\\tanh\\left(\\frac{g}{\\beta_1}\\right)\\odot\\operatorname{sigmoid}(g)\\right]\n\\odot\n\\left[\\beta_2\\tanh\\left(\\frac{u}{\\beta_2}\\right)\\right]\n$$\n\nHere $g$ is the gate projection, $u$ is the up projection, and the positive values $\\beta_1$ and $\\beta_2$ control the caps of the two branches.\n\n## Why scaled tanh is useful\n\nThe expression $\\beta\\tanh(x/\\beta)$ has two helpful behaviors.\n\nNear zero, tanh is approximately its input, so\n\n$$\n\\beta\\tanh(x/\\beta) \\approx x\n$$\n\nThis means SiTU-GLU stays close to the uncapped activation for ordinary small values. At large magnitude, tanh approaches either $1$ or $-1$, so the scaled result approaches either $\\beta$ or $-\\beta$. The transition is smooth rather than a hard clipping boundary.\n\nThe sigmoid remains on the gate branch. For a large negative gate value, sigmoid moves toward zero, preserving the vanishing negative behavior of Swish. For a large positive gate value, sigmoid approaches one while the scaled tanh supplies the cap.\n\n## The two caps are independent\n\nThe gate branch uses $\\beta_1$, and the up branch uses $\\beta_2$. Do not reuse one cap for both unless the arguments actually contain the same number.\n\nBecause the absolute gate branch is below $\\beta_1$ and the absolute up branch is below $\\beta_2$, the absolute product is bounded by $\\beta_1\\beta_2$. Kimi K3 uses gate and up caps of $4$ and $25$, giving a coordinate-wise bound of $100$.\n\nThis bound is the purpose of the operation, but it should not distract from the implementation. Project the input twice, transform each branch exactly as stated, and multiply the results element by element.\n\n## A scalar example\n\nSuppose both projected values are $2$, with gate cap $4$ and up cap $25$.\n\nThe gate branch is\n\n$$\n4\\tanh(2/4)\\operatorname{sigmoid}(2)\n$$\n\nwhich is approximately $4(0.4621)(0.8808)=1.628$. The up branch is\n\n$$\n25\\tanh(2/25)\n$$\n\nwhich is approximately $1.996$. Their product is about $3.25$.\n\nFor values near two, the caps have only a modest effect. If the projections become extremely large, the branches approach their fixed limits instead of continuing to grow. This is the balance SiTU-GLU is designed to provide.\n\n## Applying the projections\n\nThe supplied projection tensors map the input's final feature dimension to the expert feature dimension. Use the same matrix orientation described by the prompt. Leading dimensions such as batch and sequence are simply carried through, so the activation is applied independently at every token position.\n\nNo reduction is involved. Every output coordinate comes from the matching gate and up coordinates after their projections and nonlinearities.\n\n## Implementation order\n\n- Apply the gate projection and up projection to the input.\n- Divide the gate projection by its cap, apply tanh, and multiply back by that cap.\n- Multiply the capped gate branch by sigmoid of the original gate projection.\n- Smoothly cap the up projection with its own cap.\n- Multiply the two transformed branches element by element and return the result.\n\n## Common mistakes to avoid\n\n- **Applying sigmoid to the up branch.** Sigmoid belongs only to the gate projection.\n- **Using hard clipping.** The task requires scaled tanh, which has different values and gradients.\n- **Sharing the cap values.** Gate and up caps are independent.\n- **Applying tanh before dividing by the cap.** The correct form is $\\beta\\tanh(x/\\beta)$.\n- **Multiplying before the nonlinearities.** Transform each branch first, then combine them.\n",
+  "hints": [
+    "Project the input separately through the gate and up matrices.",
+    "Implement each smooth cap as its limit multiplied by tanh of the value divided by that limit.",
+    "Apply sigmoid only to the gate projection before multiplying the two capped branches."
+  ],
+  "constraints": "- Both cap values are positive.\n- Projection matrices have the same output width.\n- Tensor inputs share a floating-point dtype and device.\n- The final input dimension matches both projection input dimensions.",
+  "difficulty": "Easy",
+  "starterCode": "import torch\n\ndef situ_glu(input_tensor: torch.Tensor, gate_projection: torch.Tensor, up_projection: torch.Tensor, gate_cap: float = 4.0, up_cap: float = 25.0) -> torch.Tensor:\n    \"\"\"\n    Returns the bounded element-wise gated activation tensor.\n    \"\"\"\n    pass",
+  "createdAt": "2026-07-29T07:43:16.647Z",
+  "updatedAt": "2026-09-03T19:22:49.691Z",
+  "topicId": "k3-situ-glu",
+  "paperSnippet": "\"Sigmoid Tanh Unit GLU\"",
+  "visualizationComponent": "K3SiTUGLUViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **SiTU-GLU** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch\n\ndef situ_glu(input_tensor: torch.Tensor, gate_projection: torch.Tensor, up_projection: torch.Tensor, gate_cap: float = 4.0, up_cap: float = 25.0) -> torch.Tensor:\n    inp = input_tensor if isinstance(input_tensor, torch.Tensor) else torch.tensor(input_tensor, dtype=torch.float64)\n    gp = gate_projection if isinstance(gate_projection, torch.Tensor) else torch.tensor(gate_projection, dtype=torch.float64)\n    up = up_projection if isinstance(up_projection, torch.Tensor) else torch.tensor(up_projection, dtype=torch.float64)\n    g_cap = float(gate_cap)\n    u_cap = float(up_cap)\n    \n    g = inp @ gp\n    u = inp @ up\n    branch1 = g_cap * torch.tanh(g / g_cap) * torch.sigmoid(g)\n    branch2 = u_cap * torch.tanh(u / u_cap)\n    out = branch1 * branch2\n    return torch.round(out * 1e6) / 1e6\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Zero activation",
+      "inputs": {
+        "up_cap": 25,
+        "gate_cap": 4,
+        "input_tensor": [
+          [
+            0
+          ]
+        ],
+        "up_projection": [
+          [
+            1
+          ]
+        ],
+        "gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          0.0
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Independent branch projections",
+      "inputs": {
+        "up_cap": 25,
+        "gate_cap": 4,
+        "input_tensor": [
+          [
+            1,
+            -0.5
+          ],
+          [
+            0.25,
+            2
+          ]
+        ],
+        "up_projection": [
+          [
+            0.5,
+            -1
+          ],
+          [
+            1.25,
+            0.25
+          ]
+        ],
+        "gate_projection": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -0.25,
+            0.75
+          ]
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          -0.103446,
+          -0.074627
+        ],
+        [
+          -0.285898,
+          0.321888
+        ]
+      ]
+    },
+    {
+      "id": "test-3",
+      "name": "Saturation with small caps",
+      "inputs": {
+        "up_cap": 3,
+        "gate_cap": 2,
+        "input_tensor": [
+          [
+            [
+              8,
+              -6
+            ],
+            [
+              3,
+              5
+            ]
+          ]
+        ],
+        "up_projection": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            -0.5,
+            1
+          ]
+        ],
+        "gate_projection": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          [
+            5.882286,
+            0.008603
+          ],
+          [
+            -1.66329,
+            5.727729
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "k3-situ-glu-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "up_cap": 50,
+        "gate_cap": 8,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            2
+          ]
+        ],
+        "gate_projection": [
+          [
+            2
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[3.4497]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "up_cap": 12,
+        "gate_cap": 2,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            1
+          ]
+        ],
+        "gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[0.6741]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "up_cap": 26,
+        "gate_cap": 5,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            1
+          ]
+        ],
+        "gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[0.7211]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "up_cap": 38,
+        "gate_cap": 6,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            2
+          ]
+        ],
+        "gate_projection": [
+          [
+            2
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[3.3951]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "up_cap": 75,
+        "gate_cap": 12,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            3
+          ]
+        ],
+        "gate_projection": [
+          [
+            3
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[8.3944]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "up_cap": 6,
+        "gate_cap": 1,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            1
+          ]
+        ],
+        "gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[0.5517]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "up_cap": 27,
+        "gate_cap": 6,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            2
+          ]
+        ],
+        "gate_projection": [
+          [
+            2
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[3.3920]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "up_cap": 100,
+        "gate_cap": 16,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            4
+          ]
+        ],
+        "gate_projection": [
+          [
+            4
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[15.3847]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "up_cap": 25,
+        "gate_cap": 4,
+        "input_tensor": [
+          [
+            0
+          ]
+        ],
+        "up_projection": [
+          [
+            1
+          ]
+        ],
+        "gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[0.]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "up_cap": 19,
+        "gate_cap": 3,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            1
+          ]
+        ],
+        "gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[0.7045]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "up_cap": 125,
+        "gate_cap": 20,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            5
+          ]
+        ],
+        "gate_projection": [
+          [
+            5
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[24.3150]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "up_cap": 28,
+        "gate_cap": 7,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            3
+          ]
+        ],
+        "gate_projection": [
+          [
+            3
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[8.0534]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "up_cap": 20,
+        "gate_cap": 3,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            1
+          ]
+        ],
+        "gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[0.7045]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "up_cap": 150,
+        "gate_cap": 24,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            6
+          ]
+        ],
+        "gate_projection": [
+          [
+            6
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[35.1623]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "up_cap": 29,
+        "gate_cap": 8,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            4
+          ]
+        ],
+        "gate_projection": [
+          [
+            4
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[14.4304]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "up_cap": 30,
+        "gate_cap": 5,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            1
+          ]
+        ],
+        "gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[0.7212]], dtype=torch.float64)",
+      "isPublic": false
+    },
+    {
+      "id": "k3-situ-glu-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "up_cap": 10,
+        "gate_cap": 2,
+        "input_tensor": [
+          [
+            1
+          ]
+        ],
+        "up_projection": [
+          [
+            1
+          ]
+        ],
+        "gate_projection": [
+          [
+            1
+          ]
+        ]
+      },
+      "expectedOutput": "tensor([[0.6734]], dtype=torch.float64)",
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "situ_glu",
+    "runtime": "pytorch",
+    "parameters": [
+      {
+        "name": "input_tensor",
+        "type": "array",
+        "example": "[[0]]",
+        "description": "Input activations."
+      },
+      {
+        "name": "gate_projection",
+        "type": "array",
+        "example": "[[1]]",
+        "description": "Gate branch projection."
+      },
+      {
+        "name": "up_projection",
+        "type": "array",
+        "example": "[[1]]",
+        "description": "Up branch projection."
+      },
+      {
+        "name": "gate_cap",
+        "type": "number",
+        "example": "4",
+        "description": "Positive gate branch cap."
+      },
+      {
+        "name": "up_cap",
+        "type": "number",
+        "example": "25",
+        "description": "Positive up branch cap."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "k3-situ-glu",
+    "name": "SiTU-GLU",
+    "description": "Bound both gated feed-forward branches while retaining smooth near-origin behavior.",
+    "color": "#f59e0b"
+  },
+  "paper": {
+    "id": "kimik3",
+    "title": "Kimi K3",
+    "authors": "Kimi Team",
+    "year": 2026,
+    "paperUrl": "https://github.com/MoonshotAI/Kimi-K3/blob/main/k3_tech_report.pdf",
+    "visualizationComponent": "KimiK3ArchViz"
+  },
+  "navigation": {
+    "index": 5,
+    "total": 11,
+    "prev": "k3-block-attnres",
+    "next": "k3-quantile-balancing"
+  },
+  "cleanTitle": ""
+}

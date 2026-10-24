@@ -1,0 +1,4059 @@
+{
+  "id": "vit-full-network",
+  "title": "Complete Vision Transformer",
+  "description": "Implement a deterministic Vision Transformer forward pass from an NHWC image to class logits. Extract complete non-overlapping patches, project them with W_patch and patch_bias, prepend cls_token, add pos_embed, apply every dictionary in encoder_weights in order, normalize the final classification-token state, and project it with W_head.\n\nFor height $H$, width $W$, and patch size $P$, use\n\n$$\nN = \\left\\lfloor\\frac{H}{P}\\right\\rfloor\\left\\lfloor\\frac{W}{P}\\right\\rfloor\n$$\n\ncomplete patches. Ignore incomplete patches along the bottom or right boundary. Each encoder dictionary contains Wq, Wk, Wv, Wo, W1, and W2. LayerNorm uses population variance and $\\varepsilon=10^{-6}$. Return the logits as a float64 NumPy array with shape $(B,C)$, where $C$ is the second dimension of W_head.",
+  "seoDescription": "Assemble a complete Vision Transformer from patch embedding, class and position tokens, encoder blocks, and classifier.",
+  "examples": [
+    "Input: image = [[[[1.265364],[-1.732516]],[[0.082703],[-1.942425]]]], patch_size = 1, num_heads = 1, W_patch = [[1,0.5]], patch_bias = [0.013,0.026], cls_token = [[[1,-1]]], pos_embed = [[[0,0],[0,0],[0,0],[0,0],[0,0]]], encoder_weights = [{\"Wq\":[[1,0],[0,1]],\"Wk\":[[1,0],[0,1]],\"Wv\":[[1,0],[0,1]],\"Wo\":[[1,0],[0,1]],\"W1\":[[1,0],[0,1]],\"W2\":[[1,0],[0,1]]}], W_head = [[1,0],[0,1]]\n\nOutput: [[1,-1]]\n\nExplanation: Patch projection, sequence construction, encoder blocks, and the classification head are applied in order.",
+    "Input: image = [[[[1.463106,0.982782],[-1.518959,-0.249174],[91,91]],[[0.009436,-0.885937],[1.42101,-0.362725],[91,91]],[[73,73],[73,73],[73,73]]]], patch_size = 2, num_heads = 1, W_patch = [[1,0],[0,1],[0.5,0],[0,0.5],[-1,0],[0,-1],[0.25,0],[0,0.25]], patch_bias = [0.026,0.052], cls_token = [[[1,-1]]], pos_embed = [[[0.1,-0.1],[0.2,-0.2]]], encoder_weights = [{\"Wq\":[[1,0],[0,1]],\"Wk\":[[0,1],[1,0]],\"Wv\":[[1,0],[0,1]],\"Wo\":[[1,0],[0,1]],\"W1\":[[1,0],[0,1]],\"W2\":[[1,0],[0,1]]}], W_head = [[1,0.5],[-0.5,1]]\n\nOutput: [[1.499999,-0.5]]",
+    "Input: image = [[[[-1.108547],[-0.055819]],[[0.96107],[1.995646]]],[[[-0.24891],[-0.586723]],[[-1.682625],[-1.817477]]]], patch_size = 1, num_heads = 2, W_patch = [[1,-0.5]], patch_bias = [0.039,0.078], cls_token = [[[1,-1]]], pos_embed = [[[0,0],[0.1,0],[0,0.1],[-0.1,0],[0,-0.1]]], encoder_weights = [{\"Wq\":[[1,0],[0,1]],\"Wk\":[[1,0],[0,1]],\"Wv\":[[1,0],[0,1]],\"Wo\":[[1,0],[0,1]],\"W1\":[[1,0],[0,1]],\"W2\":[[1,0],[0,1]]},{\"Wq\":[[0,1],[1,0]],\"Wk\":[[1,0],[0,1]],\"Wv\":[[1,0.5],[0,1]],\"Wo\":[[1,0],[0,1]],\"W1\":[[1,0],[0,1]],\"W2\":[[0.5,0],[0,1]]}], W_head = [[1,0.5],[-0.5,1]]\n\nOutput: [[1.5,-0.5],[1.5,-0.5]]"
+  ],
+  "requirements": "- Use NumPy.\n- Extract complete patches in row-major order and ignore incomplete boundary patches.\n- Apply W_patch and patch_bias to every flattened patch.\n- Prepend cls_token and add pos_embed.\n- Apply every encoder_weights dictionary in order.\n- Return float64 class logits with shape (B, C).",
+  "theory": "# <span style=\"font-size: 20px;\">Complete Vision Transformer</span>\n\n<span style=\"font-size: 14px;\">The Vision Transformer (ViT) applies a standard Transformer encoder directly to sequences of image patches for image classification. Rather than using convolutions, it splits an image into fixed-size patches, linearly embeds each one, and processes the resulting sequence with a Transformer. This is the full end-to-end pipeline: patch embedding, CLS token, position embeddings, $L$ encoder blocks, and a classification head.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">What It Is</span>\n\n<span style=\"font-size: 14px;\">ViT is an image classification architecture that replaces convolutional feature extraction with a Transformer encoder. The input image is divided into non-overlapping patches, each flattened and linearly projected to produce a patch embedding. A learnable **[CLS] token** is prepended, learnable position embeddings are added, and the full sequence passes through $L$ encoder blocks (pre-LN, bidirectional attention, GELU MLP). After the final block, the [CLS] representation is extracted, LayerNormed, and linearly projected to class logits. No softmax is applied.</span>\n\n<span style=\"font-size: 14px;\">The architecture is deliberately minimal. Dosovitskiy et al. made as few modifications to the standard Transformer as possible, proving that a pure Transformer without any convolutional inductive bias can achieve state-of-the-art image classification when trained on sufficient data.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Key Equations</span>\n\n<span style=\"font-size: 14px;\">**Stage 1 -- Patch embedding.** Split the image into $N$ patches of size $P \\times P$. Flatten each patch to length $P^2 \\cdot C$, then project:</span>\n\n$$\nz_i^{(0)} = x_{\\text{patch}_i} \\cdot W_E + b_E, \\quad i = 1, \\ldots, N\n$$\n\n<span style=\"font-size: 14px;\">where $W_E \\in \\mathbb{R}^{(P^2 C) \\times D}$ and $D$ is the hidden dimension.</span>\n\n<span style=\"font-size: 14px;\">**Stage 2 -- Prepend [CLS] and add position embeddings:**</span>\n\n$$\nz^{(0)} = [z_{\\text{cls}};\\; z_1^{(0)};\\; \\ldots;\\; z_N^{(0)}] + E_{\\text{pos}}\n$$\n\n<span style=\"font-size: 14px;\">where $z_{\\text{cls}} \\in \\mathbb{R}^D$ is learnable and $E_{\\text{pos}} \\in \\mathbb{R}^{(N+1) \\times D}$.</span>\n\n<span style=\"font-size: 14px;\">**Stage 3 -- $L$ encoder blocks (pre-LN):**</span>\n\n$$\nz'^{(\\ell)} = \\text{MSA}(\\text{LN}(z^{(\\ell-1)})) + z^{(\\ell-1)}\n$$\n\n$$\nz^{(\\ell)} = \\text{MLP}(\\text{LN}(z'^{(\\ell)})) + z'^{(\\ell)}\n$$\n\n<span style=\"font-size: 14px;\">**Stage 4 -- Classification head:**</span>\n\n$$\ny = \\text{LN}(z_0^{(L)}) \\cdot W_{\\text{head}} + b_{\\text{head}}\n$$\n\n<span style=\"font-size: 14px;\">where $z_0^{(L)}$ is the CLS token after block $L$, and $y \\in \\mathbb{R}^K$ is raw logits.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Stage 1: Patch Embedding</span>\n\n<span style=\"font-size: 14px;\">The image has shape $(C, H, W)$. It is divided into a grid of non-overlapping $P \\times P$ patches. The number of patches is $N = HW / P^2$. For a 224x224 image with $P = 16$: $N = 196$. Each patch is flattened to length $P^2 C = 768$ (for RGB), then projected through $W_E \\in \\mathbb{R}^{(P^2 C) \\times D}$ with bias.</span>\n\n<span style=\"font-size: 14px;\">Why patches instead of pixels? A 224x224 image has 50,176 pixels. Self-attention is $O(N^2)$, making per-pixel tokenization prohibitive. Patch size 16 reduces this to 196 tokens. Smaller patches give finer resolution but quadratically increase cost. The ViT naming convention reflects this: ViT-B/16 means Base model with patch size 16.</span>\n\n<span style=\"font-size: 14px;\">In practice, this linear projection is equivalent to a 2D convolution with kernel size $P$ and stride $P$. All weights are initialized from $\\mathcal{N}(0, 0.02^2)$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Stage 2: CLS Token and Position Embeddings</span>\n\n<span style=\"font-size: 14px;\">**The [CLS] token.** A learnable vector $z_{\\text{cls}} \\in \\mathbb{R}^D$ is prepended, increasing sequence length from $N$ to $N + 1$. It has no spatial content and serves as a global aggregation point. Because attention is bidirectional, CLS can attend to all patches and vice versa. After $L$ blocks, the CLS representation encodes the entire image. This follows BERT's design.</span>\n\n<span style=\"font-size: 14px;\">**Position embeddings.** Learnable $E_{\\text{pos}} \\in \\mathbb{R}^{(N+1) \\times D}$ are added element-wise. Each position gets its own $D$-dimensional vector, encoding spatial layout: position 1 is the top-left patch, position 2 the next, and so on. Without these, the Transformer treats patches as an unordered set and loses all spatial information.</span>\n\n<span style=\"font-size: 14px;\">The paper found that learned 1D embeddings perform as well as more complex 2D-aware schemes. The authors tested fixed sinusoidal, learned 1D, and learned 2D embeddings, finding no significant accuracy difference. The Transformer learns to infer 2D spatial relationships from 1D indices.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Stage 3: Transformer Encoder</span>\n\n<span style=\"font-size: 14px;\">The sequence $z^{(0)} \\in \\mathbb{R}^{(N+1) \\times D}$ passes through $L$ identical encoder blocks. Each has two sub-layers: multi-head self-attention (MSA) and a feed-forward MLP, both with pre-LayerNorm and residual connections.</span>\n\n<span style=\"font-size: 14px;\">**Multi-head self-attention.** Input is normalized: $\\hat{z} = \\text{LN}(z^{(\\ell-1)})$. Queries, keys, values are computed, split into $h$ heads of dimension $d_h = D/h$. Each head computes:</span>\n\n$$\n\\text{head}_j = \\text{softmax}\\!\\left(\\frac{Q_j K_j^T}{\\sqrt{d_h}}\\right) V_j\n$$\n\n<span style=\"font-size: 14px;\">Heads are concatenated and projected: $\\text{MSA} = [\\text{head}_1; \\ldots; \\text{head}_h] W_O$. **There is no causal mask.** Every token attends to every other token bidirectionally. Image patches have no sequential ordering, so masking future positions would create arbitrary asymmetry.</span>\n\n<span style=\"font-size: 14px;\">**Feed-forward MLP.** After the attention residual, the output is normalized and passed through:</span>\n\n$$\n\\text{MLP}(x) = \\text{GELU}(x W_1 + b_1) W_2 + b_2\n$$\n\n<span style=\"font-size: 14px;\">where $W_1 \\in \\mathbb{R}^{D \\times 4D}$ and $W_2 \\in \\mathbb{R}^{4D \\times D}$. The activation is GELU, not ReLU.</span>\n\n<span style=\"font-size: 14px;\">**Pre-LN ordering** means LayerNorm is applied before each sub-layer, not after. This stabilizes training for deeper models because the residual path carries unnormalized gradients directly.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Stage 4: Classification Head</span>\n\n<span style=\"font-size: 14px;\">Extract the [CLS] token from position 0 of the final block output: $z_0^{(L)} \\in \\mathbb{R}^D$. Apply LayerNorm, then project:</span>\n\n$$\ny = \\text{LN}(z_0^{(L)}) \\cdot W_{\\text{head}} + b_{\\text{head}}\n$$\n\n<span style=\"font-size: 14px;\">where $W_{\\text{head}} \\in \\mathbb{R}^{D \\times K}$ and $K$ is the number of classes. Output is raw logits (no softmax). During training, logits go to cross-entropy loss which applies log-softmax internally.</span>\n\n<span style=\"font-size: 14px;\">During pre-training on large datasets, the paper uses an MLP head with tanh activation. During fine-tuning, this is replaced with a single linear layer. This problem uses the fine-tuning variant: LayerNorm then linear. All head weights are initialized as $\\mathcal{N}(0, 0.02^2)$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">The Data Requirement</span>\n\n<span style=\"font-size: 14px;\">The central empirical finding: pure Transformers need large-scale pre-training to match CNNs. On ImageNet-1K alone (1.3M images), ViT-B/16 underperforms a comparably sized ResNet. The Transformer lacks convolutional inductive biases: translation equivariance and locality. It must learn spatial structure entirely from data.</span>\n\n<span style=\"font-size: 14px;\">As the paper states: \"When trained on mid-sized datasets, these models yield modest accuracies. However, the picture changes if trained on larger datasets.\" On JFT-300M (303M images), ViT-L/16 surpasses the best CNNs on every benchmark.</span>\n\n* <span style=\"font-size: 14px;\">**Small data:** CNN inductive biases act as regularizers, reducing the hypothesis space. ViT must learn these patterns from scratch.</span>\n* <span style=\"font-size: 14px;\">**Large data:** Inductive biases become constraints. Self-attention can learn arbitrary spatial relationships that CNNs only capture through many stacked layers. With enough data, flexibility wins.</span>\n* <span style=\"font-size: 14px;\">**Compute:** ViT maps directly onto hardware optimized for matrix multiplications. ViT-H/14 reached 88.55% top-1 on ImageNet using fewer TPU-days than competing models.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Paper Context</span>\n\n<span style=\"font-size: 14px;\">\"An Image is Worth 16x16 Words\" by Dosovitskiy et al. (2020, Google Brain) showed that a pure Transformer applied directly to image patches can match or exceed convolutional networks at scale.</span>\n\n<span style=\"font-size: 14px;\">Three model configurations:</span>\n\n* <span style=\"font-size: 14px;\">**ViT-Base:** $L = 12$, $D = 768$, $h = 12$ heads, MLP $= 3072$, ~86M params.</span>\n* <span style=\"font-size: 14px;\">**ViT-Large:** $L = 24$, $D = 1024$, $h = 16$ heads, MLP $= 4096$, ~307M params.</span>\n* <span style=\"font-size: 14px;\">**ViT-Huge:** $L = 32$, $D = 1280$, $h = 16$ heads, MLP $= 5120$, ~632M params.</span>\n\n<span style=\"font-size: 14px;\">The design philosophy was deliberate minimalism. Prior work combined CNN feature extractors with Transformers. Dosovitskiy et al. asked: can a standard Transformer with no convolutions work for vision? The patch embedding is the only vision-specific component. Weight initialization throughout is $\\mathcal{N}(0, 0.02^2)$.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Numerical Example</span>\n\n<span style=\"font-size: 14px;\">Trace a tiny image through all stages. Image: $C = 3$, $H = 4$, $W = 4$, $P = 2$, $D = 4$, $L = 1$ block, $h = 2$ heads ($d_h = 2$), $K = 3$ classes.</span>\n\n<span style=\"font-size: 14px;\">**Stage 1: Patch embedding.** $N = 16 / 4 = 4$ patches. Each flattened to length $4 \\cdot 3 = 12$, projected through $W_E \\in \\mathbb{R}^{12 \\times 4}$:</span>\n\n* <span style=\"font-size: 14px;\">$z_1^{(0)} = [0.42, -0.18, 0.31, 0.05]$ (top-left)</span>\n* <span style=\"font-size: 14px;\">$z_2^{(0)} = [-0.11, 0.53, 0.27, -0.34]$ (top-right)</span>\n* <span style=\"font-size: 14px;\">$z_3^{(0)} = [0.29, 0.14, -0.22, 0.61]$ (bottom-left)</span>\n* <span style=\"font-size: 14px;\">$z_4^{(0)} = [0.55, -0.07, 0.48, 0.19]$ (bottom-right)</span>\n\n<span style=\"font-size: 14px;\">**Stage 2: CLS + position.** Prepend $z_{\\text{cls}} = [0.10, 0.10, 0.10, 0.10]$. Sequence: 5 tokens. Add $E_{\\text{pos}} \\in \\mathbb{R}^{5 \\times 4}$:</span>\n\n* <span style=\"font-size: 14px;\">CLS: $[0.10 + 0.01, 0.10 - 0.02, 0.10 + 0.03, 0.10 - 0.01] = [0.11, 0.08, 0.13, 0.09]$</span>\n* <span style=\"font-size: 14px;\">Patch 1: $[0.44, -0.17, 0.30, 0.08]$, patches 2-4 similar.</span>\n\n<span style=\"font-size: 14px;\">**Stage 3: Encoder block.** Focus on CLS token.</span>\n\n<span style=\"font-size: 14px;\">LayerNorm CLS $[0.11, 0.08, 0.13, 0.09]$: mean $= 0.1025$, std $= 0.0192$. Normalized: $[0.39, -1.17, 1.43, -0.65]$.</span>\n\n<span style=\"font-size: 14px;\">MSA: CLS query attends to all 5 positions (no mask). After 2-head attention and $W_O$ projection, output $= [0.06, -0.03, 0.08, -0.02]$. Residual: $[0.17, 0.05, 0.21, 0.07]$.</span>\n\n<span style=\"font-size: 14px;\">MLP: LayerNorm, expand to 8 dims with GELU, compress back to 4. Output $= [0.04, -0.01, 0.05, 0.02]$. Residual: $[0.21, 0.04, 0.26, 0.09]$.</span>\n\n<span style=\"font-size: 14px;\">**Stage 4: Classification head.** Extract CLS: $z_0^{(1)} = [0.21, 0.04, 0.26, 0.09]$. LayerNorm: $h_f = [0.64, -1.17, 1.17, -0.64]$. Project through $W_{\\text{head}} \\in \\mathbb{R}^{4 \\times 3}$:</span>\n\n* <span style=\"font-size: 14px;\">Class 0: $0.64(0.3) + (-1.17)(-0.1) + 1.17(0.2) + (-0.64)(0.4) = 0.192 + 0.117 + 0.234 - 0.256 = 0.287$</span>\n* <span style=\"font-size: 14px;\">Class 1: $0.64(-0.2) + (-1.17)(0.5) + 1.17(0.1) + (-0.64)(-0.3) = -0.128 - 0.585 + 0.117 + 0.192 = -0.404$</span>\n* <span style=\"font-size: 14px;\">Class 2: $0.64(0.1) + (-1.17)(0.3) + 1.17(-0.4) + (-0.64)(0.2) = 0.064 - 0.351 - 0.468 - 0.128 = -0.883$</span>\n\n<span style=\"font-size: 14px;\">Logits: $[0.287, -0.404, -0.883]$. Predicted class: 0. No softmax. The CLS token started with no image content but aggregated all patch information through bidirectional attention.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">ViT's Impact</span>\n\n<span style=\"font-size: 14px;\">ViT proved that Transformers work for vision without any convolutional layers. This sparked a transformation of the field:</span>\n\n* <span style=\"font-size: 14px;\">**DeiT (2021):** Knowledge distillation from a CNN teacher made ViT data-efficient, achieving competitive results with only ImageNet-1K.</span>\n* <span style=\"font-size: 14px;\">**Swin Transformer (2021):** Shifted windows for local attention created hierarchical features, enabling dense prediction tasks like detection and segmentation.</span>\n* <span style=\"font-size: 14px;\">**MAE (2022):** Masked 75% of patches and trained reconstruction, enabling powerful self-supervised pre-training for ViT.</span>\n* <span style=\"font-size: 14px;\">**CLIP (2021):** Paired a ViT image encoder with a text encoder for zero-shot classification from natural language supervision.</span>\n\n---\n\n## <span style=\"font-size: 16px;\">Pitfalls</span>\n\n<span style=\"font-size: 14px;\">**1. Adding a causal mask to self-attention.**</span>\n\n<span style=\"font-size: 14px;\">ViT uses bidirectional attention with no causal mask. Adding one would prevent patches from attending to later positions in the flattened sequence. Since \"later\" means \"further right or down\" in the image, a causal mask creates arbitrary asymmetry where top-left patches see less context than bottom-right patches.</span>\n\n<span style=\"font-size: 14px;\">**2. Forgetting position embeddings.**</span>\n\n<span style=\"font-size: 14px;\">Without position embeddings, the Transformer treats patches as an unordered set. Permuting patches would produce identical output. The model cannot learn spatial relationships without positional information.</span>\n\n<span style=\"font-size: 14px;\">**3. Wrong patch size or miscounting patches.**</span>\n\n<span style=\"font-size: 14px;\">$P$ must evenly divide $H$ and $W$. The position embedding matrix has $N + 1$ entries (the +1 is for CLS). Using $P = 14$ on a 224x224 image gives 256 patches instead of 196, requiring a different position embedding size.</span>\n\n<span style=\"font-size: 14px;\">**4. Applying softmax to the output.**</span>\n\n<span style=\"font-size: 14px;\">The forward pass outputs raw logits. Cross-entropy loss applies log-softmax internally. Adding softmax in the model creates double-softmax, compressing gradients toward zero and stopping learning.</span>\n\n<span style=\"font-size: 14px;\">**5. Not extracting the CLS token.**</span>\n\n<span style=\"font-size: 14px;\">The classification head operates only on position 0 (CLS), not the full sequence. Passing all $N + 1$ tokens through the linear head produces a $(N+1) \\times K$ output instead of a $K$-dimensional logit vector. Average pooling is a valid alternative but architecturally different from what ViT specifies.</span>\n\n---",
+  "hints": [
+    "Crop to complete patches before reshaping the image.",
+    "Use len(encoder_weights) as the number of encoder blocks.",
+    "Infer embedding and class widths from the supplied matrices."
+  ],
+  "constraints": "- image has shape (B, H, W, C_in) and dtype float64.\n- patch_size is positive and no larger than H or W.\n- W_patch has shape (patch_size Ã patch_size Ã C_in, D), and patch_bias has shape (D,).\n- cls_token has shape (1, 1, D), and pos_embed has shape (1, N + 1, D).\n- Every encoder matrix has compatible float64 dimensions, and D is divisible by num_heads.\n- W_head has shape (D, C), and every supplied numeric array has dtype float64.",
+  "difficulty": "Hard",
+  "starterCode": "import numpy as np\n\ndef vit_forward(image: np.ndarray, patch_size: int, num_heads: int,\n                W_patch: np.ndarray, patch_bias: np.ndarray,\n                cls_token: np.ndarray, pos_embed: np.ndarray,\n                encoder_weights: list, W_head: np.ndarray) -> np.ndarray:\n    \"\"\"\n    Returns float64 Vision Transformer logits with shape (B, C).\n    \"\"\"\n    pass",
+  "createdAt": "2026-01-10T22:03:54.016Z",
+  "updatedAt": "2026-04-04T12:04:55.393Z",
+  "topicId": "vit-full-network",
+  "paperSnippet": "\"When trained on mid-sized datasets such as ImageNet without strong regularization, these models yield modest accuracies... However, the picture changes if the models are trained on larger datasets. We find that large scale training trumps inductive bias.\"",
+  "visualizationComponent": "ViTArchViz",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Complete Vision Transformer** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef _gelu_tanh(x):\n    return 0.5 * x * (1.0 + np.tanh(np.sqrt(2.0 / np.pi) * (x + 0.044715 * (x ** 3))))\n\ndef _layer_norm(x, eps=1e-6):\n    mean = np.mean(x, axis=-1, keepdims=True)\n    var = np.var(x, axis=-1, keepdims=True)\n    return (x - mean) / np.sqrt(var + eps)\n\ndef vit_forward(image: np.ndarray, patch_size: int, num_heads: int,\n                W_patch: np.ndarray, patch_bias: np.ndarray,\n                cls_token: np.ndarray, pos_embed: np.ndarray,\n                encoder_weights: list, W_head: np.ndarray) -> np.ndarray:\n    img = np.asarray(image, dtype=float)\n    P = int(patch_size)\n    B, H, W, C = img.shape\n    num_h = H // P\n    num_w = W // P\n    patches = []\n    for ph in range(num_h):\n        for pw in range(num_w):\n            patch = img[:, ph*P:(ph+1)*P, pw*P:(pw+1)*P, :]\n            flat = patch.reshape(B, P*P*C)\n            patches.append(flat)\n    stacked = np.stack(patches, axis=1)\n    patch_emb = np.matmul(stacked, np.asarray(W_patch, dtype=float)) + np.asarray(patch_bias, dtype=float)\n    \n    cls = np.asarray(cls_token, dtype=float)\n    cls_b = np.broadcast_to(cls, (B, 1, patch_emb.shape[2]))\n    tokens = np.concatenate([cls_b, patch_emb], axis=1)\n    cur = tokens + np.asarray(pos_embed, dtype=float)\n    \n    for block in encoder_weights:\n        H_heads = int(num_heads)\n        D = cur.shape[2]\n        d_h = D // H_heads\n        norm1 = _layer_norm(cur)\n        Q = np.matmul(norm1, np.asarray(block['Wq'], dtype=float)).reshape(B, cur.shape[1], H_heads, d_h).swapaxes(1, 2)\n        K = np.matmul(norm1, np.asarray(block['Wk'], dtype=float)).reshape(B, cur.shape[1], H_heads, d_h).swapaxes(1, 2)\n        V = np.matmul(norm1, np.asarray(block['Wv'], dtype=float)).reshape(B, cur.shape[1], H_heads, d_h).swapaxes(1, 2)\n        scores = np.matmul(Q, np.swapaxes(K, -1, -2)) / np.sqrt(d_h)\n        exp_s = np.exp(scores - np.max(scores, axis=-1, keepdims=True))\n        weights = exp_s / np.sum(exp_s, axis=-1, keepdims=True)\n        attn = np.matmul(weights, V)\n        concat = attn.swapaxes(1, 2).reshape(B, cur.shape[1], D)\n        attn_out = np.matmul(concat, np.asarray(block['Wo'], dtype=float))\n        y = cur + attn_out\n        \n        norm2 = _layer_norm(y)\n        hidden = _gelu_tanh(np.matmul(norm2, np.asarray(block['W1'], dtype=float)))\n        mlp_out = np.matmul(hidden, np.asarray(block['W2'], dtype=float))\n        cur = y + mlp_out\n        \n    cls_feat = cur[:, 0, :]\n    norm_cls = _layer_norm(cls_feat)\n    logits = np.matmul(norm_cls, np.asarray(W_head, dtype=float))\n    return np.round(logits, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Tiny grayscale ViT",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.265364
+              ],
+              [
+                -1.732516
+              ]
+            ],
+            [
+              [
+                0.082703
+              ],
+              [
+                -1.942425
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0.5
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.013,
+          0.026
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1.0,
+          -1.0
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Two-channel patches",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.463106,
+                0.982782
+              ],
+              [
+                -1.518959,
+                -0.249174
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                0.009436,
+                -0.885937
+              ],
+              [
+                1.42101,
+                -0.362725
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                73,
+                73
+              ],
+              [
+                73,
+                73
+              ],
+              [
+                73,
+                73
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -0.5,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0.5,
+            0
+          ],
+          [
+            0,
+            0.5
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            0.25,
+            0
+          ],
+          [
+            0,
+            0.25
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0.1,
+              -0.1
+            ],
+            [
+              0.2,
+              -0.2
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.026,
+          0.052
+        ],
+        "patch_size": 2,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                0
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1.499999,
+          -0.5
+        ]
+      ]
+    },
+    {
+      "id": "test-3",
+      "name": "Batched two-layer ViT",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                -1.108547
+              ],
+              [
+                -0.055819
+              ]
+            ],
+            [
+              [
+                0.96107
+              ],
+              [
+                1.995646
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                -0.24891
+              ],
+              [
+                -0.586723
+              ]
+            ],
+            [
+              [
+                -1.682625
+              ],
+              [
+                -1.817477
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -0.5,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            -0.5
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 2,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0.1,
+              0
+            ],
+            [
+              0,
+              0.1
+            ],
+            [
+              -0.1,
+              0
+            ],
+            [
+              0,
+              -0.1
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.039,
+          0.078
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          },
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                0.5,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                0
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0.5
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.5,
+          -0.5
+        ],
+        [
+          1.5,
+          -0.5
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.265364
+              ],
+              [
+                -1.732516
+              ]
+            ],
+            [
+              [
+                0.082703
+              ],
+              [
+                -1.942425
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0.5
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.013,
+          0.026
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.0,
+          -1.0
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.463106,
+                0.982782
+              ],
+              [
+                -1.518959,
+                -0.249174
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                0.009436,
+                -0.885937
+              ],
+              [
+                1.42101,
+                -0.362725
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                73,
+                73
+              ],
+              [
+                73,
+                73
+              ],
+              [
+                73,
+                73
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -0.5,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0.5,
+            0
+          ],
+          [
+            0,
+            0.5
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            0.25,
+            0
+          ],
+          [
+            0,
+            0.25
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0.1,
+              -0.1
+            ],
+            [
+              0.2,
+              -0.2
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.026,
+          0.052
+        ],
+        "patch_size": 2,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                0
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.499999,
+          -0.5
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                -1.108547
+              ],
+              [
+                -0.055819
+              ]
+            ],
+            [
+              [
+                0.96107
+              ],
+              [
+                1.995646
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                -0.24891
+              ],
+              [
+                -0.586723
+              ]
+            ],
+            [
+              [
+                -1.682625
+              ],
+              [
+                -1.817477
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -0.5,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            -0.5
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 2,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0.1,
+              0
+            ],
+            [
+              0,
+              0.1
+            ],
+            [
+              -0.1,
+              0
+            ],
+            [
+              0,
+              -0.1
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.039,
+          0.078
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          },
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                0.5,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                0
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0.5
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.5,
+          -0.5
+        ],
+        [
+          1.5,
+          -0.5
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.265364
+              ],
+              [
+                -1.732516
+              ]
+            ],
+            [
+              [
+                0.082703
+              ],
+              [
+                -1.942425
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0.5
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.013,
+          0.026
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.0,
+          -1.0
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.463106,
+                0.982782
+              ],
+              [
+                -1.518959,
+                -0.249174
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                0.009436,
+                -0.885937
+              ],
+              [
+                1.42101,
+                -0.362725
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                73,
+                73
+              ],
+              [
+                73,
+                73
+              ],
+              [
+                73,
+                73
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -0.5,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0.5,
+            0
+          ],
+          [
+            0,
+            0.5
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            0.25,
+            0
+          ],
+          [
+            0,
+            0.25
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0.1,
+              -0.1
+            ],
+            [
+              0.2,
+              -0.2
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.026,
+          0.052
+        ],
+        "patch_size": 2,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                0
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.499999,
+          -0.5
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                -1.108547
+              ],
+              [
+                -0.055819
+              ]
+            ],
+            [
+              [
+                0.96107
+              ],
+              [
+                1.995646
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                -0.24891
+              ],
+              [
+                -0.586723
+              ]
+            ],
+            [
+              [
+                -1.682625
+              ],
+              [
+                -1.817477
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -0.5,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            -0.5
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 2,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0.1,
+              0
+            ],
+            [
+              0,
+              0.1
+            ],
+            [
+              -0.1,
+              0
+            ],
+            [
+              0,
+              -0.1
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.039,
+          0.078
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          },
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                0.5,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                0
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0.5
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.5,
+          -0.5
+        ],
+        [
+          1.5,
+          -0.5
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.265364
+              ],
+              [
+                -1.732516
+              ]
+            ],
+            [
+              [
+                0.082703
+              ],
+              [
+                -1.942425
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0.5
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.013,
+          0.026
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.0,
+          -1.0
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.463106,
+                0.982782
+              ],
+              [
+                -1.518959,
+                -0.249174
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                0.009436,
+                -0.885937
+              ],
+              [
+                1.42101,
+                -0.362725
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                73,
+                73
+              ],
+              [
+                73,
+                73
+              ],
+              [
+                73,
+                73
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -0.5,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0.5,
+            0
+          ],
+          [
+            0,
+            0.5
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            0.25,
+            0
+          ],
+          [
+            0,
+            0.25
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0.1,
+              -0.1
+            ],
+            [
+              0.2,
+              -0.2
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.026,
+          0.052
+        ],
+        "patch_size": 2,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                0
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.499999,
+          -0.5
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                -1.108547
+              ],
+              [
+                -0.055819
+              ]
+            ],
+            [
+              [
+                0.96107
+              ],
+              [
+                1.995646
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                -0.24891
+              ],
+              [
+                -0.586723
+              ]
+            ],
+            [
+              [
+                -1.682625
+              ],
+              [
+                -1.817477
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -0.5,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            -0.5
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 2,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0.1,
+              0
+            ],
+            [
+              0,
+              0.1
+            ],
+            [
+              -0.1,
+              0
+            ],
+            [
+              0,
+              -0.1
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.039,
+          0.078
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          },
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                0.5,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                0
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0.5
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.5,
+          -0.5
+        ],
+        [
+          1.5,
+          -0.5
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.265364
+              ],
+              [
+                -1.732516
+              ]
+            ],
+            [
+              [
+                0.082703
+              ],
+              [
+                -1.942425
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0.5
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.013,
+          0.026
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.0,
+          -1.0
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.463106,
+                0.982782
+              ],
+              [
+                -1.518959,
+                -0.249174
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                0.009436,
+                -0.885937
+              ],
+              [
+                1.42101,
+                -0.362725
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                73,
+                73
+              ],
+              [
+                73,
+                73
+              ],
+              [
+                73,
+                73
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -0.5,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0.5,
+            0
+          ],
+          [
+            0,
+            0.5
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            0.25,
+            0
+          ],
+          [
+            0,
+            0.25
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0.1,
+              -0.1
+            ],
+            [
+              0.2,
+              -0.2
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.026,
+          0.052
+        ],
+        "patch_size": 2,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                0
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.499999,
+          -0.5
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                -1.108547
+              ],
+              [
+                -0.055819
+              ]
+            ],
+            [
+              [
+                0.96107
+              ],
+              [
+                1.995646
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                -0.24891
+              ],
+              [
+                -0.586723
+              ]
+            ],
+            [
+              [
+                -1.682625
+              ],
+              [
+                -1.817477
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -0.5,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            -0.5
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 2,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0.1,
+              0
+            ],
+            [
+              0,
+              0.1
+            ],
+            [
+              -0.1,
+              0
+            ],
+            [
+              0,
+              -0.1
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.039,
+          0.078
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          },
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                0.5,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                0
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0.5
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.5,
+          -0.5
+        ],
+        [
+          1.5,
+          -0.5
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.265364
+              ],
+              [
+                -1.732516
+              ]
+            ],
+            [
+              [
+                0.082703
+              ],
+              [
+                -1.942425
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0.5
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.013,
+          0.026
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.0,
+          -1.0
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.463106,
+                0.982782
+              ],
+              [
+                -1.518959,
+                -0.249174
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                0.009436,
+                -0.885937
+              ],
+              [
+                1.42101,
+                -0.362725
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                73,
+                73
+              ],
+              [
+                73,
+                73
+              ],
+              [
+                73,
+                73
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -0.5,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0.5,
+            0
+          ],
+          [
+            0,
+            0.5
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            0.25,
+            0
+          ],
+          [
+            0,
+            0.25
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0.1,
+              -0.1
+            ],
+            [
+              0.2,
+              -0.2
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.026,
+          0.052
+        ],
+        "patch_size": 2,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                0
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.499999,
+          -0.5
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                -1.108547
+              ],
+              [
+                -0.055819
+              ]
+            ],
+            [
+              [
+                0.96107
+              ],
+              [
+                1.995646
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                -0.24891
+              ],
+              [
+                -0.586723
+              ]
+            ],
+            [
+              [
+                -1.682625
+              ],
+              [
+                -1.817477
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -0.5,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            -0.5
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 2,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0.1,
+              0
+            ],
+            [
+              0,
+              0.1
+            ],
+            [
+              -0.1,
+              0
+            ],
+            [
+              0,
+              -0.1
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.039,
+          0.078
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          },
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                0.5,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                0
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0.5
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.5,
+          -0.5
+        ],
+        [
+          1.5,
+          -0.5
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.265364
+              ],
+              [
+                -1.732516
+              ]
+            ],
+            [
+              [
+                0.082703
+              ],
+              [
+                -1.942425
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0.5
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.013,
+          0.026
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.0,
+          -1.0
+        ]
+      ]
+    },
+    {
+      "id": "vit-full-network-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.463106,
+                0.982782
+              ],
+              [
+                -1.518959,
+                -0.249174
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                0.009436,
+                -0.885937
+              ],
+              [
+                1.42101,
+                -0.362725
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                73,
+                73
+              ],
+              [
+                73,
+                73
+              ],
+              [
+                73,
+                73
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -0.5,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0.5,
+            0
+          ],
+          [
+            0,
+            0.5
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            0.25,
+            0
+          ],
+          [
+            0,
+            0.25
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0.1,
+              -0.1
+            ],
+            [
+              0.2,
+              -0.2
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.026,
+          0.052
+        ],
+        "patch_size": 2,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                0
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "isPublic": false,
+      "expectedOutput": [
+        [
+          1.499999,
+          -0.5
+        ]
+      ]
+    }
+  ],
+  "functionMetadata": {
+    "name": "vit_forward",
+    "runtime": "numpy",
+    "parameters": [
+      {
+        "name": "image",
+        "type": "array",
+        "example": [
+          [
+            [
+              [
+                1.265364
+              ],
+              [
+                -1.732516
+              ]
+            ],
+            [
+              [
+                0.082703
+              ],
+              [
+                -1.942425
+              ]
+            ]
+          ]
+        ],
+        "description": "Float64 NHWC image."
+      },
+      {
+        "name": "patch_size",
+        "type": "number",
+        "example": 1,
+        "description": "Square patch width and height."
+      },
+      {
+        "name": "num_heads",
+        "type": "number",
+        "example": 1,
+        "description": "Attention-head count."
+      },
+      {
+        "name": "W_patch",
+        "type": "array",
+        "example": [
+          [
+            1,
+            0.5
+          ]
+        ],
+        "description": "Float64 patch projection matrix."
+      },
+      {
+        "name": "patch_bias",
+        "type": "array",
+        "example": [
+          0.013,
+          0.026
+        ],
+        "description": "Float64 patch projection bias."
+      },
+      {
+        "name": "cls_token",
+        "type": "array",
+        "example": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "description": "Shared float64 classification token."
+      },
+      {
+        "name": "pos_embed",
+        "type": "array",
+        "example": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "description": "Float64 position embeddings."
+      },
+      {
+        "name": "encoder_weights",
+        "type": "array",
+        "example": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ],
+        "description": "Ordered encoder parameter dictionaries."
+      },
+      {
+        "name": "W_head",
+        "type": "array",
+        "example": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "description": "Float64 classification matrix."
+      }
+    ]
+  },
+  "isFree": true,
+  "tags": [],
+  "topic": {
+    "id": "vit-full-network",
+    "name": "Complete ViT",
+    "description": "Full Vision Transformer forward pass",
+    "color": "#ec4899"
+  },
+  "paper": {
+    "id": "vit",
+    "title": "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
+    "authors": "Dosovitskiy et al., 2020",
+    "year": 2020,
+    "paperUrl": "https://arxiv.org/abs/2010.11929",
+    "visualizationComponent": "ViTArchViz"
+  },
+  "navigation": {
+    "index": 6,
+    "total": 6,
+    "prev": "vit-mlp-head",
+    "next": null
+  },
+  "cleanTitle": ""
+}

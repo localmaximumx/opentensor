@@ -1,0 +1,1114 @@
+{
+  "catalogId": "python:rl-value-iteration",
+  "id": "rl-value-iteration",
+  "sourceId": "rl-value-iteration",
+  "slug": "rl-value-iteration",
+  "source": "python",
+  "category": "python",
+  "title": "Value Iteration",
+  "difficulty": "Medium",
+  "tags": [
+    "Reinforcement Learning"
+  ],
+  "isFree": false,
+  "planId": "cracking-rl",
+  "planTitle": "Cracking RL",
+  "sectionId": "cracking-rl-mdps-and-dynamic-programming",
+  "sortOrder": 116,
+  "seoDescription": "Run value iteration to convergence for a finite MDP, then extract the greedy optimal policy with stable tie handling.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Compute optimal state values and extract the greedy optimal policy for a finite Markov Decision Process using Bellman optimality updates.\n\nValue iteration converges to the unique optimal value function V* by applying the Banach fixed-point contraction operator.\n\n### Mathematical Formulation\n$$\nV_{k+1}(s) = \\max_{a} \\left[ R(s, a) + \\gamma \\sum_{s'} P(s' | s, a) V_k(s') \\right]\n$$\n\n### Step-by-Step Implementation\n1. Initialize state values V(s) to zero\n2. Perform synchronous Bellman optimality updates until max value difference falls below theta\n3. Extract greedy optimal actions argmax_a Q(s, a) for each state\n\n### Returns\nDictionary with optimal 'values' and greedy 'policy' actions.",
+  "theory": "## Understanding the Theory: Value Iteration\n\n### Core Intuition: Why Do We Need This?\nIn reinforcement learning, there is no supervisor providing correct answers. Instead, an agent learns by trial and error: taking actions, observing environment states, and receiving feedback rewards. The agent must continuously balance exploiting known high-reward actions with exploring new actions that might be even better. **Value Iteration** implements a core decision-making or value-estimation algorithm.\n\nValue iteration converges to the unique optimal value function V* by applying the Banach fixed-point contraction operator. In this problem, the goal is to: compute optimal state values and extract the greedy optimal policy for a finite markov decision process using bellman optimality updates.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nV_{k+1}(s) = \\max_{a} \\left[ R(s, a) + \\gamma \\sum_{s'} P(s' | s, a) V_k(s') \\right]\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Initialize state values V(s) to zero\n2. **Phase 2**: Perform synchronous Bellman optimality updates until max value difference falls below theta\n3. **Phase 3**: Extract greedy optimal actions argmax_a Q(s, a) for each state\n\n### Practical Machine Learning Applications & Nuances\n* **Bellman Equations**: The core idea of dynamic programming in RL is that the value of a state equals the immediate reward plus the discounted expected value of the next state.\n* **Sample Efficiency**: Replay buffers and temporal difference updates allow agents to learn stably from past experiences.\n* **Policy Optimization**: Whether using value-based methods (like Q-learning) or policy gradients (like PPO), algorithms converge toward the optimal behavioral policy.",
+  "examples": [
+    "Input: num_states = 2, num_actions = 2, transitions = [[[0.9, 0.1], [0.2, 0.8]], [[0.1, 0.9], [0.8, 0.2]]], rewards = [[1.0, 0.0], [0.0, 2.0]], gamma = 0.9, theta = 0.0001\n\nOutput: {\"values\": [10.9882, 12.0871], \"policy\": [0, 1]}\n\nExplanation: Evaluated rl_value_iteration under standard test conditions."
+  ],
+  "requirements": "* Function must be named `rl_value_iteration`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `rl_value_iteration`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef rl_value_iteration(num_states: int, num_actions: int, transitions: list, rewards: list, gamma: float = 0.9, theta: float = 1e-4) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Value Iteration** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef rl_value_iteration(num_states: int, num_actions: int, transitions: list, rewards: list, gamma: float = 0.9, theta: float = 1e-4) -> dict:\n    P, R = np.array(transitions, dtype=np.float64), np.array(rewards, dtype=np.float64)\n    V = np.zeros(num_states, dtype=np.float64)\n    while True:\n        delta = 0.0\n        V_new = np.zeros_like(V)\n        for s in range(num_states):\n            q = R[s] + gamma * np.sum(P[s] * V, axis=1)\n            bv = np.max(q)\n            delta = max(delta, abs(bv - V[s]))\n            V_new[s] = bv\n        V = V_new\n        if delta < theta: break\n    pol = [int(np.argmax(R[s] + gamma * np.sum(P[s] * V, axis=1))) for s in range(num_states)]\n    return {'values': np.round(V, 4).tolist(), 'policy': pol}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "2 states 2 actions",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "rl-value-iteration-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "rl-value-iteration-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "num_states": 2,
+        "num_actions": 2,
+        "transitions": [
+          [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.2,
+              0.8
+            ]
+          ],
+          [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.8,
+              0.2
+            ]
+          ]
+        ],
+        "rewards": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "gamma": 0.9,
+        "theta": 0.0001
+      },
+      "expectedOutput": {
+        "values": [
+          10.9882,
+          12.0871
+        ],
+        "policy": [
+          0,
+          1
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "rl_value_iteration",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "gradient-descent-quadratic",
+    "anchor-box-generation",
+    "value-iteration-step",
+    "precision-recall-at-k",
+    "cs336-l01-train-byte-pair-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "python",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

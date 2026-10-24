@@ -1,0 +1,398 @@
+{
+  "id": "l2-normalize",
+  "slug": "l2-normalize",
+  "title": "L2 Normalization in Python",
+  "cleanTitle": "L2 Normalization in Python",
+  "category": "cuda",
+  "difficulty": "Medium",
+  "tags": [
+    "Linear Algebra",
+    "GPU Programming"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "cuda-basics",
+    "title": "CUDA Kernels",
+    "sectionId": "cuda-basics-reductions"
+  },
+  "seoDescription": "Implement CUDA L2 vector normalization by reducing squared values and dividing each element by the resulting norm.",
+  "description": "Normalize an input vector or tensor along its last dimension such that its Euclidean L2 norm equals 1.\n\n**Mathematical Formulation:**\n\n$$\n\\hat{x}_i = \\frac{x_i}{\\sqrt{\\sum_j x_j^2} + \\epsilon}\n$$\n\n**Step-by-Step Implementation:**\n1. Compute the sum of squares along the final feature axis.\n2. Take the square root to compute the Euclidean norm, adding epsilon for numerical stability.\n3. Divide original values by the computed L2 norm.\n4. Return normalized array rounded to 6 decimal places.\n\n**Returns:** List of normalized floats where Euclidean norm along the last axis equals 1.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching L2 Normalization specification."
+  ],
+  "requirements": "* Must implement `l2_normalize` using CUDA.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: L2 Normalization in Python\n\n### Core Intuition: Why Do We Need This?\nNormalize an input vector or tensor along its last dimension such that its Euclidean L2 norm equals 1. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\n\\hat{x}_i = \\frac{x_i}{\\sqrt{\\sum_j x_j^2} + \\epsilon}\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Compute the sum of squares along the final feature axis.\n3. **Phase 3: Iterative Execution & Reduction**: Take the square root to compute the Euclidean norm, adding epsilon for numerical stability.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return normalized array rounded to 6 decimal places.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard CUDA documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `torch.Tensor` specifications."
+  ],
+  "constraints": "* Category: CUDA\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, CUDA\n",
+  "starterCode": "import numpy as np\n\ndef l2_normalize(x: list, eps: float = 1e-12) -> list:\n    \"\"\"\n    Normalize an input vector or tensor along its last dimension such that its Euclidean L2 norm equals 1.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nNormalize an input vector or tensor along its last dimension such that its Euclidean L2 norm equals 1.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef l2_normalize(x: list, eps: float = 1e-12) -> list:\n    arr = np.array(x, dtype=float)\n    l2_norm = np.sqrt(np.sum(arr ** 2, axis=-1, keepdims=True))\n    return np.round(arr / (l2_norm + eps), 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "l2-normalize-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "x": [
+          3.0,
+          4.0
+        ],
+        "eps": 1e-12
+      },
+      "expectedOutput": [
+        0.6,
+        0.8
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "l2-normalize-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "x": [
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0,
+            3.0,
+            4.0
+          ]
+        ],
+        "eps": 1e-12
+      },
+      "expectedOutput": [
+        [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ],
+        [
+          0.0,
+          0.0,
+          0.6,
+          0.8
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "l2-normalize-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          6.0,
+          8.0
+        ],
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        0.6,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          1.5,
+          2.0
+        ],
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        0.6,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          4.0,
+          5.0
+        ],
+        "eps": 1.0
+      },
+      "expectedOutput": [
+        0.540312,
+        0.675391
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          4.5,
+          6.0
+        ],
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        0.6,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          9.0,
+          12.0
+        ],
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        0.6,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          0.75,
+          1.0
+        ],
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        0.6,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          5.0,
+          6.0
+        ],
+        "eps": 2.0
+      },
+      "expectedOutput": [
+        0.509671,
+        0.611605
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          12.0,
+          16.0
+        ],
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        0.6,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          4.0,
+          3.0
+        ],
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        0.8,
+        0.6
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          2.25,
+          3.0
+        ],
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        0.6,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          15.0,
+          20.0
+        ],
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        0.6,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          6.0,
+          7.0
+        ],
+        "eps": 3.0
+      },
+      "expectedOutput": [
+        0.491017,
+        0.572853
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          2.4,
+          3.2
+        ],
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        0.6,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          18.0,
+          24.0
+        ],
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        0.6,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          7.0,
+          8.0
+        ],
+        "eps": 4.0
+      },
+      "expectedOutput": [
+        0.478464,
+        0.546816
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          3.6,
+          4.8
+        ],
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        0.6,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          1.2,
+          1.6
+        ],
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        0.6,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "l2-normalize-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          24.0,
+          32.0
+        ],
+        "eps": 0.0
+      },
+      "expectedOutput": [
+        0.6,
+        0.8
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "l2_normalize",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "any"
+      },
+      {
+        "name": "eps",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "swish",
+    "relu",
+    "outer-product",
+    "argmax",
+    "rms-norm"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/l2-normalize",
+  "localUrl": "http://localhost:3000/problems/l2-normalize"
+}

@@ -1,0 +1,694 @@
+{
+  "catalogId": "python:probstat-stratified-sampling",
+  "id": "probstat-stratified-sampling",
+  "sourceId": "probstat-stratified-sampling",
+  "slug": "probstat-stratified-sampling",
+  "source": "python",
+  "category": "python",
+  "title": "Stratified Sampling",
+  "difficulty": "Medium",
+  "tags": [
+    "Probability and Statistics"
+  ],
+  "isFree": false,
+  "planId": "math-probability",
+  "planTitle": "Probability & Statistics",
+  "sectionId": "math-probability-sampling-clt",
+  "sortOrder": 73,
+  "seoDescription": "Compute proportional allocation of a total sample and the resulting stratified estimator's mean and standard error.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Compute proportional sample allocations across strata and calculate the stratified mean estimator and its standard error with finite population correction.\n\nStratification guarantees representation across subgroups, eliminating between-strata variance from the estimation error.\n\n### Mathematical Formulation\n$$\nn_h = n \\frac{N_h}{N}, \\quad \\bar{y}_{\\text{st}} = \\sum w_h \\bar{y}_h, \\quad \\operatorname{Var}(\\bar{y}_{\\text{st}}) = \\sum w_h^2 \\frac{s_h^2}{n_h}\\left(1 - \\frac{n_h}{N_h}\\right)\n$$\n\n### Step-by-Step Implementation\n1. Compute strata weights w_h from population counts\n2. Allocate sample size proportionally across strata\n3. Compute composite stratified mean and standard error with finite population correction\n\n### Returns\nDictionary with 'stratified_mean', 'standard_error', and 'allocations'.",
+  "theory": "## Understanding the Theory: Stratified Sampling\n\n### Core Intuition: Why Do We Need This?\nReal-world data is inherently noisy and uncertain. Probability theory and statistics provide principled tools to quantify that uncertainty, model how data is generated, and evaluate confidence in empirical results. **Stratified Sampling** evaluates probability distributions or statistical tests to summarize sample characteristics.\n\nStratification guarantees representation across subgroups, eliminating between-strata variance from the estimation error. In this problem, the goal is to: compute proportional sample allocations across strata and calculate the stratified mean estimator and its standard error with finite population correction.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nn_h = n \\frac{N_h}{N}, \\quad \\bar{y}_{\\text{st}} = \\sum w_h \\bar{y}_h, \\quad \\operatorname{Var}(\\bar{y}_{\\text{st}}) = \\sum w_h^2 \\frac{s_h^2}{n_h}\\left(1 - \\frac{n_h}{N_h}\\right)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Compute strata weights w_h from population counts\n2. **Phase 2**: Allocate sample size proportionally across strata\n3. **Phase 3**: Compute composite stratified mean and standard error with finite population correction\n\n### Practical Machine Learning Applications & Nuances\n* **Statistical Significance**: Machine learning A/B testing and model evaluation rely on p-values and confidence intervals to ensure observed improvements are not just random noise.\n* **Tail Probabilities & Underflow**: In deep generative models or Bayesian inference, computing log-probabilities prevents underflow when dealing with very small probability values in distribution tails.\n* **Moments & Distributions**: Examining mean, variance, skewness, and kurtosis helps data practitioners detect outliers and choose appropriate normalization strategies.",
+  "examples": [
+    "Input: strata_sizes = [1000, 2000, 3000], strata_means = [50.0, 65.0, 80.0], strata_vars = [100.0, 144.0, 81.0], total_sample_size = 300\n\nOutput: {\"stratified_mean\": 70.0, \"standard_error\": 0.577086, \"allocations\": [50, 100, 150]}\n\nExplanation: Evaluated probstat_stratified_sampling under standard test conditions."
+  ],
+  "requirements": "* Function must be named `probstat_stratified_sampling`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `probstat_stratified_sampling`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef probstat_stratified_sampling(strata_sizes: list, strata_means: list, strata_vars: list, total_sample_size: int) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Stratified Sampling** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef probstat_stratified_sampling(strata_sizes: list, strata_means: list, strata_vars: list, total_sample_size: int) -> dict:\n    Nh = np.array(strata_sizes, dtype=np.float64)\n    wh = Nh / np.sum(Nh)\n    nh = np.maximum(1.0, np.round(total_sample_size * wh))\n    st_mean = np.sum(wh * np.array(strata_means, dtype=np.float64))\n    v = np.sum((wh ** 2) * (np.array(strata_vars, dtype=np.float64) / nh) * (1.0 - nh / Nh))\n    return {'stratified_mean': round(float(st_mean), 6), 'standard_error': round(float(np.sqrt(max(0.0, v))), 6), 'allocations': [int(x) for x in nh]}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Three strata",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "probstat-stratified-sampling-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "strata_sizes": [
+          1000,
+          2000,
+          3000
+        ],
+        "strata_means": [
+          50.0,
+          65.0,
+          80.0
+        ],
+        "strata_vars": [
+          100.0,
+          144.0,
+          81.0
+        ],
+        "total_sample_size": 300
+      },
+      "expectedOutput": {
+        "stratified_mean": 70.0,
+        "standard_error": 0.577086,
+        "allocations": [
+          50,
+          100,
+          150
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "probstat_stratified_sampling",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "gradient-descent-quadratic",
+    "anchor-box-generation",
+    "value-iteration-step",
+    "precision-recall-at-k",
+    "cs336-l01-train-byte-pair-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "python",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

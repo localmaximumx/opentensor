@@ -1,0 +1,894 @@
+{
+  "catalogId": "python:optim-classical-momentum",
+  "id": "optim-classical-momentum",
+  "sourceId": "optim-classical-momentum",
+  "slug": "optim-classical-momentum",
+  "source": "python",
+  "category": "numpy",
+  "title": "Classical Momentum",
+  "difficulty": "Medium",
+  "tags": [
+    "Optimization"
+  ],
+  "isFree": false,
+  "planId": "math-optimization",
+  "planTitle": "Optimization",
+  "sectionId": "math-optimization-gradient-descent-basics",
+  "sortOrder": 375,
+  "seoDescription": "Implement vanilla gradient descent and momentum-based gradient descent to minimize the MSE loss of a linear model, and return both loss curves.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Accelerate gradient descent along consistent descent directions using exponentially decaying velocity accumulation.\n\nMomentum cancels orthogonal zig-zag oscillations in ravines while accelerating progress along gentle consistent slopes.\n\n### Mathematical Formulation\n$$\nv_{t+1} = \\beta v_t + \\nabla f(w_t), \\quad w_{t+1} = w_t - \\eta v_{t+1}\n$$\n\n### Step-by-Step Implementation\n1. Maintain rolling velocity buffer initialized to zero\n2. Accumulate current gradient into exponentially weighted velocity momentum\n3. Step parameter iterate along momentum velocity vector\n\n### Returns\nDictionary with 'final_weights' and historical 'loss_curve'.",
+  "theory": "## Understanding the Theory: Classical Momentum\n\n### Core Intuition: Why Do We Need This?\nTraining deep neural networks is an optimization problem: we want to find parameter values that minimize the loss function across training samples. Because loss landscapes in deep learning are non-convex with ravines, saddle points, and plateaus, simple gradient descent can get stuck or oscillate. **Classical Momentum** accelerates convergence and stabilizes parameter trajectories.\n\nMomentum cancels orthogonal zig-zag oscillations in ravines while accelerating progress along gentle consistent slopes. In this problem, the goal is to: accelerate gradient descent along consistent descent directions using exponentially decaying velocity accumulation.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nv_{t+1} = \\beta v_t + \\nabla f(w_t), \\quad w_{t+1} = w_t - \\eta v_{t+1}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Maintain rolling velocity buffer initialized to zero\n2. **Phase 2**: Accumulate current gradient into exponentially weighted velocity momentum\n3. **Phase 3**: Step parameter iterate along momentum velocity vector\n\n### Practical Machine Learning Applications & Nuances\n* **Escaping Ravines**: Momentum methods accumulate velocity across successive steps, helping the optimizer push through flat regions and dampening high-frequency oscillations.\n* **Adaptive Learning Rates**: Algorithms like Adam scale learning rates per parameter, giving infrequent features larger updates and preventing exploding updates on frequent features.\n* **Gradient Regularization**: Techniques like gradient clipping and weight decay prevent exploding gradients and encourage simpler, more generalizable model weights.",
+  "examples": [
+    "Input: X = [[1.0, 1.0], [2.0, 1.0], [3.0, 1.0]], y = [2.0, 4.0, 6.0], lr = 0.05, momentum = 0.9, num_steps = 5\n\nOutput: {\"final_weights\": [2.3435, 0.8958], \"loss_curve\": [18.666667, 3.762963, 1.755035, 12.130545, 12.348782]}\n\nExplanation: Evaluated optim_classical_momentum under standard test conditions."
+  ],
+  "requirements": "* Function must be named `optim_classical_momentum`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `optim_classical_momentum`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef optim_classical_momentum(X: list, y: list, lr: float = 0.05, momentum: float = 0.9, num_steps: int = 10) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Classical Momentum** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef optim_classical_momentum(X: list, y: list, lr: float = 0.05, momentum: float = 0.9, num_steps: int = 10) -> dict:\n    Xa, ya = np.array(X, dtype=np.float64), np.array(y, dtype=np.float64)\n    N, D = Xa.shape; w, v, losses = np.zeros(D), np.zeros(D), []\n    for _ in range(int(num_steps)):\n        losses.append(round(float(np.mean((np.dot(Xa, w) - ya)**2)), 6))\n        g = (2.0/N) * np.dot(Xa.T, np.dot(Xa, w) - ya)\n        v = float(momentum)*v + g; w -= float(lr)*v\n    return {'final_weights': np.round(w, 4).tolist(), 'loss_curve': losses}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Linear regression with momentum",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "optim-classical-momentum-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "optim-classical-momentum-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "X": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            2.0,
+            1.0
+          ],
+          [
+            3.0,
+            1.0
+          ]
+        ],
+        "y": [
+          2.0,
+          4.0,
+          6.0
+        ],
+        "lr": 0.05,
+        "momentum": 0.9,
+        "num_steps": 5
+      },
+      "expectedOutput": {
+        "final_weights": [
+          2.3435,
+          0.8958
+        ],
+        "loss_curve": [
+          18.666667,
+          3.762963,
+          1.755035,
+          12.130545,
+          12.348782
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "optim_classical_momentum",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

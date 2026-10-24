@@ -1,0 +1,599 @@
+{
+  "id": "dropout",
+  "slug": "dropout",
+  "title": "Inverted Dropout Implementation",
+  "cleanTitle": "Inverted Dropout Implementation",
+  "category": "cuda",
+  "difficulty": "Easy",
+  "tags": [
+    "GPU Programming",
+    "Neural Networks"
+  ],
+  "isFree": true,
+  "studyPlan": {
+    "id": "cuda-basics",
+    "title": "CUDA Kernels",
+    "sectionId": "cuda-basics-ml-primitives"
+  },
+  "seoDescription": "Implement inverted dropout in CUDA using a supplied binary mask and scaling retained elements by the keep probability.",
+  "description": "Implement inverted dropout for deep neural network regularisation, scaling active activations by 1/(1 - p) during training so that evaluation requires no additional scaling.\n\n**Mathematical Formulation:**\n\n$$\ny = \\begin{cases} \\frac{x \\odot m}{1 - p}, & \\text{if training} \\\\ x, & \\text{if evaluation} \\end{cases}\n$$\n\n**Step-by-Step Implementation:**\n1. Check the training flag; if False, return the input activations unchanged.\n2. If training and a binary mask is provided, multiply inputs elementwise by the mask.\n3. Scale the surviving activations by 1 / (1 - p).\n4. Return the scaled activations rounded to 6 decimal places.\n\n**Returns:** List of activations after inverted dropout regularisation.",
+  "examples": [
+    "Input: x = [1.0, 2.0, 3.0]\nOutput: result matching Dropout specification."
+  ],
+  "requirements": "* Must implement `dropout` using CUDA.\n* Must preserve input dimensions and return correct output types.\n* Vectorized and numerically stable.",
+  "theory": "## Understanding the Theory: Inverted Dropout Implementation\n\n### Core Intuition: Why Do We Need This?\nImplement inverted dropout for deep neural network regularisation, scaling active activations by 1/(1 - p) during training so that evaluation requires no additional scaling. In modern deep learning and large-scale AI architectures, numerical correctness, memory efficiency, and deterministic computation form the foundational substrate for stable model training and fast inference. Understanding how each mathematical operator maps to low-level tensor algorithms enables practitioners to diagnose bottlenecks, eliminate silent numerical bugs, and design scalable custom operators.\n\n### Mathematical Principles & Formulation\nThe mathematical formulation governing this operation is given by:\n\n$$\ny = \\begin{cases} \\frac{x \\odot m}{1 - p}, & \\text{if training} \\\\ x, & \\text{if evaluation} \\end{cases}\n$$\n\nEach variable and term plays a precise functional role. In neural network training, preserving dimensional consistency across batch, sequence, and feature channels is essential. Numerical precision and dynamic range must be carefully preserved to avoid catastrophic floating-point cancellation, gradient underflow, or numerical instability.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Inspect tensor shapes, ensure contiguous memory layouts, and validate bounds.\n2. **Phase 2: Core Mathematical Transformation**: Check the training flag; if False, return the input activations unchanged.\n3. **Phase 3: Iterative Execution & Reduction**: If training and a binary mask is provided, multiply inputs elementwise by the mask.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Return the scaled activations rounded to 6 decimal places.\n\n### Practical Machine Learning Applications & Nuances\n* **Scalability & Performance**: Vectorized execution minimizes Python interpreter overhead and saturates modern SIMD and GPU hardware execution units.\n* **Numerical Stability**: Defensive handling of small denominators, extreme exponentials, and boundary tails prevents NaN propagation during large distributed training runs.\n* **Production Reliability**: Deterministic implementations guarantee reproducibility across different evaluation batches and distributed parallel ranks.",
+  "hints": [
+    "Inspect standard CUDA documentation for vectorized or built-in primitives.",
+    "Consider boundary values such as negative inputs, zeros, or large magnitudes.",
+    "Ensure output structure aligns with `torch.Tensor` specifications."
+  ],
+  "constraints": "* Category: CUDA\n* Time Limit: 200 ms\n* Memory Limit: 128 MB\n* Allowed Libraries: Python standard library, CUDA\n",
+  "starterCode": "import numpy as np\n\ndef dropout(x: list, p: float = 0.5, training: bool = True, mask: list = None) -> list:\n    \"\"\"\n    Implement inverted dropout for deep neural network regularisation, scaling active activations by 1/(1 - p) during training so that evaluation requires no additional scaling.\n    \"\"\"\n    # Your implementation here\n    pass",
+  "solution": "### 💡 Intuition & Approach\nImplement inverted dropout for deep neural network regularisation, scaling active activations by 1/(1 - p) during training so that evaluation requires no additional scaling.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef dropout(x: list, p: float = 0.5, training: bool = True, mask: list = None) -> list:\n    arr = np.array(x, dtype=float)\n    if not training or p == 0.0:\n        return np.round(arr, 6).tolist()\n    if mask is not None:\n        m = np.array(mask, dtype=float)\n        return np.round((arr * m) / (1.0 - p), 6).tolist()\n    return np.round(arr / (1.0 - p), 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
+  "testCases": [
+    {
+      "id": "dropout-test-1",
+      "name": "Standard Test Case 1",
+      "inputs": {
+        "x": [
+          2.0,
+          4.0,
+          6.0,
+          8.0
+        ],
+        "p": 0.5,
+        "training": 1,
+        "mask": [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        4.0,
+        0.0,
+        12.0,
+        0.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "dropout-test-2",
+      "name": "Standard Test Case 2",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "p": 0.5,
+        "training": 0,
+        "mask": null
+      },
+      "expectedOutput": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "dropout-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          4.0,
+          8.0,
+          12.0,
+          16.0
+        ],
+        "p": 1.0,
+        "training": 2,
+        "mask": [
+          2.0,
+          0.0,
+          2.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          1.0,
+          2.0,
+          3.0,
+          4.0
+        ],
+        "p": 0.25,
+        "training": 0,
+        "mask": [
+          0.5,
+          0.0,
+          0.5,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          -2.0,
+          -4.0,
+          -6.0,
+          -8.0
+        ],
+        "p": -0.5,
+        "training": -1,
+        "mask": [
+          -1.0,
+          -0.0,
+          -1.0,
+          -0.0
+        ]
+      },
+      "expectedOutput": [
+        1.333333,
+        0.0,
+        4.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          6.0,
+          12.0,
+          18.0,
+          24.0
+        ],
+        "p": 1.5,
+        "training": 3,
+        "mask": [
+          3.0,
+          0.0,
+          3.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        -36.0,
+        -0.0,
+        -108.0,
+        -0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          3.0,
+          5.0,
+          7.0,
+          9.0
+        ],
+        "p": 1.5,
+        "training": 2.0,
+        "mask": [
+          2.0,
+          1.0,
+          2.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        -12.0,
+        -10.0,
+        -28.0,
+        -18.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          0.0,
+          2.0,
+          4.0,
+          6.0
+        ],
+        "p": -1.5,
+        "training": -1.0,
+        "mask": [
+          -1.0,
+          -2.0,
+          -1.0,
+          -2.0
+        ]
+      },
+      "expectedOutput": [
+        -0.0,
+        -1.6,
+        -1.6,
+        -4.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          8.0,
+          6.0,
+          4.0,
+          2.0
+        ],
+        "p": 0.5,
+        "training": 1,
+        "mask": [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ]
+      },
+      "expectedOutput": [
+        0.0,
+        12.0,
+        0.0,
+        4.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          -2.0,
+          -4.0,
+          -6.0,
+          -8.0
+        ],
+        "p": -0.5,
+        "training": -1,
+        "mask": [
+          -1.0,
+          -0.0,
+          -1.0,
+          -0.0
+        ]
+      },
+      "expectedOutput": [
+        1.333333,
+        0.0,
+        4.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          20.0,
+          40.0,
+          60.0,
+          80.0
+        ],
+        "p": 5.0,
+        "training": 10,
+        "mask": [
+          10.0,
+          0.0,
+          10.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        -50.0,
+        -0.0,
+        -150.0,
+        -0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          0.2,
+          0.4,
+          0.6,
+          0.8
+        ],
+        "p": 0.05,
+        "training": 0,
+        "mask": [
+          0.1,
+          0.0,
+          0.1,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        0.2,
+        0.4,
+        0.6,
+        0.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          7.0,
+          9.0,
+          11.0,
+          13.0
+        ],
+        "p": 5.5,
+        "training": 6.0,
+        "mask": [
+          6.0,
+          5.0,
+          6.0,
+          5.0
+        ]
+      },
+      "expectedOutput": [
+        -9.333333,
+        -10.0,
+        -14.666667,
+        -14.444444
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          3.0,
+          6.0,
+          9.0,
+          12.0
+        ],
+        "p": 0.75,
+        "training": 2,
+        "mask": [
+          1.5,
+          0.0,
+          1.5,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        18.0,
+        0.0,
+        54.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          -4.0,
+          -8.0,
+          -12.0,
+          -16.0
+        ],
+        "p": -1.0,
+        "training": -2,
+        "mask": [
+          -2.0,
+          -0.0,
+          -2.0,
+          -0.0
+        ]
+      },
+      "expectedOutput": [
+        4.0,
+        0.0,
+        12.0,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          0.5,
+          1.0,
+          1.5,
+          2.0
+        ],
+        "p": 0.125,
+        "training": 0,
+        "mask": [
+          0.25,
+          0.0,
+          0.25,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        0.5,
+        1.0,
+        1.5,
+        2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          1.0,
+          3.0,
+          5.0,
+          7.0
+        ],
+        "p": -0.5,
+        "training": 0.0,
+        "mask": [
+          0.0,
+          -1.0,
+          0.0,
+          -1.0
+        ]
+      },
+      "expectedOutput": [
+        1.0,
+        3.0,
+        5.0,
+        7.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          8.0,
+          16.0,
+          24.0,
+          32.0
+        ],
+        "p": 2.0,
+        "training": 4,
+        "mask": [
+          4.0,
+          0.0,
+          4.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        -32.0,
+        -0.0,
+        -96.0,
+        -0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          1.5,
+          3.0,
+          4.5,
+          6.0
+        ],
+        "p": 0.375,
+        "training": 1,
+        "mask": [
+          0.75,
+          0.0,
+          0.75,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        1.8,
+        0.0,
+        5.4,
+        0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "dropout-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          10.0,
+          20.0,
+          30.0,
+          40.0
+        ],
+        "p": 2.5,
+        "training": 5,
+        "mask": [
+          5.0,
+          0.0,
+          5.0,
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        -33.333333,
+        -0.0,
+        -100.0,
+        -0.0
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "dropout",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "any"
+      },
+      {
+        "name": "p",
+        "type": "any"
+      },
+      {
+        "name": "training",
+        "type": "any"
+      },
+      {
+        "name": "mask",
+        "type": "any"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "swish",
+    "relu",
+    "outer-product",
+    "argmax",
+    "rms-norm"
+  ],
+  "source": "catalog_enriched",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/dropout",
+  "localUrl": "http://localhost:3000/problems/dropout"
+}

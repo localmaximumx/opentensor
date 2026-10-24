@@ -1,0 +1,488 @@
+{
+  "id": "re-train-weight-decay",
+  "slug": "re-train-weight-decay",
+  "title": "Decoupled Weight Decay Update",
+  "cleanTitle": "Decoupled Weight Decay Update",
+  "type": "code",
+  "difficulty": "Easy",
+  "category": "Assessment",
+  "tags": [
+    "Assessment",
+    "CODE",
+    "Training and Decoding Primitives"
+  ],
+  "isFree": true,
+  "isLocked": false,
+  "description": "Apply a decoupled weight-decay update to parameters using the learning rate and decay coefficient.",
+  "theory": "## Understanding the Theory: Decoupled Weight Decay Update\n\n### Core Intuition: Why Do We Need This?\n**Decoupled Weight Decay Update** forms a vital mathematical pillar within **Training and Decoding Primitives**. In modern foundation models and frontier LLM architectures, computational efficiency, activation stability, and precise hardware memory alignment govern both pre-training scalability and low-latency autoregressive generation. Flaws in numerical precision or suboptimal tensor transformations can silently corrupt model weights or cause distributed training divergence.\n\nUnderstanding the core mechanics enables engineers to diagnose convergence anomalies, optimize memory layouts, and construct maintainable ML pipelines from first principles.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\n\\theta_{t+1} = \\theta_t - \\eta g_t - \\eta \\lambda \\theta_t\n$$\n\nIn this formulation:\n* The input features and parameters are projected, normalized, or aggregated according to established algorithmic invariants.\n* Dimensional consistency is preserved across all tensor or matrix axes, ensuring mathematical validity.\n* Intermediate accumulators maintain numerical dynamic range to protect against floating-point anomalies.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Dimension Setup**: Validate input array dimensions, check for empty sequences or invalid bounds, and convert inputs into contiguous buffers.\n2. **Phase 2: Core Algorithmic Transformation**: Execute the foundational mathematical logic using vectorized SIMD array operations or optimized iteration.\n3. **Phase 3: Aggregation & Normalization**: Compute required sums, projections, or ranking reductions while guarding against division by zero.\n4. **Phase 4: Output Assembly & Precision Guarantee**: Format outputs into required data types and verify that returned numerical estimates adhere to expected precision thresholds.\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth & Cache Hierarchy**: High-throughput transformer operators must saturate hardware cache lines and minimize redundant memory reads between DRAM and fast register buffers.\n* **Numerical Stability & Gradient Flow**: Preventing floating-point cancellation, underflow in softmax exponents, and division by zero ensures smooth loss descent across billions of tokens.\n* **Inference Throughput**: Idempotent, stateless tensor updates allow distributed inference engines to execute asynchronous prefill and decoding iterations without race conditions.\n* **Algorithmic Complexity**: Operates with optimal asymptotic time and space complexity, ensuring minimal compute overhead.",
+  "examples": [
+    {
+      "inputArgs": [
+        [
+          1.0,
+          2.0
+        ],
+        [
+          0.1,
+          0.2
+        ],
+        0.01,
+        0.1
+      ],
+      "output": [
+        0.998,
+        1.996
+      ],
+      "explanation": "Illustrative small example for decoupled weight decay update."
+    }
+  ],
+  "requirements": [
+    "Implement the mathematical or algorithmic behavior described above.",
+    "Match the function signature and output structure in starterCode.",
+    "Handle boundary inputs and ties consistently with the supplied test cases."
+  ],
+  "hints": [
+    "Implement the small mathematical contract first; do not add production-only model machinery.",
+    "Use stable log-sum-exp/softmax formulas when exponentials are involved."
+  ],
+  "constraints": [
+    "Inputs are small enough for a straightforward reference implementation.",
+    "Floating-point outputs should be compared with a tolerance (e.g. 1e-6).",
+    "Unless otherwise stated, dimensions must be consistent."
+  ],
+  "starterCode": "def solve(weights, gradients, lr, weight_decay):\n    pass",
+  "solution": "### 💡 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### ⚡ Implementation\n```python\ndef solve(weights, gradients, lr, weight_decay):\n    return [w-lr*(g+weight_decay*w) for w,g in zip(weights,gradients)]\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
+  "testCases": [
+    {
+      "id": "case-1",
+      "name": "smoke test",
+      "inputs": {
+        "weights": [
+          1.0,
+          2.0
+        ],
+        "gradients": [
+          0.1,
+          0.2
+        ],
+        "lr": 0.01,
+        "weight_decay": 0.1
+      },
+      "expectedOutput": [
+        0.998,
+        1.996
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-2",
+      "name": "Case 2",
+      "inputs": {
+        "weights": [
+          2.0,
+          4.0
+        ],
+        "gradients": [
+          0.2,
+          0.4
+        ],
+        "lr": 0.02,
+        "weight_decay": 0.2
+      },
+      "expectedOutput": [
+        1.988,
+        3.976
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "tc-hidden-3",
+      "name": "Case 3",
+      "inputs": {
+        "weights": [
+          0.5,
+          1.0
+        ],
+        "gradients": [
+          0.05,
+          0.1
+        ],
+        "lr": 0.005,
+        "weight_decay": 0.05
+      },
+      "expectedOutput": [
+        0.499625,
+        0.99925
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-4",
+      "name": "Case 4",
+      "inputs": {
+        "weights": [
+          -1.0,
+          -2.0
+        ],
+        "gradients": [
+          -0.1,
+          -0.2
+        ],
+        "lr": -0.01,
+        "weight_decay": -0.1
+      },
+      "expectedOutput": [
+        -1.0,
+        -2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-5",
+      "name": "Case 5",
+      "inputs": {
+        "weights": [
+          3.0,
+          6.0
+        ],
+        "gradients": [
+          0.3,
+          0.6
+        ],
+        "lr": 0.03,
+        "weight_decay": 0.3
+      },
+      "expectedOutput": [
+        2.964,
+        5.928
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-6",
+      "name": "Case 6",
+      "inputs": {
+        "weights": [
+          2.0,
+          3.0
+        ],
+        "gradients": [
+          1.1,
+          1.2
+        ],
+        "lr": 1.01,
+        "weight_decay": 1.1
+      },
+      "expectedOutput": [
+        -1.3330000000000002,
+        -1.545
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-7",
+      "name": "Case 7",
+      "inputs": {
+        "weights": [
+          -1.0,
+          0.0
+        ],
+        "gradients": [
+          -1.9,
+          -1.8
+        ],
+        "lr": -1.99,
+        "weight_decay": -1.9
+      },
+      "expectedOutput": [
+        -1.0,
+        -3.582
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-8",
+      "name": "Case 8",
+      "inputs": {
+        "weights": [
+          2.0,
+          1.0
+        ],
+        "gradients": [
+          0.2,
+          0.1
+        ],
+        "lr": 0.01,
+        "weight_decay": 0.1
+      },
+      "expectedOutput": [
+        1.996,
+        0.998
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-9",
+      "name": "Case 9",
+      "inputs": {
+        "weights": [
+          -1.0,
+          -2.0
+        ],
+        "gradients": [
+          -0.1,
+          -0.2
+        ],
+        "lr": -0.01,
+        "weight_decay": -0.1
+      },
+      "expectedOutput": [
+        -1.0,
+        -2.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-10",
+      "name": "Case 10",
+      "inputs": {
+        "weights": [
+          10.0,
+          20.0
+        ],
+        "gradients": [
+          1.0,
+          2.0
+        ],
+        "lr": 0.1,
+        "weight_decay": 1.0
+      },
+      "expectedOutput": [
+        8.9,
+        17.8
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-11",
+      "name": "Case 11",
+      "inputs": {
+        "weights": [
+          0.1,
+          0.2
+        ],
+        "gradients": [
+          0.01,
+          0.02
+        ],
+        "lr": 0.001,
+        "weight_decay": 0.01
+      },
+      "expectedOutput": [
+        0.09998900000000001,
+        0.19997800000000002
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-12",
+      "name": "Case 12",
+      "inputs": {
+        "weights": [
+          6.0,
+          7.0
+        ],
+        "gradients": [
+          5.1,
+          5.2
+        ],
+        "lr": 5.01,
+        "weight_decay": 5.1
+      },
+      "expectedOutput": [
+        -172.85699999999997,
+        -197.909
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-13",
+      "name": "Case 13",
+      "inputs": {
+        "weights": [
+          1.5,
+          3.0
+        ],
+        "gradients": [
+          0.15,
+          0.3
+        ],
+        "lr": 0.015,
+        "weight_decay": 0.15
+      },
+      "expectedOutput": [
+        1.494375,
+        2.98875
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-14",
+      "name": "Case 14",
+      "inputs": {
+        "weights": [
+          -2.0,
+          -4.0
+        ],
+        "gradients": [
+          -0.2,
+          -0.4
+        ],
+        "lr": -0.02,
+        "weight_decay": -0.2
+      },
+      "expectedOutput": [
+        -1.996,
+        -3.992
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-15",
+      "name": "Case 15",
+      "inputs": {
+        "weights": [
+          0.25,
+          0.5
+        ],
+        "gradients": [
+          0.025,
+          0.05
+        ],
+        "lr": 0.0025,
+        "weight_decay": 0.025
+      },
+      "expectedOutput": [
+        0.249921875,
+        0.49984375
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-16",
+      "name": "Case 16",
+      "inputs": {
+        "weights": [
+          0.0,
+          1.0
+        ],
+        "gradients": [
+          -0.9,
+          -0.8
+        ],
+        "lr": -0.99,
+        "weight_decay": -0.9
+      },
+      "expectedOutput": [
+        -0.891,
+        -0.683
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-17",
+      "name": "Case 17",
+      "inputs": {
+        "weights": [
+          4.0,
+          8.0
+        ],
+        "gradients": [
+          0.4,
+          0.8
+        ],
+        "lr": 0.04,
+        "weight_decay": 0.4
+      },
+      "expectedOutput": [
+        3.92,
+        7.84
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-18",
+      "name": "Case 18",
+      "inputs": {
+        "weights": [
+          0.75,
+          1.5
+        ],
+        "gradients": [
+          0.075,
+          0.15
+        ],
+        "lr": 0.0075,
+        "weight_decay": 0.075
+      },
+      "expectedOutput": [
+        0.749015625,
+        1.49803125
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-19",
+      "name": "Case 19",
+      "inputs": {
+        "weights": [
+          5.0,
+          10.0
+        ],
+        "gradients": [
+          0.5,
+          1.0
+        ],
+        "lr": 0.05,
+        "weight_decay": 0.5
+      },
+      "expectedOutput": [
+        4.85,
+        9.7
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "tc-hidden-20",
+      "name": "Case 20",
+      "inputs": {
+        "weights": [
+          11.0,
+          12.0
+        ],
+        "gradients": [
+          10.1,
+          10.2
+        ],
+        "lr": 10.01,
+        "weight_decay": 10.1
+      },
+      "expectedOutput": [
+        -1202.2119999999998,
+        -1303.3139999999999
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "solve",
+    "signature": "def solve(weights, gradients, lr, weight_decay):",
+    "returnType": "varies by problem; see example output"
+  },
+  "assessmentNames": [
+    "Training and Decoding Primitives"
+  ],
+  "source": "assessment",
+  "sourceId": "assessment",
+  "updatedAt": "2026-03-01T00:00:00.000Z"
+}

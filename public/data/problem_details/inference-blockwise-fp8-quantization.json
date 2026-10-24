@@ -1,0 +1,725 @@
+{
+  "catalogId": "python:inference-blockwise-fp8-quantization",
+  "id": "inference-blockwise-fp8-quantization",
+  "sourceId": "inference-blockwise-fp8-quantization",
+  "slug": "inference-blockwise-fp8-quantization",
+  "source": "python",
+  "category": "pytorch",
+  "title": "Implement Block-Wise FP8 Quantization",
+  "difficulty": "Hard",
+  "tags": [
+    "Quantization",
+    "Inference",
+    "GPU Programming"
+  ],
+  "isFree": false,
+  "planId": "cracking-inference",
+  "planTitle": "Inference Engineering",
+  "sectionId": "cracking-inference-quantization",
+  "sortOrder": 394,
+  "seoDescription": "Compute one scale per block from that block's own absolute maximum, and scale each block into the [-fp8 max, fp8 max] range with saturation.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Quantize floating point tensors into 8-bit floating point range [-fp8_max, fp8_max] with local per-block absolute maximum scaling.\n\nBlock-wise FP8 scaling bounds outlier error propagation to small local groups, preserving LLM model accuracy.\n\n### Mathematical Formulation\n$$\ns_b = \\frac{\\max_{x \\in B} |x|}{x_{\\max}^{\\text{fp8}}}, \\quad q = \\operatorname{clip}\\left(\\operatorname{round}\\left(\\frac{x}{s_b}\\right), -x_{\\max}^{\\text{fp8}}, x_{\\max}^{\\text{fp8}}\\right)\n$$\n\n### Step-by-Step Implementation\n1. Partition tensor into localized blocks of size block_size\n2. Compute scale s_b from local absolute block maximum\n3. Scale each block into FP8 dynamic range with saturation clipping\n\n### Returns\nDictionary with 'quantized_tensor' and 'block_scales'.",
+  "theory": "## Understanding the Theory: Implement Block-Wise FP8 Quantization\n\n### Core Intuition: Why Do We Need This?\nRunning large AI models in production requires massive computing power. During text generation, memory bandwidth (fetching weights and past key-value caches from VRAM) is often the primary bottleneck rather than raw arithmetic compute. **Implement Block-Wise FP8 Quantization** optimizes hardware efficiency, memory consumption, or request serving throughput.\n\nBlock-wise FP8 scaling bounds outlier error propagation to small local groups, preserving LLM model accuracy. In this problem, the goal is to: quantize floating point tensors into 8-bit floating point range [-fp8_max, fp8_max] with local per-block absolute maximum scaling.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\ns_b = \\frac{\\max_{x \\in B} |x|}{x_{\\max}^{\\text{fp8}}}, \\quad q = \\operatorname{clip}\\left(\\operatorname{round}\\left(\\frac{x}{s_b}\\right), -x_{\\max}^{\\text{fp8}}, x_{\\max}^{\\text{fp8}}\\right)\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Partition tensor into localized blocks of size block_size\n2. **Phase 2**: Compute scale s_b from local absolute block maximum\n3. **Phase 3**: Scale each block into FP8 dynamic range with saturation clipping\n\n### Practical Machine Learning Applications & Nuances\n* **Memory Bandwidth Bottleneck**: Quantizing weights to INT8 or INT4 cuts memory traffic in half or quarters, dramatically increasing token generation speeds.\n* **Serving Systems**: Dynamic batching and PagedAttention maximize GPU utilization by grouping requests arriving at different times.\n* **Latency vs. Throughput**: In production serving, systems engineers balance Time-To-First-Token (TTFT) against overall tokens-per-second throughput.",
+  "examples": [
+    "Input: tensor = [100.0, -200.0, 50.0, -448.0, 10.0, -20.0, 5.0, -40.0], block_size = 4, fp8_max = 448.0\n\nOutput: {\"quantized_tensor\": [100.0, -200.0, 50.0, -448.0, 112.0, -224.0, 56.0, -448.0], \"block_scales\": [1.0, 0.089286]}\n\nExplanation: Evaluated inference_blockwise_fp8_quantization under standard test conditions."
+  ],
+  "requirements": "* Function must be named `inference_blockwise_fp8_quantization`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `inference_blockwise_fp8_quantization`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef inference_blockwise_fp8_quantization(tensor: list, block_size: int = 4, fp8_max: float = 448.0) -> dict:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Implement Block-Wise FP8 Quantization** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np, math\n\ndef inference_blockwise_fp8_quantization(tensor: list, block_size: int = 4, fp8_max: float = 448.0) -> dict:\n    arr = np.array(tensor, dtype=np.float64).flatten(); bs, fm = int(block_size), float(fp8_max)\n    scales, q_all = [], []\n    for b in range(math.ceil(len(arr) / bs)):\n        blk = arr[b*bs : (b+1)*bs]; sc = max(float(np.max(np.abs(blk))) / fm, 1e-12)\n        scales.append(round(sc, 6)); q_all.extend(np.clip(np.round(blk / sc), -fm, fm).tolist())\n    return {'quantized_tensor': np.round(q_all, 2).tolist(), 'block_scales': scales}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "8 floats block 4",
+      "inputs": {
+        "tensor": [
+          100.0,
+          -200.0,
+          50.0,
+          -448.0,
+          10.0,
+          -20.0,
+          5.0,
+          -40.0
+        ],
+        "block_size": 4,
+        "fp8_max": 448.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          100.0,
+          -200.0,
+          50.0,
+          -448.0,
+          112.0,
+          -224.0,
+          56.0,
+          -448.0
+        ],
+        "block_scales": [
+          1.0,
+          0.089286
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "tensor": [
+          200.0,
+          -400.0,
+          100.0,
+          -896.0,
+          20.0,
+          -40.0,
+          10.0,
+          -80.0
+        ],
+        "block_size": 8,
+        "fp8_max": 896.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          200.0,
+          -400.0,
+          100.0,
+          -896.0,
+          20.0,
+          -40.0,
+          10.0,
+          -80.0
+        ],
+        "block_scales": [
+          1.0
+        ]
+      },
+      "isPublic": true
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "tensor": [
+          50.0,
+          -100.0,
+          25.0,
+          -224.0,
+          5.0,
+          -10.0,
+          2.5,
+          -20.0
+        ],
+        "block_size": 2,
+        "fp8_max": 224.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          112.0,
+          -224.0,
+          25.0,
+          -224.0,
+          112.0,
+          -224.0,
+          28.0,
+          -224.0
+        ],
+        "block_scales": [
+          0.446429,
+          1.0,
+          0.044643,
+          0.089286
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "tensor": [
+          -100.0,
+          200.0,
+          -50.0,
+          448.0,
+          -10.0,
+          20.0,
+          -5.0,
+          40.0
+        ],
+        "block_size": -4,
+        "fp8_max": -448.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [],
+        "block_scales": []
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "tensor": [
+          300.0,
+          -600.0,
+          150.0,
+          -1344.0,
+          30.0,
+          -60.0,
+          15.0,
+          -120.0
+        ],
+        "block_size": 12,
+        "fp8_max": 1344.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          300.0,
+          -600.0,
+          150.0,
+          -1344.0,
+          30.0,
+          -60.0,
+          15.0,
+          -120.0
+        ],
+        "block_scales": [
+          1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "tensor": [
+          101.0,
+          -199.0,
+          51.0,
+          -447.0,
+          11.0,
+          -19.0,
+          6.0,
+          -39.0
+        ],
+        "block_size": 5.0,
+        "fp8_max": 449.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          101.0,
+          -200.0,
+          51.0,
+          -449.0,
+          11.0,
+          -219.0,
+          69.0,
+          -449.0
+        ],
+        "block_scales": [
+          0.995546,
+          0.08686
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "tensor": [
+          98.0,
+          -202.0,
+          48.0,
+          -450.0,
+          8.0,
+          -22.0,
+          3.0,
+          -42.0
+        ],
+        "block_size": 2.0,
+        "fp8_max": 446.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          216.0,
+          -446.0,
+          48.0,
+          -446.0,
+          162.0,
+          -446.0,
+          32.0,
+          -446.0
+        ],
+        "block_scales": [
+          0.452915,
+          1.008969,
+          0.049327,
+          0.09417
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "tensor": [
+          -40.0,
+          5.0,
+          -20.0,
+          10.0,
+          -448.0,
+          50.0,
+          -200.0,
+          100.0
+        ],
+        "block_size": 4,
+        "fp8_max": 448.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          -448.0,
+          56.0,
+          -224.0,
+          112.0,
+          -448.0,
+          50.0,
+          -200.0,
+          100.0
+        ],
+        "block_scales": [
+          0.089286,
+          1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "tensor": [
+          -100.0,
+          200.0,
+          -50.0,
+          448.0,
+          -10.0,
+          20.0,
+          -5.0,
+          40.0
+        ],
+        "block_size": -4,
+        "fp8_max": -448.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [],
+        "block_scales": []
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "tensor": [
+          1000.0,
+          -2000.0,
+          500.0,
+          -4480.0,
+          100.0,
+          -200.0,
+          50.0,
+          -400.0
+        ],
+        "block_size": 40,
+        "fp8_max": 4480.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          1000.0,
+          -2000.0,
+          500.0,
+          -4480.0,
+          100.0,
+          -200.0,
+          50.0,
+          -400.0
+        ],
+        "block_scales": [
+          1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "tensor": [
+          10.0,
+          -20.0,
+          5.0,
+          -44.8,
+          1.0,
+          -2.0,
+          0.5,
+          -4.0
+        ],
+        "block_size": 0,
+        "fp8_max": 44.8
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          100.0,
+          -200.0,
+          50.0,
+          -448.0,
+          112.0,
+          -224.0,
+          56.0,
+          -448.0
+        ],
+        "block_scales": [
+          1.0,
+          0.089286
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "tensor": [
+          105.0,
+          -195.0,
+          55.0,
+          -443.0,
+          15.0,
+          -15.0,
+          10.0,
+          -35.0
+        ],
+        "block_size": 9.0,
+        "fp8_max": 453.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          107.0,
+          -199.0,
+          56.0,
+          -453.0,
+          15.0,
+          -15.0,
+          10.0,
+          -36.0
+        ],
+        "block_scales": [
+          0.977925
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "tensor": [
+          150.0,
+          -300.0,
+          75.0,
+          -672.0,
+          15.0,
+          -30.0,
+          7.5,
+          -60.0
+        ],
+        "block_size": 6,
+        "fp8_max": 672.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          150.0,
+          -300.0,
+          75.0,
+          -672.0,
+          15.0,
+          -30.0,
+          84.0,
+          -672.0
+        ],
+        "block_scales": [
+          1.0,
+          0.089286
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "tensor": [
+          -200.0,
+          400.0,
+          -100.0,
+          896.0,
+          -20.0,
+          40.0,
+          -10.0,
+          80.0
+        ],
+        "block_size": -8,
+        "fp8_max": -896.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [],
+        "block_scales": []
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "tensor": [
+          25.0,
+          -50.0,
+          12.5,
+          -112.0,
+          2.5,
+          -5.0,
+          1.25,
+          -10.0
+        ],
+        "block_size": 1,
+        "fp8_max": 112.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          112.0,
+          -112.0,
+          112.0,
+          -112.0,
+          112.0,
+          -112.0,
+          112.0,
+          -112.0
+        ],
+        "block_scales": [
+          0.223214,
+          0.446429,
+          0.111607,
+          1.0,
+          0.022321,
+          0.044643,
+          0.011161,
+          0.089286
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "tensor": [
+          99.0,
+          -201.0,
+          49.0,
+          -449.0,
+          9.0,
+          -21.0,
+          4.0,
+          -41.0
+        ],
+        "block_size": 3.0,
+        "fp8_max": 447.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          220.0,
+          -447.0,
+          109.0,
+          -447.0,
+          9.0,
+          -21.0,
+          44.0,
+          -447.0
+        ],
+        "block_scales": [
+          0.449664,
+          1.004474,
+          0.091723
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "tensor": [
+          400.0,
+          -800.0,
+          200.0,
+          -1792.0,
+          40.0,
+          -80.0,
+          20.0,
+          -160.0
+        ],
+        "block_size": 16,
+        "fp8_max": 1792.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          400.0,
+          -800.0,
+          200.0,
+          -1792.0,
+          40.0,
+          -80.0,
+          20.0,
+          -160.0
+        ],
+        "block_scales": [
+          1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "tensor": [
+          75.0,
+          -150.0,
+          37.5,
+          -336.0,
+          7.5,
+          -15.0,
+          3.75,
+          -30.0
+        ],
+        "block_size": 3,
+        "fp8_max": 336.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          168.0,
+          -336.0,
+          84.0,
+          -336.0,
+          8.0,
+          -15.0,
+          42.0,
+          -336.0
+        ],
+        "block_scales": [
+          0.446429,
+          1.0,
+          0.089286
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "tensor": [
+          500.0,
+          -1000.0,
+          250.0,
+          -2240.0,
+          50.0,
+          -100.0,
+          25.0,
+          -200.0
+        ],
+        "block_size": 20,
+        "fp8_max": 2240.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          500.0,
+          -1000.0,
+          250.0,
+          -2240.0,
+          50.0,
+          -100.0,
+          25.0,
+          -200.0
+        ],
+        "block_scales": [
+          1.0
+        ]
+      },
+      "isPublic": false
+    },
+    {
+      "id": "inference-blockwise-fp8-quantization-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "tensor": [
+          110.0,
+          -190.0,
+          60.0,
+          -438.0,
+          20.0,
+          -10.0,
+          15.0,
+          -30.0
+        ],
+        "block_size": 14.0,
+        "fp8_max": 458.0
+      },
+      "expectedOutput": {
+        "quantized_tensor": [
+          115.0,
+          -199.0,
+          63.0,
+          -458.0,
+          21.0,
+          -10.0,
+          16.0,
+          -31.0
+        ],
+        "block_scales": [
+          0.956332
+        ]
+      },
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "inference_blockwise_fp8_quantization",
+    "runtime": "pytorch"
+  },
+  "relatedProblems": [
+    "autograd-l08-train-tiny-micrograd-mlp",
+    "inference-groupwise-int4-quantization",
+    "pytorch-residual-block",
+    "autograd-l07-dense-layer-forward",
+    "inference-latency-percentiles"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "pytorch",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

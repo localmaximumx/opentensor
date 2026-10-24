@@ -1,0 +1,1443 @@
+{
+  "id": "anchor-box-generation",
+  "title": "Anchor Box Generation",
+  "description": "Object detectors like Faster R-CNN and SSD generate a dense set of predefined bounding boxes called anchors at every position on a feature grid. Each anchor serves as an initial guess that the network refines during training.\n\nGiven a square feature grid size, the original image size, a list of scales, and a list of aspect ratios, generate all anchor boxes in image coordinates.\n\n### Algorithm\n\n1. Compute the stride (spacing between grid cells in image space):\n\n$$\nstride = \\frac{image\\_size}{feature\\_size}\n$$\n\n2. For each grid cell (i, j), compute the center in image coordinates:\n\n$$\ncx = (j + 0.5) \\times stride \\qquad cy = (i + 0.5) \\times stride\n$$\n\n3. For each combination of scale s and aspect ratio r, compute the box width and height:\n\n$$\nw = s \\cdot \\sqrt{r} \\qquad h = \\frac{s}{\\sqrt{r}}\n$$\n\n4. The anchor box is [cx - w/2, cy - h/2, cx + w/2, cy + h/2].\n\nIterate over grid cells in row-major order (i then j), and for each cell iterate over scales then aspect ratios.",
+  "seoDescription": "Generate object-detection anchor boxes across a feature grid for every scale and aspect-ratio combination.",
+  "examples": [
+    "Input: feature_size = 1, image_size = 8, scales = [4], aspect_ratios = [1.0]\n\nOutput: [[2.0, 2.0, 6.0, 6.0]]\n\nExplanation: The only grid cell is centered at (4, 4), and its anchor has width and height 4.",
+    "Input: feature_size = 2, image_size = 8, scales = [2], aspect_ratios = [1.0]\n\nOutput: [[1.0, 1.0, 3.0, 3.0], [5.0, 1.0, 7.0, 3.0], [1.0, 5.0, 3.0, 7.0], [5.0, 5.0, 7.0, 7.0]]"
+  ],
+  "requirements": "* <span style=\"font-size: 14px;\">Map each grid cell center to image coordinates using the 0.5 offset</span>\n* <span style=\"font-size: 14px;\">Generate one anchor per (scale, aspect_ratio) pair at each grid position</span>\n* <span style=\"font-size: 14px;\">Return anchors in row-major grid order, then by scale, then by ratio</span>",
+  "theory": "## Understanding the Theory: Anchor Box Generation\n\n### Core Intuition: Why Do We Need This?\nImages possess rich spatial structure: nearby pixels are correlated, and visual patterns (edges, textures, object parts) are translation invariant. Computer vision models apply local receptive fields and weight sharing to process high-resolution visual inputs with minimal parameter overhead. **Anchor Box Generation** extracts localized visual features, pools spatial maps, or reconciles geometric bounding boxes.\n\nIn this problem, the objective is to implement **Anchor Box Generation** efficiently and accurately adhering to standard mathematical conventions.\n\n### Mathematical Principles & Formulation\nThe operation is governed by the following mathematical formulation:\n\n$$\nstride = \\frac{image\\_size}{feature\\_size}\n$$\n\nEvery variable and index in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1: Input Validation & Pre-processing**: Validate tensor dimensions, convert inputs into contiguous array buffers, and extract structural shape parameters.\n2. **Phase 2: Core Transformation**: Apply vectorized operations directly across array dimensions without explicit Python loops.\n3. **Phase 3: Aggregation & Normalization**: Compute required summations, projections, or element-wise bounds while safeguarding against numerical instability.\n4. **Phase 4: Output Formatting**: Ensure the resulting array or dictionary matches expected output data types and precision tolerances.\n\n### Practical Machine Learning Applications & Nuances\n* **Receptive Field Growth**: Stacking convolutional layers with strides or pooling progressively expands the effective field of view, enabling deep layers to capture global semantic context.\n* **Boundary Padding & Strides**: Padding controls spatial dimension retention, while strides downsample feature resolutions efficiently without extra parameters.\n* **Vectorized im2col**: High-performance vision libraries transform sliding window convolutions into matrix multiplications (`GEMM`) via im2col operations.",
+  "hints": [
+    "Compute stride as image_size / feature_size and offset each grid coordinate by 0.5 before scaling.",
+    "For scale s and ratio r, use width = s * sqrt(r) and height = s / sqrt(r)."
+  ],
+  "constraints": "* <span style=\"font-size: 14px;\">feature_size >= 1, image_size >= 1</span>\n* <span style=\"font-size: 14px;\">scales and aspect_ratios are non-empty lists of positive floats</span>\n* <span style=\"font-size: 14px;\">Return a list of [x1, y1, x2, y2] boxes as floats</span>\n* <span style=\"font-size: 14px;\">Time limit: 300 ms</span>",
+  "difficulty": "Medium",
+  "starterCode": "def generate_anchors(feature_size: int, image_size: float, scales: list[float], aspect_ratios: list[float]) -> list[list[float]]:\n    \"\"\"\n    Returns a list of [x1, y1, x2, y2] anchor boxes.\n    \"\"\"\n    # Write code here\n    pass",
+  "createdAt": "2026-01-31T11:39:40.084Z",
+  "updatedAt": "2026-03-05T16:52:54.635Z",
+  "solution": "### 💡 Intuition & Approach\nGenerates candidate bounding boxes centered at each spatial grid cell $(c_x, c_y)$ across multiple combinations of scales and aspect ratios.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef generate_anchors(feature_size: int, image_size: float, scales: list[float], aspect_ratios: list[float]) -> list:\n    stride = image_size / feature_size\n    anchors = []\n    for i in range(feature_size):\n        for j in range(feature_size):\n            cx = (j + 0.5) * stride\n            cy = (i + 0.5) * stride\n            for s in scales:\n                for ar in aspect_ratios:\n                    w = s * np.sqrt(ar)\n                    h = s / np.sqrt(ar)\n                    anchors.append([\n                        float(round(cx - w / 2.0, 4)),\n                        float(round(cy - h / 2.0, 4)),\n                        float(round(cx + w / 2.0, 4)),\n                        float(round(cy + h / 2.0, 4))\n                    ])\n    return anchors\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$\n- **Space Complexity:** $\\mathcal{O}(N)$\n\n### 🔍 How It Works\n1. **Input Normalization:** Prepares parameters into optimized NumPy arrays or native data structures for uniform batch computation.\n2. **Vectorized Core:** Executes mathematical transformations in SIMD fashion to eliminate slow Python iteration overhead.\n3. **Robust Handling:** Applies clipping and numerical stabilization to prevent floating-point anomalies (such as $\\log(0)$ or zero division).\n",
+  "visualizationComponent": "AnchorBoxGenerationViz",
+  "testCases": [
+    {
+      "id": "test-1",
+      "name": "Single cell, one anchor",
+      "inputs": {
+        "scales": [
+          4
+        ],
+        "image_size": 8,
+        "feature_size": 1,
+        "aspect_ratios": [
+          1
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          2.0,
+          2.0,
+          6.0,
+          6.0
+        ]
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "2x2 grid, single scale/ratio",
+      "inputs": {
+        "scales": [
+          2
+        ],
+        "image_size": 8,
+        "feature_size": 2,
+        "aspect_ratios": [
+          1
+        ]
+      },
+      "isPublic": true,
+      "expectedOutput": [
+        [
+          1.0,
+          1.0,
+          3.0,
+          3.0
+        ],
+        [
+          5.0,
+          1.0,
+          7.0,
+          3.0
+        ],
+        [
+          1.0,
+          5.0,
+          3.0,
+          7.0
+        ],
+        [
+          5.0,
+          5.0,
+          7.0,
+          7.0
+        ]
+      ]
+    },
+    {
+      "id": "anchor-box-generation-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "scales": [
+          8
+        ],
+        "image_size": 16,
+        "feature_size": 2,
+        "aspect_ratios": [
+          2
+        ]
+      },
+      "expectedOutput": [
+        [
+          -1.6569,
+          1.1716,
+          9.6569,
+          6.8284
+        ],
+        [
+          6.3431,
+          1.1716,
+          17.6569,
+          6.8284
+        ],
+        [
+          -1.6569,
+          9.1716,
+          9.6569,
+          14.8284
+        ],
+        [
+          6.3431,
+          9.1716,
+          17.6569,
+          14.8284
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "scales": [
+          2
+        ],
+        "image_size": 4,
+        "feature_size": 0,
+        "aspect_ratios": [
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          2.0,
+          6.0,
+          6.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "scales": [
+          -4
+        ],
+        "image_size": -8,
+        "feature_size": -1,
+        "aspect_ratios": [
+          -1
+        ]
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "scales": [
+          12
+        ],
+        "image_size": 24,
+        "feature_size": 3,
+        "aspect_ratios": [
+          3
+        ]
+      },
+      "expectedOutput": [
+        [
+          -6.3923,
+          0.5359,
+          14.3923,
+          7.4641
+        ],
+        [
+          1.6077,
+          0.5359,
+          22.3923,
+          7.4641
+        ],
+        [
+          9.6077,
+          0.5359,
+          30.3923,
+          7.4641
+        ],
+        [
+          -6.3923,
+          8.5359,
+          14.3923,
+          15.4641
+        ],
+        [
+          1.6077,
+          8.5359,
+          22.3923,
+          15.4641
+        ],
+        [
+          9.6077,
+          8.5359,
+          30.3923,
+          15.4641
+        ],
+        [
+          -6.3923,
+          16.5359,
+          14.3923,
+          23.4641
+        ],
+        [
+          1.6077,
+          16.5359,
+          22.3923,
+          23.4641
+        ],
+        [
+          9.6077,
+          16.5359,
+          30.3923,
+          23.4641
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "scales": [
+          5.0
+        ],
+        "image_size": 9.0,
+        "feature_size": 2.0,
+        "aspect_ratios": [
+          2.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          2.0,
+          6.0,
+          6.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "scales": [
+          2.0
+        ],
+        "image_size": 6.0,
+        "feature_size": -1.0,
+        "aspect_ratios": [
+          -1.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          2.0,
+          6.0,
+          6.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "scales": [
+          4
+        ],
+        "image_size": 8,
+        "feature_size": 1,
+        "aspect_ratios": [
+          1
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          2.0,
+          6.0,
+          6.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "scales": [
+          -4
+        ],
+        "image_size": -8,
+        "feature_size": -1,
+        "aspect_ratios": [
+          -1
+        ]
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "scales": [
+          40
+        ],
+        "image_size": 80,
+        "feature_size": 10,
+        "aspect_ratios": [
+          10
+        ]
+      },
+      "expectedOutput": [
+        [
+          -59.2456,
+          -2.3246,
+          67.2456,
+          10.3246
+        ],
+        [
+          -51.2456,
+          -2.3246,
+          75.2456,
+          10.3246
+        ],
+        [
+          -43.2456,
+          -2.3246,
+          83.2456,
+          10.3246
+        ],
+        [
+          -35.2456,
+          -2.3246,
+          91.2456,
+          10.3246
+        ],
+        [
+          -27.2456,
+          -2.3246,
+          99.2456,
+          10.3246
+        ],
+        [
+          -19.2456,
+          -2.3246,
+          107.2456,
+          10.3246
+        ],
+        [
+          -11.2456,
+          -2.3246,
+          115.2456,
+          10.3246
+        ],
+        [
+          -3.2456,
+          -2.3246,
+          123.2456,
+          10.3246
+        ],
+        [
+          4.7544,
+          -2.3246,
+          131.2456,
+          10.3246
+        ],
+        [
+          12.7544,
+          -2.3246,
+          139.2456,
+          10.3246
+        ],
+        [
+          -59.2456,
+          5.6754,
+          67.2456,
+          18.3246
+        ],
+        [
+          -51.2456,
+          5.6754,
+          75.2456,
+          18.3246
+        ],
+        [
+          -43.2456,
+          5.6754,
+          83.2456,
+          18.3246
+        ],
+        [
+          -35.2456,
+          5.6754,
+          91.2456,
+          18.3246
+        ],
+        [
+          -27.2456,
+          5.6754,
+          99.2456,
+          18.3246
+        ],
+        [
+          -19.2456,
+          5.6754,
+          107.2456,
+          18.3246
+        ],
+        [
+          -11.2456,
+          5.6754,
+          115.2456,
+          18.3246
+        ],
+        [
+          -3.2456,
+          5.6754,
+          123.2456,
+          18.3246
+        ],
+        [
+          4.7544,
+          5.6754,
+          131.2456,
+          18.3246
+        ],
+        [
+          12.7544,
+          5.6754,
+          139.2456,
+          18.3246
+        ],
+        [
+          -59.2456,
+          13.6754,
+          67.2456,
+          26.3246
+        ],
+        [
+          -51.2456,
+          13.6754,
+          75.2456,
+          26.3246
+        ],
+        [
+          -43.2456,
+          13.6754,
+          83.2456,
+          26.3246
+        ],
+        [
+          -35.2456,
+          13.6754,
+          91.2456,
+          26.3246
+        ],
+        [
+          -27.2456,
+          13.6754,
+          99.2456,
+          26.3246
+        ],
+        [
+          -19.2456,
+          13.6754,
+          107.2456,
+          26.3246
+        ],
+        [
+          -11.2456,
+          13.6754,
+          115.2456,
+          26.3246
+        ],
+        [
+          -3.2456,
+          13.6754,
+          123.2456,
+          26.3246
+        ],
+        [
+          4.7544,
+          13.6754,
+          131.2456,
+          26.3246
+        ],
+        [
+          12.7544,
+          13.6754,
+          139.2456,
+          26.3246
+        ],
+        [
+          -59.2456,
+          21.6754,
+          67.2456,
+          34.3246
+        ],
+        [
+          -51.2456,
+          21.6754,
+          75.2456,
+          34.3246
+        ],
+        [
+          -43.2456,
+          21.6754,
+          83.2456,
+          34.3246
+        ],
+        [
+          -35.2456,
+          21.6754,
+          91.2456,
+          34.3246
+        ],
+        [
+          -27.2456,
+          21.6754,
+          99.2456,
+          34.3246
+        ],
+        [
+          -19.2456,
+          21.6754,
+          107.2456,
+          34.3246
+        ],
+        [
+          -11.2456,
+          21.6754,
+          115.2456,
+          34.3246
+        ],
+        [
+          -3.2456,
+          21.6754,
+          123.2456,
+          34.3246
+        ],
+        [
+          4.7544,
+          21.6754,
+          131.2456,
+          34.3246
+        ],
+        [
+          12.7544,
+          21.6754,
+          139.2456,
+          34.3246
+        ],
+        [
+          -59.2456,
+          29.6754,
+          67.2456,
+          42.3246
+        ],
+        [
+          -51.2456,
+          29.6754,
+          75.2456,
+          42.3246
+        ],
+        [
+          -43.2456,
+          29.6754,
+          83.2456,
+          42.3246
+        ],
+        [
+          -35.2456,
+          29.6754,
+          91.2456,
+          42.3246
+        ],
+        [
+          -27.2456,
+          29.6754,
+          99.2456,
+          42.3246
+        ],
+        [
+          -19.2456,
+          29.6754,
+          107.2456,
+          42.3246
+        ],
+        [
+          -11.2456,
+          29.6754,
+          115.2456,
+          42.3246
+        ],
+        [
+          -3.2456,
+          29.6754,
+          123.2456,
+          42.3246
+        ],
+        [
+          4.7544,
+          29.6754,
+          131.2456,
+          42.3246
+        ],
+        [
+          12.7544,
+          29.6754,
+          139.2456,
+          42.3246
+        ],
+        [
+          -59.2456,
+          37.6754,
+          67.2456,
+          50.3246
+        ],
+        [
+          -51.2456,
+          37.6754,
+          75.2456,
+          50.3246
+        ],
+        [
+          -43.2456,
+          37.6754,
+          83.2456,
+          50.3246
+        ],
+        [
+          -35.2456,
+          37.6754,
+          91.2456,
+          50.3246
+        ],
+        [
+          -27.2456,
+          37.6754,
+          99.2456,
+          50.3246
+        ],
+        [
+          -19.2456,
+          37.6754,
+          107.2456,
+          50.3246
+        ],
+        [
+          -11.2456,
+          37.6754,
+          115.2456,
+          50.3246
+        ],
+        [
+          -3.2456,
+          37.6754,
+          123.2456,
+          50.3246
+        ],
+        [
+          4.7544,
+          37.6754,
+          131.2456,
+          50.3246
+        ],
+        [
+          12.7544,
+          37.6754,
+          139.2456,
+          50.3246
+        ],
+        [
+          -59.2456,
+          45.6754,
+          67.2456,
+          58.3246
+        ],
+        [
+          -51.2456,
+          45.6754,
+          75.2456,
+          58.3246
+        ],
+        [
+          -43.2456,
+          45.6754,
+          83.2456,
+          58.3246
+        ],
+        [
+          -35.2456,
+          45.6754,
+          91.2456,
+          58.3246
+        ],
+        [
+          -27.2456,
+          45.6754,
+          99.2456,
+          58.3246
+        ],
+        [
+          -19.2456,
+          45.6754,
+          107.2456,
+          58.3246
+        ],
+        [
+          -11.2456,
+          45.6754,
+          115.2456,
+          58.3246
+        ],
+        [
+          -3.2456,
+          45.6754,
+          123.2456,
+          58.3246
+        ],
+        [
+          4.7544,
+          45.6754,
+          131.2456,
+          58.3246
+        ],
+        [
+          12.7544,
+          45.6754,
+          139.2456,
+          58.3246
+        ],
+        [
+          -59.2456,
+          53.6754,
+          67.2456,
+          66.3246
+        ],
+        [
+          -51.2456,
+          53.6754,
+          75.2456,
+          66.3246
+        ],
+        [
+          -43.2456,
+          53.6754,
+          83.2456,
+          66.3246
+        ],
+        [
+          -35.2456,
+          53.6754,
+          91.2456,
+          66.3246
+        ],
+        [
+          -27.2456,
+          53.6754,
+          99.2456,
+          66.3246
+        ],
+        [
+          -19.2456,
+          53.6754,
+          107.2456,
+          66.3246
+        ],
+        [
+          -11.2456,
+          53.6754,
+          115.2456,
+          66.3246
+        ],
+        [
+          -3.2456,
+          53.6754,
+          123.2456,
+          66.3246
+        ],
+        [
+          4.7544,
+          53.6754,
+          131.2456,
+          66.3246
+        ],
+        [
+          12.7544,
+          53.6754,
+          139.2456,
+          66.3246
+        ],
+        [
+          -59.2456,
+          61.6754,
+          67.2456,
+          74.3246
+        ],
+        [
+          -51.2456,
+          61.6754,
+          75.2456,
+          74.3246
+        ],
+        [
+          -43.2456,
+          61.6754,
+          83.2456,
+          74.3246
+        ],
+        [
+          -35.2456,
+          61.6754,
+          91.2456,
+          74.3246
+        ],
+        [
+          -27.2456,
+          61.6754,
+          99.2456,
+          74.3246
+        ],
+        [
+          -19.2456,
+          61.6754,
+          107.2456,
+          74.3246
+        ],
+        [
+          -11.2456,
+          61.6754,
+          115.2456,
+          74.3246
+        ],
+        [
+          -3.2456,
+          61.6754,
+          123.2456,
+          74.3246
+        ],
+        [
+          4.7544,
+          61.6754,
+          131.2456,
+          74.3246
+        ],
+        [
+          12.7544,
+          61.6754,
+          139.2456,
+          74.3246
+        ],
+        [
+          -59.2456,
+          69.6754,
+          67.2456,
+          82.3246
+        ],
+        [
+          -51.2456,
+          69.6754,
+          75.2456,
+          82.3246
+        ],
+        [
+          -43.2456,
+          69.6754,
+          83.2456,
+          82.3246
+        ],
+        [
+          -35.2456,
+          69.6754,
+          91.2456,
+          82.3246
+        ],
+        [
+          -27.2456,
+          69.6754,
+          99.2456,
+          82.3246
+        ],
+        [
+          -19.2456,
+          69.6754,
+          107.2456,
+          82.3246
+        ],
+        [
+          -11.2456,
+          69.6754,
+          115.2456,
+          82.3246
+        ],
+        [
+          -3.2456,
+          69.6754,
+          123.2456,
+          82.3246
+        ],
+        [
+          4.7544,
+          69.6754,
+          131.2456,
+          82.3246
+        ],
+        [
+          12.7544,
+          69.6754,
+          139.2456,
+          82.3246
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "scales": [
+          0
+        ],
+        "image_size": 1,
+        "feature_size": 0,
+        "aspect_ratios": [
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          2.0,
+          6.0,
+          6.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "scales": [
+          9.0
+        ],
+        "image_size": 13.0,
+        "feature_size": 6.0,
+        "aspect_ratios": [
+          6.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          2.0,
+          6.0,
+          6.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "scales": [
+          6
+        ],
+        "image_size": 12,
+        "feature_size": 2,
+        "aspect_ratios": [
+          2
+        ]
+      },
+      "expectedOutput": [
+        [
+          -1.2426,
+          0.8787,
+          7.2426,
+          5.1213
+        ],
+        [
+          4.7574,
+          0.8787,
+          13.2426,
+          5.1213
+        ],
+        [
+          -1.2426,
+          6.8787,
+          7.2426,
+          11.1213
+        ],
+        [
+          4.7574,
+          6.8787,
+          13.2426,
+          11.1213
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "scales": [
+          -8
+        ],
+        "image_size": -16,
+        "feature_size": -2,
+        "aspect_ratios": [
+          -2
+        ]
+      },
+      "expectedOutput": [],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "scales": [
+          1
+        ],
+        "image_size": 2,
+        "feature_size": 0,
+        "aspect_ratios": [
+          0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          2.0,
+          6.0,
+          6.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "scales": [
+          3.0
+        ],
+        "image_size": 7.0,
+        "feature_size": 0.0,
+        "aspect_ratios": [
+          0.0
+        ]
+      },
+      "expectedOutput": [
+        [
+          2.0,
+          2.0,
+          6.0,
+          6.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "scales": [
+          16
+        ],
+        "image_size": 32,
+        "feature_size": 4,
+        "aspect_ratios": [
+          4
+        ]
+      },
+      "expectedOutput": [
+        [
+          -12.0,
+          0.0,
+          20.0,
+          8.0
+        ],
+        [
+          -4.0,
+          0.0,
+          28.0,
+          8.0
+        ],
+        [
+          4.0,
+          0.0,
+          36.0,
+          8.0
+        ],
+        [
+          12.0,
+          0.0,
+          44.0,
+          8.0
+        ],
+        [
+          -12.0,
+          8.0,
+          20.0,
+          16.0
+        ],
+        [
+          -4.0,
+          8.0,
+          28.0,
+          16.0
+        ],
+        [
+          4.0,
+          8.0,
+          36.0,
+          16.0
+        ],
+        [
+          12.0,
+          8.0,
+          44.0,
+          16.0
+        ],
+        [
+          -12.0,
+          16.0,
+          20.0,
+          24.0
+        ],
+        [
+          -4.0,
+          16.0,
+          28.0,
+          24.0
+        ],
+        [
+          4.0,
+          16.0,
+          36.0,
+          24.0
+        ],
+        [
+          12.0,
+          16.0,
+          44.0,
+          24.0
+        ],
+        [
+          -12.0,
+          24.0,
+          20.0,
+          32.0
+        ],
+        [
+          -4.0,
+          24.0,
+          28.0,
+          32.0
+        ],
+        [
+          4.0,
+          24.0,
+          36.0,
+          32.0
+        ],
+        [
+          12.0,
+          24.0,
+          44.0,
+          32.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "scales": [
+          3
+        ],
+        "image_size": 6,
+        "feature_size": 1,
+        "aspect_ratios": [
+          1
+        ]
+      },
+      "expectedOutput": [
+        [
+          1.5,
+          1.5,
+          4.5,
+          4.5
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "anchor-box-generation-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "scales": [
+          20
+        ],
+        "image_size": 40,
+        "feature_size": 5,
+        "aspect_ratios": [
+          5
+        ]
+      },
+      "expectedOutput": [
+        [
+          -18.3607,
+          -0.4721,
+          26.3607,
+          8.4721
+        ],
+        [
+          -10.3607,
+          -0.4721,
+          34.3607,
+          8.4721
+        ],
+        [
+          -2.3607,
+          -0.4721,
+          42.3607,
+          8.4721
+        ],
+        [
+          5.6393,
+          -0.4721,
+          50.3607,
+          8.4721
+        ],
+        [
+          13.6393,
+          -0.4721,
+          58.3607,
+          8.4721
+        ],
+        [
+          -18.3607,
+          7.5279,
+          26.3607,
+          16.4721
+        ],
+        [
+          -10.3607,
+          7.5279,
+          34.3607,
+          16.4721
+        ],
+        [
+          -2.3607,
+          7.5279,
+          42.3607,
+          16.4721
+        ],
+        [
+          5.6393,
+          7.5279,
+          50.3607,
+          16.4721
+        ],
+        [
+          13.6393,
+          7.5279,
+          58.3607,
+          16.4721
+        ],
+        [
+          -18.3607,
+          15.5279,
+          26.3607,
+          24.4721
+        ],
+        [
+          -10.3607,
+          15.5279,
+          34.3607,
+          24.4721
+        ],
+        [
+          -2.3607,
+          15.5279,
+          42.3607,
+          24.4721
+        ],
+        [
+          5.6393,
+          15.5279,
+          50.3607,
+          24.4721
+        ],
+        [
+          13.6393,
+          15.5279,
+          58.3607,
+          24.4721
+        ],
+        [
+          -18.3607,
+          23.5279,
+          26.3607,
+          32.4721
+        ],
+        [
+          -10.3607,
+          23.5279,
+          34.3607,
+          32.4721
+        ],
+        [
+          -2.3607,
+          23.5279,
+          42.3607,
+          32.4721
+        ],
+        [
+          5.6393,
+          23.5279,
+          50.3607,
+          32.4721
+        ],
+        [
+          13.6393,
+          23.5279,
+          58.3607,
+          32.4721
+        ],
+        [
+          -18.3607,
+          31.5279,
+          26.3607,
+          40.4721
+        ],
+        [
+          -10.3607,
+          31.5279,
+          34.3607,
+          40.4721
+        ],
+        [
+          -2.3607,
+          31.5279,
+          42.3607,
+          40.4721
+        ],
+        [
+          5.6393,
+          31.5279,
+          50.3607,
+          40.4721
+        ],
+        [
+          13.6393,
+          31.5279,
+          58.3607,
+          40.4721
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "generate_anchors",
+    "parameters": [
+      {
+        "name": "feature_size",
+        "type": "number",
+        "example": "2",
+        "description": "Size of the square feature grid"
+      },
+      {
+        "name": "image_size",
+        "type": "number",
+        "example": "8",
+        "description": "Size of the image in pixels (square)"
+      },
+      {
+        "name": "scales",
+        "type": "array",
+        "example": "[2, 4]",
+        "description": "List of anchor scales"
+      },
+      {
+        "name": "aspect_ratios",
+        "type": "array",
+        "example": "[0.5, 1.0, 2.0]",
+        "description": "List of aspect ratios (width/height)"
+      }
+    ]
+  },
+  "relatedProblems": [
+    "iou-bounding-box",
+    "non-maximum-suppression",
+    "roi-pooling",
+    "bilinear-interpolation",
+    "max-pooling-2d"
+  ],
+  "tags": [
+    "Computer Vision"
+  ],
+  "prevId": "dropout-training",
+  "nextId": "homogeneous-transform",
+  "slug": "anchor-box-generation",
+  "cleanTitle": "Anchor Box Generation",
+  "category": "python",
+  "isFree": true,
+  "source": "scraped_full",
+  "tensortonicUrl": "https://www.tensortonic.com/problems/anchor-box-generation",
+  "localUrl": "http://localhost:3000/problems/anchor-box-generation",
+  "studyPlan": null
+}

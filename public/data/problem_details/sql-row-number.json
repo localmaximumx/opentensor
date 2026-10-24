@@ -1,0 +1,1154 @@
+{
+  "catalogId": "sql:sql-row-number",
+  "id": "sql-row-number",
+  "sourceId": "sql-row-number",
+  "slug": "sql-row-number",
+  "source": "sql",
+  "category": "sql",
+  "title": "ROW_NUMBER",
+  "difficulty": "Medium",
+  "tags": [
+    "Data Processing"
+  ],
+  "isFree": false,
+  "planId": "sql-basics",
+  "planTitle": "SQL Sheet",
+  "sectionId": "sql-basics-window-functions",
+  "sortOrder": 115,
+  "seoDescription": "Assign deterministic per-segment activity ranks with SQL ROW_NUMBER ordered by engagement score and username.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Assign sequential integers to rows within each partition segment ordered by score descending and username ascending.\n\nROW_NUMBER produces distinct ascending integers within partitions without gaps, unlike RANK or DENSE_RANK.\n\n### Query Logic & Formulation\n$$\n\\operatorname{ROW\\_NUMBER}() \\quad \\text{OVER}(\\operatorname{PARTITION BY} \\text{segment\\_id} \\quad \\operatorname{ORDER BY} \\text{score DESC, username ASC})\n$$\n\n### Relational Execution Steps\n1. Partition records by segment_id\n2. Sort records within each partition by score descending with username breaking ties\n3. Assign sequential 1-based ranks to each row\n\n### Expected Query Output\nList of records including the computed rank.",
+  "theory": "## Understanding the Theory: ROW_NUMBER\n\n### Core Intuition: Why Do We Need This?\nRelational databases structure data into normalized tables with strict schemas and foreign-key relationships. SQL allows data engineers and analysts to write declarative queries describing what data is needed, while the database query engine optimizes the underlying execution plan. **ROW_NUMBER** combines, aggregates, or transforms records across tables.\n\nROW_NUMBER produces distinct ascending integers within partitions without gaps, unlike RANK or DENSE_RANK. In this problem, the goal is to: assign sequential integers to rows within each partition segment ordered by score descending and username ascending.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\n\\operatorname{ROW\\_NUMBER}() \\quad \\text{OVER}(\\operatorname{PARTITION BY} \\text{segment\\_id} \\quad \\operatorname{ORDER BY} \\text{score DESC, username ASC})\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Partition records by segment_id\n2. **Phase 2**: Sort records within each partition by score descending with username breaking ties\n3. **Phase 3**: Assign sequential 1-based ranks to each row\n\n### Practical Machine Learning Applications & Nuances\n* **Join Mechanics**: Inner joins filter for matching records across tables, while outer joins preserve all rows from one table even when no matches exist.\n* **Window Functions**: Functions like `ROW_NUMBER()` and `RANK()` allow computing partitioned running totals and top-K ranks without requiring self-joins.\n* **Index Optimization**: Proper indexing on join keys and filter conditions ensures queries run in milliseconds rather than doing full table scans.",
+  "examples": [
+    "Input: records = [{\"segment_id\": \"A\", \"username\": \"alice\", \"score\": 85.0}, {\"segment_id\": \"A\", \"username\": \"bob\", \"score\": 92.0}, {\"segment_id\": \"B\", \"username\": \"charlie\", \"score\": 70.0}, {\"segment_id\": \"B\", \"username\": \"david\", \"score\": 95.0}]\n\nOutput: [{\"segment_id\": \"A\", \"username\": \"bob\", \"score\": 92.0, \"rank\": 1}, {\"segment_id\": \"A\", \"username\": \"alice\", \"score\": 85.0, \"rank\": 2}, {\"segment_id\": \"B\", \"username\": \"david\", \"score\": 95.0, \"rank\": 1}, {\"segment_id\": \"B\", \"username\": \"charlie\", \"score\": 70.0, \"rank\": 2}]\n\nExplanation: Evaluated sql_row_number under standard test conditions."
+  ],
+  "requirements": "* Function must be named `sql_row_number`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `sql_row_number`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "-- SQL ROW_NUMBER\nSELECT segment_id, username, score,\n       ROW_NUMBER() OVER(PARTITION BY segment_id ORDER BY score DESC, username ASC) AS rank\nFROM user_activity\nORDER BY segment_id, rank;",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **ROW_NUMBER** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\ndef sql_row_number(records: list) -> list:\n    parts = {}\n    for r in records: parts.setdefault(r['segment_id'], []).append(r)\n    out = []\n    for s, items in sorted(parts.items()):\n        for rank, it in enumerate(sorted(items, key=lambda x: (-float(x['score']), x['username'])), 1):\n            out.append({'segment_id': it['segment_id'], 'username': it['username'], 'score': float(it['score']), 'rank': rank})\n    return out\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "Two segments with two users each",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "sql-row-number-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "sql-row-number-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "records": [
+          {
+            "segment_id": "A",
+            "username": "alice",
+            "score": 85.0
+          },
+          {
+            "segment_id": "A",
+            "username": "bob",
+            "score": 92.0
+          },
+          {
+            "segment_id": "B",
+            "username": "charlie",
+            "score": 70.0
+          },
+          {
+            "segment_id": "B",
+            "username": "david",
+            "score": 95.0
+          }
+        ]
+      },
+      "expectedOutput": [
+        {
+          "segment_id": "A",
+          "username": "bob",
+          "score": 92.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "A",
+          "username": "alice",
+          "score": 85.0,
+          "rank": 2
+        },
+        {
+          "segment_id": "B",
+          "username": "david",
+          "score": 95.0,
+          "rank": 1
+        },
+        {
+          "segment_id": "B",
+          "username": "charlie",
+          "score": 70.0,
+          "rank": 2
+        }
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "sql_row_number",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sql-multiple-joins",
+    "sql-subqueries",
+    "sql-distinct-values",
+    "sql-inner-join",
+    "sql-conditional-aggregation"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "sql",
+    "placeholderType": "sql_dummy_select (SELECT * FROM main_table)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

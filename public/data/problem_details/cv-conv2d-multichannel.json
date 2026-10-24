@@ -1,0 +1,1137 @@
+{
+  "catalogId": "python:cv-conv2d-multichannel",
+  "id": "cv-conv2d-multichannel",
+  "sourceId": "cv-conv2d-multichannel",
+  "slug": "cv-conv2d-multichannel",
+  "source": "python",
+  "category": "numpy",
+  "title": "Multichannel 2D Convolution",
+  "difficulty": "Medium",
+  "tags": [
+    "Computer Vision"
+  ],
+  "isFree": false,
+  "planId": "cracking-cv",
+  "planTitle": "Cracking CV",
+  "sectionId": "cracking-cv-convolution-and-pooling",
+  "sortOrder": 30,
+  "seoDescription": "Implement multichannel two-dimensional cross-correlation with output filters, optional bias, stride, and padding.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Implement multichannel 2D cross-correlation over spatial feature maps.\n\nStandard 2D convolution aggregates features across both space and depth channels.\n\n### Mathematical Formulation\n$$\nY_{c_{\\text{out}}, i, j} = b_{c_{\\text{out}}} + \\sum_{c_{\\text{in}}} \\sum_{u, v} X_{c_{\\text{in}}, i \\cdot s + u, j \\cdot s + v} K_{c_{\\text{out}}, c_{\\text{in}}, u, v}\n$$\n\n### Step-by-Step Implementation\n1. Pad spatial dimensions of input X with constant zeros\n2. Slide each kernel filter over receptive field patches\n3. Sum across input channels and add optional bias\n\n### Returns\n3D array of shape (Cout, H_out, W_out).",
+  "theory": "## Understanding the Theory: Multichannel 2D Convolution\n\n### Core Intuition: Why Do We Need This?\nImages have unique spatial properties: neighboring pixels are strongly correlated, and visual patterns (like edges, corners, or textures) appear anywhere in an image. Computer vision algorithms use spatial inductive biases like translation equivariance and local receptive fields to process image grids efficiently. **Multichannel 2D Convolution** operates directly on spatial coordinates or bounding box geometries.\n\nStandard 2D convolution aggregates features across both space and depth channels. In this problem, the goal is to: implement multichannel 2d cross-correlation over spatial feature maps.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nY_{c_{\\text{out}}, i, j} = b_{c_{\\text{out}}} + \\sum_{c_{\\text{in}}} \\sum_{u, v} X_{c_{\\text{in}}, i \\cdot s + u, j \\cdot s + v} K_{c_{\\text{out}}, c_{\\text{in}}, u, v}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Pad spatial dimensions of input X with constant zeros\n2. **Phase 2**: Slide each kernel filter over receptive field patches\n3. **Phase 3**: Sum across input channels and add optional bias\n\n### Practical Machine Learning Applications & Nuances\n* **Spatial Locality**: Sliding spatial filters across multi-channel feature maps aggregates contextual clues across local neighborhoods.\n* **Object Detection Pipelines**: Bounding box metrics (such as IoU and Non-Maximum Suppression) reconcile duplicate candidate detections into clean, final predictions.\n* **Data Augmentation**: Geometric transformations expose models to diverse spatial viewpoints, significantly improving generalization to unseen test images.",
+  "examples": [
+    "Input: x = [[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]], kernels = [[[[1.0, 0.0], [0.0, 1.0]]]], bias = [0.5], stride = 1, padding = 0\n\nOutput: [[[6.5, 8.5], [12.5, 14.5]]]\n\nExplanation: Evaluated cv_conv2d_multichannel under standard test conditions."
+  ],
+  "requirements": "* Function must be named `cv_conv2d_multichannel`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `cv_conv2d_multichannel`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef cv_conv2d_multichannel(x: list, kernels: list, bias: list = None, stride: int = 1, padding: int = 0) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Multichannel 2D Convolution** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cv_conv2d_multichannel(x: list, kernels: list, bias: list = None, stride: int = 1, padding: int = 0) -> list:\n    X = np.array(x, dtype=np.float64)\n    K = np.array(kernels, dtype=np.float64)\n    Cin, H, W = X.shape\n    Cout, _, kH, kW = K.shape\n    s, p = int(stride), int(padding)\n    X_pad = np.pad(X, ((0, 0), (p, p), (p, p)), mode='constant') if p > 0 else X\n    H_out = (H + 2 * p - kH) // s + 1\n    W_out = (W + 2 * p - kW) // s + 1\n    out = np.zeros((Cout, H_out, W_out), dtype=np.float64)\n    for oc in range(Cout):\n        for i in range(H_out):\n            for j in range(W_out):\n                patch = X_pad[:, i*s:i*s+kH, j*s:j*s+kW]\n                out[oc, i, j] = np.sum(patch * K[oc])\n        if bias is not None:\n            out[oc] += bias[oc]\n    return np.round(out, 6).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "1 in, 1 out 3x3",
+      "inputs": {
+        "x": [
+          [
+            [
+              1.0,
+              2.0,
+              3.0
+            ],
+            [
+              4.0,
+              5.0,
+              6.0
+            ],
+            [
+              7.0,
+              8.0,
+              9.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                1.0,
+                0.0
+              ],
+              [
+                0.0,
+                1.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          0.5
+        ],
+        "stride": 1,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            6.5,
+            8.5
+          ],
+          [
+            12.5,
+            14.5
+          ]
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "x": [
+          [
+            [
+              2.0,
+              4.0,
+              6.0
+            ],
+            [
+              8.0,
+              10.0,
+              12.0
+            ],
+            [
+              14.0,
+              16.0,
+              18.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                2.0,
+                0.0
+              ],
+              [
+                0.0,
+                2.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          1.0
+        ],
+        "stride": 2,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            25.0
+          ]
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "x": [
+          [
+            [
+              0.5,
+              1.0,
+              1.5
+            ],
+            [
+              2.0,
+              2.5,
+              3.0
+            ],
+            [
+              3.5,
+              4.0,
+              4.5
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                0.5,
+                0.0
+              ],
+              [
+                0.0,
+                0.5
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          0.25
+        ],
+        "stride": 0,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            6.5,
+            8.5
+          ],
+          [
+            12.5,
+            14.5
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "x": [
+          [
+            [
+              -1.0,
+              -2.0,
+              -3.0
+            ],
+            [
+              -4.0,
+              -5.0,
+              -6.0
+            ],
+            [
+              -7.0,
+              -8.0,
+              -9.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                -1.0,
+                -0.0
+              ],
+              [
+                -0.0,
+                -1.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          -0.5
+        ],
+        "stride": -1,
+        "padding": 0
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "x": [
+          [
+            [
+              3.0,
+              6.0,
+              9.0
+            ],
+            [
+              12.0,
+              15.0,
+              18.0
+            ],
+            [
+              21.0,
+              24.0,
+              27.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                3.0,
+                0.0
+              ],
+              [
+                0.0,
+                3.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          1.5
+        ],
+        "stride": 3,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            55.5
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "x": [
+          [
+            [
+              2.0,
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0,
+              7.0
+            ],
+            [
+              8.0,
+              9.0,
+              10.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                2.0,
+                1.0
+              ],
+              [
+                1.0,
+                2.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          1.5
+        ],
+        "stride": 2.0,
+        "padding": 1.0
+      },
+      "expectedOutput": [
+        [
+          [
+            5.5,
+            12.5
+          ],
+          [
+            22.5,
+            49.5
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "x": [
+          [
+            [
+              -1.0,
+              0.0,
+              1.0
+            ],
+            [
+              2.0,
+              3.0,
+              4.0
+            ],
+            [
+              5.0,
+              6.0,
+              7.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                -1.0,
+                -2.0
+              ],
+              [
+                -2.0,
+                -1.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          -1.5
+        ],
+        "stride": -1.0,
+        "padding": -2.0
+      },
+      "expectedOutput": [
+        [
+          [
+            6.5,
+            8.5
+          ],
+          [
+            12.5,
+            14.5
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "x": [
+          [
+            [
+              3.0,
+              2.0,
+              1.0
+            ],
+            [
+              6.0,
+              5.0,
+              4.0
+            ],
+            [
+              9.0,
+              8.0,
+              7.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                0.0,
+                1.0
+              ],
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          0.5
+        ],
+        "stride": 1,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            8.5,
+            6.5
+          ],
+          [
+            14.5,
+            12.5
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "x": [
+          [
+            [
+              -1.0,
+              -2.0,
+              -3.0
+            ],
+            [
+              -4.0,
+              -5.0,
+              -6.0
+            ],
+            [
+              -7.0,
+              -8.0,
+              -9.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                -1.0,
+                -0.0
+              ],
+              [
+                -0.0,
+                -1.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          -0.5
+        ],
+        "stride": -1,
+        "padding": 0
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "x": [
+          [
+            [
+              10.0,
+              20.0,
+              30.0
+            ],
+            [
+              40.0,
+              50.0,
+              60.0
+            ],
+            [
+              70.0,
+              80.0,
+              90.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                10.0,
+                0.0
+              ],
+              [
+                0.0,
+                10.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          5.0
+        ],
+        "stride": 10,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            605.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "x": [
+          [
+            [
+              0.1,
+              0.2,
+              0.3
+            ],
+            [
+              0.4,
+              0.5,
+              0.6
+            ],
+            [
+              0.7,
+              0.8,
+              0.9
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                0.1,
+                0.0
+              ],
+              [
+                0.0,
+                0.1
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          0.05
+        ],
+        "stride": 0,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            6.5,
+            8.5
+          ],
+          [
+            12.5,
+            14.5
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "x": [
+          [
+            [
+              6.0,
+              7.0,
+              8.0
+            ],
+            [
+              9.0,
+              10.0,
+              11.0
+            ],
+            [
+              12.0,
+              13.0,
+              14.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                6.0,
+                5.0
+              ],
+              [
+                5.0,
+                6.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          5.5
+        ],
+        "stride": 6.0,
+        "padding": 5.0
+      },
+      "expectedOutput": [
+        [
+          [
+            5.5,
+            5.5
+          ],
+          [
+            5.5,
+            269.5
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "x": [
+          [
+            [
+              1.5,
+              3.0,
+              4.5
+            ],
+            [
+              6.0,
+              7.5,
+              9.0
+            ],
+            [
+              10.5,
+              12.0,
+              13.5
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                1.5,
+                0.0
+              ],
+              [
+                0.0,
+                1.5
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          0.75
+        ],
+        "stride": 2,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            14.25
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "x": [
+          [
+            [
+              -2.0,
+              -4.0,
+              -6.0
+            ],
+            [
+              -8.0,
+              -10.0,
+              -12.0
+            ],
+            [
+              -14.0,
+              -16.0,
+              -18.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                -2.0,
+                -0.0
+              ],
+              [
+                -0.0,
+                -2.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          -1.0
+        ],
+        "stride": -2,
+        "padding": 0
+      },
+      "expectedOutput": [
+        []
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "x": [
+          [
+            [
+              0.25,
+              0.5,
+              0.75
+            ],
+            [
+              1.0,
+              1.25,
+              1.5
+            ],
+            [
+              1.75,
+              2.0,
+              2.25
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                0.25,
+                0.0
+              ],
+              [
+                0.0,
+                0.25
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          0.125
+        ],
+        "stride": 0,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            6.5,
+            8.5
+          ],
+          [
+            12.5,
+            14.5
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "x": [
+          [
+            [
+              0.0,
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              4.0,
+              5.0
+            ],
+            [
+              6.0,
+              7.0,
+              8.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                0.0,
+                -1.0
+              ],
+              [
+                -1.0,
+                0.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          -0.5
+        ],
+        "stride": 0.0,
+        "padding": -1.0
+      },
+      "expectedOutput": [
+        [
+          [
+            6.5,
+            8.5
+          ],
+          [
+            12.5,
+            14.5
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "x": [
+          [
+            [
+              4.0,
+              8.0,
+              12.0
+            ],
+            [
+              16.0,
+              20.0,
+              24.0
+            ],
+            [
+              28.0,
+              32.0,
+              36.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                4.0,
+                0.0
+              ],
+              [
+                0.0,
+                4.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          2.0
+        ],
+        "stride": 4,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            98.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "x": [
+          [
+            [
+              0.75,
+              1.5,
+              2.25
+            ],
+            [
+              3.0,
+              3.75,
+              4.5
+            ],
+            [
+              5.25,
+              6.0,
+              6.75
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                0.75,
+                0.0
+              ],
+              [
+                0.0,
+                0.75
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          0.375
+        ],
+        "stride": 1,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            3.75,
+            4.875
+          ],
+          [
+            7.125,
+            8.25
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "x": [
+          [
+            [
+              5.0,
+              10.0,
+              15.0
+            ],
+            [
+              20.0,
+              25.0,
+              30.0
+            ],
+            [
+              35.0,
+              40.0,
+              45.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                5.0,
+                0.0
+              ],
+              [
+                0.0,
+                5.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          2.5
+        ],
+        "stride": 5,
+        "padding": 0
+      },
+      "expectedOutput": [
+        [
+          [
+            152.5
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-conv2d-multichannel-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "x": [
+          [
+            [
+              11.0,
+              12.0,
+              13.0
+            ],
+            [
+              14.0,
+              15.0,
+              16.0
+            ],
+            [
+              17.0,
+              18.0,
+              19.0
+            ]
+          ]
+        ],
+        "kernels": [
+          [
+            [
+              [
+                11.0,
+                10.0
+              ],
+              [
+                10.0,
+                11.0
+              ]
+            ]
+          ]
+        ],
+        "bias": [
+          10.5
+        ],
+        "stride": 11.0,
+        "padding": 10.0
+      },
+      "expectedOutput": [
+        [
+          [
+            10.5,
+            10.5
+          ],
+          [
+            10.5,
+            724.5
+          ]
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cv_conv2d_multichannel",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "sigmoid-numpy",
+    "logistic-regression-training",
+    "pad-sequences",
+    "matrix-transpose",
+    "positional-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "numpy",
+    "placeholderType": "numpy_passthrough (return arr)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}

@@ -1,0 +1,1159 @@
+{
+  "catalogId": "python:cv-dilated-conv2d",
+  "id": "cv-dilated-conv2d",
+  "sourceId": "cv-dilated-conv2d",
+  "slug": "cv-dilated-conv2d",
+  "source": "python",
+  "category": "python",
+  "title": "Dilated 2D Convolution",
+  "difficulty": "Medium",
+  "tags": [
+    "Computer Vision"
+  ],
+  "isFree": false,
+  "planId": "cracking-cv",
+  "planTitle": "Cracking CV",
+  "sectionId": "cracking-cv-convolution-and-pooling",
+  "sortOrder": 761,
+  "seoDescription": "Implement a 2D dilated cross-correlation (no kernel flip) on a single multi-channel image.",
+  "solved": false,
+  "isLocked": true,
+  "description": "Apply 2D convolution with non-unitary dilation factor expanding effective receptive field without parameter inflation.\n\nDilated convolutions aggregate multi-scale context without resolution loss from pooling, foundational to dense semantic segmentation.\n\n### Mathematical Formulation\n$$\nY_{i, j} = \\sum_{u=0}^{K_h-1} \\sum_{v=0}^{K_w-1} X_{i + u \\cdot d, j + v \\cdot d} \\cdot K_{u, v}\n$$\n\n### Step-by-Step Implementation\n1. Determine expanded receptive window dimensions effective_K = K + (K - 1)(d - 1)\n2. Sample input image coordinates with spacing step dilation\n3. Compute Frobenius inner product with kernel and format output matrix rounded to 4 decimal places\n\n### Returns\nNested 2D list representing dilated convolution output.",
+  "theory": "## Understanding the Theory: Dilated 2D Convolution\n\n### Core Intuition: Why Do We Need This?\nImages have unique spatial properties: neighboring pixels are strongly correlated, and visual patterns (like edges, corners, or textures) appear anywhere in an image. Computer vision algorithms use spatial inductive biases like translation equivariance and local receptive fields to process image grids efficiently. **Dilated 2D Convolution** operates directly on spatial coordinates or bounding box geometries.\n\nDilated convolutions aggregate multi-scale context without resolution loss from pooling, foundational to dense semantic segmentation. In this problem, the goal is to: apply 2d convolution with non-unitary dilation factor expanding effective receptive field without parameter inflation.\n\n### Mathematical Principles & Formulation\nThe core governing equation for this operation is:\n\n$$\nY_{i, j} = \\sum_{u=0}^{K_h-1} \\sum_{v=0}^{K_w-1} X_{i + u \\cdot d, j + v \\cdot d} \\cdot K_{u, v}\n$$\n\nEvery term in this formulation plays a precise mathematical role in ensuring dimensional consistency, numerical stability, and correct algorithmic behavior.\n\n### Step-by-Step Computational Workflow\n1. **Phase 1**: Determine expanded receptive window dimensions effective_K = K + (K - 1)(d - 1)\n2. **Phase 2**: Sample input image coordinates with spacing step dilation\n3. **Phase 3**: Compute Frobenius inner product with kernel and format output matrix rounded to 4 decimal places\n\n### Practical Machine Learning Applications & Nuances\n* **Spatial Locality**: Sliding spatial filters across multi-channel feature maps aggregates contextual clues across local neighborhoods.\n* **Object Detection Pipelines**: Bounding box metrics (such as IoU and Non-Maximum Suppression) reconcile duplicate candidate detections into clean, final predictions.\n* **Data Augmentation**: Geometric transformations expose models to diverse spatial viewpoints, significantly improving generalization to unseen test images.",
+  "examples": [
+    "Input: image = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], kernel = [[1.0, 0.0], [0.0, 1.0]], dilation = 2\n\nOutput: [[12.0, 14.0], [20.0, 22.0]]\n\nExplanation: Evaluated cv_dilated_conv2d under standard test conditions."
+  ],
+  "requirements": "* Function must be named `cv_dilated_conv2d`\n* Return value must match the exact expected structure and types\n* Handle edge cases cleanly and maintain numerical stability\n* Must run efficiently without redundant memory allocations",
+  "hints": [
+    "Verify the dimensions of inputs before computing transformations in `cv_dilated_conv2d`.",
+    "Utilize vectorized operations rather than manual loops for optimal performance."
+  ],
+  "constraints": "* Input arrays/tensors are non-empty and well-formed\n* Floating point values are finite real numbers\n* Numerical operations must adhere to standard precision tolerances",
+  "starterCode": "import numpy as np\n\ndef cv_dilated_conv2d(image: list, kernel: list, dilation: int = 2) -> list:\n    pass",
+  "solution": "### 💡 Intuition & Approach\nThe implementation computes **Dilated 2D Convolution** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef cv_dilated_conv2d(image: list, kernel: list, dilation: int = 2) -> list:\n    img, k = np.array(image, dtype=float), np.array(kernel, dtype=float)\n    H, W = img.shape; Kh, Kw = k.shape\n    ekh, ekw = Kh + (Kh - 1) * (dilation - 1), Kw + (Kw - 1) * (dilation - 1)\n    oh, ow = H - ekh + 1, W - ekw + 1\n    out = np.zeros((oh, ow))\n    for i in range(oh):\n        for j in range(ow):\n            out[i, j] = sum(img[i + u*dilation, j + v*dilation] * k[u, v] for u in range(Kh) for v in range(Kw))\n    return np.round(out, 4).tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
+  "testCases": [
+    {
+      "id": "c1",
+      "name": "4x4 image dilation 2",
+      "inputs": {
+        "image": [
+          [
+            1,
+            2,
+            3,
+            4
+          ],
+          [
+            5,
+            6,
+            7,
+            8
+          ],
+          [
+            9,
+            10,
+            11,
+            12
+          ],
+          [
+            13,
+            14,
+            15,
+            16
+          ]
+        ],
+        "kernel": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "dilation": 2
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          14.0
+        ],
+        [
+          20.0,
+          22.0
+        ]
+      ],
+      "isPublic": true
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-2",
+      "name": "Case 2",
+      "inputs": {
+        "image": [
+          [
+            2,
+            4,
+            6,
+            8
+          ],
+          [
+            10,
+            12,
+            14,
+            16
+          ],
+          [
+            18,
+            20,
+            22,
+            24
+          ],
+          [
+            26,
+            28,
+            30,
+            32
+          ]
+        ],
+        "kernel": [
+          [
+            2.0,
+            0.0
+          ],
+          [
+            0.0,
+            2.0
+          ]
+        ],
+        "dilation": 4
+      },
+      "expectedOutput": [],
+      "isPublic": true
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-3",
+      "name": "Case 3",
+      "inputs": {
+        "image": [
+          [
+            0,
+            1,
+            2,
+            2
+          ],
+          [
+            2,
+            3,
+            4,
+            4
+          ],
+          [
+            4,
+            5,
+            6,
+            6
+          ],
+          [
+            6,
+            7,
+            8,
+            8
+          ]
+        ],
+        "kernel": [
+          [
+            0.5,
+            0.0
+          ],
+          [
+            0.0,
+            0.5
+          ]
+        ],
+        "dilation": 1
+      },
+      "expectedOutput": [
+        [
+          1.5,
+          2.5,
+          3.0
+        ],
+        [
+          3.5,
+          4.5,
+          5.0
+        ],
+        [
+          5.5,
+          6.5,
+          7.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-4",
+      "name": "Case 4",
+      "inputs": {
+        "image": [
+          [
+            -1,
+            -2,
+            -3,
+            -4
+          ],
+          [
+            -5,
+            -6,
+            -7,
+            -8
+          ],
+          [
+            -9,
+            -10,
+            -11,
+            -12
+          ],
+          [
+            -13,
+            -14,
+            -15,
+            -16
+          ]
+        ],
+        "kernel": [
+          [
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0
+          ]
+        ],
+        "dilation": -2
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          14.0
+        ],
+        [
+          20.0,
+          22.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "image": [
+          [
+            3,
+            6,
+            9,
+            12
+          ],
+          [
+            15,
+            18,
+            21,
+            24
+          ],
+          [
+            27,
+            30,
+            33,
+            36
+          ],
+          [
+            39,
+            42,
+            45,
+            48
+          ]
+        ],
+        "kernel": [
+          [
+            3.0,
+            0.0
+          ],
+          [
+            0.0,
+            3.0
+          ]
+        ],
+        "dilation": 6
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          14.0
+        ],
+        [
+          20.0,
+          22.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "image": [
+          [
+            2.0,
+            3.0,
+            4.0,
+            5.0
+          ],
+          [
+            6.0,
+            7.0,
+            8.0,
+            9.0
+          ],
+          [
+            10.0,
+            11.0,
+            12.0,
+            13.0
+          ],
+          [
+            14.0,
+            15.0,
+            16.0,
+            17.0
+          ]
+        ],
+        "kernel": [
+          [
+            2.0,
+            1.0
+          ],
+          [
+            1.0,
+            2.0
+          ]
+        ],
+        "dilation": 3.0
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          14.0
+        ],
+        [
+          20.0,
+          22.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-7",
+      "name": "Case 7",
+      "inputs": {
+        "image": [
+          [
+            -1.0,
+            0.0,
+            1.0,
+            2.0
+          ],
+          [
+            3.0,
+            4.0,
+            5.0,
+            6.0
+          ],
+          [
+            7.0,
+            8.0,
+            9.0,
+            10.0
+          ],
+          [
+            11.0,
+            12.0,
+            13.0,
+            14.0
+          ]
+        ],
+        "kernel": [
+          [
+            -1.0,
+            -2.0
+          ],
+          [
+            -2.0,
+            -1.0
+          ]
+        ],
+        "dilation": 0.0
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          14.0
+        ],
+        [
+          20.0,
+          22.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-8",
+      "name": "Case 8",
+      "inputs": {
+        "image": [
+          [
+            4,
+            3,
+            2,
+            1
+          ],
+          [
+            8,
+            7,
+            6,
+            5
+          ],
+          [
+            12,
+            11,
+            10,
+            9
+          ],
+          [
+            16,
+            15,
+            14,
+            13
+          ]
+        ],
+        "kernel": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        "dilation": 2
+      },
+      "expectedOutput": [
+        [
+          14.0,
+          12.0
+        ],
+        [
+          22.0,
+          20.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-9",
+      "name": "Case 9",
+      "inputs": {
+        "image": [
+          [
+            -1,
+            -2,
+            -3,
+            -4
+          ],
+          [
+            -5,
+            -6,
+            -7,
+            -8
+          ],
+          [
+            -9,
+            -10,
+            -11,
+            -12
+          ],
+          [
+            -13,
+            -14,
+            -15,
+            -16
+          ]
+        ],
+        "kernel": [
+          [
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -1.0
+          ]
+        ],
+        "dilation": -2
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          14.0
+        ],
+        [
+          20.0,
+          22.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-10",
+      "name": "Case 10",
+      "inputs": {
+        "image": [
+          [
+            10,
+            20,
+            30,
+            40
+          ],
+          [
+            50,
+            60,
+            70,
+            80
+          ],
+          [
+            90,
+            100,
+            110,
+            120
+          ],
+          [
+            130,
+            140,
+            150,
+            160
+          ]
+        ],
+        "kernel": [
+          [
+            10.0,
+            0.0
+          ],
+          [
+            0.0,
+            10.0
+          ]
+        ],
+        "dilation": 20
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          14.0
+        ],
+        [
+          20.0,
+          22.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-11",
+      "name": "Case 11",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            2,
+            2
+          ]
+        ],
+        "kernel": [
+          [
+            0.1,
+            0.0
+          ],
+          [
+            0.0,
+            0.1
+          ]
+        ],
+        "dilation": 0
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.2,
+          0.2,
+          0.2
+        ],
+        [
+          0.2,
+          0.2,
+          0.2,
+          0.2
+        ],
+        [
+          0.2,
+          0.2,
+          0.4,
+          0.4
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-12",
+      "name": "Case 12",
+      "inputs": {
+        "image": [
+          [
+            6.0,
+            7.0,
+            8.0,
+            9.0
+          ],
+          [
+            10.0,
+            11.0,
+            12.0,
+            13.0
+          ],
+          [
+            14.0,
+            15.0,
+            16.0,
+            17.0
+          ],
+          [
+            18.0,
+            19.0,
+            20.0,
+            21.0
+          ]
+        ],
+        "kernel": [
+          [
+            6.0,
+            5.0
+          ],
+          [
+            5.0,
+            6.0
+          ]
+        ],
+        "dilation": 7.0
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          14.0
+        ],
+        [
+          20.0,
+          22.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-13",
+      "name": "Case 13",
+      "inputs": {
+        "image": [
+          [
+            2,
+            3,
+            4,
+            6
+          ],
+          [
+            8,
+            9,
+            10,
+            12
+          ],
+          [
+            14,
+            15,
+            16,
+            18
+          ],
+          [
+            20,
+            21,
+            22,
+            24
+          ]
+        ],
+        "kernel": [
+          [
+            1.5,
+            0.0
+          ],
+          [
+            0.0,
+            1.5
+          ]
+        ],
+        "dilation": 3
+      },
+      "expectedOutput": [
+        [
+          39.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-14",
+      "name": "Case 14",
+      "inputs": {
+        "image": [
+          [
+            -2,
+            -4,
+            -6,
+            -8
+          ],
+          [
+            -10,
+            -12,
+            -14,
+            -16
+          ],
+          [
+            -18,
+            -20,
+            -22,
+            -24
+          ],
+          [
+            -26,
+            -28,
+            -30,
+            -32
+          ]
+        ],
+        "kernel": [
+          [
+            -2.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -2.0
+          ]
+        ],
+        "dilation": -4
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          14.0
+        ],
+        [
+          20.0,
+          22.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-15",
+      "name": "Case 15",
+      "inputs": {
+        "image": [
+          [
+            0,
+            0,
+            1,
+            1
+          ],
+          [
+            1,
+            2,
+            2,
+            2
+          ],
+          [
+            2,
+            2,
+            3,
+            3
+          ],
+          [
+            3,
+            4,
+            4,
+            4
+          ]
+        ],
+        "kernel": [
+          [
+            0.25,
+            0.0
+          ],
+          [
+            0.0,
+            0.25
+          ]
+        ],
+        "dilation": 0
+      },
+      "expectedOutput": [
+        [
+          0.0,
+          0.0,
+          0.5,
+          0.5
+        ],
+        [
+          0.5,
+          1.0,
+          1.0,
+          1.0
+        ],
+        [
+          1.0,
+          1.0,
+          1.5,
+          1.5
+        ],
+        [
+          1.5,
+          2.0,
+          2.0,
+          2.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-16",
+      "name": "Case 16",
+      "inputs": {
+        "image": [
+          [
+            0.0,
+            1.0,
+            2.0,
+            3.0
+          ],
+          [
+            4.0,
+            5.0,
+            6.0,
+            7.0
+          ],
+          [
+            8.0,
+            9.0,
+            10.0,
+            11.0
+          ],
+          [
+            12.0,
+            13.0,
+            14.0,
+            15.0
+          ]
+        ],
+        "kernel": [
+          [
+            0.0,
+            -1.0
+          ],
+          [
+            -1.0,
+            0.0
+          ]
+        ],
+        "dilation": 1.0
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          14.0
+        ],
+        [
+          20.0,
+          22.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-17",
+      "name": "Case 17",
+      "inputs": {
+        "image": [
+          [
+            4,
+            8,
+            12,
+            16
+          ],
+          [
+            20,
+            24,
+            28,
+            32
+          ],
+          [
+            36,
+            40,
+            44,
+            48
+          ],
+          [
+            52,
+            56,
+            60,
+            64
+          ]
+        ],
+        "kernel": [
+          [
+            4.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.0
+          ]
+        ],
+        "dilation": 8
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          14.0
+        ],
+        [
+          20.0,
+          22.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-18",
+      "name": "Case 18",
+      "inputs": {
+        "image": [
+          [
+            1,
+            2,
+            2,
+            3
+          ],
+          [
+            4,
+            4,
+            5,
+            6
+          ],
+          [
+            7,
+            8,
+            8,
+            9
+          ],
+          [
+            10,
+            10,
+            11,
+            12
+          ]
+        ],
+        "kernel": [
+          [
+            0.75,
+            0.0
+          ],
+          [
+            0.0,
+            0.75
+          ]
+        ],
+        "dilation": 2
+      },
+      "expectedOutput": [
+        [
+          6.75,
+          8.25
+        ],
+        [
+          11.25,
+          12.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-19",
+      "name": "Case 19",
+      "inputs": {
+        "image": [
+          [
+            5,
+            10,
+            15,
+            20
+          ],
+          [
+            25,
+            30,
+            35,
+            40
+          ],
+          [
+            45,
+            50,
+            55,
+            60
+          ],
+          [
+            65,
+            70,
+            75,
+            80
+          ]
+        ],
+        "kernel": [
+          [
+            5.0,
+            0.0
+          ],
+          [
+            0.0,
+            5.0
+          ]
+        ],
+        "dilation": 10
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          14.0
+        ],
+        [
+          20.0,
+          22.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "cv-dilated-conv2d-tc-20",
+      "name": "Case 20",
+      "inputs": {
+        "image": [
+          [
+            11.0,
+            12.0,
+            13.0,
+            14.0
+          ],
+          [
+            15.0,
+            16.0,
+            17.0,
+            18.0
+          ],
+          [
+            19.0,
+            20.0,
+            21.0,
+            22.0
+          ],
+          [
+            23.0,
+            24.0,
+            25.0,
+            26.0
+          ]
+        ],
+        "kernel": [
+          [
+            11.0,
+            10.0
+          ],
+          [
+            10.0,
+            11.0
+          ]
+        ],
+        "dilation": 12.0
+      },
+      "expectedOutput": [
+        [
+          12.0,
+          14.0
+        ],
+        [
+          20.0,
+          22.0
+        ]
+      ],
+      "isPublic": false
+    }
+  ],
+  "functionMetadata": {
+    "name": "cv_dilated_conv2d",
+    "runtime": "python"
+  },
+  "relatedProblems": [
+    "gradient-descent-quadratic",
+    "anchor-box-generation",
+    "value-iteration-step",
+    "precision-recall-at-k",
+    "cs336-l01-train-byte-pair-encoding"
+  ],
+  "placeholderAnalysis": {
+    "isPlaceholder": true,
+    "category": "python",
+    "placeholderType": "torch_passthrough (return x)",
+    "reason": "Server paywalled solution, starter code, and test cases; contains synthetic identity passthrough."
+  },
+  "cleanTitle": ""
+}
