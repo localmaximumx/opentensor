@@ -4,6 +4,7 @@ import {
   CheckCircle2, 
   Sparkles,
   ChevronRight,
+  ChevronDown,
   Maximize2,
   X
 } from 'lucide-react';
@@ -269,19 +270,22 @@ export const ResearchPage: React.FC = () => {
         <div className="max-w-2xl mx-auto">
           
           {/* Mobile Paper Selector (< md) */}
-          <div className="md:hidden mb-6 p-3 rounded-xl bg-card border border-border/80 flex items-center justify-between gap-3 shadow-xs">
+          <div className="md:hidden mb-5 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card border border-border/80 shadow-xs">
             <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider shrink-0">Paper:</span>
-            <select
-              value={activePaper.id}
-              onChange={(e) => selectPaper(e.target.value)}
-              className="flex-1 bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground focus:outline-none cursor-pointer truncate"
-            >
-              {papers.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {getSidebarName(p)}
-                </option>
-              ))}
-            </select>
+            <div className="relative inline-block w-auto max-w-[200px]">
+              <select
+                value={activePaper.id}
+                onChange={(e) => selectPaper(e.target.value)}
+                className="appearance-none w-full bg-background border border-border rounded-lg pl-2.5 pr-7 py-1 text-xs font-semibold text-foreground focus:outline-none focus:border-[#93C572]/60 cursor-pointer truncate"
+              >
+                {papers.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-card text-foreground">
+                    {getSidebarName(p)}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
           
           {/* Active Paper Title & Emblem Shield Badge */}
