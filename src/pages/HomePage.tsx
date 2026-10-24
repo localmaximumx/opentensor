@@ -92,7 +92,7 @@ export const HomePage: React.FC = () => {
           {/* Top Pill Announcement */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30 shadow-xs">
             <span className="w-2 h-2 rounded-full bg-[#93C572] animate-pulse" />
-            <span className="font-bold text-foreground">OpenTensor</span>
+            <span className="font-bold text-foreground">TonicLite</span>
             <span className="text-muted-foreground">·</span>
             <span>Master Machine Learning From First Principles</span>
           </div>

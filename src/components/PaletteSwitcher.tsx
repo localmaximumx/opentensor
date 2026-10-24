@@ -11,8 +11,12 @@ export const PaletteSwitcher: React.FC = () => {
     const handlePaletteChange = (e: any) => {
       setCurrentPalette(e.detail || getSavedPalette());
     };
+    window.addEventListener('toniclite_palette_change', handlePaletteChange);
     window.addEventListener('opentensor_palette_change', handlePaletteChange);
-    return () => window.removeEventListener('opentensor_palette_change', handlePaletteChange);
+    return () => {
+      window.removeEventListener('toniclite_palette_change', handlePaletteChange);
+      window.removeEventListener('opentensor_palette_change', handlePaletteChange);
+    };
   }, []);
 
   // Close on outside click

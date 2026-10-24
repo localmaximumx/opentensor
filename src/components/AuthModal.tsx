@@ -121,7 +121,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white tracking-tight">OpenTensor Account</h3>
+              <h3 className="text-base font-bold text-white tracking-tight">TonicLite Account</h3>
               <p className="text-[11px] text-muted-foreground font-mono">Synced Progress & Code Drafts</p>
             </div>
           </div>

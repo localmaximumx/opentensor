@@ -35,7 +35,7 @@ export const Navbar: React.FC = () => {
   const [solvedCount, setSolvedCount] = useState<number>(0);
   const [isDark, setIsDark] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
-    const saved = localStorage.getItem('opentensor_theme');
+    const saved = localStorage.getItem('toniclite_theme') || localStorage.getItem('opentensor_theme');
     return saved ? saved === 'dark' : true;
   });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
@@ -60,7 +60,7 @@ export const Navbar: React.FC = () => {
   useEffect(() => {
     refreshAuth();
     syncUserSession().then(() => refreshAuth());
-    const savedTheme = localStorage.getItem('opentensor_theme');
+    const savedTheme = localStorage.getItem('toniclite_theme') || localStorage.getItem('opentensor_theme');
     if (savedTheme === 'light') {
       document.documentElement.classList.remove('dark');
       setIsDark(false);
@@ -68,7 +68,7 @@ export const Navbar: React.FC = () => {
       document.documentElement.classList.add('dark');
       setIsDark(true);
       if (!savedTheme) {
-        localStorage.setItem('opentensor_theme', 'dark');
+        localStorage.setItem('toniclite_theme', 'dark');
       }
     }
     const handleAuthChange = () => refreshAuth();
@@ -105,11 +105,11 @@ export const Navbar: React.FC = () => {
     if (isDark) {
       document.documentElement.classList.remove('dark');
       setIsDark(false);
-      localStorage.setItem('opentensor_theme', 'light');
+      localStorage.setItem('toniclite_theme', 'light');
     } else {
       document.documentElement.classList.add('dark');
       setIsDark(true);
-      localStorage.setItem('opentensor_theme', 'dark');
+      localStorage.setItem('toniclite_theme', 'dark');
     }
   };
 
@@ -120,7 +120,7 @@ export const Navbar: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `opentensor_${currentUser.username}_backup.json`;
+    a.download = `toniclite_${currentUser.username}_backup.json`;
     a.click();
     URL.revokeObjectURL(url);
     setIsUserMenuOpen(false);
@@ -156,14 +156,14 @@ export const Navbar: React.FC = () => {
             <div className="flex items-center gap-2 md:gap-8 flex-shrink-0">
               <Link to="/" className="hover:opacity-85 transition-opacity flex items-center gap-2 shrink-0">
                 <img
-                  alt="OpenTensor"
+                  alt="TonicLite"
                   width={28}
                   height={28}
                   className="h-7 w-auto flex-shrink-0 drop-shadow-sm"
-                  src="/images/logos/opentensor.svg"
+                  src="/images/logos/toniclite.svg"
                 />
                 <span className="text-foreground font-black text-base sm:text-lg tracking-tight font-sans inline">
-                  Open<span className="text-[#93C572]">Tensor</span>
+                  Tonic<span className="text-[#93C572]">Lite</span>
                 </span>
               </Link>
 

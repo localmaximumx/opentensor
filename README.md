@@ -1,7 +1,7 @@
-# OpenTensor
+# TonicLite
 
 <p align="center">
-  <img src="public/images/logos/opentensor.svg" alt="OpenTensor Logo" width="88" height="88" />
+  <img src="public/images/logos/toniclite.svg" alt="TonicLite Logo" width="88" height="88" />
 </p>
 
 <h3 align="center">Master Machine Learning & AI Engineering From Scratch</h3>
@@ -88,7 +88,7 @@
 ## 📁 Architecture & Project Structure
 
 ```text
-opentensor/
+toniclite/
 ├── api/                        # Vercel Serverless API Functions
 │   ├── auth/                   # Authentication & session endpoints
 │   ├── code/                   # User code draft persistence
@@ -135,8 +135,8 @@ opentensor/
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/localmaximumx/opentensor.git
-cd opentensor
+git clone https://github.com/localmaximumx/opentensor.git toniclite
+cd toniclite
 ```
 
 ### 2. Install Dependencies
@@ -192,7 +192,7 @@ To enable multi-device cloud synchronization across user accounts:
 
 ## 🤝 Contributing
 
-Contributions to OpenTensor are welcome! Whether you are:
+Contributions to TonicLite are welcome! Whether you are:
 - Adding new tensor and neural network problem sets
 - Expanding test case suites and edge cases
 - Adding classic or frontier research paper tracks

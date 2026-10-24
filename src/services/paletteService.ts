@@ -43,11 +43,12 @@ export const PALETTES: PaletteOption[] = [
   }
 ];
 
-const STORAGE_KEY = 'opentensor_color_palette';
+const STORAGE_KEY = 'toniclite_color_palette';
+const LEGACY_STORAGE_KEY = 'opentensor_color_palette';
 
 export function getSavedPalette(): PaletteId {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY) as PaletteId | null;
+    const saved = (localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY)) as PaletteId | null;
     if (saved && PALETTES.some(p => p.id === saved)) {
       return saved;
     }
@@ -62,6 +63,7 @@ export function applyPalette(id: PaletteId): void {
   try {
     localStorage.setItem(STORAGE_KEY, id);
     document.documentElement.setAttribute('data-palette', id);
+    window.dispatchEvent(new CustomEvent('toniclite_palette_change', { detail: id }));
     window.dispatchEvent(new CustomEvent('opentensor_palette_change', { detail: id }));
   } catch (e) {
     console.error('Failed to apply palette', e);
