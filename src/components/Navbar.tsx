@@ -34,7 +34,9 @@ export const Navbar: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [solvedCount, setSolvedCount] = useState<number>(0);
   const [isDark, setIsDark] = useState<boolean>(() => {
-    return typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('opentensor_theme');
+    return saved ? saved === 'dark' : true;
   });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
@@ -59,12 +61,15 @@ export const Navbar: React.FC = () => {
     refreshAuth();
     syncUserSession().then(() => refreshAuth());
     const savedTheme = localStorage.getItem('opentensor_theme');
-    if (savedTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-      setIsDark(true);
-    } else {
+    if (savedTheme === 'light') {
       document.documentElement.classList.remove('dark');
       setIsDark(false);
+    } else {
+      document.documentElement.classList.add('dark');
+      setIsDark(true);
+      if (!savedTheme) {
+        localStorage.setItem('opentensor_theme', 'dark');
+      }
     }
     const handleAuthChange = () => refreshAuth();
     window.addEventListener('tensortonic_auth_change', handleAuthChange);
@@ -139,7 +144,7 @@ export const Navbar: React.FC = () => {
             
             {/* Left: Brand logo & Nav links */}
             <div className="flex items-center gap-2 md:gap-8 flex-shrink-0">
-              <Link to="/" className="hover:opacity-85 transition-opacity flex items-center gap-2.5">
+              <Link to="/" className="hover:opacity-85 transition-opacity flex items-center gap-2 shrink-0">
                 <img
                   alt="OpenTensor"
                   width={28}
@@ -147,7 +152,7 @@ export const Navbar: React.FC = () => {
                   className="h-7 w-auto flex-shrink-0 drop-shadow-sm"
                   src="/images/logos/opentensor.svg"
                 />
-                <span className="text-foreground font-black text-lg tracking-tight hidden sm:inline font-sans">
+                <span className="text-foreground font-black text-base sm:text-lg tracking-tight font-sans inline">
                   Open<span className="text-[#93C572]">Tensor</span>
                 </span>
               </Link>
@@ -188,7 +193,7 @@ export const Navbar: React.FC = () => {
               {/* Solved Progress Counter */}
               <Link
                 to="/problems"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-secondary text-muted-foreground hover:text-foreground border border-border/80 transition-colors"
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-secondary text-muted-foreground hover:text-foreground border border-border/80 transition-colors"
                 title={currentUser ? `${currentUser.username}'s solved problems` : "Total solved problems"}
               >
                 <CheckCircle2 className="w-3.5 h-3.5 text-[#93C572]" />
@@ -196,11 +201,11 @@ export const Navbar: React.FC = () => {
                 <span className="text-[11px] opacity-70">/ 790</span>
               </Link>
 
-              {/* Theme Toggle Button */}
+              {/* Theme Toggle Button (Desktop visible, on mobile moved into hamburger menu) */}
               <button
                 onClick={toggleTheme}
                 aria-label="Toggle theme"
-                className="inline-flex items-center justify-center h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="hidden md:inline-flex items-center justify-center h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                 title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
               >
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -340,8 +345,38 @@ export const Navbar: React.FC = () => {
                 );
               })}
 
+              {/* Theme Toggle Button Inside Mobile Menu */}
+              <div className="pt-2 mt-2 border-t border-border/60">
+                <button
+                  onClick={toggleTheme}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold text-foreground/90 hover:text-foreground hover:bg-secondary/60 transition-colors"
+                >
+                  <span className="flex items-center gap-3">
+                    {isDark ? (
+                      <Moon className="w-4 h-4 text-[#93C572]" />
+                    ) : (
+                      <Sun className="w-4 h-4 text-amber-400" />
+                    )}
+                    <span>Theme</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-secondary border border-border/60">
+                    {isDark ? (
+                      <>
+                        <Sun className="w-3 h-3 text-amber-400" />
+                        <span>Dark (Tap to switch)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Moon className="w-3 h-3 text-[#93C572]" />
+                        <span>Light (Tap to switch)</span>
+                      </>
+                    )}
+                  </span>
+                </button>
+              </div>
+
               {/* Mobile Solved Counter */}
-              <div className="pt-2 mt-2 border-t border-border/60 flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground">
+              <div className="pt-2 border-t border-border/60 flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#93C572]" />
                   <span>Your Solved Problems</span>
