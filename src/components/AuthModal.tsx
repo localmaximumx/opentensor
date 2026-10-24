@@ -112,7 +112,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       />
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-md bg-[#111614] border border-[#26332b] rounded-2xl shadow-2xl overflow-hidden z-10 text-foreground animate-in fade-in zoom-in-95 duration-150">
+      <div className="relative w-full max-w-md max-h-[90dvh] overflow-y-auto bg-[#111614] border border-[#26332b] rounded-2xl shadow-2xl z-10 text-foreground animate-in fade-in zoom-in-95 duration-150 custom-scrollbar">
         
         {/* Header Bar */}
         <div className="p-5 border-b border-[#26332b] flex items-center justify-between bg-[#141a17]">
@@ -121,8 +121,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white tracking-tight">TensorTonic Account</h3>
-              <p className="text-[11px] text-muted-foreground font-mono">Isolated Progress & Code Drafts</p>
+              <h3 className="text-base font-bold text-white tracking-tight">OpenTensor Account</h3>
+              <p className="text-[11px] text-muted-foreground font-mono">Synced Progress & Code Drafts</p>
             </div>
           </div>
           <button 

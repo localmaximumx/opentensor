@@ -11,7 +11,13 @@ import {
   LogOut, 
   Download, 
   Users, 
-  ShieldCheck 
+  ShieldCheck,
+  Menu,
+  X,
+  Home,
+  Code2,
+  BookOpen,
+  Radio
 } from 'lucide-react';
 import { 
   getCurrentUser, 
@@ -32,7 +38,12 @@ export const Navbar: React.FC = () => {
   });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
 
   const refreshAuth = () => {
     const user = getCurrentUser();
@@ -101,10 +112,10 @@ export const Navbar: React.FC = () => {
   };
 
   const navLinks = [
-    { label: 'Home', path: '/' },
-    { label: 'Problems', path: '/problems' },
-    { label: 'Research', path: '/research' },
-    { label: 'Interview', path: '/interview' }
+    { label: 'Home', path: '/', icon: Home },
+    { label: 'Problems', path: '/problems', icon: Code2 },
+    { label: 'Research', path: '/research', icon: BookOpen },
+    { label: 'Interview', path: '/interview', icon: Radio }
   ];
 
   const getInitials = (name: string) => {
@@ -282,9 +293,63 @@ export const Navbar: React.FC = () => {
                 </button>
               )}
 
+              {/* Mobile Hamburger Button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                aria-label="Toggle navigation menu"
+                className="lg:hidden inline-flex items-center justify-center h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors ml-1"
+              >
+                {isMobileMenuOpen ? <X className="w-5 h-5 text-foreground" /> : <Menu className="w-5 h-5" />}
+              </button>
+
             </div>
 
           </div>
+
+          {/* Mobile Navigation Dropdown */}
+          {isMobileMenuOpen && (
+            <div className="lg:hidden mt-2 p-3 bg-card/95 backdrop-blur-2xl border border-border/80 rounded-2xl shadow-2xl space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
+              {navLinks.map((link) => {
+                const Icon = link.icon;
+                const isInterview = link.path === '/interview' && (
+                  location.pathname.startsWith('/interview') ||
+                  location.search.includes('assessment=')
+                );
+                const isResearch = link.path === '/research' && location.pathname.startsWith('/research');
+                const isProblems = link.path === '/problems' && (
+                  location.pathname.startsWith('/problems') && !location.search.includes('assessment=')
+                );
+                const isHome = link.path === '/' && location.pathname === '/';
+                const isActive = isInterview || isResearch || isProblems || isHome;
+
+                return (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+                      isActive
+                        ? 'bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30'
+                        : 'text-foreground/80 hover:text-foreground hover:bg-secondary/60'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{link.label}</span>
+                    {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#93C572]" />}
+                  </Link>
+                );
+              })}
+
+              {/* Mobile Solved Counter */}
+              <div className="pt-2 mt-2 border-t border-border/60 flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#93C572]" />
+                  <span>Your Solved Problems</span>
+                </span>
+                <span className="font-mono font-bold text-foreground">{solvedCount} / 790</span>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
     </>

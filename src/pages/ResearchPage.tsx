@@ -212,7 +212,7 @@ export const ResearchPage: React.FC = () => {
       {/* ======================================================== */}
       {/* COLUMN 1: LEFT SIDEBAR - RESEARCH PAPERS LIST            */}
       {/* ======================================================== */}
-      <aside className="w-64 flex-shrink-0 border-r border-border/60 flex flex-col h-full bg-card/40 select-none">
+      <aside className="hidden md:flex w-64 flex-shrink-0 border-r border-border/60 flex-col h-full bg-card/40 select-none">
         <div className="px-5 py-4 border-b border-border/60">
           <h2 className="text-base font-bold text-foreground tracking-tight">
             Research Papers
@@ -265,8 +265,24 @@ export const ResearchPage: React.FC = () => {
       {/* ======================================================== */}
       {/* COLUMN 2: CENTER ROADMAP - ACTIVE PAPER CURRICULUM       */}
       {/* ======================================================== */}
-      <main className="flex-1 h-full overflow-y-auto px-6 lg:px-10 py-8 custom-scrollbar bg-background">
+      <main className="flex-1 h-full overflow-y-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8 custom-scrollbar bg-background">
         <div className="max-w-2xl mx-auto">
+          
+          {/* Mobile Paper Selector (< md) */}
+          <div className="md:hidden mb-6 p-3 rounded-xl bg-card border border-border/80 flex items-center justify-between gap-3 shadow-xs">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider shrink-0">Paper:</span>
+            <select
+              value={activePaper.id}
+              onChange={(e) => selectPaper(e.target.value)}
+              className="flex-1 bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground focus:outline-none cursor-pointer truncate"
+            >
+              {papers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {getSidebarName(p)}
+                </option>
+              ))}
+            </select>
+          </div>
           
           {/* Active Paper Title & Emblem Shield Badge */}
           <div className="flex items-center justify-between gap-4 mb-8">

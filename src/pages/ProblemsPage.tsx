@@ -236,8 +236,27 @@ export const ProblemsPage: React.FC = () => {
             ))}
           </div>
 
+          {/* Mobile Progress Summary Card (< lg) */}
+          <div className="lg:hidden mb-4 p-3.5 rounded-xl bg-card border border-border/80 flex items-center justify-between shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-[#93C572]/15 text-[#93C572] rounded-lg">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-foreground">Your Solved Progress</div>
+                <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                  Easy: <span className="text-emerald-400 font-semibold">{solvedStats.easy}</span> · Med: <span className="text-amber-400 font-semibold">{solvedStats.medium}</span> · Hard: <span className="text-rose-400 font-semibold">{solvedStats.hard}</span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="font-mono text-lg font-black text-[#93C572]">{solvedStats.total}</span>
+              <span className="text-[11px] text-muted-foreground"> / 790</span>
+            </div>
+          </div>
+
           {/* Category Icons Row */}
-          <div className="mb-4 grid grid-cols-2 gap-1 sm:grid-cols-4 lg:flex lg:flex-wrap lg:items-center">
+          <div className="mb-4 flex items-center gap-1.5 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap custom-scrollbar">
             {categories.map((c) => {
               const active = selectedCategory === c.id;
               return (

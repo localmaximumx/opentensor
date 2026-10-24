@@ -77,6 +77,7 @@ export const ProblemSolverPage: React.FC = () => {
   const [isSolved, setIsSolved] = useState<boolean>(false);
   const [solutionCopied, setSolutionCopied] = useState<boolean>(false);
   const [solutionApplied, setSolutionApplied] = useState<boolean>(false);
+  const [mobileActivePanel, setMobileActivePanel] = useState<'problem' | 'code' | 'console'>('problem');
 
   // Prev / Next navigation & Drawer State
   const [prevSlug, setPrevSlug] = useState<string | null>(null);
@@ -335,6 +336,9 @@ export const ProblemSolverPage: React.FC = () => {
     setIsRunning(true);
     setIsSubmission(false);
     setBottomTab('result');
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setMobileActivePanel('console');
+    }
 
     const report = await runPythonCode(code, getFunctionName(), publicTestCases);
     setExecReport(report);
@@ -349,6 +353,9 @@ export const ProblemSolverPage: React.FC = () => {
     setIsRunning(true);
     setIsSubmission(true);
     setBottomTab('result');
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setMobileActivePanel('console');
+    }
 
     const baseTestCases = problem.testCases && problem.testCases.length > 0
       ? problem.testCases
@@ -453,10 +460,68 @@ export const ProblemSolverPage: React.FC = () => {
             style={{ pointerEvents: 'auto' }}
           />
         )}
+
+        {/* Mobile View Selector (< md) */}
+        <div className="md:hidden flex items-center justify-between px-3 py-2 bg-card border-b border-border/80 text-xs shrink-0 z-20">
+          <div className="flex items-center gap-1 bg-secondary/80 p-0.5 rounded-lg border border-border/60">
+            <button
+              onClick={() => setMobileActivePanel('problem')}
+              className={`px-3 py-1 rounded-md font-semibold transition-all ${
+                mobileActivePanel === 'problem'
+                  ? 'bg-background text-[#93C572] shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Description
+            </button>
+            <button
+              onClick={() => setMobileActivePanel('code')}
+              className={`px-3 py-1 rounded-md font-semibold transition-all ${
+                mobileActivePanel === 'code'
+                  ? 'bg-background text-[#38BDF8] shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Code
+            </button>
+            <button
+              onClick={() => setMobileActivePanel('console')}
+              className={`px-3 py-1 rounded-md font-semibold transition-all ${
+                mobileActivePanel === 'console'
+                  ? 'bg-background text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Console
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleRun}
+              disabled={isRunning}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-secondary hover:bg-accent border border-border text-foreground text-xs font-medium disabled:opacity-50"
+              title="Run code"
+            >
+              <Play className="w-3 h-3 fill-current" />
+              <span>Run</span>
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={isRunning}
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-md bg-[#93C572] hover:bg-[#85b964] text-black text-xs font-bold disabled:opacity-50 shadow-xs"
+              title="Submit code"
+            >
+              <span>Submit</span>
+            </button>
+          </div>
+        </div>
         
         {/* LEFT PANEL: Problem Info, Theory, Solution */}
         <div
-          className="w-full md:w-auto h-full flex flex-col border-r border-border bg-card flex-shrink-0 overflow-hidden"
+          className={`${
+            mobileActivePanel === 'problem' ? 'flex' : 'hidden md:flex'
+          } w-full md:w-auto h-full flex-col border-r border-border bg-card flex-shrink-0 overflow-hidden`}
           style={{ width: typeof window !== 'undefined' && window.innerWidth >= 768 ? `${leftWidthPct}%` : undefined }}
         >
           
@@ -737,7 +802,9 @@ export const ProblemSolverPage: React.FC = () => {
 
       {/* RIGHT PANEL: Code Editor & Test Cases */}
       <div
-        className="w-full md:w-auto flex-1 h-full flex flex-col bg-[#1e1e1e] overflow-hidden min-w-0"
+        className={`${
+          mobileActivePanel !== 'problem' ? 'flex' : 'hidden md:flex'
+        } w-full md:w-auto flex-1 h-full flex-col bg-[#1e1e1e] overflow-hidden min-w-0`}
         style={{ width: typeof window !== 'undefined' && window.innerWidth >= 768 ? `${100 - leftWidthPct}%` : undefined }}
       >
         
@@ -806,7 +873,7 @@ export const ProblemSolverPage: React.FC = () => {
         </div>
 
         {/* Monaco Editor (Flex Grow) */}
-        <div className="flex-1 min-h-[120px] overflow-hidden">
+        <div className={`${mobileActivePanel === 'console' ? 'hidden md:block' : 'block'} flex-1 min-h-[120px] overflow-hidden`}>
           <Editor
             height="100%"
             language="python"
@@ -829,7 +896,7 @@ export const ProblemSolverPage: React.FC = () => {
         {/* HORIZONTAL SPLITTER: Code Editor vs Test Cases */}
         <div
           onMouseDown={handleMouseDownV}
-          className={`h-1.5 hover:h-2 cursor-row-resize bg-border/60 hover:bg-[#93C572] transition-colors flex items-center justify-center select-none z-20 group relative flex-shrink-0 ${
+          className={`hidden md:flex h-1.5 hover:h-2 cursor-row-resize bg-border/60 hover:bg-[#93C572] transition-colors items-center justify-center select-none z-20 group relative flex-shrink-0 ${
             isDraggingV ? 'bg-[#93C572] h-2' : ''
           }`}
           title="Drag to resize code editor and test case panels"
@@ -839,8 +906,10 @@ export const ProblemSolverPage: React.FC = () => {
 
         {/* BOTTOM PANEL: Test Cases & Test Result */}
         <div
-          className="flex flex-col border-t border-border bg-card flex-shrink-0 overflow-hidden"
-          style={{ height: `${bottomHeightPx}px` }}
+          className={`${mobileActivePanel === 'code' ? 'hidden md:flex' : 'flex'} flex-col border-t border-border bg-card flex-shrink-0 overflow-hidden ${
+            mobileActivePanel === 'console' ? 'flex-1' : ''
+          }`}
+          style={{ height: typeof window !== 'undefined' && window.innerWidth < 768 ? (mobileActivePanel === 'console' ? '100%' : '180px') : `${bottomHeightPx}px` }}
         >
           
           {/* Bottom Tabs */}
