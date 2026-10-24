@@ -135,7 +135,7 @@ toniclite/
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/localmaximumx/opentensor.git toniclite
+git clone https://github.com/localmaximumx/toniclite.git
 cd toniclite
 ```
 
@@ -173,7 +173,7 @@ npm run preview
 
 1. Push your repository to GitHub under your user or organization.
 2. Log into [Vercel](https://vercel.com/) and click **Add New** -> **Project**.
-3. Import the `opentensor` repository.
+3. Import the `toniclite` repository.
 4. Vercel automatically detects the configuration:
    - **Framework Preset**: `Vite`
    - **Build Command**: `npm run build`
@@ -198,7 +198,7 @@ Contributions to TonicLite are welcome! Whether you are:
 - Adding classic or frontier research paper tracks
 - Improving mobile responsiveness or editor features
 
-Feel free to open an issue or submit a pull request on [GitHub](https://github.com/localmaximumx/opentensor).
+Feel free to open an issue or submit a pull request on [GitHub](https://github.com/localmaximumx/toniclite).
 
 ---
 
