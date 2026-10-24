@@ -69,8 +69,20 @@ export async function saveAccount(account) {
     const serialized = JSON.stringify(account);
     await kvCommand('set', `user:name:${clean}`, serialized);
     await kvCommand('set', `user:id:${account.id}`, serialized);
+    await kvCommand('sadd', 'users:list', clean);
   }
   return account;
+}
+
+export async function getAllUserAccounts() {
+  if (KV_URL) {
+    const list = await kvCommand('smembers', 'users:list');
+    if (Array.isArray(list) && list.length > 0) {
+      const accounts = await Promise.all(list.map(username => getAccountByUsername(username)));
+      return accounts.filter(Boolean);
+    }
+  }
+  return Object.values(inMemoryStore.accounts);
 }
 
 export async function createSession(userId) {
