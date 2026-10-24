@@ -325,7 +325,7 @@ export const ProblemsPage: React.FC = () => {
 
           {/* Problems Table */}
           <div className="bg-card dark:bg-background/50 backdrop-blur-xl border border-border/70 dark:border-white/[0.06] rounded-xl overflow-hidden shadow-sm">
-            <div className="grid grid-cols-[1.5rem_1fr_1.5rem] md:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1fr)_5rem] gap-2 sm:gap-3 px-3 sm:px-4 py-3 bg-secondary/70 dark:bg-muted/30 border-b border-border text-xs font-semibold text-foreground/65 dark:text-muted-foreground">
+            <div className="grid grid-cols-[1.5rem_1fr_1.5rem] md:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1fr)_5rem] gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-3.5 sm:py-3 bg-secondary/70 dark:bg-muted/30 border-b border-border text-xs font-semibold text-foreground/65 dark:text-muted-foreground">
               <div className="text-center">#</div>
               <div className="min-w-0">Problem</div>
               <div className="hidden md:block min-w-0">Topics</div>
@@ -348,7 +348,7 @@ export const ProblemsPage: React.FC = () => {
                   return (
                     <div
                       key={p.slug}
-                      className="relative grid grid-cols-[1.5rem_1fr_1.5rem] md:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1fr)_5rem] gap-2 sm:gap-3 px-3 sm:px-4 h-13 sm:h-14 items-center hover:bg-secondary/40 dark:hover:bg-accent/40 transition-colors group"
+                      className="relative grid grid-cols-[1.5rem_1fr_1.5rem] md:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1fr)_5rem] gap-2.5 sm:gap-3 px-3.5 sm:px-4 h-16 sm:h-14 items-center hover:bg-secondary/40 dark:hover:bg-accent/40 transition-colors group"
                     >
                       {/* Left accent bar on hover */}
                       <span className="absolute left-0 top-2.5 bottom-2.5 w-0.5 rounded-r-full bg-[#93C572] opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -356,18 +356,18 @@ export const ProblemsPage: React.FC = () => {
                       {/* Status Icon */}
                       <div className="flex justify-center">
                         {isSolved ? (
-                          <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
+                          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
                         ) : (
-                          <span className="text-xs sm:text-sm text-muted-foreground/60">-</span>
+                          <span className="text-sm text-muted-foreground/60">-</span>
                         )}
                       </div>
 
                       {/* Problem Number + Title */}
-                      <div className="min-w-0 flex items-center gap-1.5 sm:gap-2">
-                        <span className="text-muted-foreground text-xs sm:text-sm font-mono shrink-0">{p.sortOrder}.</span>
+                      <div className="min-w-0 flex items-center gap-2">
+                        <span className="text-muted-foreground text-sm font-mono shrink-0">{p.sortOrder}.</span>
                         <Link
                           to={`/problems/${p.slug}`}
-                          className="min-w-0 flex-1 text-foreground text-xs sm:text-sm hover:text-[#93C572] transition-colors truncate font-medium"
+                          className="min-w-0 flex-1 text-foreground text-sm hover:text-[#93C572] transition-colors truncate font-medium py-1"
                           title={p.title}
                         >
                           {p.title}

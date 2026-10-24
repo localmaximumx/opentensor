@@ -462,55 +462,21 @@ export const ProblemSolverPage: React.FC = () => {
         )}
 
         {/* Mobile View Selector & Action Bar (< md) */}
-        <div className="md:hidden flex items-center justify-between px-2 sm:px-3 py-1.5 bg-card border-b border-border/80 text-xs shrink-0 z-20 gap-1.5">
-          {/* Problem Nav: Prev / Next & Drawer */}
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              onClick={() => setIsDrawerOpen(true)}
-              className="p-1 rounded-md border border-border/80 bg-secondary/50 text-muted-foreground hover:text-foreground active:scale-95 transition-all"
-              title="Browse problems"
-            >
-              <PanelLeft className="w-3.5 h-3.5 text-[#93C572]" />
-            </button>
-            {prevSlug ? (
-              <Link
-                to={prevSlug.startsWith('/') ? prevSlug : `/problems/${prevSlug}`}
-                className="p-1 rounded-md border border-border/80 bg-secondary/50 text-foreground hover:bg-secondary active:scale-95 transition-all"
-                title="Previous problem"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </Link>
-            ) : (
-              <span className="p-1 rounded-md border border-border/40 text-muted-foreground/30"><ChevronLeft className="w-3.5 h-3.5" /></span>
-            )}
-            {nextSlug ? (
-              <Link
-                to={nextSlug.startsWith('/') ? nextSlug : `/problems/${nextSlug}`}
-                className="p-1 rounded-md border border-border/80 bg-secondary/50 text-foreground hover:bg-secondary active:scale-95 transition-all"
-                title="Next problem"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            ) : (
-              <span className="p-1 rounded-md border border-border/40 text-muted-foreground/30"><ChevronRight className="w-3.5 h-3.5" /></span>
-            )}
-          </div>
-
-          {/* 3-way Tab switcher */}
-          <div className="flex items-center gap-0.5 bg-secondary/80 p-0.5 rounded-lg border border-border/60">
+        <div className="md:hidden flex items-center justify-between px-3 py-2 bg-card border-b border-border/80 text-xs shrink-0 z-20">
+          <div className="flex items-center gap-1 bg-secondary/80 p-0.5 rounded-lg border border-border/60">
             <button
               onClick={() => setMobileActivePanel('problem')}
-              className={`px-2 py-1 rounded-md font-semibold transition-all text-xs ${
+              className={`px-3 py-1 rounded-md font-semibold transition-all ${
                 mobileActivePanel === 'problem'
                   ? 'bg-background text-[#93C572] shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              Desc
+              Description
             </button>
             <button
               onClick={() => setMobileActivePanel('code')}
-              className={`px-2 py-1 rounded-md font-semibold transition-all text-xs ${
+              className={`px-3 py-1 rounded-md font-semibold transition-all ${
                 mobileActivePanel === 'code'
                   ? 'bg-background text-[#38BDF8] shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
@@ -520,7 +486,7 @@ export const ProblemSolverPage: React.FC = () => {
             </button>
             <button
               onClick={() => setMobileActivePanel('console')}
-              className={`px-2 py-1 rounded-md font-semibold transition-all text-xs ${
+              className={`px-3 py-1 rounded-md font-semibold transition-all ${
                 mobileActivePanel === 'console'
                   ? 'bg-background text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
@@ -530,21 +496,20 @@ export const ProblemSolverPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Actions: Run & Submit */}
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={handleRun}
               disabled={isRunning}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-secondary hover:bg-accent border border-border text-foreground text-xs font-medium disabled:opacity-50"
               title="Run code"
             >
-              <Play className="w-3 h-3 fill-current text-[#93C572]" />
+              <Play className="w-3 h-3 fill-current" />
               <span>Run</span>
             </button>
             <button
               onClick={handleSubmit}
               disabled={isRunning}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#93C572] hover:bg-[#85b964] text-black text-xs font-bold disabled:opacity-50 shadow-xs"
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-md bg-[#93C572] hover:bg-[#85b964] text-black text-xs font-bold disabled:opacity-50 shadow-xs"
               title="Submit code"
             >
               <Send className="w-3 h-3" />
@@ -562,12 +527,12 @@ export const ProblemSolverPage: React.FC = () => {
         >
           
           {/* Navigation / Tab bar */}
-          <nav className="flex items-center justify-between px-2 sm:px-3 md:px-4 h-11 md:h-12 border-b border-border text-xs sm:text-sm bg-secondary/30 flex-shrink-0">
+          <nav className="flex items-center justify-between px-3 md:px-4 h-12 border-b border-border text-xs sm:text-sm bg-secondary/30 flex-shrink-0">
             <div className="flex items-center gap-1.5 sm:gap-3 h-full">
               {/* Browse Problems Sidebar Button (Handles Assessment, Research paper, and Problems catalog) */}
               <button
                 onClick={() => setIsDrawerOpen(true)}
-                className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/80 bg-background/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors text-xs font-medium shadow-xs"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/80 bg-background/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors text-xs font-medium shadow-xs"
                 title={
                   currentAssessment
                     ? `Assessment: ${currentAssessment.name}`
@@ -591,7 +556,7 @@ export const ProblemSolverPage: React.FC = () => {
                 )}
               </button>
 
-              <div className="hidden md:block h-4 w-px bg-border/60" />
+              <div className="h-4 w-px bg-border/60" />
 
               <button
                 onClick={() => setActiveTab('description')}
@@ -628,8 +593,8 @@ export const ProblemSolverPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Prev / Next controls for desktop (mobile has them in top bar) */}
-            <div className="hidden md:flex items-center gap-1">
+            {/* Prev / Next controls in side panel */}
+            <div className="flex items-center gap-1">
               {prevSlug ? (
                 <Link
                   to={prevSlug.startsWith('/') ? prevSlug : `/problems/${prevSlug}`}
