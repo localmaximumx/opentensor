@@ -81,6 +81,58 @@ export function getCurrentUser(): UserAccount | null {
   }
 }
 
+export async function syncUserSession(): Promise<UserAccount | null> {
+  const token = getAuthToken();
+  if (!token) return getCurrentUser();
+
+  try {
+    const res = await fetch('/api/auth/me', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.user) {
+        const accounts = getAllAccounts();
+        const existingIdx = accounts.findIndex(
+          a => a.id === data.user.id || a.username.toLowerCase() === data.user.username.toLowerCase()
+        );
+        const fullUser: UserAccount = {
+          ...data.user,
+          solvedProblems: data.user.solvedProblems || [],
+          codeDrafts: data.user.codeDrafts || {},
+          submissions: data.user.submissions || {}
+        };
+        if (existingIdx !== -1) {
+          accounts[existingIdx] = { ...accounts[existingIdx], ...fullUser };
+        } else {
+          accounts.push(fullUser);
+        }
+        saveAccounts(accounts);
+        setCurrentSession(data.user.id);
+
+        if (Array.isArray(fullUser.solvedProblems) && fullUser.solvedProblems.length > 0) {
+          const stored = localStorage.getItem('tensortonic_solved_problems');
+          const localSet = stored ? new Set(JSON.parse(stored)) : new Set();
+          fullUser.solvedProblems.forEach((s: string) => localSet.add(s));
+          localStorage.setItem('tensortonic_solved_problems', JSON.stringify(Array.from(localSet)));
+        }
+
+        window.dispatchEvent(new CustomEvent('tensortonic_auth_change'));
+        return fullUser;
+      }
+    }
+  } catch (e) {
+    // offline or backend unreachable
+  }
+  return getCurrentUser();
+}
+
+if (typeof window !== 'undefined') {
+  syncUserSession();
+}
+
 export function setCurrentSession(userId: string | null): void {
   if (userId) {
     localStorage.setItem(SESSION_STORAGE_KEY, userId);
@@ -300,26 +352,6 @@ export function unmarkUserProblemSolved(slug: string, userId?: string): void {
   }
 }
 
-// Clean up stale or demo marks on the first problems from existing accounts
-(() => {
-  try {
-    const initialFirstProblems = ['transformers-tokenization', 'nlp-tokenization', 'sigmoid-numpy', 'linear-regression-forward'];
-    const accounts = getAllAccounts();
-    let changed = false;
-    accounts.forEach(acc => {
-      if (acc.solvedProblems && acc.solvedProblems.some(s => initialFirstProblems.includes(s))) {
-        acc.solvedProblems = acc.solvedProblems.filter(s => !initialFirstProblems.includes(s));
-        changed = true;
-      }
-    });
-    if (changed) {
-      saveAccounts(accounts);
-    }
-  } catch (e) {
-    // ignore
-  }
-})();
-
 export function getUserSavedCode(slug: string, defaultCode: string, userId?: string): string {
   const current = userId ? getAllAccounts().find(a => a.id === userId) : getCurrentUser();
   if (!current || !current.codeDrafts) return defaultCode;
@@ -393,6 +425,17 @@ export function recordUserSubmission(
     window.dispatchEvent(new CustomEvent('tensortonic_auth_change'));
   }
 
+  // Also sync to global solved problems store for instant catalog counter
+  if (success) {
+    try {
+      const stored = localStorage.getItem('tensortonic_solved_problems');
+      const localSet = stored ? new Set(JSON.parse(stored)) : new Set();
+      localSet.add(slug);
+      localStorage.setItem('tensortonic_solved_problems', JSON.stringify(Array.from(localSet)));
+      window.dispatchEvent(new CustomEvent('tensortonic_auth_change'));
+    } catch (e) {}
+  }
+
   // Sync to Vercel API
   const token = getAuthToken();
   if (token) {
@@ -403,7 +446,24 @@ export function recordUserSubmission(
         Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({ slug, success, runtimeMs, passedCount, totalCount })
-    }).catch(() => {});
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.solvedProblems)) {
+          const accs = getAllAccounts();
+          const t = accs.find(a => a.id === currentId);
+          if (t) {
+            t.solvedProblems = data.solvedProblems;
+            saveAccounts(accs);
+          }
+          const stored = localStorage.getItem('tensortonic_solved_problems');
+          const localSet = stored ? new Set(JSON.parse(stored)) : new Set();
+          data.solvedProblems.forEach((s: string) => localSet.add(s));
+          localStorage.setItem('tensortonic_solved_problems', JSON.stringify(Array.from(localSet)));
+          window.dispatchEvent(new CustomEvent('tensortonic_auth_change'));
+        }
+      })
+      .catch(() => {});
   }
 }
 

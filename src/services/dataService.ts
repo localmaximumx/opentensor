@@ -301,12 +301,28 @@ export async function getAssessmentForProblem(slug: string, preferredAssessmentI
 const SOLVED_STORAGE_KEY = 'tensortonic_solved_problems';
 
 export function getSolvedProblems(): Set<string> {
+  const result = new Set<string>();
   try {
     const stored = localStorage.getItem(SOLVED_STORAGE_KEY);
-    return stored ? new Set(JSON.parse(stored)) : new Set();
-  } catch (e) {
-    return new Set();
-  }
+    if (stored) {
+      const arr = JSON.parse(stored);
+      if (Array.isArray(arr)) arr.forEach(s => result.add(s));
+    }
+  } catch (e) {}
+
+  try {
+    const sessionUserId = localStorage.getItem('tensortonic_auth_session');
+    const accountsRaw = localStorage.getItem('tensortonic_accounts');
+    if (sessionUserId && accountsRaw) {
+      const accounts = JSON.parse(accountsRaw);
+      const user = accounts.find((a: any) => a.id === sessionUserId);
+      if (user && Array.isArray(user.solvedProblems)) {
+        user.solvedProblems.forEach((s: string) => result.add(s));
+      }
+    }
+  } catch (e) {}
+
+  return result;
 }
 
 export function markProblemSolved(slug: string): void {
@@ -314,6 +330,22 @@ export function markProblemSolved(slug: string): void {
     const solved = getSolvedProblems();
     solved.add(slug);
     localStorage.setItem(SOLVED_STORAGE_KEY, JSON.stringify(Array.from(solved)));
+
+    // Also sync with active user session
+    const sessionUserId = localStorage.getItem('tensortonic_auth_session');
+    const accountsRaw = localStorage.getItem('tensortonic_accounts');
+    if (sessionUserId && accountsRaw) {
+      const accounts = JSON.parse(accountsRaw);
+      const user = accounts.find((a: any) => a.id === sessionUserId);
+      if (user) {
+        if (!user.solvedProblems) user.solvedProblems = [];
+        if (!user.solvedProblems.includes(slug)) {
+          user.solvedProblems.push(slug);
+          localStorage.setItem('tensortonic_accounts', JSON.stringify(accounts));
+        }
+      }
+    }
+    window.dispatchEvent(new CustomEvent('tensortonic_auth_change'));
   } catch (e) {
     console.error(e);
   }
@@ -324,29 +356,23 @@ export function unmarkProblemSolved(slug: string): void {
     const solved = getSolvedProblems();
     solved.delete(slug);
     localStorage.setItem(SOLVED_STORAGE_KEY, JSON.stringify(Array.from(solved)));
+
+    // Also sync with active user session
+    const sessionUserId = localStorage.getItem('tensortonic_auth_session');
+    const accountsRaw = localStorage.getItem('tensortonic_accounts');
+    if (sessionUserId && accountsRaw) {
+      const accounts = JSON.parse(accountsRaw);
+      const user = accounts.find((a: any) => a.id === sessionUserId);
+      if (user && user.solvedProblems) {
+        user.solvedProblems = user.solvedProblems.filter((s: string) => s !== slug);
+        localStorage.setItem('tensortonic_accounts', JSON.stringify(accounts));
+      }
+    }
+    window.dispatchEvent(new CustomEvent('tensortonic_auth_change'));
   } catch (e) {
     console.error(e);
   }
 }
-
-// Clean up stale or demo marks on the first problems
-(() => {
-  try {
-    const initialFirstProblems = ['transformers-tokenization', 'nlp-tokenization', 'sigmoid-numpy', 'linear-regression-forward'];
-    const stored = localStorage.getItem(SOLVED_STORAGE_KEY);
-    if (stored) {
-      const arr = JSON.parse(stored);
-      if (Array.isArray(arr)) {
-        const filtered = arr.filter(s => !initialFirstProblems.includes(s));
-        if (filtered.length !== arr.length) {
-          localStorage.setItem(SOLVED_STORAGE_KEY, JSON.stringify(filtered));
-        }
-      }
-    }
-  } catch (e) {
-    // ignore
-  }
-})();
 
 export function getSavedCode(slug: string, defaultCode: string): string {
   try {

@@ -16,17 +16,23 @@ const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST
 async function kvCommand(command, ...args) {
   if (!KV_URL || !KV_TOKEN) return null;
   try {
-    const url = `${KV_URL}/${command}/${args.map(encodeURIComponent).join('/')}`;
-    const res = await fetch(url, {
+    const res = await fetch(KV_URL, {
+      method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${KV_TOKEN}`
-      }
+      },
+      body: JSON.stringify([command, ...args])
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      console.warn(`KV [${command}] HTTP ${res.status}:`, errText);
+      return null;
+    }
     const json = await res.json();
     return json.result;
   } catch (e) {
-    console.warn('KV command error:', e.message);
+    console.warn(`KV [${command}] exception:`, e.message);
     return null;
   }
 }

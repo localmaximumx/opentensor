@@ -17,6 +17,7 @@ import {
   getCurrentUser, 
   logoutUser, 
   getUserSolvedProblems, 
+  syncUserSession,
   exportAccountBackup, 
   UserAccount 
 } from '../services/authService';
@@ -45,6 +46,7 @@ export const Navbar: React.FC = () => {
 
   useEffect(() => {
     refreshAuth();
+    syncUserSession().then(() => refreshAuth());
     const savedTheme = localStorage.getItem('opentensor_theme');
     if (savedTheme === 'dark') {
       document.documentElement.classList.add('dark');

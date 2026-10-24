@@ -362,12 +362,12 @@ export const ProblemSolverPage: React.FC = () => {
     setIsRunning(false);
 
     if (report.success && slug) {
+      markProblemSolved(slug);
       if (currentUser) {
         recordUserSubmission(slug, true, report.totalTimeMs, report.results.length, report.results.length, currentUser.id);
-      } else {
-        markProblemSolved(slug);
       }
       setIsSolved(true);
+      setSolvedSet((prev) => new Set([...prev, slug]));
       confetti({
         particleCount: 100,
         spread: 70,
