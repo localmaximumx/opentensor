@@ -80,15 +80,25 @@ export const Navbar: React.FC = () => {
     };
   }, []);
 
-  // Close user dropdown on outside click
+  // Close user dropdown on outside click & escape key
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setIsUserMenuOpen(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsUserMenuOpen(false);
+        setIsMobileMenuOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const toggleTheme = () => {
@@ -138,9 +148,9 @@ export const Navbar: React.FC = () => {
         onSuccess={() => refreshAuth()}
       />
 
-      <nav className="text-foreground sticky top-0 z-50 w-full pt-3 pb-1">
-        <div className="container mx-auto px-4 max-w-7xl">
-          <div className="h-14 flex items-center justify-between pl-5 pr-3 rounded-full border backdrop-blur-2xl shadow-[0_8px_40px_rgba(0,0,0,0.12)] border-border bg-card/95 dark:border-border/60 dark:bg-background/60">
+      <nav className="text-foreground sticky top-0 z-50 w-full pt-3 pb-1 flex-shrink-0">
+        <div className="container mx-auto px-4 max-w-7xl relative">
+          <div className="relative z-50 h-14 flex items-center justify-between pl-5 pr-3 rounded-full border backdrop-blur-2xl shadow-[0_8px_40px_rgba(0,0,0,0.12)] border-border bg-card/95 dark:border-border/60 dark:bg-background/60">
             
             {/* Left: Brand logo & Nav links */}
             <div className="flex items-center gap-2 md:gap-8 flex-shrink-0">
@@ -311,9 +321,18 @@ export const Navbar: React.FC = () => {
 
           </div>
 
-          {/* Mobile Navigation Dropdown */}
+          {/* Backdrop overlay when mobile menu is open (dims content below, tap to dismiss) */}
           {isMobileMenuOpen && (
-            <div className="lg:hidden mt-2 p-3 bg-card/95 backdrop-blur-2xl border border-border/80 rounded-2xl shadow-2xl space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden animate-in fade-in duration-200"
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-hidden="true"
+            />
+          )}
+
+          {/* Mobile Navigation Dropdown - floating overlay over page text and problems list */}
+          {isMobileMenuOpen && (
+            <div className="lg:hidden absolute top-[calc(100%+0.5rem)] left-4 right-4 z-50 p-3 bg-card/98 dark:bg-[#121212]/98 backdrop-blur-2xl border border-border/80 dark:border-border/60 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[calc(100dvh-5.5rem)] overflow-y-auto custom-scrollbar">
               {navLinks.map((link) => {
                 const Icon = link.icon;
                 const isInterview = link.path === '/interview' && (
