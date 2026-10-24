@@ -20,7 +20,9 @@ import {
   Tag,
   Star,
   PanelLeft,
-  ShieldCheck
+  ShieldCheck,
+  Plus,
+  X
 } from 'lucide-react';
 import { 
   getProblemDetail, 
@@ -49,6 +51,63 @@ import { MathView } from '../components/MathView';
 import { SolutionViewer } from '../components/SolutionViewer';
 import { ProblemDrawer } from '../components/ProblemDrawer';
 import { AuthModal } from '../components/AuthModal';
+
+interface ActiveTestCase {
+  id: string;
+  name: string;
+  isCustom: boolean;
+  rawInputs: Record<string, string>;
+  rawExpectedOutput: string;
+}
+
+function parseInputValue(raw: any): any {
+  if (typeof raw !== 'string') return raw;
+  const trimmed = raw.trim();
+  if (trimmed === '') return '';
+
+  if (trimmed === 'True') return true;
+  if (trimmed === 'False') return false;
+  if (trimmed === 'None') return null;
+
+  // 1. Try pure JSON
+  try {
+    return JSON.parse(trimmed);
+  } catch {}
+
+  // 2. Try single quotes replaced with double quotes
+  try {
+    return JSON.parse(trimmed.replace(/'/g, '"'));
+  } catch {}
+
+  // 3. Try Python tuple syntax: (1, 2, 3) -> [1, 2, 3]
+  if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+    try {
+      const arrayForm = '[' + trimmed.slice(1, -1) + ']';
+      return JSON.parse(arrayForm);
+    } catch {}
+    try {
+      const arrayForm = '[' + trimmed.slice(1, -1).replace(/'/g, '"') + ']';
+      return JSON.parse(arrayForm);
+    } catch {}
+  }
+
+  // 4. Try numeric
+  if (!isNaN(Number(trimmed))) {
+    return Number(trimmed);
+  }
+
+  return trimmed;
+}
+
+const serializeValue = (val: any): string => {
+  if (val === undefined || val === null) return '';
+  if (typeof val === 'string') return val;
+  try {
+    return JSON.stringify(val);
+  } catch {
+    return String(val);
+  }
+};
 
 export const ProblemSolverPage: React.FC = () => {
   const { paperId, slug } = useParams<{ paperId?: string; slug?: string }>();
@@ -344,17 +403,168 @@ export const ProblemSolverPage: React.FC = () => {
     return slug?.replace(/[^a-zA-Z0-9_]/g, '_') || 'solution';
   };
 
-  // Public sample test cases: strictly 1 or 2 test cases for "Run" and the "Testcase" bottom tab
-  const publicTestCases = useMemo(() => {
+  // Default sample test cases (strictly 1 or 2 test cases)
+  const defaultSampleCases = useMemo<ActiveTestCase[]>(() => {
     if (!problem?.testCases || problem.testCases.length === 0) {
-      return [{ id: 'case-1', name: 'Case 1', inputs: { x: [0, 2, -2] }, expectedOutput: [0.5, 0.880797, 0.119203], isPublic: true }];
+      return [{
+        id: 'case-1',
+        name: 'Case 1',
+        isCustom: false,
+        rawInputs: { x: '[0, 2, -2]' },
+        rawExpectedOutput: '[0.5, 0.880797, 0.119203]'
+      }];
     }
     const pub = problem.testCases.filter(tc => tc.isPublic !== false);
-    if (pub.length > 0) return pub.slice(0, 2);
-    return problem.testCases.slice(0, 2);
+    const selected = pub.length > 0 ? pub.slice(0, 2) : problem.testCases.slice(0, 2);
+    return selected.map((tc, idx) => ({
+      id: tc.id || `case-${idx + 1}`,
+      name: tc.name || `Case ${idx + 1}`,
+      isCustom: false,
+      rawInputs: Object.fromEntries(
+        Object.entries(tc.inputs || {}).map(([k, v]) => [k, serializeValue(v)])
+      ),
+      rawExpectedOutput: serializeValue(tc.expectedOutput)
+    }));
   }, [problem]);
 
-  // Run only the 1 or 2 sample test cases
+  const [activeTestCases, setActiveTestCases] = useState<ActiveTestCase[]>([]);
+
+  useEffect(() => {
+    if (!slug) return;
+    try {
+      const saved = localStorage.getItem(`toniclite_user_cases_${slug}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setActiveTestCases(parsed);
+          setActiveCaseIdx(0);
+          return;
+        }
+      }
+    } catch {}
+    setActiveTestCases(defaultSampleCases);
+    setActiveCaseIdx(0);
+  }, [slug, defaultSampleCases]);
+
+  const saveTestCases = (cases: ActiveTestCase[]) => {
+    setActiveTestCases(cases);
+    if (slug) {
+      try {
+        localStorage.setItem(`toniclite_user_cases_${slug}`, JSON.stringify(cases));
+      } catch {}
+    }
+  };
+
+  const handleAddTestCase = () => {
+    const current = activeTestCases.length > 0 ? activeTestCases : defaultSampleCases;
+    const templateCase = current[0] || defaultSampleCases[0];
+    const initialInputs: Record<string, string> = {};
+
+    if (templateCase && Object.keys(templateCase.rawInputs).length > 0) {
+      for (const [k, v] of Object.entries(templateCase.rawInputs)) {
+        initialInputs[k] = v;
+      }
+    } else if (problem?.functionMetadata?.parameters?.length) {
+      for (const p of problem.functionMetadata.parameters) {
+        initialInputs[p.name] = '[]';
+      }
+    } else {
+      initialInputs['input'] = '[]';
+    }
+
+    const nextIndex = current.length + 1;
+    const newCase: ActiveTestCase = {
+      id: `custom-case-${Date.now()}`,
+      name: `Case ${nextIndex}`,
+      isCustom: true,
+      rawInputs: initialInputs,
+      rawExpectedOutput: ''
+    };
+
+    const updated = [...current, newCase];
+    saveTestCases(updated);
+    setActiveCaseIdx(updated.length - 1);
+  };
+
+  const handleRemoveTestCase = (indexToRemove: number) => {
+    const current = activeTestCases.length > 0 ? activeTestCases : defaultSampleCases;
+    const updated = current.filter((_, idx) => idx !== indexToRemove);
+    saveTestCases(updated);
+    setActiveCaseIdx(prev => Math.max(0, Math.min(prev, updated.length - 1)));
+  };
+
+  const handleResetTestCases = () => {
+    saveTestCases(defaultSampleCases);
+    if (slug) {
+      try {
+        localStorage.removeItem(`toniclite_user_cases_${slug}`);
+      } catch {}
+    }
+    setActiveCaseIdx(0);
+  };
+
+  const handleUpdateInput = (paramKey: string, newValue: string) => {
+    const current = activeTestCases.length > 0 ? activeTestCases : defaultSampleCases;
+    const updated = current.map((tc, idx) => {
+      if (idx !== activeCaseIdx) return tc;
+      return {
+        ...tc,
+        rawInputs: {
+          ...tc.rawInputs,
+          [paramKey]: newValue
+        }
+      };
+    });
+    saveTestCases(updated);
+  };
+
+  const handleUpdateExpected = (newValue: string) => {
+    const current = activeTestCases.length > 0 ? activeTestCases : defaultSampleCases;
+    const updated = current.map((tc, idx) => {
+      if (idx !== activeCaseIdx) return tc;
+      return {
+        ...tc,
+        rawExpectedOutput: newValue
+      };
+    });
+    saveTestCases(updated);
+  };
+
+  const handleAddParam = () => {
+    const paramName = window.prompt('Enter parameter name:');
+    if (!paramName || !paramName.trim()) return;
+    const cleanName = paramName.trim().replace(/[^a-zA-Z0-9_]/g, '');
+    if (!cleanName) return;
+
+    const current = activeTestCases.length > 0 ? activeTestCases : defaultSampleCases;
+    const updated = current.map((tc, idx) => {
+      if (idx !== activeCaseIdx) return tc;
+      return {
+        ...tc,
+        rawInputs: {
+          ...tc.rawInputs,
+          [cleanName]: '[]'
+        }
+      };
+    });
+    saveTestCases(updated);
+  };
+
+  const handleRemoveParam = (paramKey: string) => {
+    const current = activeTestCases.length > 0 ? activeTestCases : defaultSampleCases;
+    const updated = current.map((tc, idx) => {
+      if (idx !== activeCaseIdx) return tc;
+      const nextInputs = { ...tc.rawInputs };
+      delete nextInputs[paramKey];
+      return {
+        ...tc,
+        rawInputs: nextInputs
+      };
+    });
+    saveTestCases(updated);
+  };
+
+  // Run sample & custom test cases
   const handleRun = async () => {
     if (!problem || isRunning) return;
     setIsRunning(true);
@@ -365,7 +575,24 @@ export const ProblemSolverPage: React.FC = () => {
     }
 
     const currentCode = editorRef.current ? editorRef.current.getValue() : code;
-    const report = await runPythonCode(currentCode, getFunctionName(), publicTestCases);
+    const casesToRun = (activeTestCases.length > 0 ? activeTestCases : defaultSampleCases).map((tc, idx) => {
+      const parsedInputs: Record<string, any> = {};
+      for (const [k, v] of Object.entries(tc.rawInputs || {})) {
+        parsedInputs[k] = parseInputValue(v);
+      }
+      const parsedExpected = tc.rawExpectedOutput && tc.rawExpectedOutput.trim() !== ''
+        ? parseInputValue(tc.rawExpectedOutput)
+        : undefined;
+
+      return {
+        id: tc.id || `case-${idx + 1}`,
+        name: tc.name || `Case ${idx + 1}`,
+        inputs: parsedInputs,
+        expectedOutput: parsedExpected
+      };
+    });
+
+    const report = await runPythonCode(currentCode, getFunctionName(), casesToRun);
     setExecReport(report);
     const firstFail = report.results.findIndex(r => !r.passed);
     setResultCaseIdx(firstFail !== -1 ? firstFail : 0);
@@ -384,7 +611,13 @@ export const ProblemSolverPage: React.FC = () => {
 
     const baseTestCases = problem.testCases && problem.testCases.length > 0
       ? problem.testCases
-      : publicTestCases;
+      : (activeTestCases.length > 0 ? activeTestCases.map((tc, idx) => ({
+          id: tc.id || `case-${idx + 1}`,
+          name: tc.name || `Case ${idx + 1}`,
+          inputs: Object.fromEntries(Object.entries(tc.rawInputs).map(([k, v]) => [k, parseInputValue(v)])),
+          expectedOutput: tc.rawExpectedOutput ? parseInputValue(tc.rawExpectedOutput) : undefined,
+          isPublic: true
+        })) : []);
 
     const currentCode = editorRef.current ? editorRef.current.getValue() : code;
     const report = await runPythonSubmission(currentCode, getFunctionName(), baseTestCases, problem.solution, 7);
@@ -1035,37 +1268,138 @@ export const ProblemSolverPage: React.FC = () => {
 
           {/* Bottom Panel Content */}
           <div className="flex-1 p-3 sm:p-4 pb-24 md:pb-4 overflow-y-auto problem-scrollbar font-mono text-xs">
-            {bottomTab === 'testcase' && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  {publicTestCases.map((tc, idx) => (
-                    <button
-                      key={tc.id || idx}
-                      onClick={() => setActiveCaseIdx(idx)}
-                      className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                        activeCaseIdx === idx
-                          ? 'bg-secondary text-foreground font-semibold border border-border'
-                          : 'text-muted-foreground hover:bg-secondary/40'
-                      }`}
-                    >
-                      Case {idx + 1}
-                    </button>
-                  ))}
-                </div>
+            {bottomTab === 'testcase' && (() => {
+              const currentCases = activeTestCases.length > 0 ? activeTestCases : defaultSampleCases;
+              const activeCase = currentCases[activeCaseIdx] || currentCases[0];
+              const hasModifications = JSON.stringify(currentCases) !== JSON.stringify(defaultSampleCases);
 
-                {/* Active Test Case Inputs */}
-                <div className="space-y-2 mt-2">
-                  {Object.entries((publicTestCases[activeCaseIdx] || publicTestCases[0])?.inputs || {}).map(([key, val]) => (
-                    <div key={key}>
-                      <span className="text-muted-foreground">{key} =</span>
-                      <div className="mt-1 p-2 rounded bg-muted/50 border border-border text-foreground">
-                        {JSON.stringify(val)}
+              return (
+                <div className="space-y-3">
+                  {/* Test Cases Tabs + Add Icon Button */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {currentCases.map((tc, idx) => (
+                        <div key={tc.id || idx} className="relative group/tab">
+                          <button
+                            onClick={() => setActiveCaseIdx(idx)}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono transition-colors ${
+                              activeCaseIdx === idx
+                                ? 'bg-secondary text-foreground font-semibold border border-border shadow-xs'
+                                : 'text-muted-foreground hover:bg-secondary/40 hover:text-foreground border border-transparent'
+                            }`}
+                          >
+                            <span>Case {idx + 1}</span>
+                            {tc.isCustom && (
+                              <span className="text-[10px] px-1 py-0.2 rounded bg-[#93C572]/15 text-[#93C572] font-sans font-medium">
+                                Custom
+                              </span>
+                            )}
+                          </button>
+                          {tc.isCustom && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveTestCase(idx);
+                              }}
+                              className="opacity-0 group-hover/tab:opacity-100 absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center transition-opacity shadow-xs"
+                              title="Delete test case"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* + Icon beside the list of cases */}
+                      <button
+                        onClick={handleAddTestCase}
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-dashed border-border hover:border-[#93C572] text-muted-foreground hover:text-[#93C572] hover:bg-[#93C572]/10 transition-colors"
+                        title="Add your own test case"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {hasModifications && (
+                      <button
+                        onClick={handleResetTestCases}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+                        title="Reset to default sample test cases"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        <span>Reset Cases</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Active Test Case Inputs & Expected Output */}
+                  {activeCase && (
+                    <div className="space-y-3 mt-3">
+                      {/* Inputs List */}
+                      <div className="space-y-2.5">
+                        <div className="text-[11px] text-muted-foreground font-sans font-semibold uppercase tracking-wider">
+                          Inputs
+                        </div>
+                        {Object.entries(activeCase.rawInputs || {}).map(([key, val]) => (
+                          <div key={key} className="space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground font-mono font-medium">{key} =</span>
+                              {activeCase.isCustom && Object.keys(activeCase.rawInputs).length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveParam(key)}
+                                  className="text-muted-foreground/50 hover:text-rose-400 text-[11px] transition-colors"
+                                  title={`Remove parameter ${key}`}
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                            <textarea
+                              value={val}
+                              onChange={(e) => handleUpdateInput(key, e.target.value)}
+                              rows={typeof val === 'string' && val.includes('\n') ? 3 : 1}
+                              className="w-full px-3 py-1.5 rounded-md bg-muted/40 hover:bg-muted/60 focus:bg-background border border-border focus:border-[#93C572] focus:ring-1 focus:ring-[#93C572] font-mono text-xs text-foreground outline-none transition-all resize-y min-h-[32px]"
+                              placeholder={`Enter value for ${key}...`}
+                              spellCheck={false}
+                            />
+                          </div>
+                        ))}
+
+                        {activeCase.isCustom && (
+                          <div className="pt-0.5">
+                            <button
+                              type="button"
+                              onClick={handleAddParam}
+                              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-[#93C572] font-medium transition-colors"
+                            >
+                              <Plus className="w-3 h-3" />
+                              <span>Add parameter</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Expected Output */}
+                      <div className="space-y-1.5 pt-3 border-t border-border/60">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground font-mono font-medium">Expected Output =</span>
+                          <span className="text-[10px] text-muted-foreground/60 font-sans">(optional, compares when Run)</span>
+                        </div>
+                        <textarea
+                          value={activeCase.rawExpectedOutput}
+                          onChange={(e) => handleUpdateExpected(e.target.value)}
+                          rows={typeof activeCase.rawExpectedOutput === 'string' && activeCase.rawExpectedOutput.includes('\n') ? 3 : 1}
+                          className="w-full px-3 py-1.5 rounded-md bg-muted/40 hover:bg-muted/60 focus:bg-background border border-border focus:border-[#93C572] focus:ring-1 focus:ring-[#93C572] font-mono text-xs text-foreground outline-none transition-all resize-y min-h-[32px]"
+                          placeholder="e.g. [0.5, 0.88, 0.12] or (w, b) or 42"
+                          spellCheck={false}
+                        />
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {bottomTab === 'result' && (
               <div>
