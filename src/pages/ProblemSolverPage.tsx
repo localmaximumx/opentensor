@@ -77,7 +77,7 @@ export const ProblemSolverPage: React.FC = () => {
   const [isSolved, setIsSolved] = useState<boolean>(false);
   const [solutionCopied, setSolutionCopied] = useState<boolean>(false);
   const [solutionApplied, setSolutionApplied] = useState<boolean>(false);
-  const [mobileActivePanel, setMobileActivePanel] = useState<'problem' | 'code' | 'console'>('problem');
+  const [mobileActivePanel, setMobileActivePanel] = useState<'problem' | 'code'>('problem');
 
   // Prev / Next navigation & Drawer State
   const [prevSlug, setPrevSlug] = useState<string | null>(null);
@@ -128,27 +128,42 @@ export const ProblemSolverPage: React.FC = () => {
   }, [isDraggingH]);
 
   // Horizontal splitter (resizing editor vs bottom testcase panel vertically)
-  const handleMouseDownV = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleMouseDownV = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     setIsDraggingV(true);
   }, []);
 
   useEffect(() => {
     if (!isDraggingV) return;
-    const handleMouseMove = (e: MouseEvent) => {
-      const h = window.innerHeight - e.clientY;
-      const clamped = Math.max(100, Math.min(window.innerHeight - 180, h));
+    const handleMove = (clientY: number) => {
+      const h = window.innerHeight - clientY;
+      const clamped = Math.max(100, Math.min(window.innerHeight - 140, h));
       setBottomHeightPx(clamped);
       localStorage.setItem('tensortonic_bottom_panel_height', clamped.toString());
     };
-    const handleMouseUp = () => {
+
+    const handleMouseMove = (e: MouseEvent) => {
+      handleMove(e.clientY);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        handleMove(e.touches[0].clientY);
+      }
+    };
+
+    const handleEnd = () => {
       setIsDraggingV(false);
     };
+
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleEnd);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleEnd);
     };
   }, [isDraggingV]);
 
@@ -462,7 +477,7 @@ export const ProblemSolverPage: React.FC = () => {
         )}
 
         {/* Mobile View Selector & Action Bar (< md) */}
-        <div className="md:hidden flex items-center justify-between px-3 py-2 bg-card border-b border-border/80 text-xs shrink-0 z-20">
+        <div className="md:hidden flex items-center justify-between px-3 sm:px-4 py-2 bg-card border-b border-border/80 text-xs shrink-0 z-20">
           <div className="flex items-center gap-1 bg-secondary/80 p-0.5 rounded-lg border border-border/60">
             <button
               onClick={() => setMobileActivePanel('problem')}
@@ -484,32 +499,22 @@ export const ProblemSolverPage: React.FC = () => {
             >
               Code
             </button>
-            <button
-              onClick={() => setMobileActivePanel('console')}
-              className={`px-3 py-1 rounded-md font-semibold transition-all ${
-                mobileActivePanel === 'console'
-                  ? 'bg-background text-foreground shadow-xs'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Console
-            </button>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2 pr-1.5">
             <button
               onClick={handleRun}
               disabled={isRunning}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-secondary hover:bg-accent border border-border text-foreground text-xs font-medium disabled:opacity-50"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-secondary hover:bg-accent border border-border text-foreground text-xs font-medium disabled:opacity-50"
               title="Run code"
             >
-              <Play className="w-3 h-3 fill-current" />
+              <Play className="w-3 h-3 fill-current text-[#93C572]" />
               <span>Run</span>
             </button>
             <button
               onClick={handleSubmit}
               disabled={isRunning}
-              className="inline-flex items-center gap-1 px-3 py-1 rounded-md bg-[#93C572] hover:bg-[#85b964] text-black text-xs font-bold disabled:opacity-50 shadow-xs"
+              className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-md bg-[#93C572] hover:bg-[#85b964] text-black text-xs font-bold disabled:opacity-50 shadow-xs mr-1"
               title="Submit code"
             >
               <Send className="w-3 h-3" />
@@ -879,7 +884,7 @@ export const ProblemSolverPage: React.FC = () => {
         </div>
 
         {/* Monaco Editor (Flex Grow) */}
-        <div className={`${mobileActivePanel === 'console' ? 'hidden md:block' : 'block'} flex-1 min-h-[120px] overflow-hidden`}>
+        <div className="flex-1 min-h-[120px] overflow-hidden">
           <Editor
             height="100%"
             language="python"
@@ -902,20 +907,19 @@ export const ProblemSolverPage: React.FC = () => {
         {/* HORIZONTAL SPLITTER: Code Editor vs Test Cases */}
         <div
           onMouseDown={handleMouseDownV}
-          className={`hidden md:flex h-1.5 hover:h-2 cursor-row-resize bg-border/60 hover:bg-[#93C572] transition-colors items-center justify-center select-none z-20 group relative flex-shrink-0 ${
-            isDraggingV ? 'bg-[#93C572] h-2' : ''
+          onTouchStart={handleMouseDownV}
+          className={`flex h-2.5 sm:h-1.5 hover:h-2 cursor-row-resize bg-border/60 hover:bg-[#93C572] transition-colors items-center justify-center select-none z-20 group relative flex-shrink-0 touch-none ${
+            isDraggingV ? 'bg-[#93C572] h-2.5 sm:h-2' : ''
           }`}
           title="Drag to resize code editor and test case panels"
         >
-          <div className="h-0.5 w-8 bg-muted-foreground/40 group-hover:bg-black rounded-full" />
+          <div className="h-1 w-10 sm:h-0.5 sm:w-8 bg-muted-foreground/50 group-hover:bg-black rounded-full" />
         </div>
 
         {/* BOTTOM PANEL: Test Cases & Test Result */}
         <div
-          className={`${mobileActivePanel === 'code' ? 'hidden md:flex' : 'flex'} flex-col border-t border-border bg-card flex-shrink-0 overflow-hidden ${
-            mobileActivePanel === 'console' ? 'flex-1' : ''
-          }`}
-          style={{ height: typeof window !== 'undefined' && window.innerWidth < 768 ? (mobileActivePanel === 'console' ? '100%' : '180px') : `${bottomHeightPx}px` }}
+          className="flex flex-col border-t border-border bg-card flex-shrink-0 overflow-hidden"
+          style={{ height: `${bottomHeightPx}px` }}
         >
           
           {/* Bottom Tabs */}
