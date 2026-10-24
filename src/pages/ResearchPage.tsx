@@ -117,6 +117,20 @@ const stepColors = [
   '#eab308'  // 11: yellow
 ];
 
+// Paper display names for sidebar and dropdown
+const getSidebarName = (p: ResearchPaper): string => {
+  if (!p) return '';
+  if (p.id === 'transformer') return 'Transformers';
+  if (p.id === 'kimik3') return 'Kimi K3';
+  if (p.id === 'vit') return 'Vision Transformer';
+  if (p.id === 'gan') return 'GANs';
+  if (p.id === 'vae') return 'VAE';
+  if (p.id === 'unet') return 'U-Net';
+  if (p.id === 'densenet') return 'DenseNet';
+  if (p.id === 'word2vec') return 'Word2Vec';
+  return (p.title || '').split(':')[0].split('(')[0].trim() || p.id;
+};
+
 export const ResearchPage: React.FC = () => {
   const { paperId: routePaperId } = useParams<{ paperId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -170,6 +184,15 @@ export const ResearchPage: React.FC = () => {
     return papers.find((p) => p.id === activePaperId || normalizePaperId(p.id) === activePaperId) || papers[0];
   }, [papers, activePaperId]);
 
+  const filteredDropdownPapers = useMemo(() => {
+    if (!dropdownSearch.trim()) return papers;
+    const q = dropdownSearch.toLowerCase();
+    return papers.filter(p => 
+      getSidebarName(p).toLowerCase().includes(q) || 
+      (p.title || '').toLowerCase().includes(q)
+    );
+  }, [papers, dropdownSearch]);
+
   const selectPaper = (id: string) => {
     setSearchParams({ paper: id });
   };
@@ -197,7 +220,7 @@ export const ResearchPage: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loading || !activePaper) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-background">
         <div className="w-8 h-8 border-2 border-[#93C572] border-t-transparent rounded-full animate-spin" />
@@ -205,33 +228,9 @@ export const ResearchPage: React.FC = () => {
     );
   }
 
-  if (!activePaper) return null;
-
   const topics = activePaper.topics || [];
   const badgeUrl = paperBadges[activePaper.id] || paperBadges[normalizePaperId(activePaper.id)] || '/images/badges/transformers.png';
   const archImageUrl = paperArchitectureImages[activePaper.id] || paperArchitectureImages[normalizePaperId(activePaper.id)] || '/images/architectures/Transformer.png';
-
-  // Paper display names for sidebar
-  const getSidebarName = (p: ResearchPaper) => {
-    if (p.id === 'transformer') return 'Transformers';
-    if (p.id === 'kimik3') return 'Kimi K3';
-    if (p.id === 'vit') return 'Vision Transformer';
-    if (p.id === 'gan') return 'GANs';
-    if (p.id === 'vae') return 'VAE';
-    if (p.id === 'unet') return 'U-Net';
-    if (p.id === 'densenet') return 'DenseNet';
-    if (p.id === 'word2vec') return 'Word2Vec';
-    return p.title.split(':')[0].split('(')[0].trim();
-  };
-
-  const filteredDropdownPapers = useMemo(() => {
-    if (!dropdownSearch.trim()) return papers;
-    const q = dropdownSearch.toLowerCase();
-    return papers.filter(p => 
-      getSidebarName(p).toLowerCase().includes(q) || 
-      p.title.toLowerCase().includes(q)
-    );
-  }, [papers, dropdownSearch]);
 
   return (
     <div className="h-[calc(100vh-64px)] flex overflow-hidden bg-background text-foreground font-sans selection:bg-[#93C572]/20 selection:text-[#93C572]">
