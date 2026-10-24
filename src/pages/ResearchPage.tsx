@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { 
   CheckCircle2, 
@@ -6,7 +6,10 @@ import {
   ChevronRight,
   ChevronDown,
   Maximize2,
-  X
+  X,
+  Search,
+  Check,
+  BookOpen
 } from 'lucide-react';
 import { getResearchPapers, getSolvedProblems } from '../services/dataService';
 import { ResearchPaper, Difficulty } from '../types';
@@ -124,6 +127,20 @@ export const ResearchPage: React.FC = () => {
   const [solvedSet, setSolvedSet] = useState<Set<string>>(new Set());
   const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [dropdownSearch, setDropdownSearch] = useState<string>('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const rawPaperId = routePaperId || searchParams.get('paper') || 'transformer';
   const activePaperId = normalizePaperId(rawPaperId);
@@ -207,6 +224,15 @@ export const ResearchPage: React.FC = () => {
     return p.title.split(':')[0].split('(')[0].trim();
   };
 
+  const filteredDropdownPapers = useMemo(() => {
+    if (!dropdownSearch.trim()) return papers;
+    const q = dropdownSearch.toLowerCase();
+    return papers.filter(p => 
+      getSidebarName(p).toLowerCase().includes(q) || 
+      p.title.toLowerCase().includes(q)
+    );
+  }, [papers, dropdownSearch]);
+
   return (
     <div className="h-[calc(100vh-64px)] flex overflow-hidden bg-background text-foreground font-sans selection:bg-[#93C572]/20 selection:text-[#93C572]">
       
@@ -269,23 +295,108 @@ export const ResearchPage: React.FC = () => {
       <main className="flex-1 h-full overflow-y-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8 custom-scrollbar bg-background">
         <div className="max-w-2xl mx-auto">
           
-          {/* Mobile Paper Selector (< md) */}
-          <div className="md:hidden mb-5 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card border border-border/80 shadow-xs">
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider shrink-0">Paper:</span>
-            <div className="relative inline-block w-auto max-w-[200px]">
-              <select
-                value={activePaper.id}
-                onChange={(e) => selectPaper(e.target.value)}
-                className="appearance-none w-full bg-background border border-border rounded-lg pl-2.5 pr-7 py-1 text-xs font-semibold text-foreground focus:outline-none focus:border-[#93C572]/60 cursor-pointer truncate"
-              >
-                {papers.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-card text-foreground">
-                    {getSidebarName(p)}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
+          {/* Fancy Mobile Paper Dropdown (< md) */}
+          <div className="md:hidden mb-6 relative" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsDropdownOpen(prev => !prev)}
+              className={`inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-card/90 backdrop-blur-xl border transition-all duration-200 text-xs shadow-md select-none ${
+                isDropdownOpen
+                  ? 'border-[#93C572] ring-2 ring-[#93C572]/20 shadow-[0_0_20px_rgba(147,197,114,0.15)] bg-secondary/80'
+                  : 'border-border/80 hover:border-[#93C572]/50 hover:bg-secondary/60'
+              }`}
+            >
+              {/* Paper Badge thumbnail */}
+              <div className="w-6 h-6 rounded-lg bg-background/80 border border-border/60 p-0.5 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+                <img
+                  src={paperBadges[activePaper.id] || paperBadges[normalizePaperId(activePaper.id)] || '/images/badges/transformers.png'}
+                  alt=""
+                  className="w-full h-full object-contain"
+                  onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                />
+              </div>
+
+              <div className="flex flex-col text-left">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-none">Paper</span>
+                <span className="text-xs font-bold text-foreground truncate max-w-[130px] leading-tight mt-0.5">
+                  {getSidebarName(activePaper)}
+                </span>
+              </div>
+
+              <span className="text-[10px] font-mono text-[#93C572] bg-[#93C572]/10 border border-[#93C572]/20 px-1.5 py-0.5 rounded-full shrink-0">
+                {topics.length} steps
+              </span>
+
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180 text-[#93C572]' : ''}`} />
+            </button>
+
+            {/* Fancy Popover Menu */}
+            {isDropdownOpen && (
+              <div className="absolute left-0 top-full mt-2 w-72 sm:w-80 bg-[#121614]/95 backdrop-blur-2xl border border-[#93C572]/30 rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                {/* Search Bar inside Dropdown */}
+                <div className="relative mb-2">
+                  <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={dropdownSearch}
+                    onChange={(e) => setDropdownSearch(e.target.value)}
+                    placeholder="Search 23 papers..."
+                    className="w-full bg-background/80 border border-border/80 rounded-xl pl-8 pr-3 py-1.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-[#93C572]/60 transition-colors"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Papers List */}
+                <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar pr-0.5">
+                  {filteredDropdownPapers.length === 0 ? (
+                    <div className="text-center py-4 text-xs text-muted-foreground">
+                      No papers found
+                    </div>
+                  ) : (
+                    filteredDropdownPapers.map((p) => {
+                      const isSelected = p.id === activePaper.id || normalizePaperId(p.id) === activePaper.id;
+                      const pBadge = paperBadges[p.id] || paperBadges[normalizePaperId(p.id)] || '/images/badges/transformers.png';
+                      const topicLen = p.topics?.length || 8;
+
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => {
+                            selectPaper(p.id);
+                            setIsDropdownOpen(false);
+                            setDropdownSearch('');
+                          }}
+                          className={`w-full flex items-center justify-between p-2 rounded-xl text-left text-xs transition-all ${
+                            isSelected
+                              ? 'bg-[#93C572]/15 text-[#93C572] font-semibold border border-[#93C572]/30 shadow-xs'
+                              : 'text-foreground/80 hover:text-foreground hover:bg-secondary/60 border border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-6 h-6 rounded-lg bg-background/90 border border-border/60 p-0.5 flex items-center justify-center shrink-0">
+                              <img
+                                src={pBadge}
+                                alt=""
+                                className="w-full h-full object-contain"
+                                onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                              />
+                            </div>
+                            <span className="truncate font-medium">{getSidebarName(p)}</span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                            <span className="text-[10px] font-mono text-muted-foreground bg-secondary/80 px-1.5 py-0.5 rounded border border-border/40">
+                              {topicLen}
+                            </span>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-[#93C572]" />}
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Active Paper Title & Emblem Shield Badge */}
