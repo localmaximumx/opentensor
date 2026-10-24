@@ -348,7 +348,7 @@ export const ProblemsPage: React.FC = () => {
                   return (
                     <div
                       key={p.slug}
-                      className="relative grid grid-cols-[1.5rem_1fr_1.5rem] md:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1fr)_5rem] gap-2.5 sm:gap-3 px-3.5 sm:px-4 h-16 sm:h-14 items-center hover:bg-secondary/40 dark:hover:bg-accent/40 transition-colors group"
+                      className="relative grid grid-cols-[1.5rem_1fr_1.5rem] md:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1fr)_5rem] gap-2.5 sm:gap-3 px-3.5 sm:px-4 h-[60px] sm:h-14 items-center hover:bg-secondary/40 dark:hover:bg-accent/40 transition-colors group"
                     >
                       {/* Left accent bar on hover */}
                       <span className="absolute left-0 top-2.5 bottom-2.5 w-0.5 rounded-r-full bg-[#93C572] opacity-0 group-hover:opacity-100 transition-opacity" />

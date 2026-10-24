@@ -550,7 +550,7 @@ export const ProblemSolverPage: React.FC = () => {
                   {currentAssessment ? currentAssessment.name : paperId ? (currentPaper?.title || 'Paper') : 'Problems'}
                 </span>
                 {currentIndex !== -1 && (
-                  <span className="text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded border border-border/40">
+                  <span className="hidden sm:inline-block text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded border border-border/40">
                     #{currentIndex + 1}/{totalItems || (paperId || currentAssessment ? '' : catalogProblems.length || 790)}
                   </span>
                 )}
