@@ -944,28 +944,22 @@ export const ProblemSolverPage: React.FC = () => {
             <button
               onClick={handleRun}
               disabled={isRunning}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border border-input bg-card hover:bg-accent text-foreground transition-colors disabled:opacity-50 group"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border border-input bg-card hover:bg-accent text-foreground transition-colors disabled:opacity-50"
               title="Run code (Ctrl + Enter)"
             >
               <Play className="w-3.5 h-3.5 text-[#93C572] fill-current" />
               <span>Run</span>
-              <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground bg-muted/70 rounded border border-border/50 group-hover:border-border transition-colors">
-                Ctrl+Enter
-              </kbd>
             </button>
 
             {/* Submit Button */}
             <button
               onClick={handleSubmit}
               disabled={isRunning}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold bg-[#93C572] hover:bg-[#A4D287] text-black transition-colors shadow-sm disabled:opacity-50 group"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold bg-[#93C572] hover:bg-[#A4D287] text-black transition-colors shadow-sm disabled:opacity-50"
               title="Submit code (Ctrl + Alt + Enter)"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Submit</span>
-              <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium text-black/80 bg-black/10 rounded border border-black/15 group-hover:bg-black/20 transition-colors">
-                Ctrl+Alt+Enter
-              </kbd>
             </button>
           </div>
         </div>
