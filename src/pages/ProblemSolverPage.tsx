@@ -274,9 +274,14 @@ export const ProblemSolverPage: React.FC = () => {
     }
   };
 
+  const editorRef = useRef<any>(null);
+
   const handleResetCode = () => {
     if (problem?.starterCode && slug) {
       setCode(problem.starterCode);
+      if (editorRef.current) {
+        editorRef.current.setValue(problem.starterCode);
+      }
       if (currentUser) {
         saveUserCode(slug, problem.starterCode, currentUser.id);
       } else {
@@ -307,6 +312,9 @@ export const ProblemSolverPage: React.FC = () => {
     const refCode = extractSolutionCode(problem.solution);
     if (refCode && slug) {
       setCode(refCode);
+      if (editorRef.current) {
+        editorRef.current.setValue(refCode);
+      }
       if (currentUser) {
         saveUserCode(slug, refCode, currentUser.id);
       } else {
@@ -330,7 +338,8 @@ export const ProblemSolverPage: React.FC = () => {
   // Determine function name from starter code or metadata
   const getFunctionName = (): string => {
     if (problem?.functionMetadata?.name) return problem.functionMetadata.name;
-    const match = code.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
+    const activeCode = editorRef.current ? editorRef.current.getValue() : code;
+    const match = activeCode.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
     if (match) return match[1];
     return slug?.replace(/[^a-zA-Z0-9_]/g, '_') || 'solution';
   };
@@ -352,10 +361,11 @@ export const ProblemSolverPage: React.FC = () => {
     setIsSubmission(false);
     setBottomTab('result');
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      setMobileActivePanel('console');
+      setMobileActivePanel('code');
     }
 
-    const report = await runPythonCode(code, getFunctionName(), publicTestCases);
+    const currentCode = editorRef.current ? editorRef.current.getValue() : code;
+    const report = await runPythonCode(currentCode, getFunctionName(), publicTestCases);
     setExecReport(report);
     const firstFail = report.results.findIndex(r => !r.passed);
     setResultCaseIdx(firstFail !== -1 ? firstFail : 0);
@@ -369,14 +379,15 @@ export const ProblemSolverPage: React.FC = () => {
     setIsSubmission(true);
     setBottomTab('result');
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      setMobileActivePanel('console');
+      setMobileActivePanel('code');
     }
 
     const baseTestCases = problem.testCases && problem.testCases.length > 0
       ? problem.testCases
       : publicTestCases;
 
-    const report = await runPythonSubmission(code, getFunctionName(), baseTestCases, problem.solution, 7);
+    const currentCode = editorRef.current ? editorRef.current.getValue() : code;
+    const report = await runPythonSubmission(currentCode, getFunctionName(), baseTestCases, problem.solution, 7);
     setExecReport(report);
 
     const firstFail = report.results.findIndex(r => !r.passed);
@@ -398,6 +409,74 @@ export const ProblemSolverPage: React.FC = () => {
       });
     }
   };
+
+  // Stable refs & debounced triggers for keyboard shortcuts
+  const handleRunRef = useRef(handleRun);
+  handleRunRef.current = handleRun;
+
+  const handleSubmitRef = useRef(handleSubmit);
+  handleSubmitRef.current = handleSubmit;
+
+  const lastActionTimeRef = useRef<number>(0);
+
+  const triggerRun = useCallback(() => {
+    const now = Date.now();
+    if (now - lastActionTimeRef.current < 400) return;
+    lastActionTimeRef.current = now;
+    handleRunRef.current();
+  }, []);
+
+  const triggerSubmit = useCallback(() => {
+    const now = Date.now();
+    if (now - lastActionTimeRef.current < 400) return;
+    lastActionTimeRef.current = now;
+    handleSubmitRef.current();
+  }, []);
+
+  // Global keyboard shortcuts: Ctrl+Enter (Run) & Ctrl+Alt+Enter (Submit)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' && e.code !== 'Enter' && e.code !== 'NumpadEnter') return;
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+      if (!isCtrlOrCmd) return;
+
+      if (e.altKey) {
+        e.preventDefault();
+        triggerSubmit();
+      } else if (!e.shiftKey) {
+        e.preventDefault();
+        triggerRun();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [triggerRun, triggerSubmit]);
+
+  // Monaco editor mount handler: registers editor-level actions & keybindings
+  const handleEditorDidMount = useCallback((editor: any, monaco: any) => {
+    editorRef.current = editor;
+
+    // Run Code: Ctrl/Cmd + Enter
+    editor.addAction({
+      id: 'run-code',
+      label: 'Run Code (Ctrl+Enter)',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+      run: () => {
+        triggerRun();
+      }
+    });
+
+    // Submit Solution: Ctrl/Cmd + Alt/Option + Enter
+    editor.addAction({
+      id: 'submit-solution',
+      label: 'Submit Solution (Ctrl+Alt+Enter)',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.Enter],
+      run: () => {
+        triggerSubmit();
+      }
+    });
+  }, [triggerRun, triggerSubmit]);
 
   const getDifficultyBadge = (diff: Difficulty) => {
     switch (diff) {
@@ -506,7 +585,7 @@ export const ProblemSolverPage: React.FC = () => {
               onClick={handleRun}
               disabled={isRunning}
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-secondary hover:bg-accent border border-border text-foreground text-xs font-medium disabled:opacity-50"
-              title="Run code"
+              title="Run code (Ctrl + Enter)"
             >
               <Play className="w-3 h-3 fill-current text-[#93C572]" />
               <span>Run</span>
@@ -515,7 +594,7 @@ export const ProblemSolverPage: React.FC = () => {
               onClick={handleSubmit}
               disabled={isRunning}
               className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-md bg-[#93C572] hover:bg-[#85b964] text-black text-xs font-bold disabled:opacity-50 shadow-xs mr-1"
-              title="Submit code"
+              title="Submit code (Ctrl + Alt + Enter)"
             >
               <Send className="w-3 h-3" />
               <span>Submit</span>
@@ -865,20 +944,28 @@ export const ProblemSolverPage: React.FC = () => {
             <button
               onClick={handleRun}
               disabled={isRunning}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border border-input bg-card hover:bg-accent text-foreground transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border border-input bg-card hover:bg-accent text-foreground transition-colors disabled:opacity-50 group"
+              title="Run code (Ctrl + Enter)"
             >
               <Play className="w-3.5 h-3.5 text-[#93C572] fill-current" />
-              Run
+              <span>Run</span>
+              <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground bg-muted/70 rounded border border-border/50 group-hover:border-border transition-colors">
+                Ctrl+Enter
+              </kbd>
             </button>
 
             {/* Submit Button */}
             <button
               onClick={handleSubmit}
               disabled={isRunning}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold bg-[#93C572] hover:bg-[#A4D287] text-black transition-colors shadow-sm disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold bg-[#93C572] hover:bg-[#A4D287] text-black transition-colors shadow-sm disabled:opacity-50 group"
+              title="Submit code (Ctrl + Alt + Enter)"
             >
               <Send className="w-3.5 h-3.5" />
-              Submit
+              <span>Submit</span>
+              <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium text-black/80 bg-black/10 rounded border border-black/15 group-hover:bg-black/20 transition-colors">
+                Ctrl+Alt+Enter
+              </kbd>
             </button>
           </div>
         </div>
@@ -891,6 +978,7 @@ export const ProblemSolverPage: React.FC = () => {
             theme="vs-dark"
             value={code}
             onChange={handleEditorChange}
+            onMount={handleEditorDidMount}
             options={{
               fontSize: 13,
               fontFamily: "'JetBrains Mono', Consolas, monospace",
