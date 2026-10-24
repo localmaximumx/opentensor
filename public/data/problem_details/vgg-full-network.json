@@ -26,7 +26,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **Complete VGG Network** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef vgg_maxpool(x: np.ndarray) -> np.ndarray:\n    x_arr = np.asarray(x, dtype=float)\n    N, H, W, C = x_arr.shape\n    out_h = H // 2\n    out_w = W // 2\n    out = np.zeros((N, out_h, out_w, C), dtype=float)\n    for n in range(N):\n        for h in range(out_h):\n            for w in range(out_w):\n                patch = x_arr[n, 2*h:2*h+2, 2*w:2*w+2, :]\n                out[n, h, w, :] = np.max(patch, axis=(0, 1))\n    return out\n\ndef vgg_features(x: np.ndarray, config: list, kernels: list, biases: list) -> np.ndarray:\n    cur = np.asarray(x, dtype=float)\n    k_idx = 0\n    for item in config:\n        if item == \"M\":\n            cur = vgg_maxpool(cur)\n        else:\n            k = np.asarray(kernels[k_idx], dtype=float)\n            b = np.asarray(biases[k_idx], dtype=float)\n            k_idx += 1\n            Kh, Kw, Cin, Cout = k.shape\n            pad_h = (Kh - 1) // 2\n            pad_w = (Kw - 1) // 2\n            padded = np.pad(cur, ((0, 0), (pad_h, pad_h), (pad_w, pad_w), (0, 0)), mode='constant')\n            N, H, W, _ = cur.shape\n            conv = np.zeros((N, H, W, Cout), dtype=float)\n            for n in range(N):\n                for h in range(H):\n                    for w in range(W):\n                        patch = padded[n, h:h+Kh, w:w+Kw, :]\n                        for c in range(Cout):\n                            conv[n, h, w, c] = np.sum(patch * k[:, :, :, c]) + b[c]\n            cur = np.maximum(0.0, conv)\n    return cur\n\ndef vgg_forward(x: np.ndarray, config: list, kernels: list, biases: list, classifier: dict) -> np.ndarray:\n    feat = vgg_features(x, config, kernels, biases)\n    B = feat.shape[0]\n    flat = feat.reshape(B, -1)\n    w1, b1 = np.asarray(classifier['W1'], dtype=float), np.asarray(classifier['b1'], dtype=float)\n    w2, b2 = np.asarray(classifier['W2'], dtype=float), np.asarray(classifier['b2'], dtype=float)\n    w3, b3 = np.asarray(classifier['W3'], dtype=float), np.asarray(classifier['b3'], dtype=float)\n    \n    h1 = np.maximum(0.0, flat @ w1 + b1)\n    h2 = np.maximum(0.0, h1 @ w2 + b2)\n    out = h2 @ w3 + b3\n    return np.round(out, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "public-1",
+      "id": "vgg-full-network-tc-1",
       "name": "Compact classifier",
       "inputs": {
         "x": [
@@ -107,8 +107,8 @@
       ]
     },
     {
-      "id": "public-2",
-      "name": "Two convolution channels",
+      "id": "vgg-full-network-tc-2",
+      "name": "Case 2",
       "inputs": {
         "x": [
           [
@@ -183,8 +183,8 @@
       ]
     },
     {
-      "id": "public-3",
-      "name": "Batch logits",
+      "id": "vgg-full-network-tc-3",
+      "name": "Case 3",
       "inputs": {
         "x": [
           [
@@ -275,18 +275,18 @@
           [
             [
               [
-                1
+                2
               ],
               [
-                2
+                3
               ]
             ],
             [
               [
-                3
+                4
               ],
               [
-                4
+                6
               ]
             ]
           ]
@@ -297,7 +297,7 @@
           ]
         ],
         "config": [
-          1,
+          2,
           "M"
         ],
         "kernels": [
@@ -305,7 +305,7 @@
             [
               [
                 [
-                  1
+                  2
                 ]
               ]
             ]
@@ -314,39 +314,39 @@
         "classifier": {
           "W1": [
             [
-              0.5
+              0.75
             ]
           ],
           "W2": [
             [
-              2
+              3
             ]
           ],
           "W3": [
             [
-              0.3,
-              -0.2
+              0.45,
+              -0.3
             ]
           ],
           "b1": [
             0
           ],
           "b2": [
-            -1
+            -2
           ],
           "b3": [
-            0.1,
+            0.15,
             0
           ]
         }
       },
-      "isPublic": false,
       "expectedOutput": [
         [
-          1.0,
-          -0.6
+          11.4,
+          -7.5
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "vgg-full-network-tc-5",
@@ -356,32 +356,37 @@
           [
             [
               [
-                1,
-                -1
+                0
+              ],
+              [
+                1
+              ]
+            ],
+            [
+              [
+                2
+              ],
+              [
+                2
               ]
             ]
           ]
         ],
         "biases": [
           [
-            0,
-            0.1
+            0
           ]
         ],
         "config": [
-          2
+          0,
+          "M"
         ],
         "kernels": [
           [
             [
               [
                 [
-                  1,
                   0
-                ],
-                [
-                  0.5,
-                  1
                 ]
               ]
             ]
@@ -390,10 +395,7 @@
         "classifier": {
           "W1": [
             [
-              1
-            ],
-            [
-              0.5
+              0.25
             ]
           ],
           "W2": [
@@ -403,26 +405,29 @@
           ],
           "W3": [
             [
-              1
+              0.15,
+              -0.1
             ]
           ],
           "b1": [
             0
           ],
           "b2": [
-            0.2
+            0
           ],
           "b3": [
-            -0.1
+            0.05,
+            0
           ]
         }
       },
-      "isPublic": false,
       "expectedOutput": [
         [
-          0.6
+          0.05,
+          0.0
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "vgg-full-network-tc-6",
@@ -432,25 +437,30 @@
           [
             [
               [
-                1
+                2
+              ],
+              [
+                4
               ]
-            ]
-          ],
-          [
+            ],
             [
               [
-                -1
+                6
+              ],
+              [
+                8
               ]
             ]
           ]
         ],
         "biases": [
           [
-            0.5
+            0
           ]
         ],
         "config": [
-          1
+          2,
+          "M"
         ],
         "kernels": [
           [
@@ -466,48 +476,39 @@
         "classifier": {
           "W1": [
             [
-              1,
-              -1
+              1.0
             ]
           ],
           "W2": [
             [
-              1
-            ],
-            [
-              0.5
+              4
             ]
           ],
           "W3": [
             [
-              1,
-              -1
+              0.6,
+              -0.4
             ]
           ],
           "b1": [
-            0,
-            0.2
-          ],
-          "b2": [
             0
           ],
+          "b2": [
+            -2
+          ],
           "b3": [
-            0.1,
-            0.2
+            0.2,
+            0
           ]
         }
       },
-      "isPublic": false,
       "expectedOutput": [
         [
-          2.6,
-          -2.3
-        ],
-        [
-          0.2,
-          0.1
+          37.4,
+          -24.8
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "vgg-full-network-tc-7",
@@ -517,18 +518,18 @@
           [
             [
               [
-                1
+                -1
               ],
               [
-                2
+                -2
               ]
             ],
             [
               [
-                3
+                -3
               ],
               [
-                4
+                -4
               ]
             ]
           ]
@@ -539,7 +540,7 @@
           ]
         ],
         "config": [
-          1,
+          -1,
           "M"
         ],
         "kernels": [
@@ -547,7 +548,7 @@
             [
               [
                 [
-                  1
+                  -1
                 ]
               ]
             ]
@@ -556,1083 +557,39 @@
         "classifier": {
           "W1": [
             [
-              0.5
+              -0.5
             ]
           ],
           "W2": [
             [
-              2
+              -2
             ]
           ],
           "W3": [
             [
-              0.3,
-              -0.2
+              -0.3,
+              0.2
             ]
           ],
           "b1": [
             0
           ],
           "b2": [
-            -1
+            1
           ],
           "b3": [
-            0.1,
+            -0.1,
             0
           ]
         }
       },
-      "isPublic": false,
       "expectedOutput": [
         [
-          1.0,
-          -0.6
+          -0.4,
+          0.2
         ]
-      ]
-    },
-    {
-      "id": "vgg-full-network-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0,
-            0.1
-          ]
-        ],
-        "config": [
-          2
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  1,
-                  0
-                ],
-                [
-                  0.5,
-                  1
-                ]
-              ]
-            ]
-          ]
-        ],
-        "classifier": {
-          "W1": [
-            [
-              1
-            ],
-            [
-              0.5
-            ]
-          ],
-          "W2": [
-            [
-              1
-            ]
-          ],
-          "W3": [
-            [
-              1
-            ]
-          ],
-          "b1": [
-            0
-          ],
-          "b2": [
-            0.2
-          ],
-          "b3": [
-            -0.1
-          ]
-        }
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          0.6
-        ]
-      ]
-    },
-    {
-      "id": "vgg-full-network-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                -1
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0.5
-          ]
-        ],
-        "config": [
-          1
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  2
-                ]
-              ]
-            ]
-          ]
-        ],
-        "classifier": {
-          "W1": [
-            [
-              1,
-              -1
-            ]
-          ],
-          "W2": [
-            [
-              1
-            ],
-            [
-              0.5
-            ]
-          ],
-          "W3": [
-            [
-              1,
-              -1
-            ]
-          ],
-          "b1": [
-            0,
-            0.2
-          ],
-          "b2": [
-            0
-          ],
-          "b3": [
-            0.1,
-            0.2
-          ]
-        }
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          2.6,
-          -2.3
-        ],
-        [
-          0.2,
-          0.1
-        ]
-      ]
-    },
-    {
-      "id": "vgg-full-network-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ]
-            ],
-            [
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0
-          ]
-        ],
-        "config": [
-          1,
-          "M"
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  1
-                ]
-              ]
-            ]
-          ]
-        ],
-        "classifier": {
-          "W1": [
-            [
-              0.5
-            ]
-          ],
-          "W2": [
-            [
-              2
-            ]
-          ],
-          "W3": [
-            [
-              0.3,
-              -0.2
-            ]
-          ],
-          "b1": [
-            0
-          ],
-          "b2": [
-            -1
-          ],
-          "b3": [
-            0.1,
-            0
-          ]
-        }
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.0,
-          -0.6
-        ]
-      ]
-    },
-    {
-      "id": "vgg-full-network-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0,
-            0.1
-          ]
-        ],
-        "config": [
-          2
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  1,
-                  0
-                ],
-                [
-                  0.5,
-                  1
-                ]
-              ]
-            ]
-          ]
-        ],
-        "classifier": {
-          "W1": [
-            [
-              1
-            ],
-            [
-              0.5
-            ]
-          ],
-          "W2": [
-            [
-              1
-            ]
-          ],
-          "W3": [
-            [
-              1
-            ]
-          ],
-          "b1": [
-            0
-          ],
-          "b2": [
-            0.2
-          ],
-          "b3": [
-            -0.1
-          ]
-        }
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          0.6
-        ]
-      ]
-    },
-    {
-      "id": "vgg-full-network-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                -1
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0.5
-          ]
-        ],
-        "config": [
-          1
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  2
-                ]
-              ]
-            ]
-          ]
-        ],
-        "classifier": {
-          "W1": [
-            [
-              1,
-              -1
-            ]
-          ],
-          "W2": [
-            [
-              1
-            ],
-            [
-              0.5
-            ]
-          ],
-          "W3": [
-            [
-              1,
-              -1
-            ]
-          ],
-          "b1": [
-            0,
-            0.2
-          ],
-          "b2": [
-            0
-          ],
-          "b3": [
-            0.1,
-            0.2
-          ]
-        }
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          2.6,
-          -2.3
-        ],
-        [
-          0.2,
-          0.1
-        ]
-      ]
-    },
-    {
-      "id": "vgg-full-network-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ]
-            ],
-            [
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0
-          ]
-        ],
-        "config": [
-          1,
-          "M"
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  1
-                ]
-              ]
-            ]
-          ]
-        ],
-        "classifier": {
-          "W1": [
-            [
-              0.5
-            ]
-          ],
-          "W2": [
-            [
-              2
-            ]
-          ],
-          "W3": [
-            [
-              0.3,
-              -0.2
-            ]
-          ],
-          "b1": [
-            0
-          ],
-          "b2": [
-            -1
-          ],
-          "b3": [
-            0.1,
-            0
-          ]
-        }
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.0,
-          -0.6
-        ]
-      ]
-    },
-    {
-      "id": "vgg-full-network-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0,
-            0.1
-          ]
-        ],
-        "config": [
-          2
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  1,
-                  0
-                ],
-                [
-                  0.5,
-                  1
-                ]
-              ]
-            ]
-          ]
-        ],
-        "classifier": {
-          "W1": [
-            [
-              1
-            ],
-            [
-              0.5
-            ]
-          ],
-          "W2": [
-            [
-              1
-            ]
-          ],
-          "W3": [
-            [
-              1
-            ]
-          ],
-          "b1": [
-            0
-          ],
-          "b2": [
-            0.2
-          ],
-          "b3": [
-            -0.1
-          ]
-        }
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          0.6
-        ]
-      ]
-    },
-    {
-      "id": "vgg-full-network-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                -1
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0.5
-          ]
-        ],
-        "config": [
-          1
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  2
-                ]
-              ]
-            ]
-          ]
-        ],
-        "classifier": {
-          "W1": [
-            [
-              1,
-              -1
-            ]
-          ],
-          "W2": [
-            [
-              1
-            ],
-            [
-              0.5
-            ]
-          ],
-          "W3": [
-            [
-              1,
-              -1
-            ]
-          ],
-          "b1": [
-            0,
-            0.2
-          ],
-          "b2": [
-            0
-          ],
-          "b3": [
-            0.1,
-            0.2
-          ]
-        }
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          2.6,
-          -2.3
-        ],
-        [
-          0.2,
-          0.1
-        ]
-      ]
-    },
-    {
-      "id": "vgg-full-network-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ]
-            ],
-            [
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0
-          ]
-        ],
-        "config": [
-          1,
-          "M"
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  1
-                ]
-              ]
-            ]
-          ]
-        ],
-        "classifier": {
-          "W1": [
-            [
-              0.5
-            ]
-          ],
-          "W2": [
-            [
-              2
-            ]
-          ],
-          "W3": [
-            [
-              0.3,
-              -0.2
-            ]
-          ],
-          "b1": [
-            0
-          ],
-          "b2": [
-            -1
-          ],
-          "b3": [
-            0.1,
-            0
-          ]
-        }
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.0,
-          -0.6
-        ]
-      ]
-    },
-    {
-      "id": "vgg-full-network-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0,
-            0.1
-          ]
-        ],
-        "config": [
-          2
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  1,
-                  0
-                ],
-                [
-                  0.5,
-                  1
-                ]
-              ]
-            ]
-          ]
-        ],
-        "classifier": {
-          "W1": [
-            [
-              1
-            ],
-            [
-              0.5
-            ]
-          ],
-          "W2": [
-            [
-              1
-            ]
-          ],
-          "W3": [
-            [
-              1
-            ]
-          ],
-          "b1": [
-            0
-          ],
-          "b2": [
-            0.2
-          ],
-          "b3": [
-            -0.1
-          ]
-        }
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          0.6
-        ]
-      ]
-    },
-    {
-      "id": "vgg-full-network-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                -1
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0.5
-          ]
-        ],
-        "config": [
-          1
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  2
-                ]
-              ]
-            ]
-          ]
-        ],
-        "classifier": {
-          "W1": [
-            [
-              1,
-              -1
-            ]
-          ],
-          "W2": [
-            [
-              1
-            ],
-            [
-              0.5
-            ]
-          ],
-          "W3": [
-            [
-              1,
-              -1
-            ]
-          ],
-          "b1": [
-            0,
-            0.2
-          ],
-          "b2": [
-            0
-          ],
-          "b3": [
-            0.1,
-            0.2
-          ]
-        }
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          2.6,
-          -2.3
-        ],
-        [
-          0.2,
-          0.1
-        ]
-      ]
-    },
-    {
-      "id": "vgg-full-network-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ]
-            ],
-            [
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0
-          ]
-        ],
-        "config": [
-          1,
-          "M"
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  1
-                ]
-              ]
-            ]
-          ]
-        ],
-        "classifier": {
-          "W1": [
-            [
-              0.5
-            ]
-          ],
-          "W2": [
-            [
-              2
-            ]
-          ],
-          "W3": [
-            [
-              0.3,
-              -0.2
-            ]
-          ],
-          "b1": [
-            0
-          ],
-          "b2": [
-            -1
-          ],
-          "b3": [
-            0.1,
-            0
-          ]
-        }
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.0,
-          -0.6
-        ]
-      ]
-    },
-    {
-      "id": "vgg-full-network-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0,
-            0.1
-          ]
-        ],
-        "config": [
-          2
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  1,
-                  0
-                ],
-                [
-                  0.5,
-                  1
-                ]
-              ]
-            ]
-          ]
-        ],
-        "classifier": {
-          "W1": [
-            [
-              1
-            ],
-            [
-              0.5
-            ]
-          ],
-          "W2": [
-            [
-              1
-            ]
-          ],
-          "W3": [
-            [
-              1
-            ]
-          ],
-          "b1": [
-            0
-          ],
-          "b2": [
-            0.2
-          ],
-          "b3": [
-            -0.1
-          ]
-        }
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          0.6
-        ]
-      ]
+      ],
+      "isPublic": false
     }
   ],
   "functionMetadata": {

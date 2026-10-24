@@ -26,7 +26,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **Complete Vision Transformer** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef _gelu_tanh(x):\n    return 0.5 * x * (1.0 + np.tanh(np.sqrt(2.0 / np.pi) * (x + 0.044715 * (x ** 3))))\n\ndef _layer_norm(x, eps=1e-6):\n    mean = np.mean(x, axis=-1, keepdims=True)\n    var = np.var(x, axis=-1, keepdims=True)\n    return (x - mean) / np.sqrt(var + eps)\n\ndef vit_forward(image: np.ndarray, patch_size: int, num_heads: int,\n                W_patch: np.ndarray, patch_bias: np.ndarray,\n                cls_token: np.ndarray, pos_embed: np.ndarray,\n                encoder_weights: list, W_head: np.ndarray) -> np.ndarray:\n    img = np.asarray(image, dtype=float)\n    P = int(patch_size)\n    B, H, W, C = img.shape\n    num_h = H // P\n    num_w = W // P\n    patches = []\n    for ph in range(num_h):\n        for pw in range(num_w):\n            patch = img[:, ph*P:(ph+1)*P, pw*P:(pw+1)*P, :]\n            flat = patch.reshape(B, P*P*C)\n            patches.append(flat)\n    stacked = np.stack(patches, axis=1)\n    patch_emb = np.matmul(stacked, np.asarray(W_patch, dtype=float)) + np.asarray(patch_bias, dtype=float)\n    \n    cls = np.asarray(cls_token, dtype=float)\n    cls_b = np.broadcast_to(cls, (B, 1, patch_emb.shape[2]))\n    tokens = np.concatenate([cls_b, patch_emb], axis=1)\n    cur = tokens + np.asarray(pos_embed, dtype=float)\n    \n    for block in encoder_weights:\n        H_heads = int(num_heads)\n        D = cur.shape[2]\n        d_h = D // H_heads\n        norm1 = _layer_norm(cur)\n        Q = np.matmul(norm1, np.asarray(block['Wq'], dtype=float)).reshape(B, cur.shape[1], H_heads, d_h).swapaxes(1, 2)\n        K = np.matmul(norm1, np.asarray(block['Wk'], dtype=float)).reshape(B, cur.shape[1], H_heads, d_h).swapaxes(1, 2)\n        V = np.matmul(norm1, np.asarray(block['Wv'], dtype=float)).reshape(B, cur.shape[1], H_heads, d_h).swapaxes(1, 2)\n        scores = np.matmul(Q, np.swapaxes(K, -1, -2)) / np.sqrt(d_h)\n        exp_s = np.exp(scores - np.max(scores, axis=-1, keepdims=True))\n        weights = exp_s / np.sum(exp_s, axis=-1, keepdims=True)\n        attn = np.matmul(weights, V)\n        concat = attn.swapaxes(1, 2).reshape(B, cur.shape[1], D)\n        attn_out = np.matmul(concat, np.asarray(block['Wo'], dtype=float))\n        y = cur + attn_out\n        \n        norm2 = _layer_norm(y)\n        hidden = _gelu_tanh(np.matmul(norm2, np.asarray(block['W1'], dtype=float)))\n        mlp_out = np.matmul(hidden, np.asarray(block['W2'], dtype=float))\n        cur = y + mlp_out\n        \n    cls_feat = cur[:, 0, :]\n    norm_cls = _layer_norm(cls_feat)\n    logits = np.matmul(norm_cls, np.asarray(W_head, dtype=float))\n    return np.round(logits, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "test-1",
+      "id": "vit-full-network-tc-1",
       "name": "Tiny grayscale ViT",
       "inputs": {
         "image": [
@@ -177,8 +177,8 @@
       ]
     },
     {
-      "id": "test-2",
-      "name": "Two-channel patches",
+      "id": "vit-full-network-tc-2",
+      "name": "Case 2",
       "inputs": {
         "image": [
           [
@@ -364,14 +364,14 @@
       "isPublic": true,
       "expectedOutput": [
         [
-          1.499999,
+          1.5,
           -0.5
         ]
       ]
     },
     {
-      "id": "test-3",
-      "name": "Batched two-layer ViT",
+      "id": "vit-full-network-tc-3",
+      "name": "Case 3",
       "inputs": {
         "image": [
           [
@@ -612,6 +612,308 @@
           [
             [
               [
+                1.0123
+              ],
+              [
+                -1.386
+              ]
+            ],
+            [
+              [
+                0.0662
+              ],
+              [
+                -1.5539
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0.4
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.0104,
+          0.0208
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          -1.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "vit-full-network-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
+                1.5184
+              ],
+              [
+                -2.079
+              ]
+            ],
+            [
+              [
+                0.0992
+              ],
+              [
+                -2.3309
+              ]
+            ]
+          ]
+        ],
+        "W_head": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "W_patch": [
+          [
+            1,
+            0.6
+          ]
+        ],
+        "cls_token": [
+          [
+            [
+              1,
+              -1
+            ]
+          ]
+        ],
+        "num_heads": 1,
+        "pos_embed": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "patch_bias": [
+          0.0156,
+          0.0312
+        ],
+        "patch_size": 1,
+        "encoder_weights": [
+          {
+            "W1": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "W2": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wk": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wo": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wq": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "Wv": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "expectedOutput": [
+        [
+          1.0,
+          -1.0
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "vit-full-network-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "image": [
+          [
+            [
+              [
                 1.265364
               ],
               [
@@ -752,434 +1054,6 @@
         [
           1.0,
           -1.0
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-5",
-      "name": "Case 5",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
-                1.463106,
-                0.982782
-              ],
-              [
-                -1.518959,
-                -0.249174
-              ],
-              [
-                91,
-                91
-              ]
-            ],
-            [
-              [
-                0.009436,
-                -0.885937
-              ],
-              [
-                1.42101,
-                -0.362725
-              ],
-              [
-                91,
-                91
-              ]
-            ],
-            [
-              [
-                73,
-                73
-              ],
-              [
-                73,
-                73
-              ],
-              [
-                73,
-                73
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0.5
-          ],
-          [
-            -0.5,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            0.5,
-            0
-          ],
-          [
-            0,
-            0.5
-          ],
-          [
-            -1,
-            0
-          ],
-          [
-            0,
-            -1
-          ],
-          [
-            0.25,
-            0
-          ],
-          [
-            0,
-            0.25
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 1,
-        "pos_embed": [
-          [
-            [
-              0.1,
-              -0.1
-            ],
-            [
-              0.2,
-              -0.2
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.026,
-          0.052
-        ],
-        "patch_size": 2,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                0,
-                1
-              ],
-              [
-                1,
-                0
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.499999,
-          -0.5
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-6",
-      "name": "Case 6",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
-                -1.108547
-              ],
-              [
-                -0.055819
-              ]
-            ],
-            [
-              [
-                0.96107
-              ],
-              [
-                1.995646
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                -0.24891
-              ],
-              [
-                -0.586723
-              ]
-            ],
-            [
-              [
-                -1.682625
-              ],
-              [
-                -1.817477
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0.5
-          ],
-          [
-            -0.5,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            -0.5
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 2,
-        "pos_embed": [
-          [
-            [
-              0,
-              0
-            ],
-            [
-              0.1,
-              0
-            ],
-            [
-              0,
-              0.1
-            ],
-            [
-              -0.1,
-              0
-            ],
-            [
-              0,
-              -0.1
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.039,
-          0.078
-        ],
-        "patch_size": 1,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          },
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                0.5,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                0,
-                1
-              ],
-              [
-                1,
-                0
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0.5
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.5,
-          -0.5
-        ],
-        [
-          1.5,
-          -0.5
         ]
       ]
     },
@@ -1191,157 +1065,6 @@
           [
             [
               [
-                1.265364
-              ],
-              [
-                -1.732516
-              ]
-            ],
-            [
-              [
-                0.082703
-              ],
-              [
-                -1.942425
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            0.5
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 1,
-        "pos_embed": [
-          [
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.013,
-          0.026
-        ],
-        "patch_size": 1,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.0,
-          -1.0
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
                 1.463106,
                 0.982782
               ],
@@ -1522,2323 +1245,7 @@
       "isPublic": false,
       "expectedOutput": [
         [
-          1.499999,
-          -0.5
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
-                -1.108547
-              ],
-              [
-                -0.055819
-              ]
-            ],
-            [
-              [
-                0.96107
-              ],
-              [
-                1.995646
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                -0.24891
-              ],
-              [
-                -0.586723
-              ]
-            ],
-            [
-              [
-                -1.682625
-              ],
-              [
-                -1.817477
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0.5
-          ],
-          [
-            -0.5,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            -0.5
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 2,
-        "pos_embed": [
-          [
-            [
-              0,
-              0
-            ],
-            [
-              0.1,
-              0
-            ],
-            [
-              0,
-              0.1
-            ],
-            [
-              -0.1,
-              0
-            ],
-            [
-              0,
-              -0.1
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.039,
-          0.078
-        ],
-        "patch_size": 1,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          },
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                0.5,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                0,
-                1
-              ],
-              [
-                1,
-                0
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0.5
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
           1.5,
-          -0.5
-        ],
-        [
-          1.5,
-          -0.5
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
-                1.265364
-              ],
-              [
-                -1.732516
-              ]
-            ],
-            [
-              [
-                0.082703
-              ],
-              [
-                -1.942425
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            0.5
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 1,
-        "pos_embed": [
-          [
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.013,
-          0.026
-        ],
-        "patch_size": 1,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.0,
-          -1.0
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
-                1.463106,
-                0.982782
-              ],
-              [
-                -1.518959,
-                -0.249174
-              ],
-              [
-                91,
-                91
-              ]
-            ],
-            [
-              [
-                0.009436,
-                -0.885937
-              ],
-              [
-                1.42101,
-                -0.362725
-              ],
-              [
-                91,
-                91
-              ]
-            ],
-            [
-              [
-                73,
-                73
-              ],
-              [
-                73,
-                73
-              ],
-              [
-                73,
-                73
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0.5
-          ],
-          [
-            -0.5,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            0.5,
-            0
-          ],
-          [
-            0,
-            0.5
-          ],
-          [
-            -1,
-            0
-          ],
-          [
-            0,
-            -1
-          ],
-          [
-            0.25,
-            0
-          ],
-          [
-            0,
-            0.25
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 1,
-        "pos_embed": [
-          [
-            [
-              0.1,
-              -0.1
-            ],
-            [
-              0.2,
-              -0.2
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.026,
-          0.052
-        ],
-        "patch_size": 2,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                0,
-                1
-              ],
-              [
-                1,
-                0
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.499999,
-          -0.5
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
-                -1.108547
-              ],
-              [
-                -0.055819
-              ]
-            ],
-            [
-              [
-                0.96107
-              ],
-              [
-                1.995646
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                -0.24891
-              ],
-              [
-                -0.586723
-              ]
-            ],
-            [
-              [
-                -1.682625
-              ],
-              [
-                -1.817477
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0.5
-          ],
-          [
-            -0.5,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            -0.5
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 2,
-        "pos_embed": [
-          [
-            [
-              0,
-              0
-            ],
-            [
-              0.1,
-              0
-            ],
-            [
-              0,
-              0.1
-            ],
-            [
-              -0.1,
-              0
-            ],
-            [
-              0,
-              -0.1
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.039,
-          0.078
-        ],
-        "patch_size": 1,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          },
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                0.5,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                0,
-                1
-              ],
-              [
-                1,
-                0
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0.5
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.5,
-          -0.5
-        ],
-        [
-          1.5,
-          -0.5
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
-                1.265364
-              ],
-              [
-                -1.732516
-              ]
-            ],
-            [
-              [
-                0.082703
-              ],
-              [
-                -1.942425
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            0.5
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 1,
-        "pos_embed": [
-          [
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.013,
-          0.026
-        ],
-        "patch_size": 1,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.0,
-          -1.0
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
-                1.463106,
-                0.982782
-              ],
-              [
-                -1.518959,
-                -0.249174
-              ],
-              [
-                91,
-                91
-              ]
-            ],
-            [
-              [
-                0.009436,
-                -0.885937
-              ],
-              [
-                1.42101,
-                -0.362725
-              ],
-              [
-                91,
-                91
-              ]
-            ],
-            [
-              [
-                73,
-                73
-              ],
-              [
-                73,
-                73
-              ],
-              [
-                73,
-                73
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0.5
-          ],
-          [
-            -0.5,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            0.5,
-            0
-          ],
-          [
-            0,
-            0.5
-          ],
-          [
-            -1,
-            0
-          ],
-          [
-            0,
-            -1
-          ],
-          [
-            0.25,
-            0
-          ],
-          [
-            0,
-            0.25
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 1,
-        "pos_embed": [
-          [
-            [
-              0.1,
-              -0.1
-            ],
-            [
-              0.2,
-              -0.2
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.026,
-          0.052
-        ],
-        "patch_size": 2,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                0,
-                1
-              ],
-              [
-                1,
-                0
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.499999,
-          -0.5
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
-                -1.108547
-              ],
-              [
-                -0.055819
-              ]
-            ],
-            [
-              [
-                0.96107
-              ],
-              [
-                1.995646
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                -0.24891
-              ],
-              [
-                -0.586723
-              ]
-            ],
-            [
-              [
-                -1.682625
-              ],
-              [
-                -1.817477
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0.5
-          ],
-          [
-            -0.5,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            -0.5
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 2,
-        "pos_embed": [
-          [
-            [
-              0,
-              0
-            ],
-            [
-              0.1,
-              0
-            ],
-            [
-              0,
-              0.1
-            ],
-            [
-              -0.1,
-              0
-            ],
-            [
-              0,
-              -0.1
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.039,
-          0.078
-        ],
-        "patch_size": 1,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          },
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                0.5,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                0,
-                1
-              ],
-              [
-                1,
-                0
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0.5
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.5,
-          -0.5
-        ],
-        [
-          1.5,
-          -0.5
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
-                1.265364
-              ],
-              [
-                -1.732516
-              ]
-            ],
-            [
-              [
-                0.082703
-              ],
-              [
-                -1.942425
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            0.5
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 1,
-        "pos_embed": [
-          [
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.013,
-          0.026
-        ],
-        "patch_size": 1,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.0,
-          -1.0
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
-                1.463106,
-                0.982782
-              ],
-              [
-                -1.518959,
-                -0.249174
-              ],
-              [
-                91,
-                91
-              ]
-            ],
-            [
-              [
-                0.009436,
-                -0.885937
-              ],
-              [
-                1.42101,
-                -0.362725
-              ],
-              [
-                91,
-                91
-              ]
-            ],
-            [
-              [
-                73,
-                73
-              ],
-              [
-                73,
-                73
-              ],
-              [
-                73,
-                73
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0.5
-          ],
-          [
-            -0.5,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            0.5,
-            0
-          ],
-          [
-            0,
-            0.5
-          ],
-          [
-            -1,
-            0
-          ],
-          [
-            0,
-            -1
-          ],
-          [
-            0.25,
-            0
-          ],
-          [
-            0,
-            0.25
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 1,
-        "pos_embed": [
-          [
-            [
-              0.1,
-              -0.1
-            ],
-            [
-              0.2,
-              -0.2
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.026,
-          0.052
-        ],
-        "patch_size": 2,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                0,
-                1
-              ],
-              [
-                1,
-                0
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.499999,
-          -0.5
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
-                -1.108547
-              ],
-              [
-                -0.055819
-              ]
-            ],
-            [
-              [
-                0.96107
-              ],
-              [
-                1.995646
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                -0.24891
-              ],
-              [
-                -0.586723
-              ]
-            ],
-            [
-              [
-                -1.682625
-              ],
-              [
-                -1.817477
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0.5
-          ],
-          [
-            -0.5,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            -0.5
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 2,
-        "pos_embed": [
-          [
-            [
-              0,
-              0
-            ],
-            [
-              0.1,
-              0
-            ],
-            [
-              0,
-              0.1
-            ],
-            [
-              -0.1,
-              0
-            ],
-            [
-              0,
-              -0.1
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.039,
-          0.078
-        ],
-        "patch_size": 1,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          },
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                0.5,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                0,
-                1
-              ],
-              [
-                1,
-                0
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0.5
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.5,
-          -0.5
-        ],
-        [
-          1.5,
-          -0.5
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
-                1.265364
-              ],
-              [
-                -1.732516
-              ]
-            ],
-            [
-              [
-                0.082703
-              ],
-              [
-                -1.942425
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            0.5
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 1,
-        "pos_embed": [
-          [
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ],
-            [
-              0,
-              0
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.013,
-          0.026
-        ],
-        "patch_size": 1,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.0,
-          -1.0
-        ]
-      ]
-    },
-    {
-      "id": "vit-full-network-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "image": [
-          [
-            [
-              [
-                1.463106,
-                0.982782
-              ],
-              [
-                -1.518959,
-                -0.249174
-              ],
-              [
-                91,
-                91
-              ]
-            ],
-            [
-              [
-                0.009436,
-                -0.885937
-              ],
-              [
-                1.42101,
-                -0.362725
-              ],
-              [
-                91,
-                91
-              ]
-            ],
-            [
-              [
-                73,
-                73
-              ],
-              [
-                73,
-                73
-              ],
-              [
-                73,
-                73
-              ]
-            ]
-          ]
-        ],
-        "W_head": [
-          [
-            1,
-            0.5
-          ],
-          [
-            -0.5,
-            1
-          ]
-        ],
-        "W_patch": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            0.5,
-            0
-          ],
-          [
-            0,
-            0.5
-          ],
-          [
-            -1,
-            0
-          ],
-          [
-            0,
-            -1
-          ],
-          [
-            0.25,
-            0
-          ],
-          [
-            0,
-            0.25
-          ]
-        ],
-        "cls_token": [
-          [
-            [
-              1,
-              -1
-            ]
-          ]
-        ],
-        "num_heads": 1,
-        "pos_embed": [
-          [
-            [
-              0.1,
-              -0.1
-            ],
-            [
-              0.2,
-              -0.2
-            ]
-          ]
-        ],
-        "patch_bias": [
-          0.026,
-          0.052
-        ],
-        "patch_size": 2,
-        "encoder_weights": [
-          {
-            "W1": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "W2": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wk": [
-              [
-                0,
-                1
-              ],
-              [
-                1,
-                0
-              ]
-            ],
-            "Wo": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wq": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ],
-            "Wv": [
-              [
-                1,
-                0
-              ],
-              [
-                0,
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          1.499999,
           -0.5
         ]
       ]

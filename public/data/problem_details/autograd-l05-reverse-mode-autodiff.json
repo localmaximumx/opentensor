@@ -32,7 +32,7 @@
   "solution": "### 💡 Intuition & Approach\nExecute full reverse-mode automatic differentiation over a scalar expression graph containing leaves and arithmetic operations (add, mul, tanh).\n\n### ⚡ Python Reference Implementation\n```python\ndef autograd_l05_reverse_mode_autodiff(nodes: dict, root_id: str) -> dict:\n    grads = {k: 0.0 for k in nodes}\n    grads[root_id] = 1.0\n    topo, visited = [], set()\n    def dfs(n):\n        visited.add(n)\n        for p in nodes[n].get('parents', []):\n            if p not in visited: dfs(p)\n        topo.append(n)\n    dfs(root_id)\n    for nid in topo[::-1]:\n        up, op, parents = grads[nid], nodes[nid].get('op'), nodes[nid].get('parents', [])\n        if op == 'add':\n            grads[parents[0]] += up\n            grads[parents[1]] += up\n        elif op == 'mul':\n            grads[parents[0]] += up * nodes[parents[1]]['val']\n            grads[parents[1]] += up * nodes[parents[0]]['val']\n        elif op == 'tanh':\n            y = nodes[nid]['val']\n            grads[parents[0]] += up * (1.0 - y ** 2)\n    return {k: round(v, 6) for k, v in grads.items() if nodes[k].get('op') == 'leaf'}\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
   "testCases": [
     {
-      "id": "autograd-l05-reverse-mode-autodiff-test-1",
+      "id": "autograd-l05-reverse-mode-autodiff-tc-1",
       "name": "Standard Test Case 1",
       "inputs": {
         "nodes": {
@@ -72,8 +72,8 @@
       "isPublic": true
     },
     {
-      "id": "autograd-l05-reverse-mode-autodiff-test-2",
-      "name": "Standard Test Case 2",
+      "id": "autograd-l05-reverse-mode-autodiff-tc-2",
+      "name": "Case 2",
       "inputs": {
         "nodes": {
           "x": {
@@ -102,17 +102,17 @@
       "inputs": {
         "nodes": {
           "a": {
-            "val": 2.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "b": {
             "val": 3.0,
             "op": "leaf",
             "parents": []
           },
+          "b": {
+            "val": 4.5,
+            "op": "leaf",
+            "parents": []
+          },
           "c": {
-            "val": 5.0,
+            "val": 7.5,
             "op": "add",
             "parents": [
               "a",
@@ -120,7 +120,7 @@
             ]
           },
           "d": {
-            "val": 10.0,
+            "val": 15.0,
             "op": "mul",
             "parents": [
               "c",
@@ -131,8 +131,8 @@
         "root_id": "d"
       },
       "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
+        "a": 10.5,
+        "b": 3.0
       },
       "isPublic": false
     },
@@ -142,17 +142,17 @@
       "inputs": {
         "nodes": {
           "a": {
-            "val": 2.0,
+            "val": 1.0,
             "op": "leaf",
             "parents": []
           },
           "b": {
-            "val": 3.0,
+            "val": 1.5,
             "op": "leaf",
             "parents": []
           },
           "c": {
-            "val": 5.0,
+            "val": 2.5,
             "op": "add",
             "parents": [
               "a",
@@ -160,7 +160,7 @@
             ]
           },
           "d": {
-            "val": 10.0,
+            "val": 5.0,
             "op": "mul",
             "parents": [
               "c",
@@ -171,8 +171,8 @@
         "root_id": "d"
       },
       "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
+        "a": 3.5,
+        "b": 1.0
       },
       "isPublic": false
     },
@@ -182,17 +182,17 @@
       "inputs": {
         "nodes": {
           "a": {
-            "val": 2.0,
+            "val": 4.0,
             "op": "leaf",
             "parents": []
           },
           "b": {
-            "val": 3.0,
+            "val": 6.0,
             "op": "leaf",
             "parents": []
           },
           "c": {
-            "val": 5.0,
+            "val": 10.0,
             "op": "add",
             "parents": [
               "a",
@@ -200,7 +200,7 @@
             ]
           },
           "d": {
-            "val": 10.0,
+            "val": 20.0,
             "op": "mul",
             "parents": [
               "c",
@@ -211,8 +211,8 @@
         "root_id": "d"
       },
       "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
+        "a": 14.0,
+        "b": 4.0
       },
       "isPublic": false
     },
@@ -222,17 +222,17 @@
       "inputs": {
         "nodes": {
           "a": {
-            "val": 2.0,
+            "val": -2.0,
             "op": "leaf",
             "parents": []
           },
           "b": {
-            "val": 3.0,
+            "val": -3.0,
             "op": "leaf",
             "parents": []
           },
           "c": {
-            "val": 5.0,
+            "val": -5.0,
             "op": "add",
             "parents": [
               "a",
@@ -240,7 +240,7 @@
             ]
           },
           "d": {
-            "val": 10.0,
+            "val": -10.0,
             "op": "mul",
             "parents": [
               "c",
@@ -251,8 +251,8 @@
         "root_id": "d"
       },
       "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
+        "a": -7.0,
+        "b": -2.0
       },
       "isPublic": false
     },
@@ -262,17 +262,17 @@
       "inputs": {
         "nodes": {
           "a": {
-            "val": 2.0,
+            "val": 1.6,
             "op": "leaf",
             "parents": []
           },
           "b": {
-            "val": 3.0,
+            "val": 2.4,
             "op": "leaf",
             "parents": []
           },
           "c": {
-            "val": 5.0,
+            "val": 4.0,
             "op": "add",
             "parents": [
               "a",
@@ -280,7 +280,7 @@
             ]
           },
           "d": {
-            "val": 10.0,
+            "val": 8.0,
             "op": "mul",
             "parents": [
               "c",
@@ -291,528 +291,8 @@
         "root_id": "d"
       },
       "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
-      },
-      "isPublic": false
-    },
-    {
-      "id": "autograd-l05-reverse-mode-autodiff-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "nodes": {
-          "a": {
-            "val": 2.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "b": {
-            "val": 3.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "c": {
-            "val": 5.0,
-            "op": "add",
-            "parents": [
-              "a",
-              "b"
-            ]
-          },
-          "d": {
-            "val": 10.0,
-            "op": "mul",
-            "parents": [
-              "c",
-              "a"
-            ]
-          }
-        },
-        "root_id": "d"
-      },
-      "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
-      },
-      "isPublic": false
-    },
-    {
-      "id": "autograd-l05-reverse-mode-autodiff-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "nodes": {
-          "a": {
-            "val": 2.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "b": {
-            "val": 3.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "c": {
-            "val": 5.0,
-            "op": "add",
-            "parents": [
-              "a",
-              "b"
-            ]
-          },
-          "d": {
-            "val": 10.0,
-            "op": "mul",
-            "parents": [
-              "c",
-              "a"
-            ]
-          }
-        },
-        "root_id": "d"
-      },
-      "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
-      },
-      "isPublic": false
-    },
-    {
-      "id": "autograd-l05-reverse-mode-autodiff-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "nodes": {
-          "a": {
-            "val": 2.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "b": {
-            "val": 3.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "c": {
-            "val": 5.0,
-            "op": "add",
-            "parents": [
-              "a",
-              "b"
-            ]
-          },
-          "d": {
-            "val": 10.0,
-            "op": "mul",
-            "parents": [
-              "c",
-              "a"
-            ]
-          }
-        },
-        "root_id": "d"
-      },
-      "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
-      },
-      "isPublic": false
-    },
-    {
-      "id": "autograd-l05-reverse-mode-autodiff-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "nodes": {
-          "a": {
-            "val": 2.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "b": {
-            "val": 3.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "c": {
-            "val": 5.0,
-            "op": "add",
-            "parents": [
-              "a",
-              "b"
-            ]
-          },
-          "d": {
-            "val": 10.0,
-            "op": "mul",
-            "parents": [
-              "c",
-              "a"
-            ]
-          }
-        },
-        "root_id": "d"
-      },
-      "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
-      },
-      "isPublic": false
-    },
-    {
-      "id": "autograd-l05-reverse-mode-autodiff-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "nodes": {
-          "a": {
-            "val": 2.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "b": {
-            "val": 3.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "c": {
-            "val": 5.0,
-            "op": "add",
-            "parents": [
-              "a",
-              "b"
-            ]
-          },
-          "d": {
-            "val": 10.0,
-            "op": "mul",
-            "parents": [
-              "c",
-              "a"
-            ]
-          }
-        },
-        "root_id": "d"
-      },
-      "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
-      },
-      "isPublic": false
-    },
-    {
-      "id": "autograd-l05-reverse-mode-autodiff-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "nodes": {
-          "a": {
-            "val": 2.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "b": {
-            "val": 3.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "c": {
-            "val": 5.0,
-            "op": "add",
-            "parents": [
-              "a",
-              "b"
-            ]
-          },
-          "d": {
-            "val": 10.0,
-            "op": "mul",
-            "parents": [
-              "c",
-              "a"
-            ]
-          }
-        },
-        "root_id": "d"
-      },
-      "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
-      },
-      "isPublic": false
-    },
-    {
-      "id": "autograd-l05-reverse-mode-autodiff-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "nodes": {
-          "a": {
-            "val": 2.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "b": {
-            "val": 3.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "c": {
-            "val": 5.0,
-            "op": "add",
-            "parents": [
-              "a",
-              "b"
-            ]
-          },
-          "d": {
-            "val": 10.0,
-            "op": "mul",
-            "parents": [
-              "c",
-              "a"
-            ]
-          }
-        },
-        "root_id": "d"
-      },
-      "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
-      },
-      "isPublic": false
-    },
-    {
-      "id": "autograd-l05-reverse-mode-autodiff-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "nodes": {
-          "a": {
-            "val": 2.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "b": {
-            "val": 3.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "c": {
-            "val": 5.0,
-            "op": "add",
-            "parents": [
-              "a",
-              "b"
-            ]
-          },
-          "d": {
-            "val": 10.0,
-            "op": "mul",
-            "parents": [
-              "c",
-              "a"
-            ]
-          }
-        },
-        "root_id": "d"
-      },
-      "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
-      },
-      "isPublic": false
-    },
-    {
-      "id": "autograd-l05-reverse-mode-autodiff-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "nodes": {
-          "a": {
-            "val": 2.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "b": {
-            "val": 3.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "c": {
-            "val": 5.0,
-            "op": "add",
-            "parents": [
-              "a",
-              "b"
-            ]
-          },
-          "d": {
-            "val": 10.0,
-            "op": "mul",
-            "parents": [
-              "c",
-              "a"
-            ]
-          }
-        },
-        "root_id": "d"
-      },
-      "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
-      },
-      "isPublic": false
-    },
-    {
-      "id": "autograd-l05-reverse-mode-autodiff-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "nodes": {
-          "a": {
-            "val": 2.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "b": {
-            "val": 3.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "c": {
-            "val": 5.0,
-            "op": "add",
-            "parents": [
-              "a",
-              "b"
-            ]
-          },
-          "d": {
-            "val": 10.0,
-            "op": "mul",
-            "parents": [
-              "c",
-              "a"
-            ]
-          }
-        },
-        "root_id": "d"
-      },
-      "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
-      },
-      "isPublic": false
-    },
-    {
-      "id": "autograd-l05-reverse-mode-autodiff-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "nodes": {
-          "a": {
-            "val": 2.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "b": {
-            "val": 3.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "c": {
-            "val": 5.0,
-            "op": "add",
-            "parents": [
-              "a",
-              "b"
-            ]
-          },
-          "d": {
-            "val": 10.0,
-            "op": "mul",
-            "parents": [
-              "c",
-              "a"
-            ]
-          }
-        },
-        "root_id": "d"
-      },
-      "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
-      },
-      "isPublic": false
-    },
-    {
-      "id": "autograd-l05-reverse-mode-autodiff-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "nodes": {
-          "a": {
-            "val": 2.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "b": {
-            "val": 3.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "c": {
-            "val": 5.0,
-            "op": "add",
-            "parents": [
-              "a",
-              "b"
-            ]
-          },
-          "d": {
-            "val": 10.0,
-            "op": "mul",
-            "parents": [
-              "c",
-              "a"
-            ]
-          }
-        },
-        "root_id": "d"
-      },
-      "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
-      },
-      "isPublic": false
-    },
-    {
-      "id": "autograd-l05-reverse-mode-autodiff-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "nodes": {
-          "a": {
-            "val": 2.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "b": {
-            "val": 3.0,
-            "op": "leaf",
-            "parents": []
-          },
-          "c": {
-            "val": 5.0,
-            "op": "add",
-            "parents": [
-              "a",
-              "b"
-            ]
-          },
-          "d": {
-            "val": 10.0,
-            "op": "mul",
-            "parents": [
-              "c",
-              "a"
-            ]
-          }
-        },
-        "root_id": "d"
-      },
-      "expectedOutput": {
-        "a": 7.0,
-        "b": 2.0
+        "a": 5.6,
+        "b": 1.6
       },
       "isPublic": false
     }

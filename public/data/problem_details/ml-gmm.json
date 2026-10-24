@@ -35,7 +35,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **Gaussian Mixture Models (EM)** by following direct mathematical principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef ml_gmm(X: list, k: int = 2, max_iter: int = 10) -> dict:\n    x = np.array(X, dtype=np.float64)\n    N, D = x.shape\n    means, vars_, weights = x[:k].copy(), np.ones((k, D)), np.ones(k) / k\n    for _ in range(int(max_iter)):\n        lik = np.zeros((N, k))\n        for j in range(k):\n            v = np.maximum(vars_[j], 1e-6)\n            lik[:, j] = weights[j] * np.exp(-0.5*np.sum(((x - means[j])**2)/v, axis=1)) / (np.sqrt((2*np.pi)**D * np.prod(v)) + 1e-12)\n        gamma = lik / (np.sum(lik, axis=1, keepdims=True) + 1e-12)\n        Nk = np.sum(gamma, axis=0) + 1e-12\n        weights = Nk / N\n        for j in range(k):\n            means[j] = np.sum(gamma[:, j:j+1]*x, axis=0) / Nk[j]\n            vars_[j] = np.maximum(np.sum(gamma[:, j:j+1]*((x - means[j])**2), axis=0) / Nk[j], 1e-6)\n    return {'means': np.round(means, 4).tolist(), 'variances': np.round(vars_, 4).tolist(), 'weights': np.round(weights, 4).tolist()}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the size of the primary input.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "c1",
+      "id": "ml-gmm-tc-1",
       "name": "Simple 1D two-cluster data",
       "inputs": {
         "X": [
@@ -85,44 +85,51 @@
       "inputs": {
         "X": [
           [
-            1.0
+            1.5
           ],
           [
-            1.2
+            1.8
           ],
           [
-            5.0
+            7.5
           ],
           [
-            5.2
+            7.8
           ]
         ],
-        "k": 2,
-        "max_iter": 5
+        "k": 3,
+        "max_iter": 8
       },
       "expectedOutput": {
         "means": [
           [
-            2.5668
+            1.6466
           ],
           [
-            3.4624
+            1.6534
+          ],
+          [
+            7.65
           ]
         ],
         "variances": [
           [
-            3.7257
+            0.0225
           ],
           [
-            3.8786
+            0.0225
+          ],
+          [
+            0.0225
           ]
         ],
         "weights": [
-          0.4046,
-          0.5954
+          0.25,
+          0.25,
+          0.5
         ]
       },
-      "isPublic": false
+      "isPublic": true
     },
     {
       "id": "ml-gmm-tc-3",
@@ -130,41 +137,34 @@
       "inputs": {
         "X": [
           [
-            1.0
+            0.5
           ],
           [
-            1.2
+            0.6
           ],
           [
-            5.0
+            2.5
           ],
           [
-            5.2
+            2.6
           ]
         ],
-        "k": 2,
-        "max_iter": 5
+        "k": 1,
+        "max_iter": 2
       },
       "expectedOutput": {
         "means": [
           [
-            2.5668
-          ],
-          [
-            3.4624
+            1.55
           ]
         ],
         "variances": [
           [
-            3.7257
-          ],
-          [
-            3.8786
+            1.0025
           ]
         ],
         "weights": [
-          0.4046,
-          0.5954
+          1.0
         ]
       },
       "isPublic": false
@@ -175,41 +175,55 @@
       "inputs": {
         "X": [
           [
-            1.0
+            2.0
           ],
           [
-            1.2
+            2.4
           ],
           [
-            5.0
+            10.0
           ],
           [
-            5.2
+            10.4
           ]
         ],
-        "k": 2,
-        "max_iter": 5
+        "k": 4,
+        "max_iter": 10
       },
       "expectedOutput": {
         "means": [
           [
-            2.5668
+            2.1919
           ],
           [
-            3.4624
+            2.2081
+          ],
+          [
+            10.1919
+          ],
+          [
+            10.2081
           ]
         ],
         "variances": [
           [
-            3.7257
+            0.0399
           ],
           [
-            3.8786
+            0.0399
+          ],
+          [
+            0.0399
+          ],
+          [
+            0.0399
           ]
         ],
         "weights": [
-          0.4046,
-          0.5954
+          0.25,
+          0.25,
+          0.25,
+          0.25
         ]
       },
       "isPublic": false
@@ -220,41 +234,41 @@
       "inputs": {
         "X": [
           [
-            1.0
+            0.8
           ],
           [
-            1.2
+            0.96
           ],
           [
-            5.0
+            4.0
           ],
           [
-            5.2
+            4.16
           ]
         ],
         "k": 2,
-        "max_iter": 5
+        "max_iter": 4
       },
       "expectedOutput": {
         "means": [
           [
-            2.5668
+            2.2422
           ],
           [
-            3.4624
+            2.6648
           ]
         ],
         "variances": [
           [
-            3.7257
+            2.5099
           ],
           [
-            3.8786
+            2.5322
           ]
         ],
         "weights": [
-          0.4046,
-          0.5954
+          0.4373,
+          0.5627
         ]
       },
       "isPublic": false
@@ -265,42 +279,25 @@
       "inputs": {
         "X": [
           [
-            1.0
+            0.25
           ],
           [
-            1.2
+            0.3
           ],
           [
-            5.0
+            1.25
           ],
           [
-            5.2
+            1.3
           ]
         ],
-        "k": 2,
-        "max_iter": 5
+        "k": 0,
+        "max_iter": 1
       },
       "expectedOutput": {
-        "means": [
-          [
-            2.5668
-          ],
-          [
-            3.4624
-          ]
-        ],
-        "variances": [
-          [
-            3.7257
-          ],
-          [
-            3.8786
-          ]
-        ],
-        "weights": [
-          0.4046,
-          0.5954
-        ]
+        "means": [],
+        "variances": [],
+        "weights": []
       },
       "isPublic": false
     },
@@ -310,626 +307,41 @@
       "inputs": {
         "X": [
           [
-            1.0
-          ],
-          [
             1.2
           ],
           [
-            5.0
+            1.44
           ],
           [
-            5.2
+            6.0
+          ],
+          [
+            6.24
           ]
         ],
         "k": 2,
-        "max_iter": 5
+        "max_iter": 6
       },
       "expectedOutput": {
         "means": [
           [
-            2.5668
+            2.4254
           ],
           [
-            3.4624
+            4.471
           ]
         ],
         "variances": [
           [
-            3.7257
+            4.0989
           ],
           [
-            3.8786
+            5.21
           ]
         ],
         "weights": [
-          0.4046,
-          0.5954
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ml-gmm-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "X": [
-          [
-            1.0
-          ],
-          [
-            1.2
-          ],
-          [
-            5.0
-          ],
-          [
-            5.2
-          ]
-        ],
-        "k": 2,
-        "max_iter": 5
-      },
-      "expectedOutput": {
-        "means": [
-          [
-            2.5668
-          ],
-          [
-            3.4624
-          ]
-        ],
-        "variances": [
-          [
-            3.7257
-          ],
-          [
-            3.8786
-          ]
-        ],
-        "weights": [
-          0.4046,
-          0.5954
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ml-gmm-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "X": [
-          [
-            1.0
-          ],
-          [
-            1.2
-          ],
-          [
-            5.0
-          ],
-          [
-            5.2
-          ]
-        ],
-        "k": 2,
-        "max_iter": 5
-      },
-      "expectedOutput": {
-        "means": [
-          [
-            2.5668
-          ],
-          [
-            3.4624
-          ]
-        ],
-        "variances": [
-          [
-            3.7257
-          ],
-          [
-            3.8786
-          ]
-        ],
-        "weights": [
-          0.4046,
-          0.5954
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ml-gmm-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "X": [
-          [
-            1.0
-          ],
-          [
-            1.2
-          ],
-          [
-            5.0
-          ],
-          [
-            5.2
-          ]
-        ],
-        "k": 2,
-        "max_iter": 5
-      },
-      "expectedOutput": {
-        "means": [
-          [
-            2.5668
-          ],
-          [
-            3.4624
-          ]
-        ],
-        "variances": [
-          [
-            3.7257
-          ],
-          [
-            3.8786
-          ]
-        ],
-        "weights": [
-          0.4046,
-          0.5954
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ml-gmm-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "X": [
-          [
-            1.0
-          ],
-          [
-            1.2
-          ],
-          [
-            5.0
-          ],
-          [
-            5.2
-          ]
-        ],
-        "k": 2,
-        "max_iter": 5
-      },
-      "expectedOutput": {
-        "means": [
-          [
-            2.5668
-          ],
-          [
-            3.4624
-          ]
-        ],
-        "variances": [
-          [
-            3.7257
-          ],
-          [
-            3.8786
-          ]
-        ],
-        "weights": [
-          0.4046,
-          0.5954
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ml-gmm-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "X": [
-          [
-            1.0
-          ],
-          [
-            1.2
-          ],
-          [
-            5.0
-          ],
-          [
-            5.2
-          ]
-        ],
-        "k": 2,
-        "max_iter": 5
-      },
-      "expectedOutput": {
-        "means": [
-          [
-            2.5668
-          ],
-          [
-            3.4624
-          ]
-        ],
-        "variances": [
-          [
-            3.7257
-          ],
-          [
-            3.8786
-          ]
-        ],
-        "weights": [
-          0.4046,
-          0.5954
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ml-gmm-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "X": [
-          [
-            1.0
-          ],
-          [
-            1.2
-          ],
-          [
-            5.0
-          ],
-          [
-            5.2
-          ]
-        ],
-        "k": 2,
-        "max_iter": 5
-      },
-      "expectedOutput": {
-        "means": [
-          [
-            2.5668
-          ],
-          [
-            3.4624
-          ]
-        ],
-        "variances": [
-          [
-            3.7257
-          ],
-          [
-            3.8786
-          ]
-        ],
-        "weights": [
-          0.4046,
-          0.5954
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ml-gmm-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "X": [
-          [
-            1.0
-          ],
-          [
-            1.2
-          ],
-          [
-            5.0
-          ],
-          [
-            5.2
-          ]
-        ],
-        "k": 2,
-        "max_iter": 5
-      },
-      "expectedOutput": {
-        "means": [
-          [
-            2.5668
-          ],
-          [
-            3.4624
-          ]
-        ],
-        "variances": [
-          [
-            3.7257
-          ],
-          [
-            3.8786
-          ]
-        ],
-        "weights": [
-          0.4046,
-          0.5954
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ml-gmm-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "X": [
-          [
-            1.0
-          ],
-          [
-            1.2
-          ],
-          [
-            5.0
-          ],
-          [
-            5.2
-          ]
-        ],
-        "k": 2,
-        "max_iter": 5
-      },
-      "expectedOutput": {
-        "means": [
-          [
-            2.5668
-          ],
-          [
-            3.4624
-          ]
-        ],
-        "variances": [
-          [
-            3.7257
-          ],
-          [
-            3.8786
-          ]
-        ],
-        "weights": [
-          0.4046,
-          0.5954
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ml-gmm-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "X": [
-          [
-            1.0
-          ],
-          [
-            1.2
-          ],
-          [
-            5.0
-          ],
-          [
-            5.2
-          ]
-        ],
-        "k": 2,
-        "max_iter": 5
-      },
-      "expectedOutput": {
-        "means": [
-          [
-            2.5668
-          ],
-          [
-            3.4624
-          ]
-        ],
-        "variances": [
-          [
-            3.7257
-          ],
-          [
-            3.8786
-          ]
-        ],
-        "weights": [
-          0.4046,
-          0.5954
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ml-gmm-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "X": [
-          [
-            1.0
-          ],
-          [
-            1.2
-          ],
-          [
-            5.0
-          ],
-          [
-            5.2
-          ]
-        ],
-        "k": 2,
-        "max_iter": 5
-      },
-      "expectedOutput": {
-        "means": [
-          [
-            2.5668
-          ],
-          [
-            3.4624
-          ]
-        ],
-        "variances": [
-          [
-            3.7257
-          ],
-          [
-            3.8786
-          ]
-        ],
-        "weights": [
-          0.4046,
-          0.5954
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ml-gmm-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "X": [
-          [
-            1.0
-          ],
-          [
-            1.2
-          ],
-          [
-            5.0
-          ],
-          [
-            5.2
-          ]
-        ],
-        "k": 2,
-        "max_iter": 5
-      },
-      "expectedOutput": {
-        "means": [
-          [
-            2.5668
-          ],
-          [
-            3.4624
-          ]
-        ],
-        "variances": [
-          [
-            3.7257
-          ],
-          [
-            3.8786
-          ]
-        ],
-        "weights": [
-          0.4046,
-          0.5954
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ml-gmm-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "X": [
-          [
-            1.0
-          ],
-          [
-            1.2
-          ],
-          [
-            5.0
-          ],
-          [
-            5.2
-          ]
-        ],
-        "k": 2,
-        "max_iter": 5
-      },
-      "expectedOutput": {
-        "means": [
-          [
-            2.5668
-          ],
-          [
-            3.4624
-          ]
-        ],
-        "variances": [
-          [
-            3.7257
-          ],
-          [
-            3.8786
-          ]
-        ],
-        "weights": [
-          0.4046,
-          0.5954
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ml-gmm-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "X": [
-          [
-            1.0
-          ],
-          [
-            1.2
-          ],
-          [
-            5.0
-          ],
-          [
-            5.2
-          ]
-        ],
-        "k": 2,
-        "max_iter": 5
-      },
-      "expectedOutput": {
-        "means": [
-          [
-            2.5668
-          ],
-          [
-            3.4624
-          ]
-        ],
-        "variances": [
-          [
-            3.7257
-          ],
-          [
-            3.8786
-          ]
-        ],
-        "weights": [
-          0.4046,
-          0.5954
+          0.3671,
+          0.6329
         ]
       },
       "isPublic": false

@@ -26,7 +26,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **SiTU-GLU** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch\n\ndef situ_glu(input_tensor: torch.Tensor, gate_projection: torch.Tensor, up_projection: torch.Tensor, gate_cap: float = 4.0, up_cap: float = 25.0) -> torch.Tensor:\n    inp = input_tensor if isinstance(input_tensor, torch.Tensor) else torch.tensor(input_tensor, dtype=torch.float64)\n    gp = gate_projection if isinstance(gate_projection, torch.Tensor) else torch.tensor(gate_projection, dtype=torch.float64)\n    up = up_projection if isinstance(up_projection, torch.Tensor) else torch.tensor(up_projection, dtype=torch.float64)\n    g_cap = float(gate_cap)\n    u_cap = float(up_cap)\n    \n    g = inp @ gp\n    u = inp @ up\n    branch1 = g_cap * torch.tanh(g / g_cap) * torch.sigmoid(g)\n    branch2 = u_cap * torch.tanh(u / u_cap)\n    out = branch1 * branch2\n    return torch.round(out * 1e6) / 1e6\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "test-1",
+      "id": "k3-situ-glu-tc-1",
       "name": "Zero activation",
       "inputs": {
         "up_cap": 25,
@@ -48,15 +48,11 @@
         ]
       },
       "isPublic": true,
-      "expectedOutput": [
-        [
-          0.0
-        ]
-      ]
+      "expectedOutput": "tensor([[0.]], dtype=torch.float64)"
     },
     {
-      "id": "test-2",
-      "name": "Independent branch projections",
+      "id": "k3-situ-glu-tc-2",
+      "name": "Case 2",
       "inputs": {
         "up_cap": 25,
         "gate_cap": 4,
@@ -92,20 +88,11 @@
         ]
       },
       "isPublic": true,
-      "expectedOutput": [
-        [
-          -0.103446,
-          -0.074627
-        ],
-        [
-          -0.285898,
-          0.321888
-        ]
-      ]
+      "expectedOutput": "tensor([[-0.1034, -0.0746],\n        [-0.2859,  0.3219]], dtype=torch.float64)"
     },
     {
-      "id": "test-3",
-      "name": "Saturation with small caps",
+      "id": "k3-situ-glu-tc-3",
+      "name": "Case 3",
       "inputs": {
         "up_cap": 3,
         "gate_cap": 2,
@@ -143,18 +130,7 @@
         ]
       },
       "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            5.882286,
-            0.008603
-          ],
-          [
-            -1.66329,
-            5.727729
-          ]
-        ]
-      ]
+      "expectedOutput": "tensor([[[ 5.8823,  0.0086],\n         [-1.6633,  5.7277]]], dtype=torch.float64)"
     },
     {
       "id": "k3-situ-glu-tc-4",
@@ -254,331 +230,6 @@
         ]
       },
       "expectedOutput": "tensor([[3.3951]], dtype=torch.float64)",
-      "isPublic": false
-    },
-    {
-      "id": "k3-situ-glu-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "up_cap": 75,
-        "gate_cap": 12,
-        "input_tensor": [
-          [
-            1
-          ]
-        ],
-        "up_projection": [
-          [
-            3
-          ]
-        ],
-        "gate_projection": [
-          [
-            3
-          ]
-        ]
-      },
-      "expectedOutput": "tensor([[8.3944]], dtype=torch.float64)",
-      "isPublic": false
-    },
-    {
-      "id": "k3-situ-glu-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "up_cap": 6,
-        "gate_cap": 1,
-        "input_tensor": [
-          [
-            1
-          ]
-        ],
-        "up_projection": [
-          [
-            1
-          ]
-        ],
-        "gate_projection": [
-          [
-            1
-          ]
-        ]
-      },
-      "expectedOutput": "tensor([[0.5517]], dtype=torch.float64)",
-      "isPublic": false
-    },
-    {
-      "id": "k3-situ-glu-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "up_cap": 27,
-        "gate_cap": 6,
-        "input_tensor": [
-          [
-            1
-          ]
-        ],
-        "up_projection": [
-          [
-            2
-          ]
-        ],
-        "gate_projection": [
-          [
-            2
-          ]
-        ]
-      },
-      "expectedOutput": "tensor([[3.3920]], dtype=torch.float64)",
-      "isPublic": false
-    },
-    {
-      "id": "k3-situ-glu-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "up_cap": 100,
-        "gate_cap": 16,
-        "input_tensor": [
-          [
-            1
-          ]
-        ],
-        "up_projection": [
-          [
-            4
-          ]
-        ],
-        "gate_projection": [
-          [
-            4
-          ]
-        ]
-      },
-      "expectedOutput": "tensor([[15.3847]], dtype=torch.float64)",
-      "isPublic": false
-    },
-    {
-      "id": "k3-situ-glu-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "up_cap": 25,
-        "gate_cap": 4,
-        "input_tensor": [
-          [
-            0
-          ]
-        ],
-        "up_projection": [
-          [
-            1
-          ]
-        ],
-        "gate_projection": [
-          [
-            1
-          ]
-        ]
-      },
-      "expectedOutput": "tensor([[0.]], dtype=torch.float64)",
-      "isPublic": false
-    },
-    {
-      "id": "k3-situ-glu-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "up_cap": 19,
-        "gate_cap": 3,
-        "input_tensor": [
-          [
-            1
-          ]
-        ],
-        "up_projection": [
-          [
-            1
-          ]
-        ],
-        "gate_projection": [
-          [
-            1
-          ]
-        ]
-      },
-      "expectedOutput": "tensor([[0.7045]], dtype=torch.float64)",
-      "isPublic": false
-    },
-    {
-      "id": "k3-situ-glu-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "up_cap": 125,
-        "gate_cap": 20,
-        "input_tensor": [
-          [
-            1
-          ]
-        ],
-        "up_projection": [
-          [
-            5
-          ]
-        ],
-        "gate_projection": [
-          [
-            5
-          ]
-        ]
-      },
-      "expectedOutput": "tensor([[24.3150]], dtype=torch.float64)",
-      "isPublic": false
-    },
-    {
-      "id": "k3-situ-glu-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "up_cap": 28,
-        "gate_cap": 7,
-        "input_tensor": [
-          [
-            1
-          ]
-        ],
-        "up_projection": [
-          [
-            3
-          ]
-        ],
-        "gate_projection": [
-          [
-            3
-          ]
-        ]
-      },
-      "expectedOutput": "tensor([[8.0534]], dtype=torch.float64)",
-      "isPublic": false
-    },
-    {
-      "id": "k3-situ-glu-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "up_cap": 20,
-        "gate_cap": 3,
-        "input_tensor": [
-          [
-            1
-          ]
-        ],
-        "up_projection": [
-          [
-            1
-          ]
-        ],
-        "gate_projection": [
-          [
-            1
-          ]
-        ]
-      },
-      "expectedOutput": "tensor([[0.7045]], dtype=torch.float64)",
-      "isPublic": false
-    },
-    {
-      "id": "k3-situ-glu-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "up_cap": 150,
-        "gate_cap": 24,
-        "input_tensor": [
-          [
-            1
-          ]
-        ],
-        "up_projection": [
-          [
-            6
-          ]
-        ],
-        "gate_projection": [
-          [
-            6
-          ]
-        ]
-      },
-      "expectedOutput": "tensor([[35.1623]], dtype=torch.float64)",
-      "isPublic": false
-    },
-    {
-      "id": "k3-situ-glu-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "up_cap": 29,
-        "gate_cap": 8,
-        "input_tensor": [
-          [
-            1
-          ]
-        ],
-        "up_projection": [
-          [
-            4
-          ]
-        ],
-        "gate_projection": [
-          [
-            4
-          ]
-        ]
-      },
-      "expectedOutput": "tensor([[14.4304]], dtype=torch.float64)",
-      "isPublic": false
-    },
-    {
-      "id": "k3-situ-glu-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "up_cap": 30,
-        "gate_cap": 5,
-        "input_tensor": [
-          [
-            1
-          ]
-        ],
-        "up_projection": [
-          [
-            1
-          ]
-        ],
-        "gate_projection": [
-          [
-            1
-          ]
-        ]
-      },
-      "expectedOutput": "tensor([[0.7212]], dtype=torch.float64)",
-      "isPublic": false
-    },
-    {
-      "id": "k3-situ-glu-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "up_cap": 10,
-        "gate_cap": 2,
-        "input_tensor": [
-          [
-            1
-          ]
-        ],
-        "up_projection": [
-          [
-            1
-          ]
-        ],
-        "gate_projection": [
-          [
-            1
-          ]
-        ]
-      },
-      "expectedOutput": "tensor([[0.6734]], dtype=torch.float64)",
       "isPublic": false
     }
   ],

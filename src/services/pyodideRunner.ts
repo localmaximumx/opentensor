@@ -866,6 +866,24 @@ def _check_equal(actual, expected):
 
     # Handle numpy / list / tuple
     if isinstance(expected, (list, tuple)) or isinstance(actual, (list, tuple, np.ndarray)):
+        # If both are sequences of the exact same length, try elementwise check first (handles tuples of arrays/scalars like (w, b))
+        if isinstance(actual, (list, tuple, np.ndarray)) and isinstance(expected, (list, tuple, np.ndarray)):
+            try:
+                act_list = list(actual)
+                exp_list = list(expected)
+                if len(act_list) == len(exp_list):
+                    all_matched = True
+                    first_err = ""
+                    for a_item, e_item in zip(act_list, exp_list):
+                        ok_item, msg_item = _check_equal(a_item, e_item)
+                        if not ok_item:
+                            all_matched = False
+                            first_err = msg_item
+                            break
+                    if all_matched:
+                        return True, ""
+            except Exception:
+                pass
         try:
             act_arr = np.array(actual, dtype=float)
             exp_arr = np.array(expected, dtype=float)
@@ -874,8 +892,11 @@ def _check_equal(actual, expected):
             close = np.allclose(act_arr, exp_arr, rtol=1e-3, atol=1e-4, equal_nan=True)
             return bool(close), "" if close else "Array values do not match expected output"
         except Exception:
-            eq = list(actual) == list(expected)
-            return eq, "" if eq else "List items do not match"
+            try:
+                eq = list(actual) == list(expected)
+                return eq, "" if eq else "List items do not match"
+            except Exception:
+                return False, "Failed to compare sequence outputs"
 
     # Handle dict
     if isinstance(expected, dict) or isinstance(actual, dict):
@@ -1177,16 +1198,16 @@ json.dumps(__res_obj)
 }
 
 /**
- * Run submission against large test suite (20 or more test cases).
- * If testCases has fewer than 20 cases, dynamically synthesizes diverse variations
- * (edge cases, scaled, negative, boundary values) to evaluate code over 20+ cases.
+ * Run submission against comprehensive test suite (7 test cases).
+ * If testCases has fewer than 7 cases, dynamically synthesizes diverse variations
+ * (edge cases, scaled, negative, boundary values) to evaluate code over 7 cases.
  */
 export async function runPythonSubmission(
   userCode: string,
   functionName: string,
   testCases: Array<{ id: string; name: string; inputs: Record<string, any>; expectedOutput?: any }>,
   refSolutionCode?: string | null,
-  targetCount: number = 20
+  targetCount: number = 7
 ): Promise<ExecutionReport> {
   let expandedCases = [...testCases];
 

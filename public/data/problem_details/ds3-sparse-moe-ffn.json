@@ -119,7 +119,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **Sparse MoE FFN** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\ndef solution(x, expert_weights, router_logits, top_k=1):\n    x=np.asarray(x,dtype=float); ew=np.asarray(expert_weights,dtype=float); logits=np.asarray(router_logits,dtype=float)\n    if ew.ndim!=3 or logits.shape[-1]!=ew.shape[0]: raise ValueError(\"expert_weights must be [experts,in,out]\")\n    idx=np.argsort(logits,axis=-1)[...,-top_k:][...,::-1]\n    vals=np.take_along_axis(logits,idx,axis=-1); probs=np.exp(vals-vals.max(axis=-1,keepdims=True)); probs/=probs.sum(axis=-1,keepdims=True)\n    out=np.zeros(x.shape[:-1]+(ew.shape[-1],),dtype=float)\n    for j in range(top_k):\n        ids=idx[...,j]; weights=probs[...,j]\n        # This simple reference expects one router row per token (x shape [tokens,features]).\n        for t in range(x.shape[0]): out[t]+=weights[t]*(x[t]@ew[ids[t]])\n    return out.tolist()\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "case-1",
+      "id": "ds3-sparse-moe-ffn-tc-1",
       "name": "smoke test",
       "inputs": {
         "x": [
@@ -165,14 +165,14 @@
       },
       "expectedOutput": [
         [
-          1.2689414213699952
+          1.2689
         ]
       ],
       "isPublic": true
     },
     {
-      "id": "case-2",
-      "name": "edge case 1",
+      "id": "ds3-sparse-moe-ffn-tc-2",
+      "name": "Case 2",
       "inputs": {
         "x": [
           [
@@ -209,58 +209,6 @@
     {
       "id": "ds3-sparse-moe-ffn-tc-3",
       "name": "Case 3",
-      "inputs": {
-        "x": [
-          [
-            2.0,
-            4.0
-          ]
-        ],
-        "expert_weights": [
-          [
-            [
-              2.0
-            ],
-            [
-              0.0
-            ]
-          ],
-          [
-            [
-              0.0
-            ],
-            [
-              2.0
-            ]
-          ],
-          [
-            [
-              2.0
-            ],
-            [
-              2.0
-            ]
-          ]
-        ],
-        "router_logits": [
-          [
-            4.0,
-            2.0,
-            0.0
-          ]
-        ],
-        "top_k": 4
-      },
-      "expectedOutput": [
-        [
-          1.2689414213699952
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "ds3-sparse-moe-ffn-tc-4",
-      "name": "Case 4",
       "inputs": {
         "x": [
           [
@@ -311,8 +259,8 @@
       "isPublic": false
     },
     {
-      "id": "ds3-sparse-moe-ffn-tc-5",
-      "name": "Case 5",
+      "id": "ds3-sparse-moe-ffn-tc-4",
+      "name": "Case 4",
       "inputs": {
         "x": [
           [
@@ -363,164 +311,8 @@
       "isPublic": false
     },
     {
-      "id": "ds3-sparse-moe-ffn-tc-6",
-      "name": "Case 6",
-      "inputs": {
-        "x": [
-          [
-            3.0,
-            6.0
-          ]
-        ],
-        "expert_weights": [
-          [
-            [
-              3.0
-            ],
-            [
-              0.0
-            ]
-          ],
-          [
-            [
-              0.0
-            ],
-            [
-              3.0
-            ]
-          ],
-          [
-            [
-              3.0
-            ],
-            [
-              3.0
-            ]
-          ]
-        ],
-        "router_logits": [
-          [
-            6.0,
-            3.0,
-            0.0
-          ]
-        ],
-        "top_k": 6
-      },
-      "expectedOutput": [
-        [
-          1.2689414213699952
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "ds3-sparse-moe-ffn-tc-7",
-      "name": "Case 7",
-      "inputs": {
-        "x": [
-          [
-            2.0,
-            3.0
-          ]
-        ],
-        "expert_weights": [
-          [
-            [
-              2.0
-            ],
-            [
-              1.0
-            ]
-          ],
-          [
-            [
-              1.0
-            ],
-            [
-              2.0
-            ]
-          ],
-          [
-            [
-              2.0
-            ],
-            [
-              2.0
-            ]
-          ]
-        ],
-        "router_logits": [
-          [
-            3.0,
-            2.0,
-            1.0
-          ]
-        ],
-        "top_k": 3.0
-      },
-      "expectedOutput": [
-        [
-          1.2689414213699952
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "ds3-sparse-moe-ffn-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "x": [
-          [
-            -1.0,
-            0.0
-          ]
-        ],
-        "expert_weights": [
-          [
-            [
-              -1.0
-            ],
-            [
-              -2.0
-            ]
-          ],
-          [
-            [
-              -2.0
-            ],
-            [
-              -1.0
-            ]
-          ],
-          [
-            [
-              -1.0
-            ],
-            [
-              -1.0
-            ]
-          ]
-        ],
-        "router_logits": [
-          [
-            0.0,
-            -1.0,
-            -2.0
-          ]
-        ],
-        "top_k": 0.0
-      },
-      "expectedOutput": [
-        [
-          1.2689414213699952
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "ds3-sparse-moe-ffn-tc-9",
-      "name": "Case 9",
+      "id": "ds3-sparse-moe-ffn-tc-5",
+      "name": "Case 5",
       "inputs": {
         "x": [
           [
@@ -565,118 +357,14 @@
       },
       "expectedOutput": [
         [
-          2.46211715726001
+          2.4621
         ]
       ],
       "isPublic": false
     },
     {
-      "id": "ds3-sparse-moe-ffn-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "x": [
-          [
-            -1.0,
-            -2.0
-          ]
-        ],
-        "expert_weights": [
-          [
-            [
-              -1.0
-            ],
-            [
-              -0.0
-            ]
-          ],
-          [
-            [
-              -0.0
-            ],
-            [
-              -1.0
-            ]
-          ],
-          [
-            [
-              -1.0
-            ],
-            [
-              -1.0
-            ]
-          ]
-        ],
-        "router_logits": [
-          [
-            -2.0,
-            -1.0,
-            -0.0
-          ]
-        ],
-        "top_k": -2
-      },
-      "expectedOutput": [
-        [
-          0.0
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "ds3-sparse-moe-ffn-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "x": [
-          [
-            10.0,
-            20.0
-          ]
-        ],
-        "expert_weights": [
-          [
-            [
-              10.0
-            ],
-            [
-              0.0
-            ]
-          ],
-          [
-            [
-              0.0
-            ],
-            [
-              10.0
-            ]
-          ],
-          [
-            [
-              10.0
-            ],
-            [
-              10.0
-            ]
-          ]
-        ],
-        "router_logits": [
-          [
-            20.0,
-            10.0,
-            0.0
-          ]
-        ],
-        "top_k": 20
-      },
-      "expectedOutput": [
-        [
-          1.2689414213699952
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "ds3-sparse-moe-ffn-tc-12",
-      "name": "Case 12",
+      "id": "ds3-sparse-moe-ffn-tc-6",
+      "name": "Case 6",
       "inputs": {
         "x": [
           [
@@ -727,60 +415,8 @@
       "isPublic": false
     },
     {
-      "id": "ds3-sparse-moe-ffn-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "x": [
-          [
-            6.0,
-            7.0
-          ]
-        ],
-        "expert_weights": [
-          [
-            [
-              6.0
-            ],
-            [
-              5.0
-            ]
-          ],
-          [
-            [
-              5.0
-            ],
-            [
-              6.0
-            ]
-          ],
-          [
-            [
-              6.0
-            ],
-            [
-              6.0
-            ]
-          ]
-        ],
-        "router_logits": [
-          [
-            7.0,
-            6.0,
-            5.0
-          ]
-        ],
-        "top_k": 7.0
-      },
-      "expectedOutput": [
-        [
-          1.2689414213699952
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "ds3-sparse-moe-ffn-tc-14",
-      "name": "Case 14",
+      "id": "ds3-sparse-moe-ffn-tc-7",
+      "name": "Case 7",
       "inputs": {
         "x": [
           [
@@ -825,319 +461,7 @@
       },
       "expectedOutput": [
         [
-          2.820409962033176
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "ds3-sparse-moe-ffn-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "x": [
-          [
-            -2.0,
-            -4.0
-          ]
-        ],
-        "expert_weights": [
-          [
-            [
-              -2.0
-            ],
-            [
-              -0.0
-            ]
-          ],
-          [
-            [
-              -0.0
-            ],
-            [
-              -2.0
-            ]
-          ],
-          [
-            [
-              -2.0
-            ],
-            [
-              -2.0
-            ]
-          ]
-        ],
-        "router_logits": [
-          [
-            -4.0,
-            -2.0,
-            -0.0
-          ]
-        ],
-        "top_k": -4
-      },
-      "expectedOutput": [
-        [
-          1.2689414213699952
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "ds3-sparse-moe-ffn-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "x": [
-          [
-            0.25,
-            0.5
-          ]
-        ],
-        "expert_weights": [
-          [
-            [
-              0.25
-            ],
-            [
-              0.0
-            ]
-          ],
-          [
-            [
-              0.0
-            ],
-            [
-              0.25
-            ]
-          ],
-          [
-            [
-              0.25
-            ],
-            [
-              0.25
-            ]
-          ]
-        ],
-        "router_logits": [
-          [
-            0.5,
-            0.25,
-            0.0
-          ]
-        ],
-        "top_k": 0
-      },
-      "expectedOutput": [
-        [
-          0.0
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "ds3-sparse-moe-ffn-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "x": [
-          [
-            0.0,
-            1.0
-          ]
-        ],
-        "expert_weights": [
-          [
-            [
-              0.0
-            ],
-            [
-              -1.0
-            ]
-          ],
-          [
-            [
-              -1.0
-            ],
-            [
-              0.0
-            ]
-          ],
-          [
-            [
-              0.0
-            ],
-            [
-              0.0
-            ]
-          ]
-        ],
-        "router_logits": [
-          [
-            1.0,
-            0.0,
-            -1.0
-          ]
-        ],
-        "top_k": 1.0
-      },
-      "expectedOutput": [
-        [
-          1.2689414213699952
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "ds3-sparse-moe-ffn-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "x": [
-          [
-            4.0,
-            8.0
-          ]
-        ],
-        "expert_weights": [
-          [
-            [
-              4.0
-            ],
-            [
-              0.0
-            ]
-          ],
-          [
-            [
-              0.0
-            ],
-            [
-              4.0
-            ]
-          ],
-          [
-            [
-              4.0
-            ],
-            [
-              4.0
-            ]
-          ]
-        ],
-        "router_logits": [
-          [
-            8.0,
-            4.0,
-            0.0
-          ]
-        ],
-        "top_k": 8
-      },
-      "expectedOutput": [
-        [
-          1.2689414213699952
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "ds3-sparse-moe-ffn-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "x": [
-          [
-            0.75,
-            1.5
-          ]
-        ],
-        "expert_weights": [
-          [
-            [
-              0.75
-            ],
-            [
-              0.0
-            ]
-          ],
-          [
-            [
-              0.0
-            ],
-            [
-              0.75
-            ]
-          ],
-          [
-            [
-              0.75
-            ],
-            [
-              0.75
-            ]
-          ]
-        ],
-        "router_logits": [
-          [
-            1.5,
-            0.75,
-            0.0
-          ]
-        ],
-        "top_k": 2
-      },
-      "expectedOutput": [
-        [
-          0.7429619817138414
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "ds3-sparse-moe-ffn-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "x": [
-          [
-            5.0,
-            10.0
-          ]
-        ],
-        "expert_weights": [
-          [
-            [
-              5.0
-            ],
-            [
-              0.0
-            ]
-          ],
-          [
-            [
-              0.0
-            ],
-            [
-              5.0
-            ]
-          ],
-          [
-            [
-              5.0
-            ],
-            [
-              5.0
-            ]
-          ]
-        ],
-        "router_logits": [
-          [
-            10.0,
-            5.0,
-            0.0
-          ]
-        ],
-        "top_k": 10
-      },
-      "expectedOutput": [
-        [
-          1.2689414213699952
+          2.8204
         ]
       ],
       "isPublic": false

@@ -32,7 +32,7 @@
   "solution": "### 💡 Intuition & Approach\nCompute exact analytical gradients for Layer Normalization backwards pass with respect to input activations, learnable scale parameters (gamma), and bias parameters (beta).\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef triton_layernorm_backward(dY: list, X: list, gamma: list = None, eps: float = 1e-5) -> dict:\n    dy_arr = np.asarray(dY, dtype=float)\n    x_arr = np.asarray(X, dtype=float)\n    N, D = x_arr.shape if x_arr.ndim == 2 else (1, x_arr.size)\n    if x_arr.ndim == 1:\n        x_arr = x_arr.reshape(1, -1)\n        dy_arr = dy_arr.reshape(1, -1)\n    g = np.ones(D, dtype=float) if gamma is None else np.asarray(gamma, dtype=float)\n    mean = np.mean(x_arr, axis=-1, keepdims=True)\n    var = np.var(x_arr, axis=-1, keepdims=True)\n    std_inv = 1.0 / np.sqrt(var + eps)\n    x_hat = (x_arr - mean) * std_inv\n    dgamma = np.sum(dy_arr * x_hat, axis=0)\n    dbeta = np.sum(dy_arr, axis=0)\n    dx_hat = dy_arr * g\n    dvar = np.sum(dx_hat * (x_arr - mean) * -0.5 * (std_inv ** 3), axis=-1, keepdims=True)\n    dmean = np.sum(dx_hat * -std_inv, axis=-1, keepdims=True) + dvar * np.mean(-2.0 * (x_arr - mean), axis=-1, keepdims=True)\n    dX = dx_hat * std_inv + dvar * 2.0 * (x_arr - mean) / D + dmean / D\n    return {\n        'dX': np.round(dX, 6).tolist() if N > 1 else np.round(dX[0], 6).tolist(),\n        'dgamma': np.round(dgamma, 6).tolist(),\n        'dbeta': np.round(dbeta, 6).tolist()\n    }\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
   "testCases": [
     {
-      "id": "triton-layernorm-backward-test-1",
+      "id": "triton-layernorm-backward-tc-1",
       "name": "Standard Test Case 1",
       "inputs": {
         "dY": [
@@ -54,14 +54,14 @@
       },
       "expectedOutput": {
         "dX": [
-          2e-06,
           0.0,
-          -2e-06
+          0.0,
+          -0.0
         ],
         "dgamma": [
-          -1.224743,
+          -1.2247,
           0.0,
-          -1.224743
+          -1.2247
         ],
         "dbeta": [
           1.0,
@@ -72,8 +72,8 @@
       "isPublic": true
     },
     {
-      "id": "triton-layernorm-backward-test-2",
-      "name": "Standard Test Case 2",
+      "id": "triton-layernorm-backward-tc-2",
+      "name": "Case 2",
       "inputs": {
         "dY": [
           [
@@ -95,12 +95,12 @@
       },
       "expectedOutput": {
         "dX": [
-          1e-05,
-          -1e-05
+          0.0,
+          -0.0
         ],
         "dgamma": [
-          -0.499998,
-          -0.499998
+          -0.5,
+          -0.5
         ],
         "dbeta": [
           0.5,
@@ -114,37 +114,37 @@
       "name": "Case 3",
       "inputs": {
         "dY": [
-          1.0,
+          1.5,
           0.0,
-          -1.0
+          -1.5
         ],
         "X": [
-          2.0,
-          4.0,
-          6.0
+          3.0,
+          6.0,
+          9.0
         ],
         "gamma": [
-          1.0,
-          1.0,
-          1.0
+          1.5,
+          1.5,
+          1.5
         ],
-        "eps": 1e-05
+        "eps": 0.0
       },
       "expectedOutput": {
         "dX": [
-          2e-06,
+          -0.0,
           0.0,
-          -2e-06
+          0.0
         ],
         "dgamma": [
-          -1.224743,
+          -1.8371,
           0.0,
-          -1.224743
+          -1.8371
         ],
         "dbeta": [
-          1.0,
+          1.5,
           0.0,
-          -1.0
+          -1.5
         ]
       },
       "isPublic": false
@@ -154,34 +154,36 @@
       "name": "Case 4",
       "inputs": {
         "dY": [
-          [
-            0.5,
-            -0.5
-          ]
+          0.5,
+          0.0,
+          -0.5
         ],
         "X": [
-          [
-            1.0,
-            3.0
-          ]
+          1.0,
+          2.0,
+          3.0
         ],
         "gamma": [
-          2.0,
-          2.0
+          0.5,
+          0.5,
+          0.5
         ],
-        "eps": 1e-05
+        "eps": 0.0
       },
       "expectedOutput": {
         "dX": [
-          1e-05,
-          -1e-05
+          0.0,
+          0.0,
+          -0.0
         ],
         "dgamma": [
-          -0.499998,
-          -0.499998
+          -0.6124,
+          0.0,
+          -0.6124
         ],
         "dbeta": [
           0.5,
+          0.0,
           -0.5
         ]
       },
@@ -192,37 +194,37 @@
       "name": "Case 5",
       "inputs": {
         "dY": [
-          1.0,
+          2.0,
           0.0,
-          -1.0
+          -2.0
         ],
         "X": [
-          2.0,
           4.0,
-          6.0
+          8.0,
+          12.0
         ],
         "gamma": [
-          1.0,
-          1.0,
-          1.0
+          2.0,
+          2.0,
+          2.0
         ],
-        "eps": 1e-05
+        "eps": 0.0
       },
       "expectedOutput": {
         "dX": [
-          2e-06,
           0.0,
-          -2e-06
+          0.0,
+          -0.0
         ],
         "dgamma": [
-          -1.224743,
+          -2.4495,
           0.0,
-          -1.224743
+          -2.4495
         ],
         "dbeta": [
-          1.0,
+          2.0,
           0.0,
-          -1.0
+          -2.0
         ]
       },
       "isPublic": false
@@ -232,35 +234,37 @@
       "name": "Case 6",
       "inputs": {
         "dY": [
-          [
-            0.5,
-            -0.5
-          ]
+          -1.0,
+          -0.0,
+          1.0
         ],
         "X": [
-          [
-            1.0,
-            3.0
-          ]
+          -2.0,
+          -4.0,
+          -6.0
         ],
         "gamma": [
-          2.0,
-          2.0
+          -1.0,
+          -1.0,
+          -1.0
         ],
-        "eps": 1e-05
+        "eps": -0.0
       },
       "expectedOutput": {
         "dX": [
-          1e-05,
-          -1e-05
+          0.0,
+          0.0,
+          -0.0
         ],
         "dgamma": [
-          -0.499998,
-          -0.499998
+          -1.2247,
+          0.0,
+          -1.2247
         ],
         "dbeta": [
-          0.5,
-          -0.5
+          -1.0,
+          0.0,
+          1.0
         ]
       },
       "isPublic": false
@@ -270,543 +274,37 @@
       "name": "Case 7",
       "inputs": {
         "dY": [
-          1.0,
+          0.8,
           0.0,
-          -1.0
+          -0.8
         ],
         "X": [
-          2.0,
-          4.0,
-          6.0
+          1.6,
+          3.2,
+          4.8
         ],
         "gamma": [
-          1.0,
-          1.0,
-          1.0
+          0.8,
+          0.8,
+          0.8
         ],
-        "eps": 1e-05
+        "eps": 0.0
       },
       "expectedOutput": {
         "dX": [
-          2e-06,
           0.0,
-          -2e-06
+          0.0,
+          -0.0
         ],
         "dgamma": [
-          -1.224743,
+          -0.9798,
           0.0,
-          -1.224743
+          -0.9798
         ],
         "dbeta": [
-          1.0,
+          0.8,
           0.0,
-          -1.0
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-backward-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "dY": [
-          [
-            0.5,
-            -0.5
-          ]
-        ],
-        "X": [
-          [
-            1.0,
-            3.0
-          ]
-        ],
-        "gamma": [
-          2.0,
-          2.0
-        ],
-        "eps": 1e-05
-      },
-      "expectedOutput": {
-        "dX": [
-          1e-05,
-          -1e-05
-        ],
-        "dgamma": [
-          -0.499998,
-          -0.499998
-        ],
-        "dbeta": [
-          0.5,
-          -0.5
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-backward-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "dY": [
-          1.0,
-          0.0,
-          -1.0
-        ],
-        "X": [
-          2.0,
-          4.0,
-          6.0
-        ],
-        "gamma": [
-          1.0,
-          1.0,
-          1.0
-        ],
-        "eps": 1e-05
-      },
-      "expectedOutput": {
-        "dX": [
-          2e-06,
-          0.0,
-          -2e-06
-        ],
-        "dgamma": [
-          -1.224743,
-          0.0,
-          -1.224743
-        ],
-        "dbeta": [
-          1.0,
-          0.0,
-          -1.0
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-backward-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "dY": [
-          [
-            0.5,
-            -0.5
-          ]
-        ],
-        "X": [
-          [
-            1.0,
-            3.0
-          ]
-        ],
-        "gamma": [
-          2.0,
-          2.0
-        ],
-        "eps": 1e-05
-      },
-      "expectedOutput": {
-        "dX": [
-          1e-05,
-          -1e-05
-        ],
-        "dgamma": [
-          -0.499998,
-          -0.499998
-        ],
-        "dbeta": [
-          0.5,
-          -0.5
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-backward-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "dY": [
-          1.0,
-          0.0,
-          -1.0
-        ],
-        "X": [
-          2.0,
-          4.0,
-          6.0
-        ],
-        "gamma": [
-          1.0,
-          1.0,
-          1.0
-        ],
-        "eps": 1e-05
-      },
-      "expectedOutput": {
-        "dX": [
-          2e-06,
-          0.0,
-          -2e-06
-        ],
-        "dgamma": [
-          -1.224743,
-          0.0,
-          -1.224743
-        ],
-        "dbeta": [
-          1.0,
-          0.0,
-          -1.0
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-backward-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "dY": [
-          [
-            0.5,
-            -0.5
-          ]
-        ],
-        "X": [
-          [
-            1.0,
-            3.0
-          ]
-        ],
-        "gamma": [
-          2.0,
-          2.0
-        ],
-        "eps": 1e-05
-      },
-      "expectedOutput": {
-        "dX": [
-          1e-05,
-          -1e-05
-        ],
-        "dgamma": [
-          -0.499998,
-          -0.499998
-        ],
-        "dbeta": [
-          0.5,
-          -0.5
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-backward-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "dY": [
-          1.0,
-          0.0,
-          -1.0
-        ],
-        "X": [
-          2.0,
-          4.0,
-          6.0
-        ],
-        "gamma": [
-          1.0,
-          1.0,
-          1.0
-        ],
-        "eps": 1e-05
-      },
-      "expectedOutput": {
-        "dX": [
-          2e-06,
-          0.0,
-          -2e-06
-        ],
-        "dgamma": [
-          -1.224743,
-          0.0,
-          -1.224743
-        ],
-        "dbeta": [
-          1.0,
-          0.0,
-          -1.0
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-backward-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "dY": [
-          [
-            0.5,
-            -0.5
-          ]
-        ],
-        "X": [
-          [
-            1.0,
-            3.0
-          ]
-        ],
-        "gamma": [
-          2.0,
-          2.0
-        ],
-        "eps": 1e-05
-      },
-      "expectedOutput": {
-        "dX": [
-          1e-05,
-          -1e-05
-        ],
-        "dgamma": [
-          -0.499998,
-          -0.499998
-        ],
-        "dbeta": [
-          0.5,
-          -0.5
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-backward-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "dY": [
-          1.0,
-          0.0,
-          -1.0
-        ],
-        "X": [
-          2.0,
-          4.0,
-          6.0
-        ],
-        "gamma": [
-          1.0,
-          1.0,
-          1.0
-        ],
-        "eps": 1e-05
-      },
-      "expectedOutput": {
-        "dX": [
-          2e-06,
-          0.0,
-          -2e-06
-        ],
-        "dgamma": [
-          -1.224743,
-          0.0,
-          -1.224743
-        ],
-        "dbeta": [
-          1.0,
-          0.0,
-          -1.0
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-backward-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "dY": [
-          [
-            0.5,
-            -0.5
-          ]
-        ],
-        "X": [
-          [
-            1.0,
-            3.0
-          ]
-        ],
-        "gamma": [
-          2.0,
-          2.0
-        ],
-        "eps": 1e-05
-      },
-      "expectedOutput": {
-        "dX": [
-          1e-05,
-          -1e-05
-        ],
-        "dgamma": [
-          -0.499998,
-          -0.499998
-        ],
-        "dbeta": [
-          0.5,
-          -0.5
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-backward-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "dY": [
-          1.0,
-          0.0,
-          -1.0
-        ],
-        "X": [
-          2.0,
-          4.0,
-          6.0
-        ],
-        "gamma": [
-          1.0,
-          1.0,
-          1.0
-        ],
-        "eps": 1e-05
-      },
-      "expectedOutput": {
-        "dX": [
-          2e-06,
-          0.0,
-          -2e-06
-        ],
-        "dgamma": [
-          -1.224743,
-          0.0,
-          -1.224743
-        ],
-        "dbeta": [
-          1.0,
-          0.0,
-          -1.0
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-backward-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "dY": [
-          [
-            0.5,
-            -0.5
-          ]
-        ],
-        "X": [
-          [
-            1.0,
-            3.0
-          ]
-        ],
-        "gamma": [
-          2.0,
-          2.0
-        ],
-        "eps": 1e-05
-      },
-      "expectedOutput": {
-        "dX": [
-          1e-05,
-          -1e-05
-        ],
-        "dgamma": [
-          -0.499998,
-          -0.499998
-        ],
-        "dbeta": [
-          0.5,
-          -0.5
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-backward-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "dY": [
-          1.0,
-          0.0,
-          -1.0
-        ],
-        "X": [
-          2.0,
-          4.0,
-          6.0
-        ],
-        "gamma": [
-          1.0,
-          1.0,
-          1.0
-        ],
-        "eps": 1e-05
-      },
-      "expectedOutput": {
-        "dX": [
-          2e-06,
-          0.0,
-          -2e-06
-        ],
-        "dgamma": [
-          -1.224743,
-          0.0,
-          -1.224743
-        ],
-        "dbeta": [
-          1.0,
-          0.0,
-          -1.0
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-backward-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "dY": [
-          [
-            0.5,
-            -0.5
-          ]
-        ],
-        "X": [
-          [
-            1.0,
-            3.0
-          ]
-        ],
-        "gamma": [
-          2.0,
-          2.0
-        ],
-        "eps": 1e-05
-      },
-      "expectedOutput": {
-        "dX": [
-          1e-05,
-          -1e-05
-        ],
-        "dgamma": [
-          -0.499998,
-          -0.499998
-        ],
-        "dbeta": [
-          0.5,
-          -0.5
+          -0.8
         ]
       },
       "isPublic": false

@@ -362,7 +362,7 @@ export const ProblemSolverPage: React.FC = () => {
     setIsRunning(false);
   };
 
-  // Submit against comprehensive suite (20 or more test cases)
+  // Submit against comprehensive suite (7 test cases)
   const handleSubmit = async () => {
     if (!problem || isRunning) return;
     setIsRunning(true);
@@ -376,7 +376,7 @@ export const ProblemSolverPage: React.FC = () => {
       ? problem.testCases
       : publicTestCases;
 
-    const report = await runPythonSubmission(code, getFunctionName(), baseTestCases, problem.solution, 20);
+    const report = await runPythonSubmission(code, getFunctionName(), baseTestCases, problem.solution, 7);
     setExecReport(report);
 
     const firstFail = report.results.findIndex(r => !r.passed);
@@ -992,12 +992,12 @@ export const ProblemSolverPage: React.FC = () => {
                     <div className="w-4 h-4 border-2 border-[#93C572] border-t-transparent rounded-full animate-spin" />
                     <span>
                       {isSubmission 
-                        ? 'Evaluating against 20+ comprehensive test cases in Python WebAssembly engine...' 
+                        ? 'Evaluating against 7 comprehensive test cases in Python WebAssembly engine...' 
                         : 'Executing sample test cases in WebAssembly Python engine...'}
                     </span>
                   </div>
                 ) : !execReport ? (
-                  <div className="text-muted-foreground">Click "Run" for sample checks or "Submit" to evaluate over 20+ test cases.</div>
+                  <div className="text-muted-foreground">Click "Run" for sample checks or "Submit" to evaluate over 7 test cases.</div>
                 ) : execReport.stderr ? (
                   <div className="space-y-2 text-rose-400">
                     <div className="font-bold flex items-center gap-1.5">

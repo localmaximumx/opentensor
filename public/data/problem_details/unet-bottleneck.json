@@ -25,7 +25,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **U-Net Bottleneck** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef _conv2d_same(x: np.ndarray, k: np.ndarray, b: np.ndarray):\n    Kh, Kw, Cin, Cout = k.shape\n    pad_h = (Kh - 1) // 2\n    pad_w = (Kw - 1) // 2\n    padded = np.pad(x, ((0, 0), (pad_h, pad_h), (pad_w, pad_w), (0, 0)), mode='constant')\n    N, H, W, _ = x.shape\n    out = np.zeros((N, H, W, Cout), dtype=float)\n    for n in range(N):\n        for h in range(H):\n            for w in range(W):\n                patch = padded[n, h:h+Kh, w:w+Kw, :]\n                for c in range(Cout):\n                    out[n, h, w, c] = np.sum(patch * k[:, :, :, c]) + b[c]\n    return out\n\ndef unet_bottleneck(x: np.ndarray, kernel1: np.ndarray, bias1: np.ndarray,\n                    kernel2: np.ndarray, bias2: np.ndarray) -> np.ndarray:\n    x_arr = np.asarray(x, dtype=float)\n    k1, b1 = np.asarray(kernel1, dtype=float), np.asarray(bias1, dtype=float)\n    k2, b2 = np.asarray(kernel2, dtype=float), np.asarray(bias2, dtype=float)\n    \n    h1 = np.maximum(0.0, _conv2d_same(x_arr, k1, b1))\n    out = np.maximum(0.0, _conv2d_same(h1, k2, b2))\n    return np.round(out, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "public-1",
+      "id": "unet-bottleneck-tc-1",
       "name": "One-pixel bridge",
       "inputs": {
         "x": [
@@ -81,8 +81,8 @@
       ]
     },
     {
-      "id": "public-2",
-      "name": "Two spatial positions",
+      "id": "unet-bottleneck-tc-2",
+      "name": "Case 2",
       "inputs": {
         "x": [
           [
@@ -152,8 +152,8 @@
       ]
     },
     {
-      "id": "public-3",
-      "name": "Zero input",
+      "id": "unet-bottleneck-tc-3",
+      "name": "Case 3",
       "inputs": {
         "x": [
           [
@@ -218,27 +218,27 @@
           [
             [
               [
-                1,
-                -2
+                2,
+                -3
               ]
             ]
           ]
         ],
         "bias1": [
-          0.2
+          0.3
         ],
         "bias2": [
           0,
-          0.5
+          0.75
         ],
         "kernel1": [
           [
             [
               [
-                1
+                2
               ],
               [
-                0.5
+                0.75
               ]
             ]
           ]
@@ -247,24 +247,24 @@
           [
             [
               [
-                2,
-                -1
+                3,
+                -2
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
             [
-              0.4,
-              0.3
+              6.15,
+              0.0
             ]
           ]
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "unet-bottleneck-tc-5",
@@ -274,33 +274,27 @@
           [
             [
               [
-                1
-              ],
-              [
+                0,
                 -1
-              ]
-            ],
-            [
-              [
-                0.5
-              ],
-              [
-                2
               ]
             ]
           ]
         ],
         "bias1": [
-          -0.5
+          0.1
         ],
         "bias2": [
-          0.1
+          0,
+          0.25
         ],
         "kernel1": [
           [
             [
               [
-                2
+                0
+              ],
+              [
+                0.25
               ]
             ]
           ]
@@ -309,33 +303,24 @@
           [
             [
               [
-                0.25
+                1,
+                0
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
             [
-              0.475
-            ],
-            [
-              0.1
-            ]
-          ],
-          [
-            [
-              0.225
-            ],
-            [
-              0.975
+              0.0,
+              0.25
             ]
           ]
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "unet-bottleneck-tc-6",
@@ -345,29 +330,27 @@
           [
             [
               [
-                0,
-                0
+                2,
+                -4
               ]
             ]
           ]
         ],
         "bias1": [
-          0.3,
-          -0.2
+          0.4
         ],
         "bias2": [
-          0.1
+          0,
+          1.0
         ],
         "kernel1": [
           [
             [
               [
-                1,
-                -1
+                2
               ],
               [
-                0.5,
-                2
+                1.0
               ]
             ]
           ]
@@ -376,25 +359,24 @@
           [
             [
               [
-                1
-              ],
-              [
-                -1
+                4,
+                -2
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
             [
-              0.4
+              1.6,
+              0.2
             ]
           ]
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "unet-bottleneck-tc-7",
@@ -404,342 +386,27 @@
           [
             [
               [
-                1,
-                -2
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0.2
-        ],
-        "bias2": [
-          0,
-          0.5
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                2,
-                -1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.4,
-              0.3
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-bottleneck-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ],
-            [
-              [
-                0.5
-              ],
-              [
+                -1,
                 2
               ]
             ]
           ]
         ],
         "bias1": [
-          -0.5
-        ],
-        "bias2": [
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                2
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.25
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.475
-            ],
-            [
-              0.1
-            ]
-          ],
-          [
-            [
-              0.225
-            ],
-            [
-              0.975
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-bottleneck-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                0,
-                0
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0.3,
           -0.2
         ],
         "bias2": [
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1,
-                -1
-              ],
-              [
-                0.5,
-                2
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.4
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-bottleneck-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -2
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0.2
-        ],
-        "bias2": [
           0,
-          0.5
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                2,
-                -1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.4,
-              0.3
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-bottleneck-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ],
-            [
-              [
-                0.5
-              ],
-              [
-                2
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
           -0.5
         ],
-        "bias2": [
-          0.1
-        ],
         "kernel1": [
           [
             [
               [
-                2
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.25
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.475
-            ],
-            [
-              0.1
-            ]
-          ],
-          [
-            [
-              0.225
-            ],
-            [
-              0.975
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-bottleneck-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                0,
-                0
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0.3,
-          -0.2
-        ],
-        "bias2": [
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1,
                 -1
               ],
               [
-                0.5,
-                2
+                -0.5
               ]
             ]
           ]
@@ -748,524 +415,24 @@
           [
             [
               [
+                -2,
                 1
-              ],
-              [
-                -1
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
             [
-              0.4
+              0.0,
+              0.0
             ]
           ]
         ]
-      ]
-    },
-    {
-      "id": "unet-bottleneck-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -2
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0.2
-        ],
-        "bias2": [
-          0,
-          0.5
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                2,
-                -1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.4,
-              0.3
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-bottleneck-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ],
-            [
-              [
-                0.5
-              ],
-              [
-                2
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          -0.5
-        ],
-        "bias2": [
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                2
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.25
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.475
-            ],
-            [
-              0.1
-            ]
-          ],
-          [
-            [
-              0.225
-            ],
-            [
-              0.975
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-bottleneck-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                0,
-                0
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0.3,
-          -0.2
-        ],
-        "bias2": [
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1,
-                -1
-              ],
-              [
-                0.5,
-                2
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.4
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-bottleneck-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -2
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0.2
-        ],
-        "bias2": [
-          0,
-          0.5
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                2,
-                -1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.4,
-              0.3
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-bottleneck-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ],
-            [
-              [
-                0.5
-              ],
-              [
-                2
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          -0.5
-        ],
-        "bias2": [
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                2
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.25
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.475
-            ],
-            [
-              0.1
-            ]
-          ],
-          [
-            [
-              0.225
-            ],
-            [
-              0.975
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-bottleneck-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                0,
-                0
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0.3,
-          -0.2
-        ],
-        "bias2": [
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1,
-                -1
-              ],
-              [
-                0.5,
-                2
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.4
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-bottleneck-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -2
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0.2
-        ],
-        "bias2": [
-          0,
-          0.5
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                2,
-                -1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.4,
-              0.3
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-bottleneck-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ],
-            [
-              [
-                0.5
-              ],
-              [
-                2
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          -0.5
-        ],
-        "bias2": [
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                2
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.25
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.475
-            ],
-            [
-              0.1
-            ]
-          ],
-          [
-            [
-              0.225
-            ],
-            [
-              0.975
-            ]
-          ]
-        ]
-      ]
+      ],
+      "isPublic": false
     }
   ],
   "functionMetadata": {

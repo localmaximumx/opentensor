@@ -32,7 +32,7 @@
   "solution": "### 💡 Intuition & Approach\nImplement LayerNorm forward in Triton with row-wise mean and variance reductions, affine transformation parameters, and masked boundary tails.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef triton_layernorm(x: list, gamma: list = None, beta: list = None, eps: float = 1e-5) -> list:\n    arr = np.array(x, dtype=float)\n    m = np.mean(arr, axis=-1, keepdims=True)\n    v = np.var(arr, axis=-1, keepdims=True)\n    norm = (arr - m) / np.sqrt(v + eps)\n    if gamma is not None: norm = norm * np.array(gamma, dtype=float)\n    if beta is not None: norm = norm + np.array(beta, dtype=float)\n    return np.round(norm, 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
   "testCases": [
     {
-      "id": "triton-layernorm-test-1",
+      "id": "triton-layernorm-tc-1",
       "name": "Standard Test Case 1",
       "inputs": {
         "x": [
@@ -52,15 +52,15 @@
         ]
       },
       "expectedOutput": [
-        -1.224736,
+        -1.2247,
         0.0,
-        1.224736
+        1.2247
       ],
       "isPublic": true
     },
     {
-      "id": "triton-layernorm-test-2",
-      "name": "Standard Test Case 2",
+      "id": "triton-layernorm-tc-2",
+      "name": "Case 2",
       "inputs": {
         "x": [
           [
@@ -75,12 +75,12 @@
       },
       "expectedOutput": [
         [
-          -0.999995,
-          0.999995
+          -1.0,
+          1.0
         ],
         [
-          -0.999995,
-          0.999995
+          -1.0,
+          1.0
         ]
       ],
       "isPublic": true
@@ -90,14 +90,14 @@
       "name": "Case 3",
       "inputs": {
         "x": [
-          1.0,
-          2.0,
-          3.0
+          1.5,
+          3.0,
+          4.5
         ],
         "gamma": [
-          1.0,
-          1.0,
-          1.0
+          1.5,
+          1.5,
+          1.5
         ],
         "beta": [
           0.0,
@@ -106,9 +106,9 @@
         ]
       },
       "expectedOutput": [
-        -1.224736,
+        -1.8371,
         0.0,
-        1.224736
+        1.8371
       ],
       "isPublic": false
     },
@@ -117,25 +117,25 @@
       "name": "Case 4",
       "inputs": {
         "x": [
-          [
-            2.0,
-            4.0
-          ],
-          [
-            6.0,
-            8.0
-          ]
+          0.5,
+          1.0,
+          1.5
+        ],
+        "gamma": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "beta": [
+          0.0,
+          0.0,
+          0.0
         ]
       },
       "expectedOutput": [
-        [
-          -0.999995,
-          0.999995
-        ],
-        [
-          -0.999995,
-          0.999995
-        ]
+        -0.6124,
+        0.0,
+        0.6124
       ],
       "isPublic": false
     },
@@ -144,14 +144,14 @@
       "name": "Case 5",
       "inputs": {
         "x": [
-          1.0,
           2.0,
-          3.0
+          4.0,
+          6.0
         ],
         "gamma": [
-          1.0,
-          1.0,
-          1.0
+          2.0,
+          2.0,
+          2.0
         ],
         "beta": [
           0.0,
@@ -160,9 +160,9 @@
         ]
       },
       "expectedOutput": [
-        -1.224736,
+        -2.4495,
         0.0,
-        1.224736
+        2.4495
       ],
       "isPublic": false
     },
@@ -171,25 +171,25 @@
       "name": "Case 6",
       "inputs": {
         "x": [
-          [
-            2.0,
-            4.0
-          ],
-          [
-            6.0,
-            8.0
-          ]
+          -1.0,
+          -2.0,
+          -3.0
+        ],
+        "gamma": [
+          -1.0,
+          -1.0,
+          -1.0
+        ],
+        "beta": [
+          -0.0,
+          -0.0,
+          -0.0
         ]
       },
       "expectedOutput": [
-        [
-          -0.999995,
-          0.999995
-        ],
-        [
-          -0.999995,
-          0.999995
-        ]
+        -1.2247,
+        -0.0,
+        1.2247
       ],
       "isPublic": false
     },
@@ -198,14 +198,14 @@
       "name": "Case 7",
       "inputs": {
         "x": [
-          1.0,
-          2.0,
-          3.0
+          0.8,
+          1.6,
+          2.4
         ],
         "gamma": [
-          1.0,
-          1.0,
-          1.0
+          0.8,
+          0.8,
+          0.8
         ],
         "beta": [
           0.0,
@@ -214,360 +214,9 @@
         ]
       },
       "expectedOutput": [
-        -1.224736,
-        0.0,
-        1.224736
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "x": [
-          [
-            2.0,
-            4.0
-          ],
-          [
-            6.0,
-            8.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          -0.999995,
-          0.999995
-        ],
-        [
-          -0.999995,
-          0.999995
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "x": [
-          1.0,
-          2.0,
-          3.0
-        ],
-        "gamma": [
-          1.0,
-          1.0,
-          1.0
-        ],
-        "beta": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        -1.224736,
-        0.0,
-        1.224736
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "x": [
-          [
-            2.0,
-            4.0
-          ],
-          [
-            6.0,
-            8.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          -0.999995,
-          0.999995
-        ],
-        [
-          -0.999995,
-          0.999995
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "x": [
-          1.0,
-          2.0,
-          3.0
-        ],
-        "gamma": [
-          1.0,
-          1.0,
-          1.0
-        ],
-        "beta": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        -1.224736,
-        0.0,
-        1.224736
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "x": [
-          [
-            2.0,
-            4.0
-          ],
-          [
-            6.0,
-            8.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          -0.999995,
-          0.999995
-        ],
-        [
-          -0.999995,
-          0.999995
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "x": [
-          1.0,
-          2.0,
-          3.0
-        ],
-        "gamma": [
-          1.0,
-          1.0,
-          1.0
-        ],
-        "beta": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        -1.224736,
-        0.0,
-        1.224736
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "x": [
-          [
-            2.0,
-            4.0
-          ],
-          [
-            6.0,
-            8.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          -0.999995,
-          0.999995
-        ],
-        [
-          -0.999995,
-          0.999995
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "x": [
-          1.0,
-          2.0,
-          3.0
-        ],
-        "gamma": [
-          1.0,
-          1.0,
-          1.0
-        ],
-        "beta": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        -1.224736,
-        0.0,
-        1.224736
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "x": [
-          [
-            2.0,
-            4.0
-          ],
-          [
-            6.0,
-            8.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          -0.999995,
-          0.999995
-        ],
-        [
-          -0.999995,
-          0.999995
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "x": [
-          1.0,
-          2.0,
-          3.0
-        ],
-        "gamma": [
-          1.0,
-          1.0,
-          1.0
-        ],
-        "beta": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        -1.224736,
-        0.0,
-        1.224736
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "x": [
-          [
-            2.0,
-            4.0
-          ],
-          [
-            6.0,
-            8.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          -0.999995,
-          0.999995
-        ],
-        [
-          -0.999995,
-          0.999995
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "x": [
-          1.0,
-          2.0,
-          3.0
-        ],
-        "gamma": [
-          1.0,
-          1.0,
-          1.0
-        ],
-        "beta": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        -1.224736,
-        0.0,
-        1.224736
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-layernorm-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "x": [
-          [
-            2.0,
-            4.0
-          ],
-          [
-            6.0,
-            8.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          -0.999995,
-          0.999995
-        ],
-        [
-          -0.999995,
-          0.999995
-        ]
+        -0.9798,
+        -0.0,
+        0.9798
       ],
       "isPublic": false
     }

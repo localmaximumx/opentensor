@@ -26,7 +26,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **Fine-tuning Architecture** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef bert_fine_tuning_step(hidden_states: np.ndarray, labels: np.ndarray,\n                          classifier_W: np.ndarray, classifier_b: np.ndarray,\n                          learning_rate: float) -> dict:\n    hs = np.asarray(hidden_states, dtype=float)\n    y = np.asarray(labels, dtype=int)\n    w = np.asarray(classifier_W, dtype=float)\n    b = np.asarray(classifier_b, dtype=float)\n    lr = float(learning_rate)\n    \n    cls_tok = hs[:, 0, :]\n    B = cls_tok.shape[0]\n    logits = cls_tok @ w + b\n    \n    logits_max = np.max(logits, axis=-1, keepdims=True)\n    exp_l = np.exp(logits - logits_max)\n    probs = exp_l / np.sum(exp_l, axis=-1, keepdims=True)\n    \n    loss = -np.mean(np.log(np.maximum(probs[np.arange(B), y], 1e-12)))\n    \n    dlogits = probs.copy()\n    dlogits[np.arange(B), y] -= 1.0\n    dlogits /= B\n    \n    dw = cls_tok.T @ dlogits\n    db = np.sum(dlogits, axis=0)\n    \n    new_w = w - lr * dw\n    new_b = b - lr * db\n    \n    return {\n        \"new_classifier_W\": np.round(new_w, 6).tolist(),\n        \"new_classifier_b\": np.round(new_b, 6).tolist(),\n        \"loss\": float(np.round(loss, 6))\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "public-1",
+      "id": "bert-fine-tuning-tc-1",
       "name": "Binary classifier step",
       "inputs": {
         "labels": [
@@ -75,24 +75,24 @@
       "expectedOutput": {
         "new_classifier_W": [
           [
-            0.220066,
-            -0.120066
+            0.2201,
+            -0.1201
           ],
           [
-            -0.317717,
-            0.417717
+            -0.3177,
+            0.4177
           ]
         ],
         "new_classifier_b": [
-          0.052348,
-          -0.052348
+          0.0523,
+          -0.0523
         ],
-        "loss": 0.475252
+        "loss": 0.4753
       }
     },
     {
-      "id": "public-2",
-      "name": "Three classes",
+      "id": "bert-fine-tuning-tc-2",
+      "name": "Case 2",
       "inputs": {
         "labels": [
           2,
@@ -165,32 +165,32 @@
       "expectedOutput": {
         "new_classifier_W": [
           [
-            0.085013,
-            -0.192573,
-            0.30756
+            0.085,
+            -0.1926,
+            0.3076
           ],
           [
-            0.403876,
-            0.101804,
-            -0.10568
+            0.4039,
+            0.1018,
+            -0.1057
           ],
           [
-            -0.294879,
-            0.187395,
-            0.507484
+            -0.2949,
+            0.1874,
+            0.5075
           ]
         ],
         "new_classifier_b": [
-          0.002816,
-          0.097798,
-          -0.100613
+          0.0028,
+          0.0978,
+          -0.1006
         ],
-        "loss": 1.031599
+        "loss": 1.0316
       }
     },
     {
-      "id": "public-3",
-      "name": "Single sample",
+      "id": "bert-fine-tuning-tc-3",
+      "name": "Case 3",
       "inputs": {
         "labels": [
           1
@@ -239,77 +239,12 @@
           -0.1,
           0.1
         ],
-        "loss": 0.693147
+        "loss": 0.6931
       }
     },
     {
       "id": "bert-fine-tuning-tc-4",
       "name": "Case 4",
-      "inputs": {
-        "labels": [
-          0,
-          2
-        ],
-        "classifier_W": [
-          [
-            0.4,
-            -0.2
-          ],
-          [
-            -0.6,
-            0.8
-          ]
-        ],
-        "classifier_b": [
-          0.1,
-          -0.1
-        ],
-        "hidden_states": [
-          [
-            [
-              2,
-              0
-            ],
-            [
-              0.4,
-              0.6
-            ]
-          ],
-          [
-            [
-              0,
-              2
-            ],
-            [
-              -0.2,
-              0.8
-            ]
-          ]
-        ],
-        "learning_rate": 0.2
-      },
-      "expectedOutput": {
-        "new_classifier_W": [
-          [
-            0.220066,
-            -0.120066
-          ],
-          [
-            -0.317717,
-            0.417717
-          ]
-        ],
-        "new_classifier_b": [
-          0.052348,
-          -0.052348
-        ],
-        "loss": 0.475252
-      },
-      "isPublic": false
-    },
-    {
-      "id": "bert-fine-tuning-tc-5",
-      "name": "Case 5",
       "inputs": {
         "labels": [
           0,
@@ -365,16 +300,16 @@
           ]
         ],
         "new_classifier_b": [
-          0.049375,
-          -0.049375
+          0.0494,
+          -0.0494
         ],
-        "loss": 0.66846
+        "loss": 0.6685
       },
       "isPublic": false
     },
     {
-      "id": "bert-fine-tuning-tc-6",
-      "name": "Case 6",
+      "id": "bert-fine-tuning-tc-5",
+      "name": "Case 5",
       "inputs": {
         "labels": [
           0,
@@ -421,155 +356,25 @@
       "expectedOutput": {
         "new_classifier_W": [
           [
-            -0.177492,
-            0.077492
+            -0.1775,
+            0.0775
           ],
           [
-            0.284499,
-            -0.384499
+            0.2845,
+            -0.3845
           ]
         ],
         "new_classifier_b": [
-          -0.057007,
-          0.057007
+          -0.057,
+          0.057
         ],
-        "loss": 0.48462
+        "loss": 0.4846
       },
       "isPublic": false
     },
     {
-      "id": "bert-fine-tuning-tc-7",
-      "name": "Case 7",
-      "inputs": {
-        "labels": [
-          0,
-          3
-        ],
-        "classifier_W": [
-          [
-            0.6,
-            -0.3
-          ],
-          [
-            -0.9,
-            1.2
-          ]
-        ],
-        "classifier_b": [
-          0.15,
-          -0.15
-        ],
-        "hidden_states": [
-          [
-            [
-              3,
-              0
-            ],
-            [
-              0.6,
-              0.9
-            ]
-          ],
-          [
-            [
-              0,
-              3
-            ],
-            [
-              -0.3,
-              1.2
-            ]
-          ]
-        ],
-        "learning_rate": 0.3
-      },
-      "expectedOutput": {
-        "new_classifier_W": [
-          [
-            0.220066,
-            -0.120066
-          ],
-          [
-            -0.317717,
-            0.417717
-          ]
-        ],
-        "new_classifier_b": [
-          0.052348,
-          -0.052348
-        ],
-        "loss": 0.475252
-      },
-      "isPublic": false
-    },
-    {
-      "id": "bert-fine-tuning-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "labels": [
-          1.0,
-          2.0
-        ],
-        "classifier_W": [
-          [
-            1.2,
-            0.9
-          ],
-          [
-            0.7,
-            1.4
-          ]
-        ],
-        "classifier_b": [
-          1.05,
-          0.95
-        ],
-        "hidden_states": [
-          [
-            [
-              2.0,
-              1.0
-            ],
-            [
-              1.2,
-              1.3
-            ]
-          ],
-          [
-            [
-              1.0,
-              2.0
-            ],
-            [
-              0.9,
-              1.4
-            ]
-          ]
-        ],
-        "learning_rate": 1.1
-      },
-      "expectedOutput": {
-        "new_classifier_W": [
-          [
-            0.220066,
-            -0.120066
-          ],
-          [
-            -0.317717,
-            0.417717
-          ]
-        ],
-        "new_classifier_b": [
-          0.052348,
-          -0.052348
-        ],
-        "loss": 0.475252
-      },
-      "isPublic": false
-    },
-    {
-      "id": "bert-fine-tuning-tc-9",
-      "name": "Case 9",
+      "id": "bert-fine-tuning-tc-6",
+      "name": "Case 6",
       "inputs": {
         "labels": [
           -2.0,
@@ -616,25 +421,25 @@
       "expectedOutput": {
         "new_classifier_W": [
           [
-            -2.624783,
-            -1.275217
+            -2.6248,
+            -1.2752
           ],
           [
-            -2.382539,
-            -1.517461
+            -2.3825,
+            -1.5175
           ]
         ],
         "new_classifier_b": [
-          -1.647559,
-          -2.352441
+          -1.6476,
+          -2.3524
         ],
-        "loss": 0.530711
+        "loss": 0.5307
       },
       "isPublic": false
     },
     {
-      "id": "bert-fine-tuning-tc-10",
-      "name": "Case 10",
+      "id": "bert-fine-tuning-tc-7",
+      "name": "Case 7",
       "inputs": {
         "labels": [
           1,
@@ -681,669 +486,19 @@
       "expectedOutput": {
         "new_classifier_W": [
           [
-            -0.070066,
-            0.170066
+            -0.0701,
+            0.1701
           ],
           [
-            0.367717,
-            -0.267717
+            0.3677,
+            -0.2677
           ]
         ],
         "new_classifier_b": [
-          -0.052348,
-          0.052348
+          -0.0523,
+          0.0523
         ],
-        "loss": 0.975252
-      },
-      "isPublic": false
-    },
-    {
-      "id": "bert-fine-tuning-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "labels": [
-          0,
-          -1
-        ],
-        "classifier_W": [
-          [
-            -0.2,
-            0.1
-          ],
-          [
-            0.3,
-            -0.4
-          ]
-        ],
-        "classifier_b": [
-          -0.05,
-          0.05
-        ],
-        "hidden_states": [
-          [
-            [
-              -1,
-              0
-            ],
-            [
-              -0.2,
-              -0.3
-            ]
-          ],
-          [
-            [
-              0,
-              -1
-            ],
-            [
-              0.1,
-              -0.4
-            ]
-          ]
-        ],
-        "learning_rate": -0.1
-      },
-      "expectedOutput": {
-        "new_classifier_W": [
-          [
-            -0.177492,
-            0.077492
-          ],
-          [
-            0.284499,
-            -0.384499
-          ]
-        ],
-        "new_classifier_b": [
-          -0.057007,
-          0.057007
-        ],
-        "loss": 0.48462
-      },
-      "isPublic": false
-    },
-    {
-      "id": "bert-fine-tuning-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "labels": [
-          0,
-          10
-        ],
-        "classifier_W": [
-          [
-            2.0,
-            -1.0
-          ],
-          [
-            -3.0,
-            4.0
-          ]
-        ],
-        "classifier_b": [
-          0.5,
-          -0.5
-        ],
-        "hidden_states": [
-          [
-            [
-              10,
-              0
-            ],
-            [
-              2.0,
-              3.0
-            ]
-          ],
-          [
-            [
-              0,
-              10
-            ],
-            [
-              -1.0,
-              4.0
-            ]
-          ]
-        ],
-        "learning_rate": 1.0
-      },
-      "expectedOutput": {
-        "new_classifier_W": [
-          [
-            0.220066,
-            -0.120066
-          ],
-          [
-            -0.317717,
-            0.417717
-          ]
-        ],
-        "new_classifier_b": [
-          0.052348,
-          -0.052348
-        ],
-        "loss": 0.475252
-      },
-      "isPublic": false
-    },
-    {
-      "id": "bert-fine-tuning-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "labels": [
-          0,
-          0
-        ],
-        "classifier_W": [
-          [
-            0.02,
-            -0.01
-          ],
-          [
-            -0.03,
-            0.04
-          ]
-        ],
-        "classifier_b": [
-          0.005,
-          -0.005
-        ],
-        "hidden_states": [
-          [
-            [
-              0,
-              0
-            ],
-            [
-              0.02,
-              0.03
-            ]
-          ],
-          [
-            [
-              0,
-              0
-            ],
-            [
-              -0.01,
-              0.04
-            ]
-          ]
-        ],
-        "learning_rate": 0.01
-      },
-      "expectedOutput": {
-        "new_classifier_W": [
-          [
-            0.02,
-            -0.01
-          ],
-          [
-            -0.03,
-            0.04
-          ]
-        ],
-        "new_classifier_b": [
-          0.009975,
-          -0.009975
-        ],
-        "loss": 0.68816
-      },
-      "isPublic": false
-    },
-    {
-      "id": "bert-fine-tuning-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "labels": [
-          5.0,
-          6.0
-        ],
-        "classifier_W": [
-          [
-            5.2,
-            4.9
-          ],
-          [
-            4.7,
-            5.4
-          ]
-        ],
-        "classifier_b": [
-          5.05,
-          4.95
-        ],
-        "hidden_states": [
-          [
-            [
-              6.0,
-              5.0
-            ],
-            [
-              5.2,
-              5.3
-            ]
-          ],
-          [
-            [
-              5.0,
-              6.0
-            ],
-            [
-              4.9,
-              5.4
-            ]
-          ]
-        ],
-        "learning_rate": 5.1
-      },
-      "expectedOutput": {
-        "new_classifier_W": [
-          [
-            0.220066,
-            -0.120066
-          ],
-          [
-            -0.317717,
-            0.417717
-          ]
-        ],
-        "new_classifier_b": [
-          0.052348,
-          -0.052348
-        ],
-        "loss": 0.475252
-      },
-      "isPublic": false
-    },
-    {
-      "id": "bert-fine-tuning-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "labels": [
-          0,
-          2
-        ],
-        "classifier_W": [
-          [
-            0.3,
-            -0.15
-          ],
-          [
-            -0.45,
-            0.6
-          ]
-        ],
-        "classifier_b": [
-          0.075,
-          -0.075
-        ],
-        "hidden_states": [
-          [
-            [
-              2,
-              0
-            ],
-            [
-              0.3,
-              0.45
-            ]
-          ],
-          [
-            [
-              0,
-              2
-            ],
-            [
-              -0.15,
-              0.6
-            ]
-          ]
-        ],
-        "learning_rate": 0.15
-      },
-      "expectedOutput": {
-        "new_classifier_W": [
-          [
-            0.220066,
-            -0.120066
-          ],
-          [
-            -0.317717,
-            0.417717
-          ]
-        ],
-        "new_classifier_b": [
-          0.052348,
-          -0.052348
-        ],
-        "loss": 0.475252
-      },
-      "isPublic": false
-    },
-    {
-      "id": "bert-fine-tuning-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "labels": [
-          0,
-          -2
-        ],
-        "classifier_W": [
-          [
-            -0.4,
-            0.2
-          ],
-          [
-            0.6,
-            -0.8
-          ]
-        ],
-        "classifier_b": [
-          -0.1,
-          0.1
-        ],
-        "hidden_states": [
-          [
-            [
-              -2,
-              0
-            ],
-            [
-              -0.4,
-              -0.6
-            ]
-          ],
-          [
-            [
-              0,
-              -2
-            ],
-            [
-              0.2,
-              -0.8
-            ]
-          ]
-        ],
-        "learning_rate": -0.2
-      },
-      "expectedOutput": {
-        "new_classifier_W": [
-          [
-            -0.346212,
-            0.146212
-          ],
-          [
-            0.790515,
-            -0.990515
-          ]
-        ],
-        "new_classifier_b": [
-          -0.222152,
-          0.222152
-        ],
-        "loss": 1.680925
-      },
-      "isPublic": false
-    },
-    {
-      "id": "bert-fine-tuning-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "labels": [
-          0,
-          0
-        ],
-        "classifier_W": [
-          [
-            0.05,
-            -0.025
-          ],
-          [
-            -0.075,
-            0.1
-          ]
-        ],
-        "classifier_b": [
-          0.0125,
-          -0.0125
-        ],
-        "hidden_states": [
-          [
-            [
-              0,
-              0
-            ],
-            [
-              0.05,
-              0.075
-            ]
-          ],
-          [
-            [
-              0,
-              0
-            ],
-            [
-              -0.025,
-              0.1
-            ]
-          ]
-        ],
-        "learning_rate": 0.025
-      },
-      "expectedOutput": {
-        "new_classifier_W": [
-          [
-            0.05,
-            -0.025
-          ],
-          [
-            -0.075,
-            0.1
-          ]
-        ],
-        "new_classifier_b": [
-          0.024844,
-          -0.024844
-        ],
-        "loss": 0.680725
-      },
-      "isPublic": false
-    },
-    {
-      "id": "bert-fine-tuning-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "labels": [
-          -1.0,
-          0.0
-        ],
-        "classifier_W": [
-          [
-            -0.8,
-            -1.1
-          ],
-          [
-            -1.3,
-            -0.6
-          ]
-        ],
-        "classifier_b": [
-          -0.95,
-          -1.05
-        ],
-        "hidden_states": [
-          [
-            [
-              0.0,
-              -1.0
-            ],
-            [
-              -0.8,
-              -0.7
-            ]
-          ],
-          [
-            [
-              -1.0,
-              0.0
-            ],
-            [
-              -1.1,
-              -0.6
-            ]
-          ]
-        ],
-        "learning_rate": -0.9
-      },
-      "expectedOutput": {
-        "new_classifier_W": [
-          [
-            -0.552575,
-            -1.347425
-          ],
-          [
-            -1.610489,
-            -0.289511
-          ]
-        ],
-        "new_classifier_b": [
-          -0.886937,
-          -1.113063
-        ],
-        "loss": 0.98462
-      },
-      "isPublic": false
-    },
-    {
-      "id": "bert-fine-tuning-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "labels": [
-          0,
-          4
-        ],
-        "classifier_W": [
-          [
-            0.8,
-            -0.4
-          ],
-          [
-            -1.2,
-            1.6
-          ]
-        ],
-        "classifier_b": [
-          0.2,
-          -0.2
-        ],
-        "hidden_states": [
-          [
-            [
-              4,
-              0
-            ],
-            [
-              0.8,
-              1.2
-            ]
-          ],
-          [
-            [
-              0,
-              4
-            ],
-            [
-              -0.4,
-              1.6
-            ]
-          ]
-        ],
-        "learning_rate": 0.4
-      },
-      "expectedOutput": {
-        "new_classifier_W": [
-          [
-            0.220066,
-            -0.120066
-          ],
-          [
-            -0.317717,
-            0.417717
-          ]
-        ],
-        "new_classifier_b": [
-          0.052348,
-          -0.052348
-        ],
-        "loss": 0.475252
-      },
-      "isPublic": false
-    },
-    {
-      "id": "bert-fine-tuning-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "labels": [
-          0,
-          1
-        ],
-        "classifier_W": [
-          [
-            0.15,
-            -0.075
-          ],
-          [
-            -0.225,
-            0.3
-          ]
-        ],
-        "classifier_b": [
-          0.0375,
-          -0.0375
-        ],
-        "hidden_states": [
-          [
-            [
-              1,
-              0
-            ],
-            [
-              0.15,
-              0.225
-            ]
-          ],
-          [
-            [
-              0,
-              1
-            ],
-            [
-              -0.075,
-              0.3
-            ]
-          ]
-        ],
-        "learning_rate": 0.075
-      },
-      "expectedOutput": {
-        "new_classifier_W": [
-          [
-            0.165958,
-            -0.090958
-          ],
-          [
-            -0.239601,
-            0.314601
-          ]
-        ],
-        "new_classifier_b": [
-          0.038857,
-          -0.038857
-        ],
-        "loss": 0.523802
+        "loss": 0.9753
       },
       "isPublic": false
     }

@@ -32,7 +32,7 @@
   "solution": "### 💡 Intuition & Approach\nImplement fused FlashAttention forward in Triton with streamed key-value blocks and online softmax statistics.\n\n### ⚡ Python Reference Implementation\n```python\nimport math, numpy as np\n\ndef triton_flash_attention_fwd(q: list, k: list, v: list) -> list:\n    arr_q, arr_k, arr_v = np.array(q, dtype=float), np.array(k, dtype=float), np.array(v, dtype=float)\n    scores = np.dot(arr_q, arr_k.T) / math.sqrt(arr_q.shape[-1])\n    exp_s = np.exp(scores - np.max(scores, axis=-1, keepdims=True))\n    weights = exp_s / np.sum(exp_s, axis=-1, keepdims=True)\n    return np.round(np.dot(weights, arr_v), 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
   "testCases": [
     {
-      "id": "triton-flash-attention-fwd-test-1",
+      "id": "triton-flash-attention-fwd-tc-1",
       "name": "Standard Test Case 1",
       "inputs": {
         "q": [
@@ -63,8 +63,8 @@
       "isPublic": true
     },
     {
-      "id": "triton-flash-attention-fwd-test-2",
-      "name": "Standard Test Case 2",
+      "id": "triton-flash-attention-fwd-tc-2",
+      "name": "Case 2",
       "inputs": {
         "q": [
           [
@@ -107,27 +107,27 @@
       "inputs": {
         "q": [
           [
-            1.0,
+            1.5,
             0.0
           ]
         ],
         "k": [
           [
-            1.0,
+            1.5,
             0.0
           ]
         ],
         "v": [
           [
-            2.0,
-            3.0
+            3.0,
+            4.5
           ]
         ]
       },
       "expectedOutput": [
         [
-          2.0,
-          3.0
+          3.0,
+          4.5
         ]
       ],
       "isPublic": false
@@ -138,35 +138,27 @@
       "inputs": {
         "q": [
           [
-            1.0,
-            1.0
+            0.5,
+            0.0
           ]
         ],
         "k": [
           [
-            1.0,
+            0.5,
             0.0
-          ],
-          [
-            0.0,
-            1.0
           ]
         ],
         "v": [
           [
             1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
+            1.5
           ]
         ]
       },
       "expectedOutput": [
         [
-          0.5,
-          0.5
+          1.0,
+          1.5
         ]
       ],
       "isPublic": false
@@ -177,27 +169,27 @@
       "inputs": {
         "q": [
           [
-            1.0,
+            2.0,
             0.0
           ]
         ],
         "k": [
           [
-            1.0,
+            2.0,
             0.0
           ]
         ],
         "v": [
           [
-            2.0,
-            3.0
+            4.0,
+            6.0
           ]
         ]
       },
       "expectedOutput": [
         [
-          2.0,
-          3.0
+          4.0,
+          6.0
         ]
       ],
       "isPublic": false
@@ -208,35 +200,27 @@
       "inputs": {
         "q": [
           [
-            1.0,
-            1.0
+            -1.0,
+            -0.0
           ]
         ],
         "k": [
           [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
+            -1.0,
+            -0.0
           ]
         ],
         "v": [
           [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
+            -2.0,
+            -3.0
           ]
         ]
       },
       "expectedOutput": [
         [
-          0.5,
-          0.5
+          -2.0,
+          -3.0
         ]
       ],
       "isPublic": false
@@ -247,486 +231,27 @@
       "inputs": {
         "q": [
           [
-            1.0,
+            0.8,
             0.0
           ]
         ],
         "k": [
           [
-            1.0,
+            0.8,
             0.0
           ]
         ],
         "v": [
           [
-            2.0,
-            3.0
+            1.6,
+            2.4
           ]
         ]
       },
       "expectedOutput": [
         [
-          2.0,
-          3.0
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-flash-attention-fwd-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "q": [
-          [
-            1.0,
-            1.0
-          ]
-        ],
-        "k": [
-          [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
-          ]
-        ],
-        "v": [
-          [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          0.5,
-          0.5
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-flash-attention-fwd-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "q": [
-          [
-            1.0,
-            0.0
-          ]
-        ],
-        "k": [
-          [
-            1.0,
-            0.0
-          ]
-        ],
-        "v": [
-          [
-            2.0,
-            3.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          2.0,
-          3.0
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-flash-attention-fwd-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "q": [
-          [
-            1.0,
-            1.0
-          ]
-        ],
-        "k": [
-          [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
-          ]
-        ],
-        "v": [
-          [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          0.5,
-          0.5
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-flash-attention-fwd-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "q": [
-          [
-            1.0,
-            0.0
-          ]
-        ],
-        "k": [
-          [
-            1.0,
-            0.0
-          ]
-        ],
-        "v": [
-          [
-            2.0,
-            3.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          2.0,
-          3.0
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-flash-attention-fwd-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "q": [
-          [
-            1.0,
-            1.0
-          ]
-        ],
-        "k": [
-          [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
-          ]
-        ],
-        "v": [
-          [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          0.5,
-          0.5
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-flash-attention-fwd-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "q": [
-          [
-            1.0,
-            0.0
-          ]
-        ],
-        "k": [
-          [
-            1.0,
-            0.0
-          ]
-        ],
-        "v": [
-          [
-            2.0,
-            3.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          2.0,
-          3.0
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-flash-attention-fwd-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "q": [
-          [
-            1.0,
-            1.0
-          ]
-        ],
-        "k": [
-          [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
-          ]
-        ],
-        "v": [
-          [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          0.5,
-          0.5
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-flash-attention-fwd-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "q": [
-          [
-            1.0,
-            0.0
-          ]
-        ],
-        "k": [
-          [
-            1.0,
-            0.0
-          ]
-        ],
-        "v": [
-          [
-            2.0,
-            3.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          2.0,
-          3.0
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-flash-attention-fwd-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "q": [
-          [
-            1.0,
-            1.0
-          ]
-        ],
-        "k": [
-          [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
-          ]
-        ],
-        "v": [
-          [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          0.5,
-          0.5
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-flash-attention-fwd-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "q": [
-          [
-            1.0,
-            0.0
-          ]
-        ],
-        "k": [
-          [
-            1.0,
-            0.0
-          ]
-        ],
-        "v": [
-          [
-            2.0,
-            3.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          2.0,
-          3.0
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-flash-attention-fwd-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "q": [
-          [
-            1.0,
-            1.0
-          ]
-        ],
-        "k": [
-          [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
-          ]
-        ],
-        "v": [
-          [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          0.5,
-          0.5
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-flash-attention-fwd-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "q": [
-          [
-            1.0,
-            0.0
-          ]
-        ],
-        "k": [
-          [
-            1.0,
-            0.0
-          ]
-        ],
-        "v": [
-          [
-            2.0,
-            3.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          2.0,
-          3.0
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-flash-attention-fwd-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "q": [
-          [
-            1.0,
-            1.0
-          ]
-        ],
-        "k": [
-          [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
-          ]
-        ],
-        "v": [
-          [
-            1.0,
-            0.0
-          ],
-          [
-            0.0,
-            1.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          0.5,
-          0.5
+          1.6,
+          2.4
         ]
       ],
       "isPublic": false

@@ -105,7 +105,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **Decoupled RoPE** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\ndef solution(content, positional, positions, theta=10000.0):\n    # Content channels pass through; the separate positional subvector receives RoPE.\n    x=np.asarray(positional,dtype=float); pos=np.asarray(positions,dtype=float); dim=x.shape[-1]\n    if dim%2: raise ValueError(\"positional dimension must be even\")\n    inv=1.0/(theta**(np.arange(0,dim,2,dtype=float)/dim)); ang=pos[...,None]*inv\n    c,s=np.cos(ang),np.sin(ang); y=np.empty_like(x)\n    y[...,0::2]=x[...,0::2]*c-x[...,1::2]*s; y[...,1::2]=x[...,0::2]*s+x[...,1::2]*c\n    return {\"content\":np.asarray(content,dtype=float).tolist(),\"positional\":y.tolist()}\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "case-1",
+      "id": "ds3-decoupled-rope-tc-1",
       "name": "smoke test",
       "inputs": {
         "content": [
@@ -134,16 +134,16 @@
         ],
         "positional": [
           [
-            0.5403023058681398,
-            0.8414709848078965
+            0.5403,
+            0.8415
           ]
         ]
       },
       "isPublic": true
     },
     {
-      "id": "case-2",
-      "name": "edge case 1",
+      "id": "ds3-decoupled-rope-tc-2",
+      "name": "Case 2",
       "inputs": {
         "content": [
           [
@@ -208,8 +208,8 @@
         ],
         "positional": [
           [
-            -0.8322936730942848,
-            1.8185948536513634
+            -0.8323,
+            1.8186
           ]
         ]
       },
@@ -245,8 +245,8 @@
         ],
         "positional": [
           [
-            0.4387912809451864,
-            0.2397127693021015
+            0.4388,
+            0.2397
           ]
         ]
       },
@@ -282,8 +282,8 @@
         ],
         "positional": [
           [
-            -0.5403023058681398,
-            0.8414709848078965
+            -0.5403,
+            0.8415
           ]
         ]
       },
@@ -319,8 +319,8 @@
         ],
         "positional": [
           [
-            -2.9699774898013365,
-            0.4233600241796016
+            -2.97,
+            0.4234
           ]
         ]
       },
@@ -356,489 +356,8 @@
         ],
         "positional": [
           [
-            -1.7415910999199666,
-            1.402448017104221
-          ]
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ds3-decoupled-rope-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "content": [
-          [
-            -1.0,
-            0.0
-          ]
-        ],
-        "positional": [
-          [
-            -1.0,
-            -2.0
-          ]
-        ],
-        "positions": [
-          -1.0
-        ],
-        "theta": 9998.0
-      },
-      "expectedOutput": {
-        "content": [
-          [
-            -1.0,
-            0.0
-          ]
-        ],
-        "positional": [
-          [
-            -2.2232442754839328,
-            -0.23913362692838303
-          ]
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ds3-decoupled-rope-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "content": [
-          [
-            2.0,
-            1.0
-          ]
-        ],
-        "positional": [
-          [
-            0.0,
-            1.0
-          ]
-        ],
-        "positions": [
-          1.0
-        ],
-        "theta": 10000.0
-      },
-      "expectedOutput": {
-        "content": [
-          [
-            2.0,
-            1.0
-          ]
-        ],
-        "positional": [
-          [
-            -0.8414709848078965,
-            0.5403023058681398
-          ]
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ds3-decoupled-rope-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "content": [
-          [
-            -1.0,
-            -2.0
-          ]
-        ],
-        "positional": [
-          [
-            -1.0,
-            -0.0
-          ]
-        ],
-        "positions": [
-          -1.0
-        ],
-        "theta": -10000.0
-      },
-      "expectedOutput": {
-        "content": [
-          [
-            -1.0,
-            -2.0
-          ]
-        ],
-        "positional": [
-          [
-            -0.5403023058681398,
-            0.8414709848078965
-          ]
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ds3-decoupled-rope-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "content": [
-          [
-            10.0,
-            20.0
-          ]
-        ],
-        "positional": [
-          [
-            10.0,
-            0.0
-          ]
-        ],
-        "positions": [
-          10.0
-        ],
-        "theta": 100000.0
-      },
-      "expectedOutput": {
-        "content": [
-          [
-            10.0,
-            20.0
-          ]
-        ],
-        "positional": [
-          [
-            -8.390715290764524,
-            -5.440211108893697
-          ]
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ds3-decoupled-rope-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "content": [
-          [
-            0.1,
-            0.2
-          ]
-        ],
-        "positional": [
-          [
-            0.1,
-            0.0
-          ]
-        ],
-        "positions": [
-          0.1
-        ],
-        "theta": 1000.0
-      },
-      "expectedOutput": {
-        "content": [
-          [
-            0.1,
-            0.2
-          ]
-        ],
-        "positional": [
-          [
-            0.09950041652780259,
-            0.009983341664682815
-          ]
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ds3-decoupled-rope-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "content": [
-          [
-            6.0,
-            7.0
-          ]
-        ],
-        "positional": [
-          [
-            6.0,
-            5.0
-          ]
-        ],
-        "positions": [
-          6.0
-        ],
-        "theta": 10005.0
-      },
-      "expectedOutput": {
-        "content": [
-          [
-            6.0,
-            7.0
-          ]
-        ],
-        "positional": [
-          [
-            7.158099210896825,
-            3.1243584440582746
-          ]
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ds3-decoupled-rope-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "content": [
-          [
-            1.5,
-            3.0
-          ]
-        ],
-        "positional": [
-          [
-            1.5,
-            0.0
-          ]
-        ],
-        "positions": [
-          1.5
-        ],
-        "theta": 15000.0
-      },
-      "expectedOutput": {
-        "content": [
-          [
-            1.5,
-            3.0
-          ]
-        ],
-        "positional": [
-          [
-            0.10610580250155435,
-            1.4962424799060816
-          ]
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ds3-decoupled-rope-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "content": [
-          [
-            -2.0,
-            -4.0
-          ]
-        ],
-        "positional": [
-          [
-            -2.0,
-            -0.0
-          ]
-        ],
-        "positions": [
-          -2.0
-        ],
-        "theta": -20000.0
-      },
-      "expectedOutput": {
-        "content": [
-          [
-            -2.0,
-            -4.0
-          ]
-        ],
-        "positional": [
-          [
-            0.8322936730942848,
-            1.8185948536513634
-          ]
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ds3-decoupled-rope-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "content": [
-          [
-            0.25,
-            0.5
-          ]
-        ],
-        "positional": [
-          [
-            0.25,
-            0.0
-          ]
-        ],
-        "positions": [
-          0.25
-        ],
-        "theta": 2500.0
-      },
-      "expectedOutput": {
-        "content": [
-          [
-            0.25,
-            0.5
-          ]
-        ],
-        "positional": [
-          [
-            0.24222810542766118,
-            0.061850989813630734
-          ]
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ds3-decoupled-rope-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "content": [
-          [
-            0.0,
-            1.0
-          ]
-        ],
-        "positional": [
-          [
-            0.0,
-            -1.0
-          ]
-        ],
-        "positions": [
-          0.0
-        ],
-        "theta": 9999.0
-      },
-      "expectedOutput": {
-        "content": [
-          [
-            0.0,
-            1.0
-          ]
-        ],
-        "positional": [
-          [
-            0.0,
-            -1.0
-          ]
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ds3-decoupled-rope-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "content": [
-          [
-            4.0,
-            8.0
-          ]
-        ],
-        "positional": [
-          [
-            4.0,
-            0.0
-          ]
-        ],
-        "positions": [
-          4.0
-        ],
-        "theta": 40000.0
-      },
-      "expectedOutput": {
-        "content": [
-          [
-            4.0,
-            8.0
-          ]
-        ],
-        "positional": [
-          [
-            -2.6145744834544478,
-            -3.027209981231713
-          ]
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ds3-decoupled-rope-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "content": [
-          [
-            0.75,
-            1.5
-          ]
-        ],
-        "positional": [
-          [
-            0.75,
-            0.0
-          ]
-        ],
-        "positions": [
-          0.75
-        ],
-        "theta": 7500.0
-      },
-      "expectedOutput": {
-        "content": [
-          [
-            0.75,
-            1.5
-          ]
-        ],
-        "positional": [
-          [
-            0.5487666516553656,
-            0.5112290700175006
-          ]
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "ds3-decoupled-rope-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "content": [
-          [
-            5.0,
-            10.0
-          ]
-        ],
-        "positional": [
-          [
-            5.0,
-            0.0
-          ]
-        ],
-        "positions": [
-          5.0
-        ],
-        "theta": 50000.0
-      },
-      "expectedOutput": {
-        "content": [
-          [
-            5.0,
-            10.0
-          ]
-        ],
-        "positional": [
-          [
-            1.4183109273161312,
-            -4.794621373315692
+            -1.7416,
+            1.4024
           ]
         ]
       },

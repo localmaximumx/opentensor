@@ -26,7 +26,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **U-Net Encoder Block** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef _conv2d_same(x: np.ndarray, k: np.ndarray, b: np.ndarray):\n    Kh, Kw, Cin, Cout = k.shape\n    pad_h = (Kh - 1) // 2\n    pad_w = (Kw - 1) // 2\n    padded = np.pad(x, ((0, 0), (pad_h, pad_h), (pad_w, pad_w), (0, 0)), mode='constant')\n    N, H, W, _ = x.shape\n    out = np.zeros((N, H, W, Cout), dtype=float)\n    for n in range(N):\n        for h in range(H):\n            for w in range(W):\n                patch = padded[n, h:h+Kh, w:w+Kw, :]\n                for c in range(Cout):\n                    out[n, h, w, c] = np.sum(patch * k[:, :, :, c]) + b[c]\n    return out\n\ndef _maxpool2d(x: np.ndarray):\n    N, H, W, C = x.shape\n    out = np.zeros((N, H // 2, W // 2, C), dtype=float)\n    for n in range(N):\n        for h in range(H // 2):\n            for w in range(W // 2):\n                patch = x[n, 2*h:2*h+2, 2*w:2*w+2, :]\n                out[n, h, w, :] = np.max(patch, axis=(0, 1))\n    return out\n\ndef unet_encoder_block(x: np.ndarray, kernel1: np.ndarray, bias1: np.ndarray,\n                       kernel2: np.ndarray, bias2: np.ndarray) -> dict:\n    x_arr = np.asarray(x, dtype=float)\n    k1, b1 = np.asarray(kernel1, dtype=float), np.asarray(bias1, dtype=float)\n    k2, b2 = np.asarray(kernel2, dtype=float), np.asarray(bias2, dtype=float)\n    \n    h1 = np.maximum(0.0, _conv2d_same(x_arr, k1, b1))\n    skip = np.maximum(0.0, _conv2d_same(h1, k2, b2))\n    pooled = _maxpool2d(skip)\n    return {\n        \"skip\": np.round(skip, 6).tolist(),\n        \"pooled\": np.round(pooled, 6).tolist()\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "public-1",
+      "id": "unet-encoder-block-tc-1",
       "name": "Single-channel block",
       "inputs": {
         "x": [
@@ -113,8 +113,8 @@
       }
     },
     {
-      "id": "public-2",
-      "name": "Two output channels",
+      "id": "unet-encoder-block-tc-2",
+      "name": "Case 2",
       "inputs": {
         "x": [
           [
@@ -208,8 +208,8 @@
       }
     },
     {
-      "id": "public-3",
-      "name": "Batch of two",
+      "id": "unet-encoder-block-tc-3",
+      "name": "Case 3",
       "inputs": {
         "x": [
           [
@@ -340,35 +340,35 @@
           [
             [
               [
-                1
+                2
               ],
               [
-                -1
+                -2
               ]
             ],
             [
               [
-                2
+                3
               ],
               [
-                0.5
+                0.75
               ]
             ]
           ]
         ],
         "bias1": [
           0,
-          0.5
+          0.75
         ],
         "bias2": [
-          0.1
+          0.15
         ],
         "kernel1": [
           [
             [
               [
-                2,
-                -1
+                3,
+                -2
               ]
             ]
           ]
@@ -377,33 +377,32 @@
           [
             [
               [
-                0.5
+                0.75
               ],
               [
-                1
+                2
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": {
         "skip": [
           [
             [
               [
-                1.1
+                4.65
               ],
               [
-                1.6
+                9.65
               ]
             ],
             [
               [
-                2.1
+                6.9
               ],
               [
-                0.6
+                1.8375
               ]
             ]
           ]
@@ -412,12 +411,13 @@
           [
             [
               [
-                2.1
+                9.65
               ]
             ]
           ]
         ]
-      }
+      },
+      "isPublic": false
     },
     {
       "id": "unet-encoder-block-tc-5",
@@ -427,36 +427,35 @@
           [
             [
               [
-                1
+                0
               ],
               [
-                2
+                0
               ]
             ],
             [
               [
-                3
+                1
               ],
               [
-                4
+                0.25
               ]
             ]
           ]
         ],
         "bias1": [
           0,
-          1
+          0.25
         ],
         "bias2": [
-          0,
-          0.1
+          0.05
         ],
         "kernel1": [
           [
             [
               [
                 1,
-                -1
+                0
               ]
             ]
           ]
@@ -465,39 +464,32 @@
           [
             [
               [
-                0.5,
-                0.2
+                0.25
               ],
               [
-                1,
-                -0.5
+                0
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": {
         "skip": [
           [
             [
               [
-                0.5,
-                0.3
+                0.05
               ],
               [
-                1.0,
-                0.5
+                0.05
               ]
             ],
             [
               [
-                1.5,
-                0.7
+                0.3
               ],
               [
-                2.0,
-                0.9
+                0.1125
               ]
             ]
           ]
@@ -506,13 +498,13 @@
           [
             [
               [
-                2.0,
-                0.9
+                0.3
               ]
             ]
           ]
         ]
-      }
+      },
+      "isPublic": false
     },
     {
       "id": "unet-encoder-block-tc-6",
@@ -522,51 +514,35 @@
           [
             [
               [
-                1
-              ],
-              [
-                0
-              ]
-            ],
-            [
-              [
-                -1
-              ],
-              [
                 2
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                0.5
               ],
               [
-                1.5
+                -2
               ]
             ],
             [
               [
-                2.5
+                4
               ],
               [
-                -0.5
+                1.0
               ]
             ]
           ]
         ],
         "bias1": [
-          0
+          0,
+          1.0
         ],
         "bias2": [
-          -0.5
+          0.2
         ],
         "kernel1": [
           [
             [
               [
-                1
+                4,
+                -2
               ]
             ]
           ]
@@ -575,48 +551,32 @@
           [
             [
               [
+                1.0
+              ],
+              [
                 2
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": {
         "skip": [
           [
             [
               [
-                1.5
+                8.2
               ],
               [
-                0.0
+                10.2
               ]
             ],
             [
               [
-                0.0
+                16.2
               ],
               [
-                3.5
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                2.5
-              ]
-            ],
-            [
-              [
-                4.5
-              ],
-              [
-                0.0
+                4.2
               ]
             ]
           ]
@@ -625,19 +585,13 @@
           [
             [
               [
-                3.5
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                4.5
+                16.2
               ]
             ]
           ]
         ]
-      }
+      },
+      "isPublic": false
     },
     {
       "id": "unet-encoder-block-tc-7",
@@ -647,215 +601,15 @@
           [
             [
               [
-                1
-              ],
-              [
                 -1
-              ]
-            ],
-            [
-              [
-                2
-              ],
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          0.5
-        ],
-        "bias2": [
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                2,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.5
               ],
               [
                 1
               ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": {
-        "skip": [
-          [
-            [
-              [
-                1.1
-              ],
-              [
-                1.6
-              ]
             ],
             [
               [
-                2.1
-              ],
-              [
-                0.6
-              ]
-            ]
-          ]
-        ],
-        "pooled": [
-          [
-            [
-              [
-                2.1
-              ]
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "unet-encoder-block-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ]
-            ],
-            [
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          1
-        ],
-        "bias2": [
-          0,
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.5,
-                0.2
-              ],
-              [
-                1,
-                -0.5
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": {
-        "skip": [
-          [
-            [
-              [
-                0.5,
-                0.3
-              ],
-              [
-                1.0,
-                0.5
-              ]
-            ],
-            [
-              [
-                1.5,
-                0.7
-              ],
-              [
-                2.0,
-                0.9
-              ]
-            ]
-          ]
-        ],
-        "pooled": [
-          [
-            [
-              [
-                2.0,
-                0.9
-              ]
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "unet-encoder-block-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                0
-              ]
-            ],
-            [
-              [
-                -1
-              ],
-              [
-                2
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1.5
-              ]
-            ],
-            [
-              [
-                2.5
+                -2
               ],
               [
                 -0.5
@@ -864,125 +618,18 @@
           ]
         ],
         "bias1": [
-          0
-        ],
-        "bias2": [
+          0,
           -0.5
         ],
-        "kernel1": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                2
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": {
-        "skip": [
-          [
-            [
-              [
-                1.5
-              ],
-              [
-                0.0
-              ]
-            ],
-            [
-              [
-                0.0
-              ],
-              [
-                3.5
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                2.5
-              ]
-            ],
-            [
-              [
-                4.5
-              ],
-              [
-                0.0
-              ]
-            ]
-          ]
-        ],
-        "pooled": [
-          [
-            [
-              [
-                3.5
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                4.5
-              ]
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "unet-encoder-block-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ],
-            [
-              [
-                2
-              ],
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          0.5
-        ],
         "bias2": [
-          0.1
+          -0.1
         ],
         "kernel1": [
           [
             [
               [
-                2,
-                -1
+                -2,
+                1
               ]
             ]
           ]
@@ -990,218 +637,22 @@
         "kernel2": [
           [
             [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": {
-        "skip": [
-          [
-            [
-              [
-                1.1
-              ],
-              [
-                1.6
-              ]
-            ],
-            [
-              [
-                2.1
-              ],
-              [
-                0.6
-              ]
-            ]
-          ]
-        ],
-        "pooled": [
-          [
-            [
-              [
-                2.1
-              ]
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "unet-encoder-block-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ]
-            ],
-            [
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          1
-        ],
-        "bias2": [
-          0,
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.5,
-                0.2
-              ],
-              [
-                1,
-                -0.5
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": {
-        "skip": [
-          [
-            [
-              [
-                0.5,
-                0.3
-              ],
-              [
-                1.0,
-                0.5
-              ]
-            ],
-            [
-              [
-                1.5,
-                0.7
-              ],
-              [
-                2.0,
-                0.9
-              ]
-            ]
-          ]
-        ],
-        "pooled": [
-          [
-            [
-              [
-                2.0,
-                0.9
-              ]
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "unet-encoder-block-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                0
-              ]
-            ],
-            [
-              [
-                -1
-              ],
-              [
-                2
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1.5
-              ]
-            ],
-            [
-              [
-                2.5
-              ],
               [
                 -0.5
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0
-        ],
-        "bias2": [
-          -0.5
-        ],
-        "kernel1": [
-          [
-            [
+              ],
               [
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                2
+                -1
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": {
         "skip": [
           [
             [
               [
-                1.5
+                0.0
               ],
               [
                 0.0
@@ -1210,24 +661,6 @@
             [
               [
                 0.0
-              ],
-              [
-                3.5
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                2.5
-              ]
-            ],
-            [
-              [
-                4.5
               ],
               [
                 0.0
@@ -1239,815 +672,13 @@
           [
             [
               [
-                3.5
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                4.5
-              ]
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "unet-encoder-block-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ],
-            [
-              [
-                2
-              ],
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          0.5
-        ],
-        "bias2": [
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                2,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": {
-        "skip": [
-          [
-            [
-              [
-                1.1
-              ],
-              [
-                1.6
-              ]
-            ],
-            [
-              [
-                2.1
-              ],
-              [
-                0.6
-              ]
-            ]
-          ]
-        ],
-        "pooled": [
-          [
-            [
-              [
-                2.1
-              ]
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "unet-encoder-block-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ]
-            ],
-            [
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          1
-        ],
-        "bias2": [
-          0,
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.5,
-                0.2
-              ],
-              [
-                1,
-                -0.5
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": {
-        "skip": [
-          [
-            [
-              [
-                0.5,
-                0.3
-              ],
-              [
-                1.0,
-                0.5
-              ]
-            ],
-            [
-              [
-                1.5,
-                0.7
-              ],
-              [
-                2.0,
-                0.9
-              ]
-            ]
-          ]
-        ],
-        "pooled": [
-          [
-            [
-              [
-                2.0,
-                0.9
-              ]
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "unet-encoder-block-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                0
-              ]
-            ],
-            [
-              [
-                -1
-              ],
-              [
-                2
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1.5
-              ]
-            ],
-            [
-              [
-                2.5
-              ],
-              [
-                -0.5
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0
-        ],
-        "bias2": [
-          -0.5
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                2
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": {
-        "skip": [
-          [
-            [
-              [
-                1.5
-              ],
-              [
-                0.0
-              ]
-            ],
-            [
-              [
-                0.0
-              ],
-              [
-                3.5
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                2.5
-              ]
-            ],
-            [
-              [
-                4.5
-              ],
-              [
                 0.0
               ]
             ]
           ]
-        ],
-        "pooled": [
-          [
-            [
-              [
-                3.5
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                4.5
-              ]
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "unet-encoder-block-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ],
-            [
-              [
-                2
-              ],
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          0.5
-        ],
-        "bias2": [
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                2,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ]
-          ]
         ]
       },
-      "isPublic": false,
-      "expectedOutput": {
-        "skip": [
-          [
-            [
-              [
-                1.1
-              ],
-              [
-                1.6
-              ]
-            ],
-            [
-              [
-                2.1
-              ],
-              [
-                0.6
-              ]
-            ]
-          ]
-        ],
-        "pooled": [
-          [
-            [
-              [
-                2.1
-              ]
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "unet-encoder-block-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ]
-            ],
-            [
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          1
-        ],
-        "bias2": [
-          0,
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.5,
-                0.2
-              ],
-              [
-                1,
-                -0.5
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": {
-        "skip": [
-          [
-            [
-              [
-                0.5,
-                0.3
-              ],
-              [
-                1.0,
-                0.5
-              ]
-            ],
-            [
-              [
-                1.5,
-                0.7
-              ],
-              [
-                2.0,
-                0.9
-              ]
-            ]
-          ]
-        ],
-        "pooled": [
-          [
-            [
-              [
-                2.0,
-                0.9
-              ]
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "unet-encoder-block-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                0
-              ]
-            ],
-            [
-              [
-                -1
-              ],
-              [
-                2
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1.5
-              ]
-            ],
-            [
-              [
-                2.5
-              ],
-              [
-                -0.5
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0
-        ],
-        "bias2": [
-          -0.5
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                2
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": {
-        "skip": [
-          [
-            [
-              [
-                1.5
-              ],
-              [
-                0.0
-              ]
-            ],
-            [
-              [
-                0.0
-              ],
-              [
-                3.5
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                2.5
-              ]
-            ],
-            [
-              [
-                4.5
-              ],
-              [
-                0.0
-              ]
-            ]
-          ]
-        ],
-        "pooled": [
-          [
-            [
-              [
-                3.5
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                4.5
-              ]
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "unet-encoder-block-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ],
-            [
-              [
-                2
-              ],
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          0.5
-        ],
-        "bias2": [
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                2,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": {
-        "skip": [
-          [
-            [
-              [
-                1.1
-              ],
-              [
-                1.6
-              ]
-            ],
-            [
-              [
-                2.1
-              ],
-              [
-                0.6
-              ]
-            ]
-          ]
-        ],
-        "pooled": [
-          [
-            [
-              [
-                2.1
-              ]
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "unet-encoder-block-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ]
-            ],
-            [
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          1
-        ],
-        "bias2": [
-          0,
-          0.1
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.5,
-                0.2
-              ],
-              [
-                1,
-                -0.5
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": {
-        "skip": [
-          [
-            [
-              [
-                0.5,
-                0.3
-              ],
-              [
-                1.0,
-                0.5
-              ]
-            ],
-            [
-              [
-                1.5,
-                0.7
-              ],
-              [
-                2.0,
-                0.9
-              ]
-            ]
-          ]
-        ],
-        "pooled": [
-          [
-            [
-              [
-                2.0,
-                0.9
-              ]
-            ]
-          ]
-        ]
-      }
+      "isPublic": false
     }
   ],
   "functionMetadata": {

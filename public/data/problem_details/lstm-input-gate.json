@@ -25,7 +25,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **Input Gate** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef sigmoid(x: np.ndarray) -> np.ndarray:\n    return 1.0 / (1.0 + np.exp(-np.clip(x, -500, 500)))\n\ndef input_gate(h_prev: np.ndarray, x_t: np.ndarray,\n               W_i: np.ndarray, b_i: np.ndarray,\n               W_c: np.ndarray, b_c: np.ndarray) -> dict:\n    hp = np.asarray(h_prev, dtype=float)\n    xt = np.asarray(x_t, dtype=float)\n    wi, bi = np.asarray(W_i, dtype=float), np.asarray(b_i, dtype=float)\n    wc, bc = np.asarray(W_c, dtype=float), np.asarray(b_c, dtype=float)\n    if hp.ndim == 1:\n        cat = np.concatenate([hp, xt])\n        i_t = sigmoid(wi @ cat + bi)\n        c_tilde = np.tanh(wc @ cat + bc)\n    else:\n        cat = np.concatenate([hp, xt], axis=-1)\n        i_t = sigmoid(cat @ wi.T + bi)\n        c_tilde = np.tanh(cat @ wc.T + bc)\n    return {\n        \"input_gate\": np.round(i_t, 6).tolist(),\n        \"candidate\": np.round(c_tilde, 6).tolist()\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "test-1",
+      "id": "lstm-input-gate-tc-1",
       "name": "Basic input gate",
       "inputs": {
         "W_c": [
@@ -76,18 +76,18 @@
       "isPublic": true,
       "expectedOutput": {
         "input_gate": [
-          0.574443,
-          0.586618
+          0.5744,
+          0.5866
         ],
         "candidate": [
-          0.244919,
-          0.244919
+          0.2449,
+          0.2449
         ]
       }
     },
     {
-      "id": "test-2",
-      "name": "input gate with bias",
+      "id": "lstm-input-gate-tc-2",
+      "name": "Case 2",
       "inputs": {
         "W_c": [
           [
@@ -137,18 +137,18 @@
       "isPublic": true,
       "expectedOutput": {
         "input_gate": [
-          0.634136,
-          0.557248
+          0.6341,
+          0.5572
         ],
         "candidate": [
-          0.309507,
-          0.379949
+          0.3095,
+          0.3799
         ]
       }
     },
     {
-      "id": "test-3",
-      "name": "Batched input gate",
+      "id": "lstm-input-gate-tc-3",
+      "name": "Case 3",
       "inputs": {
         "W_c": [
           [
@@ -211,22 +211,22 @@
       "expectedOutput": {
         "input_gate": [
           [
-            0.574443,
-            0.586618
+            0.5744,
+            0.5866
           ],
           [
-            0.610639,
-            0.581759
+            0.6106,
+            0.5818
           ]
         ],
         "candidate": [
           [
-            0.244919,
-            0.244919
+            0.2449,
+            0.2449
           ],
           [
-            0.263625,
-            0.291313
+            0.2636,
+            0.2913
           ]
         ]
       }
@@ -282,12 +282,12 @@
       },
       "expectedOutput": {
         "input_gate": [
-          0.768525,
-          0.802184
+          0.7685,
+          0.8022
         ],
         "candidate": [
-          0.761594,
-          0.761594
+          0.7616,
+          0.7616
         ]
       },
       "isPublic": false
@@ -343,12 +343,12 @@
       },
       "expectedOutput": {
         "input_gate": [
-          0.512497,
-          0.503125
+          0.5125,
+          0.5031
         ],
         "candidate": [
-          0.012499,
-          0.037482
+          0.0125,
+          0.0375
         ]
       },
       "isPublic": false
@@ -404,11 +404,11 @@
       },
       "expectedOutput": {
         "input_gate": [
-          0.99959,
-          0.99961
+          0.9996,
+          0.9996
         ],
         "candidate": [
-          0.999999,
+          1.0,
           1.0
         ]
       },
@@ -465,805 +465,12 @@
       },
       "expectedOutput": {
         "input_gate": [
-          0.679179,
-          0.733509
+          0.6792,
+          0.7335
         ],
         "candidate": [
-          0.612242,
-          0.563195
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-input-gate-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "W_c": [
-          [
-            0.9,
-            0.3,
-            0.6,
-            0.3
-          ],
-          [
-            0.3,
-            1.2,
-            0.3,
-            0.9
-          ]
-        ],
-        "W_i": [
-          [
-            0.6,
-            0.9,
-            0.3,
-            1.2
-          ],
-          [
-            1.2,
-            0.6,
-            0.9,
-            0.3
-          ]
-        ],
-        "b_c": [
-          0,
-          0
-        ],
-        "b_i": [
-          0,
-          0
-        ],
-        "x_t": [
-          3,
-          1.5
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "input_gate": [
-          0.937027,
-          0.958909
-        ],
-        "candidate": [
-          0.978026,
-          0.978026
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-input-gate-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "W_c": [
-          [
-            0.075,
-            0.025,
-            0.05,
-            0.025
-          ],
-          [
-            0.025,
-            0.1,
-            0.025,
-            0.075
-          ]
-        ],
-        "W_i": [
-          [
-            0.05,
-            0.075,
-            0.025,
-            0.1
-          ],
-          [
-            0.1,
-            0.05,
-            0.075,
-            0.025
-          ]
-        ],
-        "b_c": [
-          0,
-          0
-        ],
-        "b_i": [
-          0,
-          0
-        ],
-        "x_t": [
-          0,
-          0.125
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "input_gate": [
-          0.503125,
-          0.500781
-        ],
-        "candidate": [
-          0.003125,
-          0.009375
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-input-gate-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "W_c": [
-          [
-            2.3,
-            2.1,
-            2.2,
-            2.1
-          ],
-          [
-            2.1,
-            2.4,
-            2.1,
-            2.3
-          ]
-        ],
-        "W_i": [
-          [
-            2.2,
-            2.3,
-            2.1,
-            2.4
-          ],
-          [
-            2.4,
-            2.2,
-            2.3,
-            2.1
-          ]
-        ],
-        "b_c": [
-          2,
-          2
-        ],
-        "b_i": [
-          2,
-          2
-        ],
-        "x_t": [
-          3,
-          2.5
-        ],
-        "h_prev": [
-          2,
-          2
-        ]
-      },
-      "expectedOutput": {
-        "input_gate": [
-          1.0,
-          1.0
-        ],
-        "candidate": [
-          1.0,
-          1.0
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-input-gate-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "W_c": [
-          [
-            1.2,
-            0.4,
-            0.8,
-            0.4
-          ],
-          [
-            0.4,
-            1.6,
-            0.4,
-            1.2
-          ]
-        ],
-        "W_i": [
-          [
-            0.8,
-            1.2,
-            0.4,
-            1.6
-          ],
-          [
-            1.6,
-            0.8,
-            1.2,
-            0.4
-          ]
-        ],
-        "b_c": [
-          0,
-          0
-        ],
-        "b_i": [
-          0,
-          0
-        ],
-        "x_t": [
-          4,
-          2.0
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "input_gate": [
-          0.991837,
-          0.996316
-        ],
-        "candidate": [
-          0.999329,
-          0.999329
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-input-gate-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "W_c": [
-          [
-            0.1,
-            0.2,
-            0.1,
-            0.3
-          ],
-          [
-            0.3,
-            0.1,
-            0.4,
-            0.1
-          ]
-        ],
-        "W_i": [
-          [
-            0.4,
-            0.1,
-            0.3,
-            0.2
-          ],
-          [
-            0.1,
-            0.3,
-            0.2,
-            0.4
-          ]
-        ],
-        "b_c": [
-          0,
-          0
-        ],
-        "b_i": [
-          0,
-          0
-        ],
-        "x_t": [
-          0.5,
-          1
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "input_gate": [
-          0.586618,
-          0.622459
-        ],
-        "candidate": [
-          0.336376,
-          0.291313
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-input-gate-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "W_c": [
-          [
-            0.225,
-            0.075,
-            0.15,
-            0.075
-          ],
-          [
-            0.075,
-            0.3,
-            0.075,
-            0.225
-          ]
-        ],
-        "W_i": [
-          [
-            0.15,
-            0.225,
-            0.075,
-            0.3
-          ],
-          [
-            0.3,
-            0.15,
-            0.225,
-            0.075
-          ]
-        ],
-        "b_c": [
-          0,
-          0
-        ],
-        "b_i": [
-          0,
-          0
-        ],
-        "x_t": [
-          1,
-          0.375
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "input_gate": [
-          0.546738,
-          0.562946
-        ],
-        "candidate": [
-          0.176265,
-          0.158039
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-input-gate-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "W_c": [
-          [
-            1.5,
-            0.5,
-            1.0,
-            0.5
-          ],
-          [
-            0.5,
-            2.0,
-            0.5,
-            1.5
-          ]
-        ],
-        "W_i": [
-          [
-            1.0,
-            1.5,
-            0.5,
-            2.0
-          ],
-          [
-            2.0,
-            1.0,
-            1.5,
-            0.5
-          ]
-        ],
-        "b_c": [
-          0,
-          0
-        ],
-        "b_i": [
-          0,
-          0
-        ],
-        "x_t": [
-          5,
-          2.5
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "input_gate": [
-          0.999447,
-          0.999842
-        ],
-        "candidate": [
-          0.999993,
-          0.999993
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-input-gate-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "W_c": [
-          [
-            3.3,
-            3.1,
-            3.2,
-            3.1
-          ],
-          [
-            3.1,
-            3.4,
-            3.1,
-            3.3
-          ]
-        ],
-        "W_i": [
-          [
-            3.2,
-            3.3,
-            3.1,
-            3.4
-          ],
-          [
-            3.4,
-            3.2,
-            3.3,
-            3.1
-          ]
-        ],
-        "b_c": [
-          3,
-          3
-        ],
-        "b_i": [
-          3,
-          3
-        ],
-        "x_t": [
-          4,
-          3.5
-        ],
-        "h_prev": [
-          3,
-          3
-        ]
-      },
-      "expectedOutput": {
-        "input_gate": [
-          1.0,
-          1.0
-        ],
-        "candidate": [
-          1.0,
-          1.0
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-input-gate-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "W_c": [
-          [
-            0.24,
-            0.08,
-            0.16,
-            0.08
-          ],
-          [
-            0.08,
-            0.32,
-            0.08,
-            0.24
-          ]
-        ],
-        "W_i": [
-          [
-            0.16,
-            0.24,
-            0.08,
-            0.32
-          ],
-          [
-            0.32,
-            0.16,
-            0.24,
-            0.08
-          ]
-        ],
-        "b_c": [
-          0,
-          0
-        ],
-        "b_i": [
-          0,
-          0
-        ],
-        "x_t": [
-          1,
-          0.4
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "input_gate": [
-          0.551813,
-          0.567584
-        ],
-        "candidate": [
-          0.189675,
-          0.174205
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-input-gate-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "W_c": [
-          [
-            1.8,
-            0.6,
-            1.2,
-            0.6
-          ],
-          [
-            0.6,
-            2.4,
-            0.6,
-            1.8
-          ]
-        ],
-        "W_i": [
-          [
-            1.2,
-            1.8,
-            0.6,
-            2.4
-          ],
-          [
-            2.4,
-            1.2,
-            1.8,
-            0.6
-          ]
-        ],
-        "b_c": [
-          0,
-          0
-        ],
-        "b_i": [
-          0,
-          0
-        ],
-        "x_t": [
-          6,
-          3.0
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "input_gate": [
-          0.99998,
-          0.999997
-        ],
-        "candidate": [
-          1.0,
-          1.0
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-input-gate-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "W_c": [
-          [
-            4.3,
-            4.1,
-            4.2,
-            4.1
-          ],
-          [
-            4.1,
-            4.4,
-            4.1,
-            4.3
-          ]
-        ],
-        "W_i": [
-          [
-            4.2,
-            4.3,
-            4.1,
-            4.4
-          ],
-          [
-            4.4,
-            4.2,
-            4.3,
-            4.1
-          ]
-        ],
-        "b_c": [
-          4,
-          4
-        ],
-        "b_i": [
-          4,
-          4
-        ],
-        "x_t": [
-          5,
-          4.5
-        ],
-        "h_prev": [
-          4,
-          4
-        ]
-      },
-      "expectedOutput": {
-        "input_gate": [
-          1.0,
-          1.0
-        ],
-        "candidate": [
-          1.0,
-          1.0
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-input-gate-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "W_c": [
-          [
-            0.36,
-            0.12,
-            0.24,
-            0.12
-          ],
-          [
-            0.12,
-            0.48,
-            0.12,
-            0.36
-          ]
-        ],
-        "W_i": [
-          [
-            0.24,
-            0.36,
-            0.12,
-            0.48
-          ],
-          [
-            0.48,
-            0.24,
-            0.36,
-            0.12
-          ]
-        ],
-        "b_c": [
-          0,
-          0
-        ],
-        "b_i": [
-          0,
-          0
-        ],
-        "x_t": [
-          1,
-          0.6
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "input_gate": [
-          0.600608,
-          0.606351
-        ],
-        "candidate": [
-          0.302255,
-          0.323902
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-input-gate-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "W_c": [
-          [
-            0.12,
-            0.04,
-            0.08,
-            0.04
-          ],
-          [
-            0.04,
-            0.16,
-            0.04,
-            0.12
-          ]
-        ],
-        "W_i": [
-          [
-            0.08,
-            0.12,
-            0.04,
-            0.16
-          ],
-          [
-            0.16,
-            0.08,
-            0.12,
-            0.04
-          ]
-        ],
-        "b_c": [
-          0,
-          0
-        ],
-        "b_i": [
-          0,
-          0
-        ],
-        "x_t": [
-          0,
-          0.2
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "input_gate": [
-          0.507999,
-          0.502
-        ],
-        "candidate": [
-          0.008,
-          0.023995
+          0.6122,
+          0.5632
         ]
       },
       "isPublic": false

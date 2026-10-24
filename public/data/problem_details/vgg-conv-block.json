@@ -26,7 +26,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **VGG Conv Block** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef vgg_conv_block(x: np.ndarray, kernels: list, biases: list) -> np.ndarray:\n    cur = np.asarray(x, dtype=float)\n    for k_arr, b_arr in zip(kernels, biases):\n        k = np.asarray(k_arr, dtype=float)\n        b = np.asarray(b_arr, dtype=float)\n        Kh, Kw, Cin, Cout = k.shape\n        pad_h = (Kh - 1) // 2\n        pad_w = (Kw - 1) // 2\n        padded = np.pad(cur, ((0, 0), (pad_h, pad_h), (pad_w, pad_w), (0, 0)), mode='constant')\n        N, H, W, _ = cur.shape\n        conv = np.zeros((N, H, W, Cout), dtype=float)\n        for n in range(N):\n            for h in range(H):\n                for w in range(W):\n                    patch = padded[n, h:h+Kh, w:w+Kw, :]\n                    for c in range(Cout):\n                        conv[n, h, w, c] = np.sum(patch * k[:, :, :, c]) + b[c]\n        cur = np.maximum(0.0, conv)\n    return np.round(cur, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "public-1",
+      "id": "vgg-conv-block-tc-1",
       "name": "One convolution",
       "inputs": {
         "x": [
@@ -95,8 +95,8 @@
       ]
     },
     {
-      "id": "public-2",
-      "name": "Two convolutions",
+      "id": "vgg-conv-block-tc-2",
+      "name": "Case 2",
       "inputs": {
         "x": [
           [
@@ -158,8 +158,8 @@
       ]
     },
     {
-      "id": "public-3",
-      "name": "Spatial kernel",
+      "id": "vgg-conv-block-tc-3",
+      "name": "Case 3",
       "inputs": {
         "x": [
           [
@@ -306,18 +306,18 @@
           [
             [
               [
-                1
+                2
               ],
               [
-                -1
+                -2
               ]
             ],
             [
               [
-                2
+                3
               ],
               [
-                0.5
+                0.75
               ]
             ]
           ]
@@ -325,7 +325,7 @@
         "biases": [
           [
             0,
-            0.5
+            0.75
           ]
         ],
         "kernels": [
@@ -333,39 +333,39 @@
             [
               [
                 [
-                  2,
-                  -1
+                  3,
+                  -2
                 ]
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
             [
-              2.0,
+              6.0,
               0.0
             ],
             [
               0.0,
-              1.5
+              4.75
             ]
           ],
           [
             [
-              4.0,
+              9.0,
               0.0
             ],
             [
-              1.0,
+              2.25,
               0.0
             ]
           ]
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "vgg-conv-block-tc-5",
@@ -375,8 +375,18 @@
           [
             [
               [
-                1,
-                -1
+                0
+              ],
+              [
+                0
+              ]
+            ],
+            [
+              [
+                1
+              ],
+              [
+                0.25
               ]
             ]
           ]
@@ -384,10 +394,7 @@
         "biases": [
           [
             0,
-            0.1
-          ],
-          [
-            -0.2
+            0.25
           ]
         ],
         "kernels": [
@@ -397,38 +404,37 @@
                 [
                   1,
                   0
-                ],
-                [
-                  0.5,
-                  1
-                ]
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                [
-                  0.5
-                ],
-                [
-                  2
                 ]
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
             [
-              0.05
+              0.0,
+              0.25
+            ],
+            [
+              0.0,
+              0.25
+            ]
+          ],
+          [
+            [
+              1.0,
+              0.25
+            ],
+            [
+              0.25,
+              0.25
             ]
           ]
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "vgg-conv-block-tc-6",
@@ -438,13 +444,10 @@
           [
             [
               [
-                1
-              ],
-              [
                 2
               ],
               [
-                3
+                -2
               ]
             ],
             [
@@ -452,28 +455,15 @@
                 4
               ],
               [
-                5
-              ],
-              [
-                6
-              ]
-            ],
-            [
-              [
-                7
-              ],
-              [
-                8
-              ],
-              [
-                9
+                1.0
               ]
             ]
           ]
         ],
         "biases": [
           [
-            -5
+            0,
+            1.0
           ]
         ],
         "kernels": [
@@ -481,95 +471,39 @@
             [
               [
                 [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ]
-            ],
-            [
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  1
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ]
-            ],
-            [
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
+                  4,
+                  -2
                 ]
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
             [
+              8.0,
               0.0
             ],
             [
-              0.0
-            ],
-            [
-              0.0
+              0.0,
+              5.0
             ]
           ],
           [
             [
+              16.0,
               0.0
             ],
             [
+              4.0,
               0.0
-            ],
-            [
-              1.0
-            ]
-          ],
-          [
-            [
-              2.0
-            ],
-            [
-              3.0
-            ],
-            [
-              4.0
             ]
           ]
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "vgg-conv-block-tc-7",
@@ -579,18 +513,18 @@
           [
             [
               [
-                1
+                -1
               ],
               [
-                -1
+                1
               ]
             ],
             [
               [
-                2
+                -2
               ],
               [
-                0.5
+                -0.5
               ]
             ]
           ]
@@ -598,7 +532,7 @@
         "biases": [
           [
             0,
-            0.5
+            -0.5
           ]
         ],
         "kernels": [
@@ -606,15 +540,14 @@
             [
               [
                 [
-                  2,
-                  -1
+                  -2,
+                  1
                 ]
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
@@ -624,7 +557,7 @@
             ],
             [
               0.0,
-              1.5
+              0.5
             ]
           ],
           [
@@ -638,1162 +571,8 @@
             ]
           ]
         ]
-      ]
-    },
-    {
-      "id": "vgg-conv-block-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0,
-            0.1
-          ],
-          [
-            -0.2
-          ]
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  1,
-                  0
-                ],
-                [
-                  0.5,
-                  1
-                ]
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                [
-                  0.5
-                ],
-                [
-                  2
-                ]
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.05
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vgg-conv-block-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ],
-              [
-                3
-              ]
-            ],
-            [
-              [
-                4
-              ],
-              [
-                5
-              ],
-              [
-                6
-              ]
-            ],
-            [
-              [
-                7
-              ],
-              [
-                8
-              ],
-              [
-                9
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            -5
-          ]
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ]
-            ],
-            [
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  1
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ]
-            ],
-            [
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.0
-            ],
-            [
-              0.0
-            ],
-            [
-              0.0
-            ]
-          ],
-          [
-            [
-              0.0
-            ],
-            [
-              0.0
-            ],
-            [
-              1.0
-            ]
-          ],
-          [
-            [
-              2.0
-            ],
-            [
-              3.0
-            ],
-            [
-              4.0
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vgg-conv-block-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ],
-            [
-              [
-                2
-              ],
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0,
-            0.5
-          ]
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  2,
-                  -1
-                ]
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              2.0,
-              0.0
-            ],
-            [
-              0.0,
-              1.5
-            ]
-          ],
-          [
-            [
-              4.0,
-              0.0
-            ],
-            [
-              1.0,
-              0.0
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vgg-conv-block-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0,
-            0.1
-          ],
-          [
-            -0.2
-          ]
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  1,
-                  0
-                ],
-                [
-                  0.5,
-                  1
-                ]
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                [
-                  0.5
-                ],
-                [
-                  2
-                ]
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.05
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vgg-conv-block-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ],
-              [
-                3
-              ]
-            ],
-            [
-              [
-                4
-              ],
-              [
-                5
-              ],
-              [
-                6
-              ]
-            ],
-            [
-              [
-                7
-              ],
-              [
-                8
-              ],
-              [
-                9
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            -5
-          ]
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ]
-            ],
-            [
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  1
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ]
-            ],
-            [
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.0
-            ],
-            [
-              0.0
-            ],
-            [
-              0.0
-            ]
-          ],
-          [
-            [
-              0.0
-            ],
-            [
-              0.0
-            ],
-            [
-              1.0
-            ]
-          ],
-          [
-            [
-              2.0
-            ],
-            [
-              3.0
-            ],
-            [
-              4.0
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vgg-conv-block-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ],
-            [
-              [
-                2
-              ],
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0,
-            0.5
-          ]
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  2,
-                  -1
-                ]
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              2.0,
-              0.0
-            ],
-            [
-              0.0,
-              1.5
-            ]
-          ],
-          [
-            [
-              4.0,
-              0.0
-            ],
-            [
-              1.0,
-              0.0
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vgg-conv-block-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0,
-            0.1
-          ],
-          [
-            -0.2
-          ]
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  1,
-                  0
-                ],
-                [
-                  0.5,
-                  1
-                ]
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                [
-                  0.5
-                ],
-                [
-                  2
-                ]
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.05
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vgg-conv-block-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ],
-              [
-                3
-              ]
-            ],
-            [
-              [
-                4
-              ],
-              [
-                5
-              ],
-              [
-                6
-              ]
-            ],
-            [
-              [
-                7
-              ],
-              [
-                8
-              ],
-              [
-                9
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            -5
-          ]
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ]
-            ],
-            [
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  1
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ]
-            ],
-            [
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.0
-            ],
-            [
-              0.0
-            ],
-            [
-              0.0
-            ]
-          ],
-          [
-            [
-              0.0
-            ],
-            [
-              0.0
-            ],
-            [
-              1.0
-            ]
-          ],
-          [
-            [
-              2.0
-            ],
-            [
-              3.0
-            ],
-            [
-              4.0
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vgg-conv-block-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ],
-            [
-              [
-                2
-              ],
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0,
-            0.5
-          ]
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  2,
-                  -1
-                ]
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              2.0,
-              0.0
-            ],
-            [
-              0.0,
-              1.5
-            ]
-          ],
-          [
-            [
-              4.0,
-              0.0
-            ],
-            [
-              1.0,
-              0.0
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vgg-conv-block-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0,
-            0.1
-          ],
-          [
-            -0.2
-          ]
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  1,
-                  0
-                ],
-                [
-                  0.5,
-                  1
-                ]
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                [
-                  0.5
-                ],
-                [
-                  2
-                ]
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.05
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vgg-conv-block-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ],
-              [
-                3
-              ]
-            ],
-            [
-              [
-                4
-              ],
-              [
-                5
-              ],
-              [
-                6
-              ]
-            ],
-            [
-              [
-                7
-              ],
-              [
-                8
-              ],
-              [
-                9
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            -5
-          ]
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ]
-            ],
-            [
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  1
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ]
-            ],
-            [
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ],
-              [
-                [
-                  0
-                ]
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.0
-            ],
-            [
-              0.0
-            ],
-            [
-              0.0
-            ]
-          ],
-          [
-            [
-              0.0
-            ],
-            [
-              0.0
-            ],
-            [
-              1.0
-            ]
-          ],
-          [
-            [
-              2.0
-            ],
-            [
-              3.0
-            ],
-            [
-              4.0
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vgg-conv-block-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                -1
-              ]
-            ],
-            [
-              [
-                2
-              ],
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0,
-            0.5
-          ]
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  2,
-                  -1
-                ]
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              2.0,
-              0.0
-            ],
-            [
-              0.0,
-              1.5
-            ]
-          ],
-          [
-            [
-              4.0,
-              0.0
-            ],
-            [
-              1.0,
-              0.0
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vgg-conv-block-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "biases": [
-          [
-            0,
-            0.1
-          ],
-          [
-            -0.2
-          ]
-        ],
-        "kernels": [
-          [
-            [
-              [
-                [
-                  1,
-                  0
-                ],
-                [
-                  0.5,
-                  1
-                ]
-              ]
-            ]
-          ],
-          [
-            [
-              [
-                [
-                  0.5
-                ],
-                [
-                  2
-                ]
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.05
-            ]
-          ]
-        ]
-      ]
+      ],
+      "isPublic": false
     }
   ],
   "functionMetadata": {

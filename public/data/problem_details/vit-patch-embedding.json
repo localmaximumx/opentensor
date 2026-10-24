@@ -26,7 +26,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **Patch Embedding** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef patch_embed(image: np.ndarray, patch_size: int,\n                W_proj: np.ndarray, bias: np.ndarray) -> np.ndarray:\n    img = np.asarray(image, dtype=float)\n    P = int(patch_size)\n    w = np.asarray(W_proj, dtype=float)\n    b = np.asarray(bias, dtype=float)\n    \n    B, H, W, C = img.shape\n    num_h = H // P\n    num_w = W // P\n    patches = []\n    for ph in range(num_h):\n        for pw in range(num_w):\n            patch = img[:, ph*P:(ph+1)*P, pw*P:(pw+1)*P, :]\n            flat = patch.reshape(B, P*P*C)\n            patches.append(flat)\n    stacked = np.stack(patches, axis=1)\n    out = np.matmul(stacked, w) + b\n    return np.round(out, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "public-1",
+      "id": "vit-patch-embedding-tc-1",
       "name": "One-pixel patches with bias",
       "inputs": {
         "bias": [
@@ -84,8 +84,8 @@
       ]
     },
     {
-      "id": "public-2",
-      "name": "Incomplete boundary is ignored",
+      "id": "vit-patch-embedding-tc-2",
+      "name": "Case 2",
       "inputs": {
         "bias": [
           0.25,
@@ -181,8 +181,8 @@
       ]
     },
     {
-      "id": "public-3",
-      "name": "Two-channel patch",
+      "id": "vit-patch-embedding-tc-3",
+      "name": "Case 3",
       "inputs": {
         "bias": [
           1,
@@ -263,6 +263,122 @@
       "name": "Case 4",
       "inputs": {
         "bias": [
+          0.4,
+          1
+        ],
+        "image": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ]
+            ],
+            [
+              [
+                2
+              ],
+              [
+                3
+              ]
+            ]
+          ]
+        ],
+        "W_proj": [
+          [
+            1,
+            -1
+          ]
+        ],
+        "patch_size": 1
+      },
+      "expectedOutput": [
+        [
+          [
+            1.4,
+            0.0
+          ],
+          [
+            2.4,
+            -1.0
+          ],
+          [
+            2.4,
+            -1.0
+          ],
+          [
+            3.4,
+            -2.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "vit-patch-embedding-tc-5",
+      "name": "Case 5",
+      "inputs": {
+        "bias": [
+          0.6,
+          1
+        ],
+        "image": [
+          [
+            [
+              [
+                1
+              ],
+              [
+                2
+              ]
+            ],
+            [
+              [
+                4
+              ],
+              [
+                5
+              ]
+            ]
+          ]
+        ],
+        "W_proj": [
+          [
+            1,
+            -1
+          ]
+        ],
+        "patch_size": 1
+      },
+      "expectedOutput": [
+        [
+          [
+            1.6,
+            0.0
+          ],
+          [
+            2.6,
+            -1.0
+          ],
+          [
+            4.6,
+            -3.0
+          ],
+          [
+            5.6,
+            -4.0
+          ]
+        ]
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "vit-patch-embedding-tc-6",
+      "name": "Case 6",
+      "inputs": {
+        "bias": [
           0.5,
           1
         ],
@@ -312,181 +428,6 @@
           [
             4.5,
             -3.0
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-5",
-      "name": "Case 5",
-      "inputs": {
-        "bias": [
-          0.25,
-          -0.25
-        ],
-        "image": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ],
-              [
-                3
-              ],
-              [
-                4
-              ],
-              [
-                99
-              ]
-            ],
-            [
-              [
-                5
-              ],
-              [
-                6
-              ],
-              [
-                7
-              ],
-              [
-                8
-              ],
-              [
-                99
-              ]
-            ],
-            [
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ]
-        ],
-        "patch_size": 2
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            6.25,
-            7.75
-          ],
-          [
-            10.25,
-            11.75
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-6",
-      "name": "Case 6",
-      "inputs": {
-        "bias": [
-          1,
-          -1
-        ],
-        "image": [
-          [
-            [
-              [
-                1,
-                2
-              ],
-              [
-                3,
-                4
-              ]
-            ],
-            [
-              [
-                5,
-                6
-              ],
-              [
-                7,
-                8
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            0.5,
-            0
-          ],
-          [
-            0,
-            0.5
-          ],
-          [
-            -1,
-            0
-          ],
-          [
-            0,
-            -1
-          ],
-          [
-            0.25,
-            0
-          ],
-          [
-            0,
-            0.25
-          ]
-        ],
-        "patch_size": 2
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            0.25,
-            -1.0
           ]
         ]
       ]
@@ -494,996 +435,6 @@
     {
       "id": "vit-patch-embedding-tc-7",
       "name": "Case 7",
-      "inputs": {
-        "bias": [
-          0.5,
-          1
-        ],
-        "image": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ]
-            ],
-            [
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            -1
-          ]
-        ],
-        "patch_size": 1
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            1.5,
-            0.0
-          ],
-          [
-            2.5,
-            -1.0
-          ],
-          [
-            3.5,
-            -2.0
-          ],
-          [
-            4.5,
-            -3.0
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "bias": [
-          0.25,
-          -0.25
-        ],
-        "image": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ],
-              [
-                3
-              ],
-              [
-                4
-              ],
-              [
-                99
-              ]
-            ],
-            [
-              [
-                5
-              ],
-              [
-                6
-              ],
-              [
-                7
-              ],
-              [
-                8
-              ],
-              [
-                99
-              ]
-            ],
-            [
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ]
-        ],
-        "patch_size": 2
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            6.25,
-            7.75
-          ],
-          [
-            10.25,
-            11.75
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "bias": [
-          1,
-          -1
-        ],
-        "image": [
-          [
-            [
-              [
-                1,
-                2
-              ],
-              [
-                3,
-                4
-              ]
-            ],
-            [
-              [
-                5,
-                6
-              ],
-              [
-                7,
-                8
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            0.5,
-            0
-          ],
-          [
-            0,
-            0.5
-          ],
-          [
-            -1,
-            0
-          ],
-          [
-            0,
-            -1
-          ],
-          [
-            0.25,
-            0
-          ],
-          [
-            0,
-            0.25
-          ]
-        ],
-        "patch_size": 2
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            0.25,
-            -1.0
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "bias": [
-          0.5,
-          1
-        ],
-        "image": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ]
-            ],
-            [
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            -1
-          ]
-        ],
-        "patch_size": 1
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            1.5,
-            0.0
-          ],
-          [
-            2.5,
-            -1.0
-          ],
-          [
-            3.5,
-            -2.0
-          ],
-          [
-            4.5,
-            -3.0
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "bias": [
-          0.25,
-          -0.25
-        ],
-        "image": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ],
-              [
-                3
-              ],
-              [
-                4
-              ],
-              [
-                99
-              ]
-            ],
-            [
-              [
-                5
-              ],
-              [
-                6
-              ],
-              [
-                7
-              ],
-              [
-                8
-              ],
-              [
-                99
-              ]
-            ],
-            [
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ]
-        ],
-        "patch_size": 2
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            6.25,
-            7.75
-          ],
-          [
-            10.25,
-            11.75
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "bias": [
-          1,
-          -1
-        ],
-        "image": [
-          [
-            [
-              [
-                1,
-                2
-              ],
-              [
-                3,
-                4
-              ]
-            ],
-            [
-              [
-                5,
-                6
-              ],
-              [
-                7,
-                8
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            0.5,
-            0
-          ],
-          [
-            0,
-            0.5
-          ],
-          [
-            -1,
-            0
-          ],
-          [
-            0,
-            -1
-          ],
-          [
-            0.25,
-            0
-          ],
-          [
-            0,
-            0.25
-          ]
-        ],
-        "patch_size": 2
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            0.25,
-            -1.0
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "bias": [
-          0.5,
-          1
-        ],
-        "image": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ]
-            ],
-            [
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            -1
-          ]
-        ],
-        "patch_size": 1
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            1.5,
-            0.0
-          ],
-          [
-            2.5,
-            -1.0
-          ],
-          [
-            3.5,
-            -2.0
-          ],
-          [
-            4.5,
-            -3.0
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "bias": [
-          0.25,
-          -0.25
-        ],
-        "image": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ],
-              [
-                3
-              ],
-              [
-                4
-              ],
-              [
-                99
-              ]
-            ],
-            [
-              [
-                5
-              ],
-              [
-                6
-              ],
-              [
-                7
-              ],
-              [
-                8
-              ],
-              [
-                99
-              ]
-            ],
-            [
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ]
-        ],
-        "patch_size": 2
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            6.25,
-            7.75
-          ],
-          [
-            10.25,
-            11.75
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "bias": [
-          1,
-          -1
-        ],
-        "image": [
-          [
-            [
-              [
-                1,
-                2
-              ],
-              [
-                3,
-                4
-              ]
-            ],
-            [
-              [
-                5,
-                6
-              ],
-              [
-                7,
-                8
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            0.5,
-            0
-          ],
-          [
-            0,
-            0.5
-          ],
-          [
-            -1,
-            0
-          ],
-          [
-            0,
-            -1
-          ],
-          [
-            0.25,
-            0
-          ],
-          [
-            0,
-            0.25
-          ]
-        ],
-        "patch_size": 2
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            0.25,
-            -1.0
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "bias": [
-          0.5,
-          1
-        ],
-        "image": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ]
-            ],
-            [
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            -1
-          ]
-        ],
-        "patch_size": 1
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            1.5,
-            0.0
-          ],
-          [
-            2.5,
-            -1.0
-          ],
-          [
-            3.5,
-            -2.0
-          ],
-          [
-            4.5,
-            -3.0
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "bias": [
-          0.25,
-          -0.25
-        ],
-        "image": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ],
-              [
-                3
-              ],
-              [
-                4
-              ],
-              [
-                99
-              ]
-            ],
-            [
-              [
-                5
-              ],
-              [
-                6
-              ],
-              [
-                7
-              ],
-              [
-                8
-              ],
-              [
-                99
-              ]
-            ],
-            [
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ],
-              [
-                99
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ]
-        ],
-        "patch_size": 2
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            6.25,
-            7.75
-          ],
-          [
-            10.25,
-            11.75
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "bias": [
-          1,
-          -1
-        ],
-        "image": [
-          [
-            [
-              [
-                1,
-                2
-              ],
-              [
-                3,
-                4
-              ]
-            ],
-            [
-              [
-                5,
-                6
-              ],
-              [
-                7,
-                8
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ],
-          [
-            0.5,
-            0
-          ],
-          [
-            0,
-            0.5
-          ],
-          [
-            -1,
-            0
-          ],
-          [
-            0,
-            -1
-          ],
-          [
-            0.25,
-            0
-          ],
-          [
-            0,
-            0.25
-          ]
-        ],
-        "patch_size": 2
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            0.25,
-            -1.0
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "bias": [
-          0.5,
-          1
-        ],
-        "image": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ]
-            ],
-            [
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ]
-          ]
-        ],
-        "W_proj": [
-          [
-            1,
-            -1
-          ]
-        ],
-        "patch_size": 1
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            1.5,
-            0.0
-          ],
-          [
-            2.5,
-            -1.0
-          ],
-          [
-            3.5,
-            -2.0
-          ],
-          [
-            4.5,
-            -3.0
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "vit-patch-embedding-tc-20",
-      "name": "Case 20",
       "inputs": {
         "bias": [
           0.25,

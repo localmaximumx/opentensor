@@ -26,7 +26,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **Scaled Dot-Product Attention** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef scaled_dot_product_attention(Q, K, V):\n    q = np.asarray(Q, dtype=float)\n    k = np.asarray(K, dtype=float)\n    v = np.asarray(V, dtype=float)\n    d_k = q.shape[-1]\n    scores = np.matmul(q, np.swapaxes(k, -1, -2)) / np.sqrt(d_k)\n    scores_max = np.max(scores, axis=-1, keepdims=True)\n    exp_scores = np.exp(scores - scores_max)\n    weights = exp_scores / np.sum(exp_scores, axis=-1, keepdims=True)\n    out = np.matmul(weights, v)\n    return np.round(out, 4)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "public-1",
+      "id": "transformers-attention-tc-1",
       "name": "Identity Q,K with simple V",
       "inputs": {
         "K": [
@@ -81,8 +81,8 @@
       ]
     },
     {
-      "id": "public-2",
-      "name": "Single query cross-attention",
+      "id": "transformers-attention-tc-2",
+      "name": "Case 2",
       "inputs": {
         "K": [
           [
@@ -144,8 +144,8 @@
       ]
     },
     {
-      "id": "public-3",
-      "name": "Symmetric queries uniform attention",
+      "id": "transformers-attention-tc-3",
+      "name": "Case 3",
       "inputs": {
         "K": [
           [
@@ -205,53 +205,53 @@
         "K": [
           [
             [
-              1,
+              2,
               0
             ],
             [
               0,
-              1
+              2
             ]
           ]
         ],
         "Q": [
           [
             [
-              1,
+              2,
               0
             ],
             [
               0,
-              1
+              2
             ]
           ]
         ],
         "V": [
           [
             [
-              1,
-              2
+              2,
+              3
             ],
             [
-              3,
-              4
+              4,
+              6
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
-            1.6605,
-            2.6605
+            2.1116,
+            3.1674
           ],
           [
-            2.3395,
-            3.3395
+            3.8884,
+            5.8326
           ]
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "transformers-attention-tc-5",
@@ -260,26 +260,22 @@
         "K": [
           [
             [
-              1,
               0,
               0
             ],
             [
               0,
-              1,
               0
-            ],
-            [
-              0,
-              0,
-              1
             ]
           ]
         ],
         "Q": [
           [
             [
-              1,
+              0,
+              0
+            ],
+            [
               0,
               0
             ]
@@ -288,33 +284,29 @@
         "V": [
           [
             [
-              1,
-              0,
-              0
-            ],
-            [
-              0,
-              1,
-              0
-            ],
-            [
-              0,
               0,
               1
+            ],
+            [
+              2,
+              2
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
-            0.4711,
-            0.2645,
-            0.2645
+            1.0,
+            1.5
+          ],
+          [
+            1.0,
+            1.5
           ]
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "transformers-attention-tc-6",
@@ -323,28 +315,16 @@
         "K": [
           [
             [
-              1,
+              2,
               0
             ],
             [
               0,
-              1
+              2
             ]
           ]
         ],
         "Q": [
-          [
-            [
-              1,
-              1
-            ],
-            [
-              1,
-              1
-            ]
-          ]
-        ],
-        "V": [
           [
             [
               2,
@@ -355,21 +335,33 @@
               2
             ]
           ]
+        ],
+        "V": [
+          [
+            [
+              2,
+              4
+            ],
+            [
+              6,
+              8
+            ]
+          ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
-            1.0,
-            1.0
+            2.2232,
+            4.2232
           ],
           [
-            1.0,
-            1.0
+            5.7768,
+            7.7768
           ]
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "transformers-attention-tc-7",
@@ -378,808 +370,53 @@
         "K": [
           [
             [
-              1,
+              -1,
               0
             ],
             [
               0,
-              1
+              -1
             ]
           ]
         ],
         "Q": [
           [
             [
-              1,
+              -1,
               0
             ],
             [
               0,
-              1
+              -1
             ]
           ]
         ],
         "V": [
           [
             [
-              1,
-              2
+              -1,
+              -2
             ],
             [
-              3,
-              4
+              -3,
+              -4
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
-            1.6605,
-            2.6605
+            -1.6605,
+            -2.6605
           ],
           [
-            2.3395,
-            3.3395
+            -2.3395,
+            -3.3395
           ]
         ]
-      ]
-    },
-    {
-      "id": "transformers-attention-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "K": [
-          [
-            [
-              1,
-              0,
-              0
-            ],
-            [
-              0,
-              1,
-              0
-            ],
-            [
-              0,
-              0,
-              1
-            ]
-          ]
-        ],
-        "Q": [
-          [
-            [
-              1,
-              0,
-              0
-            ]
-          ]
-        ],
-        "V": [
-          [
-            [
-              1,
-              0,
-              0
-            ],
-            [
-              0,
-              1,
-              0
-            ],
-            [
-              0,
-              0,
-              1
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            0.4711,
-            0.2645,
-            0.2645
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "transformers-attention-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "K": [
-          [
-            [
-              1,
-              0
-            ],
-            [
-              0,
-              1
-            ]
-          ]
-        ],
-        "Q": [
-          [
-            [
-              1,
-              1
-            ],
-            [
-              1,
-              1
-            ]
-          ]
-        ],
-        "V": [
-          [
-            [
-              2,
-              0
-            ],
-            [
-              0,
-              2
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            1.0,
-            1.0
-          ],
-          [
-            1.0,
-            1.0
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "transformers-attention-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "K": [
-          [
-            [
-              1,
-              0
-            ],
-            [
-              0,
-              1
-            ]
-          ]
-        ],
-        "Q": [
-          [
-            [
-              1,
-              0
-            ],
-            [
-              0,
-              1
-            ]
-          ]
-        ],
-        "V": [
-          [
-            [
-              1,
-              2
-            ],
-            [
-              3,
-              4
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            1.6605,
-            2.6605
-          ],
-          [
-            2.3395,
-            3.3395
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "transformers-attention-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "K": [
-          [
-            [
-              1,
-              0,
-              0
-            ],
-            [
-              0,
-              1,
-              0
-            ],
-            [
-              0,
-              0,
-              1
-            ]
-          ]
-        ],
-        "Q": [
-          [
-            [
-              1,
-              0,
-              0
-            ]
-          ]
-        ],
-        "V": [
-          [
-            [
-              1,
-              0,
-              0
-            ],
-            [
-              0,
-              1,
-              0
-            ],
-            [
-              0,
-              0,
-              1
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            0.4711,
-            0.2645,
-            0.2645
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "transformers-attention-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "K": [
-          [
-            [
-              1,
-              0
-            ],
-            [
-              0,
-              1
-            ]
-          ]
-        ],
-        "Q": [
-          [
-            [
-              1,
-              1
-            ],
-            [
-              1,
-              1
-            ]
-          ]
-        ],
-        "V": [
-          [
-            [
-              2,
-              0
-            ],
-            [
-              0,
-              2
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            1.0,
-            1.0
-          ],
-          [
-            1.0,
-            1.0
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "transformers-attention-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "K": [
-          [
-            [
-              1,
-              0
-            ],
-            [
-              0,
-              1
-            ]
-          ]
-        ],
-        "Q": [
-          [
-            [
-              1,
-              0
-            ],
-            [
-              0,
-              1
-            ]
-          ]
-        ],
-        "V": [
-          [
-            [
-              1,
-              2
-            ],
-            [
-              3,
-              4
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            1.6605,
-            2.6605
-          ],
-          [
-            2.3395,
-            3.3395
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "transformers-attention-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "K": [
-          [
-            [
-              1,
-              0,
-              0
-            ],
-            [
-              0,
-              1,
-              0
-            ],
-            [
-              0,
-              0,
-              1
-            ]
-          ]
-        ],
-        "Q": [
-          [
-            [
-              1,
-              0,
-              0
-            ]
-          ]
-        ],
-        "V": [
-          [
-            [
-              1,
-              0,
-              0
-            ],
-            [
-              0,
-              1,
-              0
-            ],
-            [
-              0,
-              0,
-              1
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            0.4711,
-            0.2645,
-            0.2645
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "transformers-attention-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "K": [
-          [
-            [
-              1,
-              0
-            ],
-            [
-              0,
-              1
-            ]
-          ]
-        ],
-        "Q": [
-          [
-            [
-              1,
-              1
-            ],
-            [
-              1,
-              1
-            ]
-          ]
-        ],
-        "V": [
-          [
-            [
-              2,
-              0
-            ],
-            [
-              0,
-              2
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            1.0,
-            1.0
-          ],
-          [
-            1.0,
-            1.0
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "transformers-attention-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "K": [
-          [
-            [
-              1,
-              0
-            ],
-            [
-              0,
-              1
-            ]
-          ]
-        ],
-        "Q": [
-          [
-            [
-              1,
-              0
-            ],
-            [
-              0,
-              1
-            ]
-          ]
-        ],
-        "V": [
-          [
-            [
-              1,
-              2
-            ],
-            [
-              3,
-              4
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            1.6605,
-            2.6605
-          ],
-          [
-            2.3395,
-            3.3395
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "transformers-attention-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "K": [
-          [
-            [
-              1,
-              0,
-              0
-            ],
-            [
-              0,
-              1,
-              0
-            ],
-            [
-              0,
-              0,
-              1
-            ]
-          ]
-        ],
-        "Q": [
-          [
-            [
-              1,
-              0,
-              0
-            ]
-          ]
-        ],
-        "V": [
-          [
-            [
-              1,
-              0,
-              0
-            ],
-            [
-              0,
-              1,
-              0
-            ],
-            [
-              0,
-              0,
-              1
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            0.4711,
-            0.2645,
-            0.2645
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "transformers-attention-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "K": [
-          [
-            [
-              1,
-              0
-            ],
-            [
-              0,
-              1
-            ]
-          ]
-        ],
-        "Q": [
-          [
-            [
-              1,
-              1
-            ],
-            [
-              1,
-              1
-            ]
-          ]
-        ],
-        "V": [
-          [
-            [
-              2,
-              0
-            ],
-            [
-              0,
-              2
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            1.0,
-            1.0
-          ],
-          [
-            1.0,
-            1.0
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "transformers-attention-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "K": [
-          [
-            [
-              1,
-              0
-            ],
-            [
-              0,
-              1
-            ]
-          ]
-        ],
-        "Q": [
-          [
-            [
-              1,
-              0
-            ],
-            [
-              0,
-              1
-            ]
-          ]
-        ],
-        "V": [
-          [
-            [
-              1,
-              2
-            ],
-            [
-              3,
-              4
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            1.6605,
-            2.6605
-          ],
-          [
-            2.3395,
-            3.3395
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "transformers-attention-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "K": [
-          [
-            [
-              1,
-              0,
-              0
-            ],
-            [
-              0,
-              1,
-              0
-            ],
-            [
-              0,
-              0,
-              1
-            ]
-          ]
-        ],
-        "Q": [
-          [
-            [
-              1,
-              0,
-              0
-            ]
-          ]
-        ],
-        "V": [
-          [
-            [
-              1,
-              0,
-              0
-            ],
-            [
-              0,
-              1,
-              0
-            ],
-            [
-              0,
-              0,
-              1
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            0.4711,
-            0.2645,
-            0.2645
-          ]
-        ]
-      ]
+      ],
+      "isPublic": false
     }
   ],
   "functionMetadata": {

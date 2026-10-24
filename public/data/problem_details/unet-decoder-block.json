@@ -26,7 +26,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **U-Net Decoder Block** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef _conv2d_same(x: np.ndarray, k: np.ndarray, b: np.ndarray):\n    Kh, Kw, Cin, Cout = k.shape\n    pad_h = (Kh - 1) // 2\n    pad_w = (Kw - 1) // 2\n    padded = np.pad(x, ((0, 0), (pad_h, pad_h), (pad_w, pad_w), (0, 0)), mode='constant')\n    N, H, W, _ = x.shape\n    out = np.zeros((N, H, W, Cout), dtype=float)\n    for n in range(N):\n        for h in range(H):\n            for w in range(W):\n                patch = padded[n, h:h+Kh, w:w+Kw, :]\n                for c in range(Cout):\n                    out[n, h, w, c] = np.sum(patch * k[:, :, :, c]) + b[c]\n    return out\n\ndef unet_decoder_block(x: np.ndarray, skip: np.ndarray,\n                       W_up: np.ndarray, b_up: np.ndarray,\n                       kernel1: np.ndarray, bias1: np.ndarray,\n                       kernel2: np.ndarray, bias2: np.ndarray) -> np.ndarray:\n    x_arr = np.asarray(x, dtype=float)\n    skip_arr = np.asarray(skip, dtype=float)\n    w_up = np.asarray(W_up, dtype=float)\n    b_up_arr = np.asarray(b_up, dtype=float)\n    k1, b1 = np.asarray(kernel1, dtype=float), np.asarray(bias1, dtype=float)\n    k2, b2 = np.asarray(kernel2, dtype=float), np.asarray(bias2, dtype=float)\n    \n    upsampled = np.repeat(np.repeat(x_arr, 2, axis=1), 2, axis=2)\n    u = np.maximum(0.0, upsampled @ w_up + b_up_arr)\n    \n    H, W = skip_arr.shape[1], skip_arr.shape[2]\n    th, tw = u.shape[1], u.shape[2]\n    sh = (H - th) // 2\n    sw = (W - tw) // 2\n    cropped_skip = skip_arr[:, sh:sh+th, sw:sw+tw, :]\n    cat = np.concatenate([cropped_skip, u], axis=-1)\n    \n    h1 = np.maximum(0.0, _conv2d_same(cat, k1, b1))\n    out = np.maximum(0.0, _conv2d_same(h1, k2, b2))\n    return np.round(out, 6)\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "public-1",
+      "id": "unet-decoder-block-tc-1",
       "name": "One-channel decoder",
       "inputs": {
         "x": [
@@ -117,8 +117,8 @@
       ]
     },
     {
-      "id": "public-2",
-      "name": "Projected channels",
+      "id": "unet-decoder-block-tc-2",
+      "name": "Case 2",
       "inputs": {
         "x": [
           [
@@ -218,8 +218,8 @@
       ]
     },
     {
-      "id": "public-3",
-      "name": "Centered skip crop",
+      "id": "unet-decoder-block-tc-3",
+      "name": "Case 3",
       "inputs": {
         "x": [
           [
@@ -356,14 +356,14 @@
           [
             [
               [
-                1
+                2
               ]
             ]
           ]
         ],
         "W_up": [
           [
-            2
+            3
           ]
         ],
         "b_up": [
@@ -373,36 +373,36 @@
           [
             [
               [
-                0.5
+                0.75
               ],
               [
-                1
+                2
               ]
             ],
             [
               [
-                -0.5
+                -0.75
               ],
               [
-                2
+                3
               ]
             ]
           ]
         ],
         "bias1": [
-          0.1
+          0.15
         ],
         "bias2": [
-          -0.2
+          -0.3
         ],
         "kernel1": [
           [
             [
               [
-                0.5
+                0.75
               ],
               [
-                1
+                2
               ]
             ]
           ]
@@ -411,33 +411,33 @@
           [
             [
               [
-                1
+                2
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
             [
-              2.15
+              25.125
             ],
             [
-              2.4
+              27.0
             ]
           ],
           [
             [
-              1.65
+              22.875
             ],
             [
-              2.9
+              28.5
             ]
           ]
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "unet-decoder-block-tc-5",
@@ -447,8 +447,7 @@
           [
             [
               [
-                1,
-                -1
+                0
               ]
             ]
           ]
@@ -456,51 +455,45 @@
         "W_up": [
           [
             1
-          ],
-          [
-            0.5
           ]
         ],
         "b_up": [
-          0.2
+          0
         ],
         "skip": [
           [
             [
               [
-                0
+                0.25
               ],
               [
-                1
+                0
               ]
             ],
             [
               [
-                2
+                -0.25
               ],
               [
-                3
+                1
               ]
             ]
           ]
         ],
         "bias1": [
-          0,
-          0.1
+          0.05
         ],
         "bias2": [
-          0
+          -0.1
         ],
         "kernel1": [
           [
             [
               [
-                1,
-                -1
+                0.25
               ],
               [
-                0.5,
-                1
+                0
               ]
             ]
           ]
@@ -509,36 +502,33 @@
           [
             [
               [
-                0.5
-              ],
-              [
-                1
+                0
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
             [
-              0.975
+              0.0
             ],
             [
-              0.675
+              0.0
             ]
           ],
           [
             [
-              1.175
+              0.0
             ],
             [
-              1.675
+              0.0
             ]
           ]
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "unet-decoder-block-tc-6",
@@ -548,14 +538,14 @@
           [
             [
               [
-                0.5
+                2
               ]
             ]
           ]
         ],
         "W_up": [
           [
-            1
+            4
           ]
         ],
         "b_up": [
@@ -565,76 +555,36 @@
           [
             [
               [
-                1
+                1.0
               ],
               [
                 2
-              ],
+              ]
+            ],
+            [
               [
-                3
+                -1.0
               ],
               [
                 4
-              ]
-            ],
-            [
-              [
-                5
-              ],
-              [
-                6
-              ],
-              [
-                7
-              ],
-              [
-                8
-              ]
-            ],
-            [
-              [
-                9
-              ],
-              [
-                10
-              ],
-              [
-                11
-              ],
-              [
-                12
-              ]
-            ],
-            [
-              [
-                13
-              ],
-              [
-                14
-              ],
-              [
-                15
-              ],
-              [
-                16
               ]
             ]
           ]
         ],
         "bias1": [
-          0
+          0.2
         ],
         "bias2": [
-          0
+          -0.4
         ],
         "kernel1": [
           [
             [
               [
-                1
+                1.0
               ],
               [
-                1
+                2
               ]
             ]
           ]
@@ -643,33 +593,33 @@
           [
             [
               [
-                1
+                2
               ]
             ]
           ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
             [
-              6.5
+              34.0
             ],
             [
-              7.5
+              36.0
             ]
           ],
           [
             [
-              10.5
+              30.0
             ],
             [
-              11.5
+              40.0
             ]
           ]
         ]
-      ]
+      ],
+      "isPublic": false
     },
     {
       "id": "unet-decoder-block-tc-7",
@@ -679,14 +629,14 @@
           [
             [
               [
-                1
+                -1
               ]
             ]
           ]
         ],
         "W_up": [
           [
-            2
+            -2
           ]
         ],
         "b_up": [
@@ -694,1466 +644,73 @@
         ],
         "skip": [
           [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ],
             [
               [
                 -0.5
               ],
               [
-                2
+                -1
               ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0.1
-        ],
-        "bias2": [
-          -0.2
-        ],
-        "kernel1": [
-          [
+            ],
             [
               [
                 0.5
               ],
               [
-                1
+                -2
               ]
             ]
           ]
         ],
-        "kernel2": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              2.15
-            ],
-            [
-              2.4
-            ]
-          ],
-          [
-            [
-              1.65
-            ],
-            [
-              2.9
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-decoder-block-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
+        "bias1": [
+          -0.1
         ],
-        "W_up": [
-          [
-            1
-          ],
-          [
-            0.5
-          ]
-        ],
-        "b_up": [
+        "bias2": [
           0.2
         ],
-        "skip": [
-          [
-            [
-              [
-                0
-              ],
-              [
-                1
-              ]
-            ],
-            [
-              [
-                2
-              ],
-              [
-                3
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          0.1
-        ],
-        "bias2": [
-          0
-        ],
         "kernel1": [
           [
-            [
-              [
-                1,
-                -1
-              ],
-              [
-                0.5,
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.975
-            ],
-            [
-              0.675
-            ]
-          ],
-          [
-            [
-              1.175
-            ],
-            [
-              1.675
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-decoder-block-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "W_up": [
-          [
-            1
-          ]
-        ],
-        "b_up": [
-          0
-        ],
-        "skip": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ],
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ],
-            [
-              [
-                5
-              ],
-              [
-                6
-              ],
-              [
-                7
-              ],
-              [
-                8
-              ]
-            ],
-            [
-              [
-                9
-              ],
-              [
-                10
-              ],
-              [
-                11
-              ],
-              [
-                12
-              ]
-            ],
-            [
-              [
-                13
-              ],
-              [
-                14
-              ],
-              [
-                15
-              ],
-              [
-                16
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0
-        ],
-        "bias2": [
-          0
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              6.5
-            ],
-            [
-              7.5
-            ]
-          ],
-          [
-            [
-              10.5
-            ],
-            [
-              11.5
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-decoder-block-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "W_up": [
-          [
-            2
-          ]
-        ],
-        "b_up": [
-          0
-        ],
-        "skip": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ],
             [
               [
                 -0.5
               ],
               [
-                2
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0.1
-        ],
-        "bias2": [
-          -0.2
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              2.15
-            ],
-            [
-              2.4
-            ]
-          ],
-          [
-            [
-              1.65
-            ],
-            [
-              2.9
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-decoder-block-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
                 -1
               ]
             ]
           ]
         ],
-        "W_up": [
-          [
-            1
-          ],
-          [
-            0.5
-          ]
-        ],
-        "b_up": [
-          0.2
-        ],
-        "skip": [
-          [
-            [
-              [
-                0
-              ],
-              [
-                1
-              ]
-            ],
-            [
-              [
-                2
-              ],
-              [
-                3
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          0.1
-        ],
-        "bias2": [
-          0
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1,
-                -1
-              ],
-              [
-                0.5,
-                1
-              ]
-            ]
-          ]
-        ],
         "kernel2": [
           [
             [
               [
-                0.5
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.975
-            ],
-            [
-              0.675
-            ]
-          ],
-          [
-            [
-              1.175
-            ],
-            [
-              1.675
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-decoder-block-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "W_up": [
-          [
-            1
-          ]
-        ],
-        "b_up": [
-          0
-        ],
-        "skip": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ],
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ],
-            [
-              [
-                5
-              ],
-              [
-                6
-              ],
-              [
-                7
-              ],
-              [
-                8
-              ]
-            ],
-            [
-              [
-                9
-              ],
-              [
-                10
-              ],
-              [
-                11
-              ],
-              [
-                12
-              ]
-            ],
-            [
-              [
-                13
-              ],
-              [
-                14
-              ],
-              [
-                15
-              ],
-              [
-                16
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0
-        ],
-        "bias2": [
-          0
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              6.5
-            ],
-            [
-              7.5
-            ]
-          ],
-          [
-            [
-              10.5
-            ],
-            [
-              11.5
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-decoder-block-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "W_up": [
-          [
-            2
-          ]
-        ],
-        "b_up": [
-          0
-        ],
-        "skip": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ],
-            [
-              [
-                -0.5
-              ],
-              [
-                2
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0.1
-        ],
-        "bias2": [
-          -0.2
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              2.15
-            ],
-            [
-              2.4
-            ]
-          ],
-          [
-            [
-              1.65
-            ],
-            [
-              2.9
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-decoder-block-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
                 -1
               ]
             ]
           ]
-        ],
-        "W_up": [
-          [
-            1
-          ],
-          [
-            0.5
-          ]
-        ],
-        "b_up": [
-          0.2
-        ],
-        "skip": [
-          [
-            [
-              [
-                0
-              ],
-              [
-                1
-              ]
-            ],
-            [
-              [
-                2
-              ],
-              [
-                3
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          0.1
-        ],
-        "bias2": [
-          0
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1,
-                -1
-              ],
-              [
-                0.5,
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ]
-          ]
         ]
       },
-      "isPublic": false,
       "expectedOutput": [
         [
           [
             [
-              0.975
+              0.2
             ],
             [
-              0.675
+              0.2
             ]
           ],
           [
             [
-              1.175
+              0.2
             ],
             [
-              1.675
+              0.2
             ]
           ]
         ]
-      ]
-    },
-    {
-      "id": "unet-decoder-block-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "W_up": [
-          [
-            1
-          ]
-        ],
-        "b_up": [
-          0
-        ],
-        "skip": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ],
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ],
-            [
-              [
-                5
-              ],
-              [
-                6
-              ],
-              [
-                7
-              ],
-              [
-                8
-              ]
-            ],
-            [
-              [
-                9
-              ],
-              [
-                10
-              ],
-              [
-                11
-              ],
-              [
-                12
-              ]
-            ],
-            [
-              [
-                13
-              ],
-              [
-                14
-              ],
-              [
-                15
-              ],
-              [
-                16
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0
-        ],
-        "bias2": [
-          0
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              6.5
-            ],
-            [
-              7.5
-            ]
-          ],
-          [
-            [
-              10.5
-            ],
-            [
-              11.5
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-decoder-block-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "W_up": [
-          [
-            2
-          ]
-        ],
-        "b_up": [
-          0
-        ],
-        "skip": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ],
-            [
-              [
-                -0.5
-              ],
-              [
-                2
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0.1
-        ],
-        "bias2": [
-          -0.2
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              2.15
-            ],
-            [
-              2.4
-            ]
-          ],
-          [
-            [
-              1.65
-            ],
-            [
-              2.9
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-decoder-block-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "W_up": [
-          [
-            1
-          ],
-          [
-            0.5
-          ]
-        ],
-        "b_up": [
-          0.2
-        ],
-        "skip": [
-          [
-            [
-              [
-                0
-              ],
-              [
-                1
-              ]
-            ],
-            [
-              [
-                2
-              ],
-              [
-                3
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          0.1
-        ],
-        "bias2": [
-          0
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1,
-                -1
-              ],
-              [
-                0.5,
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.975
-            ],
-            [
-              0.675
-            ]
-          ],
-          [
-            [
-              1.175
-            ],
-            [
-              1.675
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-decoder-block-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                0.5
-              ]
-            ]
-          ]
-        ],
-        "W_up": [
-          [
-            1
-          ]
-        ],
-        "b_up": [
-          0
-        ],
-        "skip": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                2
-              ],
-              [
-                3
-              ],
-              [
-                4
-              ]
-            ],
-            [
-              [
-                5
-              ],
-              [
-                6
-              ],
-              [
-                7
-              ],
-              [
-                8
-              ]
-            ],
-            [
-              [
-                9
-              ],
-              [
-                10
-              ],
-              [
-                11
-              ],
-              [
-                12
-              ]
-            ],
-            [
-              [
-                13
-              ],
-              [
-                14
-              ],
-              [
-                15
-              ],
-              [
-                16
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0
-        ],
-        "bias2": [
-          0
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              6.5
-            ],
-            [
-              7.5
-            ]
-          ],
-          [
-            [
-              10.5
-            ],
-            [
-              11.5
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-decoder-block-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "W_up": [
-          [
-            2
-          ]
-        ],
-        "b_up": [
-          0
-        ],
-        "skip": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ],
-            [
-              [
-                -0.5
-              ],
-              [
-                2
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0.1
-        ],
-        "bias2": [
-          -0.2
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              2.15
-            ],
-            [
-              2.4
-            ]
-          ],
-          [
-            [
-              1.65
-            ],
-            [
-              2.9
-            ]
-          ]
-        ]
-      ]
-    },
-    {
-      "id": "unet-decoder-block-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "x": [
-          [
-            [
-              [
-                1,
-                -1
-              ]
-            ]
-          ]
-        ],
-        "W_up": [
-          [
-            1
-          ],
-          [
-            0.5
-          ]
-        ],
-        "b_up": [
-          0.2
-        ],
-        "skip": [
-          [
-            [
-              [
-                0
-              ],
-              [
-                1
-              ]
-            ],
-            [
-              [
-                2
-              ],
-              [
-                3
-              ]
-            ]
-          ]
-        ],
-        "bias1": [
-          0,
-          0.1
-        ],
-        "bias2": [
-          0
-        ],
-        "kernel1": [
-          [
-            [
-              [
-                1,
-                -1
-              ],
-              [
-                0.5,
-                1
-              ]
-            ]
-          ]
-        ],
-        "kernel2": [
-          [
-            [
-              [
-                0.5
-              ],
-              [
-                1
-              ]
-            ]
-          ]
-        ]
-      },
-      "isPublic": false,
-      "expectedOutput": [
-        [
-          [
-            [
-              0.975
-            ],
-            [
-              0.675
-            ]
-          ],
-          [
-            [
-              1.175
-            ],
-            [
-              1.675
-            ]
-          ]
-        ]
-      ]
+      ],
+      "isPublic": false
     }
   ],
   "functionMetadata": {

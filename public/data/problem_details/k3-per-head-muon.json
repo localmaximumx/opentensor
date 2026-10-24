@@ -26,7 +26,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **Per-Head Muon** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch\n\ndef per_head_muon(parameter: torch.Tensor, gradient: torch.Tensor, previous_momentum: torch.Tensor, num_heads: int, momentum_coefficient: float, learning_rate: float) -> dict[str, torch.Tensor]:\n    P = parameter if isinstance(parameter, torch.Tensor) else torch.tensor(parameter, dtype=torch.float64)\n    G = gradient if isinstance(gradient, torch.Tensor) else torch.tensor(gradient, dtype=torch.float64)\n    M_prev = previous_momentum if isinstance(previous_momentum, torch.Tensor) else torch.tensor(previous_momentum, dtype=torch.float64)\n    H = int(num_heads)\n    mu = float(momentum_coefficient)\n    eta = float(learning_rate)\n    \n    M_t = mu * M_prev + G\n    head_dim = M_t.shape[0] // H\n    \n    O_heads = []\n    for h in range(H):\n        M_h = M_t[h*head_dim : (h+1)*head_dim, :]\n        U, S, Vh = torch.linalg.svd(M_h, full_matrices=False)\n        O_h = U @ Vh\n        O_heads.append(O_h)\n        \n    O = torch.cat(O_heads, dim=0)\n    P_new = P - eta * O\n    return {\n        \"updated_parameter\": torch.round(P_new * 1e6) / 1e6,\n        \"updated_momentum\": torch.round(M_t * 1e6) / 1e6,\n        \"orthogonalized_update\": torch.round(O * 1e6) / 1e6\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "test-1",
+      "id": "k3-per-head-muon-tc-1",
       "name": "Scalar polar update",
       "inputs": {
         "gradient": [
@@ -50,26 +50,14 @@
       },
       "isPublic": true,
       "expectedOutput": {
-        "updated_parameter": [
-          [
-            1.9
-          ]
-        ],
-        "updated_momentum": [
-          [
-            3.5
-          ]
-        ],
-        "orthogonalized_update": [
-          [
-            1.0
-          ]
-        ]
+        "updated_parameter": "tensor([[1.9000]], dtype=torch.float64)",
+        "updated_momentum": "tensor([[3.5000]], dtype=torch.float64)",
+        "orthogonalized_update": "tensor([[1.]], dtype=torch.float64)"
       }
     },
     {
-      "id": "test-2",
-      "name": "Two independent row heads",
+      "id": "k3-per-head-muon-tc-2",
+      "name": "Case 2",
       "inputs": {
         "gradient": [
           [
@@ -131,65 +119,14 @@
       },
       "isPublic": true,
       "expectedOutput": {
-        "updated_parameter": [
-          [
-            0.951371,
-            -0.511629
-          ],
-          [
-            0.238371,
-            1.548629
-          ],
-          [
-            -1.049519,
-            0.743078
-          ],
-          [
-            0.506922,
-            0.450481
-          ]
-        ],
-        "updated_momentum": [
-          [
-            0.76,
-            0.12
-          ],
-          [
-            0.1,
-            -0.16
-          ],
-          [
-            2.8,
-            0.1
-          ],
-          [
-            -0.55,
-            1.85
-          ]
-        ],
-        "orthogonalized_update": [
-          [
-            0.972579,
-            0.232573
-          ],
-          [
-            0.232573,
-            -0.972579
-          ],
-          [
-            0.990371,
-            0.138439
-          ],
-          [
-            -0.138439,
-            0.990371
-          ]
-        ]
+        "updated_parameter": "tensor([[ 0.9514, -0.5116],\n        [ 0.2384,  1.5486],\n        [-1.0495,  0.7431],\n        [ 0.5069,  0.4505]], dtype=torch.float64)",
+        "updated_momentum": "tensor([[ 0.7600,  0.1200],\n        [ 0.1000, -0.1600],\n        [ 2.8000,  0.1000],\n        [-0.5500,  1.8500]], dtype=torch.float64)",
+        "orthogonalized_update": "tensor([[ 0.9726,  0.2326],\n        [ 0.2326, -0.9726],\n        [ 0.9904,  0.1384],\n        [-0.1384,  0.9904]], dtype=torch.float64)"
       }
     },
     {
-      "id": "test-3",
-      "name": "Wide head blocks",
+      "id": "k3-per-head-muon-tc-3",
+      "name": "Case 3",
       "inputs": {
         "gradient": [
           [
@@ -239,48 +176,9 @@
       },
       "isPublic": false,
       "expectedOutput": {
-        "updated_parameter": [
-          [
-            0.987682,
-            -0.010558,
-            -0.50176,
-            0.238437
-          ],
-          [
-            0.483423,
-            -0.998342,
-            0.738948,
-            0.200553
-          ]
-        ],
-        "updated_momentum": [
-          [
-            0.49,
-            0.42,
-            0.07,
-            0.46
-          ],
-          [
-            0.75,
-            -0.075,
-            0.5,
-            -0.025
-          ]
-        ],
-        "orthogonalized_update": [
-          [
-            0.615877,
-            0.527895,
-            0.087982,
-            0.578171
-          ],
-          [
-            0.828868,
-            -0.082887,
-            0.552579,
-            -0.027629
-          ]
-        ]
+        "updated_parameter": "tensor([[ 0.9877, -0.0106, -0.5018,  0.2384],\n        [ 0.4834, -0.9983,  0.7389,  0.2006]], dtype=torch.float64)",
+        "updated_momentum": "tensor([[ 0.4900,  0.4200,  0.0700,  0.4600],\n        [ 0.7500, -0.0750,  0.5000, -0.0250]], dtype=torch.float64)",
+        "orthogonalized_update": "tensor([[ 0.6159,  0.5279,  0.0880,  0.5782],\n        [ 0.8289, -0.0829,  0.5526, -0.0276]], dtype=torch.float64)"
       }
     },
     {
@@ -337,21 +235,9 @@
         "momentum_coefficient": 0.25
       },
       "expectedOutput": {
-        "updated_parameter": [
-          [
-            1.9
-          ]
-        ],
-        "updated_momentum": [
-          [
-            3.5
-          ]
-        ],
-        "orthogonalized_update": [
-          [
-            1.0
-          ]
-        ]
+        "updated_parameter": "tensor([[0.9000]], dtype=torch.float64)",
+        "updated_momentum": "tensor([[2.2500]], dtype=torch.float64)",
+        "orthogonalized_update": "tensor([[1.]], dtype=torch.float64)"
       },
       "isPublic": false
     },
@@ -412,396 +298,6 @@
         "updated_parameter": "tensor([], size=(0, 1), dtype=torch.float64)",
         "updated_momentum": "tensor([[5.5000]], dtype=torch.float64)",
         "orthogonalized_update": "tensor([], size=(0, 1), dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-per-head-muon-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "gradient": [
-          [
-            9
-          ]
-        ],
-        "num_heads": 3,
-        "parameter": [
-          [
-            6
-          ]
-        ],
-        "learning_rate": 0.30000000000000004,
-        "previous_momentum": [
-          [
-            3
-          ]
-        ],
-        "momentum_coefficient": 1.5
-      },
-      "expectedOutput": {
-        "updated_parameter": "tensor([], size=(0, 1), dtype=torch.float64)",
-        "updated_momentum": "tensor([[13.5000]], dtype=torch.float64)",
-        "orthogonalized_update": "tensor([], size=(0, 1), dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-per-head-muon-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "gradient": [
-          [
-            1
-          ]
-        ],
-        "num_heads": 1,
-        "parameter": [
-          [
-            0
-          ]
-        ],
-        "learning_rate": 0.1,
-        "previous_momentum": [
-          [
-            1
-          ]
-        ],
-        "momentum_coefficient": 0.125
-      },
-      "expectedOutput": {
-        "updated_parameter": "tensor([[-0.1000]], dtype=torch.float64)",
-        "updated_momentum": "tensor([[1.1250]], dtype=torch.float64)",
-        "orthogonalized_update": "tensor([[1.]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-per-head-muon-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "gradient": [
-          [
-            6
-          ]
-        ],
-        "num_heads": 2,
-        "parameter": [
-          [
-            4
-          ]
-        ],
-        "learning_rate": 0.2,
-        "previous_momentum": [
-          [
-            2
-          ]
-        ],
-        "momentum_coefficient": 1.0
-      },
-      "expectedOutput": {
-        "updated_parameter": "tensor([], size=(0, 1), dtype=torch.float64)",
-        "updated_momentum": "tensor([[8.]], dtype=torch.float64)",
-        "orthogonalized_update": "tensor([], size=(0, 1), dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-per-head-muon-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "gradient": [
-          [
-            12
-          ]
-        ],
-        "num_heads": 4,
-        "parameter": [
-          [
-            8
-          ]
-        ],
-        "learning_rate": 0.4,
-        "previous_momentum": [
-          [
-            4
-          ]
-        ],
-        "momentum_coefficient": 2.0
-      },
-      "expectedOutput": {
-        "updated_parameter": "tensor([], size=(0, 1), dtype=torch.float64)",
-        "updated_momentum": "tensor([[20.]], dtype=torch.float64)",
-        "orthogonalized_update": "tensor([], size=(0, 1), dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-per-head-muon-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "gradient": [
-          [
-            3
-          ]
-        ],
-        "num_heads": 1,
-        "parameter": [
-          [
-            2
-          ]
-        ],
-        "learning_rate": 0.1,
-        "previous_momentum": [
-          [
-            1
-          ]
-        ],
-        "momentum_coefficient": 0.5
-      },
-      "expectedOutput": {
-        "updated_parameter": "tensor([[1.9000]], dtype=torch.float64)",
-        "updated_momentum": "tensor([[3.5000]], dtype=torch.float64)",
-        "orthogonalized_update": "tensor([[1.]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-per-head-muon-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "gradient": [
-          [
-            2
-          ]
-        ],
-        "num_heads": 1,
-        "parameter": [
-          [
-            2
-          ]
-        ],
-        "learning_rate": 0.1,
-        "previous_momentum": [
-          [
-            1
-          ]
-        ],
-        "momentum_coefficient": 0.375
-      },
-      "expectedOutput": {
-        "updated_parameter": "tensor([[1.9000]], dtype=torch.float64)",
-        "updated_momentum": "tensor([[2.3750]], dtype=torch.float64)",
-        "orthogonalized_update": "tensor([[1.]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-per-head-muon-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "gradient": [
-          [
-            15
-          ]
-        ],
-        "num_heads": 5,
-        "parameter": [
-          [
-            10
-          ]
-        ],
-        "learning_rate": 0.5,
-        "previous_momentum": [
-          [
-            5
-          ]
-        ],
-        "momentum_coefficient": 2.5
-      },
-      "expectedOutput": {
-        "updated_parameter": "tensor([], size=(0, 1), dtype=torch.float64)",
-        "updated_momentum": "tensor([[27.5000]], dtype=torch.float64)",
-        "orthogonalized_update": "tensor([], size=(0, 1), dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-per-head-muon-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "gradient": [
-          [
-            9
-          ]
-        ],
-        "num_heads": 3,
-        "parameter": [
-          [
-            5
-          ]
-        ],
-        "learning_rate": 0.30000000000000004,
-        "previous_momentum": [
-          [
-            3
-          ]
-        ],
-        "momentum_coefficient": 1.5
-      },
-      "expectedOutput": {
-        "updated_parameter": "tensor([], size=(0, 1), dtype=torch.float64)",
-        "updated_momentum": "tensor([[13.5000]], dtype=torch.float64)",
-        "orthogonalized_update": "tensor([], size=(0, 1), dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-per-head-muon-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "gradient": [
-          [
-            2
-          ]
-        ],
-        "num_heads": 1,
-        "parameter": [
-          [
-            2
-          ]
-        ],
-        "learning_rate": 0.1,
-        "previous_momentum": [
-          [
-            1
-          ]
-        ],
-        "momentum_coefficient": 0.4
-      },
-      "expectedOutput": {
-        "updated_parameter": "tensor([[1.9000]], dtype=torch.float64)",
-        "updated_momentum": "tensor([[2.4000]], dtype=torch.float64)",
-        "orthogonalized_update": "tensor([[1.]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-per-head-muon-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "gradient": [
-          [
-            18
-          ]
-        ],
-        "num_heads": 6,
-        "parameter": [
-          [
-            12
-          ]
-        ],
-        "learning_rate": 0.6000000000000001,
-        "previous_momentum": [
-          [
-            6
-          ]
-        ],
-        "momentum_coefficient": 3.0
-      },
-      "expectedOutput": {
-        "updated_parameter": "tensor([], size=(0, 1), dtype=torch.float64)",
-        "updated_momentum": "tensor([[36.]], dtype=torch.float64)",
-        "orthogonalized_update": "tensor([], size=(0, 1), dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-per-head-muon-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "gradient": [
-          [
-            12
-          ]
-        ],
-        "num_heads": 4,
-        "parameter": [
-          [
-            6
-          ]
-        ],
-        "learning_rate": 0.4,
-        "previous_momentum": [
-          [
-            4
-          ]
-        ],
-        "momentum_coefficient": 2.0
-      },
-      "expectedOutput": {
-        "updated_parameter": "tensor([], size=(0, 1), dtype=torch.float64)",
-        "updated_momentum": "tensor([[20.]], dtype=torch.float64)",
-        "orthogonalized_update": "tensor([], size=(0, 1), dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-per-head-muon-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "gradient": [
-          [
-            4
-          ]
-        ],
-        "num_heads": 1,
-        "parameter": [
-          [
-            2
-          ]
-        ],
-        "learning_rate": 0.12,
-        "previous_momentum": [
-          [
-            1
-          ]
-        ],
-        "momentum_coefficient": 0.6
-      },
-      "expectedOutput": {
-        "updated_parameter": "tensor([[1.8800]], dtype=torch.float64)",
-        "updated_momentum": "tensor([[4.6000]], dtype=torch.float64)",
-        "orthogonalized_update": "tensor([[1.]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-per-head-muon-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "gradient": [
-          [
-            1
-          ]
-        ],
-        "num_heads": 1,
-        "parameter": [
-          [
-            1
-          ]
-        ],
-        "learning_rate": 0.1,
-        "previous_momentum": [
-          [
-            1
-          ]
-        ],
-        "momentum_coefficient": 0.2
-      },
-      "expectedOutput": {
-        "updated_parameter": "tensor([[0.9000]], dtype=torch.float64)",
-        "updated_momentum": "tensor([[1.2000]], dtype=torch.float64)",
-        "orthogonalized_update": "tensor([[1.]], dtype=torch.float64)"
       },
       "isPublic": false
     }

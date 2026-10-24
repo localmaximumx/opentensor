@@ -32,7 +32,7 @@
   "solution": "### 💡 Intuition & Approach\nImplement inverted dropout in Triton using a supplied boolean mask, register scaling, and tail-safe memory access.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef triton_dropout(x: list, mask: list = None, p: float = 0.5) -> list:\n    arr = np.array(x, dtype=float)\n    if mask is not None:\n        return np.round((arr * np.array(mask, dtype=float)) / (1.0 - p), 6).tolist()\n    return np.round(arr / (1.0 - p), 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
   "testCases": [
     {
-      "id": "triton-dropout-test-1",
+      "id": "triton-dropout-tc-1",
       "name": "Standard Test Case 1",
       "inputs": {
         "x": [
@@ -58,8 +58,8 @@
       "isPublic": true
     },
     {
-      "id": "triton-dropout-test-2",
-      "name": "Standard Test Case 2",
+      "id": "triton-dropout-tc-2",
+      "name": "Case 2",
       "inputs": {
         "x": [
           1.0,
@@ -85,23 +85,23 @@
       "name": "Case 3",
       "inputs": {
         "x": [
-          2.0,
-          4.0,
+          3.0,
           6.0,
-          8.0
+          9.0,
+          12.0
         ],
         "mask": [
-          1.0,
+          1.5,
           0.0,
-          1.0,
+          1.5,
           0.0
         ],
-        "p": 0.5
+        "p": 0.75
       },
       "expectedOutput": [
-        4.0,
+        18.0,
         0.0,
-        12.0,
+        54.0,
         0.0
       ],
       "isPublic": false
@@ -112,19 +112,22 @@
       "inputs": {
         "x": [
           1.0,
+          2.0,
           3.0,
-          5.0
+          4.0
         ],
         "mask": [
-          1.0,
-          1.0,
+          0.5,
+          0.0,
+          0.5,
           0.0
         ],
-        "p": 0.2
+        "p": 0.25
       },
       "expectedOutput": [
-        1.25,
-        3.75,
+        0.6667,
+        0.0,
+        2.0,
         0.0
       ],
       "isPublic": false
@@ -134,23 +137,23 @@
       "name": "Case 5",
       "inputs": {
         "x": [
-          2.0,
           4.0,
-          6.0,
-          8.0
+          8.0,
+          12.0,
+          16.0
         ],
         "mask": [
-          1.0,
+          2.0,
           0.0,
-          1.0,
+          2.0,
           0.0
         ],
-        "p": 0.5
+        "p": 1.0
       },
       "expectedOutput": [
-        4.0,
         0.0,
-        12.0,
+        0.0,
+        0.0,
         0.0
       ],
       "isPublic": false
@@ -160,20 +163,23 @@
       "name": "Case 6",
       "inputs": {
         "x": [
-          1.0,
-          3.0,
-          5.0
+          -2.0,
+          -4.0,
+          -6.0,
+          -8.0
         ],
         "mask": [
-          1.0,
-          1.0,
-          0.0
+          -1.0,
+          -0.0,
+          -1.0,
+          -0.0
         ],
-        "p": 0.2
+        "p": -0.5
       },
       "expectedOutput": [
-        1.25,
-        3.75,
+        1.3333,
+        0.0,
+        4.0,
         0.0
       ],
       "isPublic": false
@@ -183,340 +189,23 @@
       "name": "Case 7",
       "inputs": {
         "x": [
-          2.0,
-          4.0,
-          6.0,
-          8.0
+          1.6,
+          3.2,
+          4.8,
+          6.4
         ],
         "mask": [
-          1.0,
+          0.8,
           0.0,
-          1.0,
+          0.8,
           0.0
         ],
-        "p": 0.5
+        "p": 0.4
       },
       "expectedOutput": [
-        4.0,
+        2.1333,
         0.0,
-        12.0,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-dropout-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "x": [
-          1.0,
-          3.0,
-          5.0
-        ],
-        "mask": [
-          1.0,
-          1.0,
-          0.0
-        ],
-        "p": 0.2
-      },
-      "expectedOutput": [
-        1.25,
-        3.75,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-dropout-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "x": [
-          2.0,
-          4.0,
-          6.0,
-          8.0
-        ],
-        "mask": [
-          1.0,
-          0.0,
-          1.0,
-          0.0
-        ],
-        "p": 0.5
-      },
-      "expectedOutput": [
-        4.0,
-        0.0,
-        12.0,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-dropout-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "x": [
-          1.0,
-          3.0,
-          5.0
-        ],
-        "mask": [
-          1.0,
-          1.0,
-          0.0
-        ],
-        "p": 0.2
-      },
-      "expectedOutput": [
-        1.25,
-        3.75,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-dropout-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "x": [
-          2.0,
-          4.0,
-          6.0,
-          8.0
-        ],
-        "mask": [
-          1.0,
-          0.0,
-          1.0,
-          0.0
-        ],
-        "p": 0.5
-      },
-      "expectedOutput": [
-        4.0,
-        0.0,
-        12.0,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-dropout-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "x": [
-          1.0,
-          3.0,
-          5.0
-        ],
-        "mask": [
-          1.0,
-          1.0,
-          0.0
-        ],
-        "p": 0.2
-      },
-      "expectedOutput": [
-        1.25,
-        3.75,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-dropout-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "x": [
-          2.0,
-          4.0,
-          6.0,
-          8.0
-        ],
-        "mask": [
-          1.0,
-          0.0,
-          1.0,
-          0.0
-        ],
-        "p": 0.5
-      },
-      "expectedOutput": [
-        4.0,
-        0.0,
-        12.0,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-dropout-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "x": [
-          1.0,
-          3.0,
-          5.0
-        ],
-        "mask": [
-          1.0,
-          1.0,
-          0.0
-        ],
-        "p": 0.2
-      },
-      "expectedOutput": [
-        1.25,
-        3.75,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-dropout-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "x": [
-          2.0,
-          4.0,
-          6.0,
-          8.0
-        ],
-        "mask": [
-          1.0,
-          0.0,
-          1.0,
-          0.0
-        ],
-        "p": 0.5
-      },
-      "expectedOutput": [
-        4.0,
-        0.0,
-        12.0,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-dropout-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "x": [
-          1.0,
-          3.0,
-          5.0
-        ],
-        "mask": [
-          1.0,
-          1.0,
-          0.0
-        ],
-        "p": 0.2
-      },
-      "expectedOutput": [
-        1.25,
-        3.75,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-dropout-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "x": [
-          2.0,
-          4.0,
-          6.0,
-          8.0
-        ],
-        "mask": [
-          1.0,
-          0.0,
-          1.0,
-          0.0
-        ],
-        "p": 0.5
-      },
-      "expectedOutput": [
-        4.0,
-        0.0,
-        12.0,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-dropout-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "x": [
-          1.0,
-          3.0,
-          5.0
-        ],
-        "mask": [
-          1.0,
-          1.0,
-          0.0
-        ],
-        "p": 0.2
-      },
-      "expectedOutput": [
-        1.25,
-        3.75,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-dropout-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "x": [
-          2.0,
-          4.0,
-          6.0,
-          8.0
-        ],
-        "mask": [
-          1.0,
-          0.0,
-          1.0,
-          0.0
-        ],
-        "p": 0.5
-      },
-      "expectedOutput": [
-        4.0,
-        0.0,
-        12.0,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-dropout-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "x": [
-          1.0,
-          3.0,
-          5.0
-        ],
-        "mask": [
-          1.0,
-          1.0,
-          0.0
-        ],
-        "p": 0.2
-      },
-      "expectedOutput": [
-        1.25,
-        3.75,
+        6.4,
         0.0
       ],
       "isPublic": false

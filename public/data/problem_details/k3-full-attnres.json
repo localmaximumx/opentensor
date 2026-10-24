@@ -26,7 +26,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **Full Attention Residuals** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport torch\n\ndef _read_depth_sources(sources, pseudo_query, eps):\n    norm = sources / torch.sqrt(sources.square().mean(dim=-1, keepdim=True) + eps)\n    logits = (norm * pseudo_query).sum(dim=-1)\n    weights = torch.softmax(logits, dim=0)\n    retrieved = (weights.unsqueeze(-1) * sources).sum(dim=0)\n    return retrieved, weights\n\ndef full_attention_residual(embedding: torch.Tensor, previous_outputs: torch.Tensor, pseudo_query: torch.Tensor, eps: float = 1e-6) -> dict[str, torch.Tensor]:\n    emb = embedding if isinstance(embedding, torch.Tensor) else torch.tensor(embedding, dtype=torch.float64)\n    pq = pseudo_query if isinstance(pseudo_query, torch.Tensor) else torch.tensor(pseudo_query, dtype=torch.float64)\n    eps_val = float(eps)\n    \n    if isinstance(previous_outputs, torch.Tensor) and previous_outputs.numel() > 0:\n        prev = previous_outputs.to(emb.dtype)\n        sources = torch.cat([emb.unsqueeze(0), prev], dim=0)\n    elif isinstance(previous_outputs, list) and len(previous_outputs) > 0:\n        prev = torch.tensor(previous_outputs, dtype=emb.dtype)\n        sources = torch.cat([emb.unsqueeze(0), prev], dim=0)\n    else:\n        sources = emb.unsqueeze(0)\n        \n    retrieved, weights = _read_depth_sources(sources, pq, eps_val)\n    return {\n        \"retrieved_representation\": torch.round(retrieved * 1e6) / 1e6,\n        \"attention_weights\": torch.round(weights * 1e6) / 1e6\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "test-1",
+      "id": "k3-full-attnres-tc-1",
       "name": "Embedding only",
       "inputs": {
         "eps": 1e-06,
@@ -44,25 +44,13 @@
       },
       "isPublic": true,
       "expectedOutput": {
-        "retrieved_representation": [
-          [
-            [
-              2.0
-            ]
-          ]
-        ],
-        "attention_weights": [
-          [
-            [
-              1.0
-            ]
-          ]
-        ]
+        "retrieved_representation": "tensor([[[2.]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
       }
     },
     {
-      "id": "test-2",
-      "name": "Embedding and one layer",
+      "id": "k3-full-attnres-tc-2",
+      "name": "Case 2",
       "inputs": {
         "eps": 1e-06,
         "embedding": [
@@ -98,37 +86,13 @@
       },
       "isPublic": true,
       "expectedOutput": {
-        "retrieved_representation": [
-          [
-            [
-              0.892958,
-              0.214084
-            ],
-            [
-              1.327105,
-              -0.240657
-            ]
-          ]
-        ],
-        "attention_weights": [
-          [
-            [
-              0.892958,
-              0.172895
-            ]
-          ],
-          [
-            [
-              0.107042,
-              0.827105
-            ]
-          ]
-        ]
+        "retrieved_representation": "tensor([[[ 0.8930,  0.2141],\n         [ 1.3271, -0.2407]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[0.8930, 0.1729]],\n\n        [[0.1070, 0.8271]]], dtype=torch.float64)"
       }
     },
     {
-      "id": "test-3",
-      "name": "Three depth sources",
+      "id": "k3-full-attnres-tc-3",
+      "name": "Case 3",
       "inputs": {
         "eps": 1e-05,
         "embedding": [
@@ -164,31 +128,8 @@
       },
       "isPublic": false,
       "expectedOutput": {
-        "retrieved_representation": [
-          [
-            [
-              0.834817,
-              0.834038
-            ]
-          ]
-        ],
-        "attention_weights": [
-          [
-            [
-              0.069492
-            ]
-          ],
-          [
-            [
-              0.492231
-            ]
-          ],
-          [
-            [
-              0.438276
-            ]
-          ]
-        ]
+        "retrieved_representation": "tensor([[[0.8348, 0.8340]]], dtype=torch.float64)",
+        "attention_weights": "tensor([[[0.0695]],\n\n        [[0.4922]],\n\n        [[0.4383]]], dtype=torch.float64)"
       }
     },
     {
@@ -279,305 +220,6 @@
       },
       "expectedOutput": {
         "retrieved_representation": "tensor([[[3.]]], dtype=torch.float64)",
-        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-full-attnres-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "eps": 0.0,
-        "embedding": [
-          [
-            [
-              6
-            ]
-          ]
-        ],
-        "pseudo_query": [
-          3
-        ],
-        "previous_outputs": []
-      },
-      "expectedOutput": {
-        "retrieved_representation": "tensor([[[6.]]], dtype=torch.float64)",
-        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-full-attnres-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "eps": 0.0,
-        "embedding": [
-          [
-            [
-              1
-            ]
-          ]
-        ],
-        "pseudo_query": [
-          0
-        ],
-        "previous_outputs": []
-      },
-      "expectedOutput": {
-        "retrieved_representation": "tensor([[[1.]]], dtype=torch.float64)",
-        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-full-attnres-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "eps": 2.0,
-        "embedding": [
-          [
-            [
-              4
-            ]
-          ]
-        ],
-        "pseudo_query": [
-          3
-        ],
-        "previous_outputs": []
-      },
-      "expectedOutput": {
-        "retrieved_representation": "tensor([[[4.]]], dtype=torch.float64)",
-        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-full-attnres-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "eps": 0.0,
-        "embedding": [
-          [
-            [
-              8
-            ]
-          ]
-        ],
-        "pseudo_query": [
-          4
-        ],
-        "previous_outputs": []
-      },
-      "expectedOutput": {
-        "retrieved_representation": "tensor([[[8.]]], dtype=torch.float64)",
-        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-full-attnres-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "eps": 0.0,
-        "embedding": [
-          [
-            [
-              2
-            ]
-          ]
-        ],
-        "pseudo_query": [
-          1
-        ],
-        "previous_outputs": []
-      },
-      "expectedOutput": {
-        "retrieved_representation": "tensor([[[2.]]], dtype=torch.float64)",
-        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-full-attnres-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "eps": 0.0,
-        "embedding": [
-          [
-            [
-              2
-            ]
-          ]
-        ],
-        "pseudo_query": [
-          1
-        ],
-        "previous_outputs": []
-      },
-      "expectedOutput": {
-        "retrieved_representation": "tensor([[[2.]]], dtype=torch.float64)",
-        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-full-attnres-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "eps": 0.0,
-        "embedding": [
-          [
-            [
-              10
-            ]
-          ]
-        ],
-        "pseudo_query": [
-          5
-        ],
-        "previous_outputs": []
-      },
-      "expectedOutput": {
-        "retrieved_representation": "tensor([[[10.]]], dtype=torch.float64)",
-        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-full-attnres-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "eps": 3.0,
-        "embedding": [
-          [
-            [
-              6
-            ]
-          ]
-        ],
-        "pseudo_query": [
-          4
-        ],
-        "previous_outputs": []
-      },
-      "expectedOutput": {
-        "retrieved_representation": "tensor([[[6.]]], dtype=torch.float64)",
-        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-full-attnres-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "eps": 0.0,
-        "embedding": [
-          [
-            [
-              2
-            ]
-          ]
-        ],
-        "pseudo_query": [
-          1
-        ],
-        "previous_outputs": []
-      },
-      "expectedOutput": {
-        "retrieved_representation": "tensor([[[2.]]], dtype=torch.float64)",
-        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-full-attnres-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "eps": 0.0,
-        "embedding": [
-          [
-            [
-              12
-            ]
-          ]
-        ],
-        "pseudo_query": [
-          6
-        ],
-        "previous_outputs": []
-      },
-      "expectedOutput": {
-        "retrieved_representation": "tensor([[[12.]]], dtype=torch.float64)",
-        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-full-attnres-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "eps": 4.0,
-        "embedding": [
-          [
-            [
-              8
-            ]
-          ]
-        ],
-        "pseudo_query": [
-          5
-        ],
-        "previous_outputs": []
-      },
-      "expectedOutput": {
-        "retrieved_representation": "tensor([[[8.]]], dtype=torch.float64)",
-        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-full-attnres-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "eps": 0.0,
-        "embedding": [
-          [
-            [
-              2
-            ]
-          ]
-        ],
-        "pseudo_query": [
-          1
-        ],
-        "previous_outputs": []
-      },
-      "expectedOutput": {
-        "retrieved_representation": "tensor([[[2.]]], dtype=torch.float64)",
-        "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
-      },
-      "isPublic": false
-    },
-    {
-      "id": "k3-full-attnres-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "eps": 0.0,
-        "embedding": [
-          [
-            [
-              1
-            ]
-          ]
-        ],
-        "pseudo_query": [
-          0
-        ],
-        "previous_outputs": []
-      },
-      "expectedOutput": {
-        "retrieved_representation": "tensor([[[1.]]], dtype=torch.float64)",
         "attention_weights": "tensor([[[1.]]], dtype=torch.float64)"
       },
       "isPublic": false

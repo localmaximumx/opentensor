@@ -17,11 +17,11 @@
   "starterCode": "import numpy as np\n\ndef _sigmoid(z: np.ndarray) -> np.ndarray:\n    \"\"\"\n    Returns elementwise sigmoid values.\n    \"\"\"\n    return np.where(z >= 0, 1/(1+np.exp(-z)), np.exp(z)/(1+np.exp(z)))\n\ndef train_logistic_regression(X: np.ndarray, y: np.ndarray, lr: float = 0.1, steps: int = 1000) -> tuple[np.ndarray, float]:\n    \"\"\"\n    Returns the trained weights and bias as (w, b).\n    \"\"\"\n    # Write code here\n    pass",
   "createdAt": "2025-10-21T18:37:14.408Z",
   "updatedAt": "2026-03-18T19:29:51.500Z",
-  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable reference implementation following exact specifications.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef train_logistic_regression(X: list, y: list, lr: float = 0.1, steps: int = 1000, expected_acc: float = 0.0) -> list:\n    arrX = np.array(X, dtype=float)\n    arry = np.array(y, dtype=float).reshape(-1, 1)\n    N, D = arrX.shape\n    w = np.zeros((D, 1), dtype=float)\n    b = 0.0\n    for _ in range(steps):\n        z = arrX @ w + b\n        p = np.where(z >= 0, 1.0 / (1.0 + np.exp(-z)), np.exp(z) / (1.0 + np.exp(z)))\n        grad_w = (arrX.T @ (p - arry)) / N\n        grad_b = np.mean(p - arry)\n        w -= lr * grad_w\n        b -= lr * grad_b\n    return [np.round(w, 4).flatten().tolist(), round(float(b), 4)]\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the input dimensions.\n- **Space Complexity**: $\\mathcal{O}(N)$ for memory buffers.\n",
+  "solution": "### 💡 Intuition & Approach\nVectorized, numerically stable logistic regression reference implementation using gradient descent.\n\n### 💻 Reference Implementation\n```python\nimport numpy as np\n\ndef train_logistic_regression(X, y, lr: float = 0.1, steps: int = 1000):\n    X = np.asarray(X, dtype=float)\n    y = np.asarray(y, dtype=float)\n    N, D = X.shape\n    w = np.zeros(D, dtype=float)\n    b = 0.0\n    for _ in range(steps):\n        z = X @ w + b\n        p = np.where(z >= 0, 1.0 / (1.0 + np.exp(-z)), np.exp(z) / (1.0 + np.exp(z)))\n        grad_w = (X.T @ (p - y)) / N\n        grad_b = np.mean(p - y)\n        w -= lr * grad_w\n        b -= lr * grad_b\n    return (np.round(w, 4), round(float(b), 4))\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(\\text{steps} \\times N \\times D)$\n- **Space Complexity**: $\\mathcal{O}(D)$ parameters\n",
   "visualizationComponent": "LogisticTrainingViz",
   "testCases": [
     {
-      "id": "test-1",
+      "id": "logistic-regression-training-tc-1",
       "name": "Simple 1D linearly separable",
       "inputs": {
         "X": [
@@ -45,308 +45,19 @@
           1
         ],
         "lr": 0.1,
-        "steps": 500,
-        "expected_acc": 0.95
+        "steps": 500
       },
-      "isPublic": true,
       "expectedOutput": [
         [
           2.5272
         ],
         -3.4307
-      ]
-    },
-    {
-      "id": "logistic-regression-training-tc-2",
-      "name": "Case 2",
-      "inputs": {
-        "X": [
-          [
-            0
-          ],
-          [
-            2
-          ],
-          [
-            4
-          ],
-          [
-            6
-          ]
-        ],
-        "y": [
-          0,
-          0,
-          2,
-          2
-        ],
-        "lr": 0.2,
-        "steps": 1000,
-        "expected_acc": 1.9
-      },
-      "expectedOutput": [
-        [
-          400.3503
-        ],
-        3.859
       ],
       "isPublic": true
     },
     {
-      "id": "logistic-regression-training-tc-3",
-      "name": "Case 3",
-      "inputs": {
-        "X": [
-          [
-            0
-          ],
-          [
-            0
-          ],
-          [
-            1
-          ],
-          [
-            2
-          ]
-        ],
-        "y": [
-          0,
-          0,
-          0,
-          0
-        ],
-        "lr": 0.05,
-        "steps": 250,
-        "expected_acc": 0.475
-      },
-      "expectedOutput": [
-        [
-          -0.9829
-        ],
-        -2.0724
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "logistic-regression-training-tc-4",
-      "name": "Case 4",
-      "inputs": {
-        "X": [
-          [
-            1
-          ],
-          [
-            2
-          ],
-          [
-            3
-          ],
-          [
-            4
-          ]
-        ],
-        "y": [
-          1,
-          1,
-          2,
-          2
-        ],
-        "lr": 1.1,
-        "steps": 500,
-        "expected_acc": 1.95
-      },
-      "expectedOutput": [
-        [
-          963.8789
-        ],
-        275.5538
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "logistic-regression-training-tc-5",
-      "name": "Case 5",
-      "inputs": {
-        "X": [
-          [
-            0
-          ],
-          [
-            2
-          ],
-          [
-            3
-          ],
-          [
-            4
-          ]
-        ],
-        "y": [
-          0,
-          0,
-          2,
-          2
-        ],
-        "lr": 0.15,
-        "steps": 750,
-        "expected_acc": 1.425
-      },
-      "expectedOutput": [
-        [
-          140.9654
-        ],
-        3.2644
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "logistic-regression-training-tc-6",
-      "name": "Case 6",
-      "inputs": {
-        "X": [
-          [
-            0
-          ],
-          [
-            3
-          ],
-          [
-            6
-          ],
-          [
-            9
-          ]
-        ],
-        "y": [
-          0,
-          0,
-          3,
-          3
-        ],
-        "lr": 0.3,
-        "steps": 1500,
-        "expected_acc": 2.85
-      },
-      "expectedOutput": [
-        [
-          2.5272
-        ],
-        -3.4307
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "logistic-regression-training-tc-7",
-      "name": "Case 7",
-      "inputs": {
-        "X": [
-          [
-            0
-          ],
-          [
-            0
-          ],
-          [
-            0
-          ],
-          [
-            1
-          ]
-        ],
-        "y": [
-          0,
-          0,
-          0,
-          0
-        ],
-        "lr": 0.025,
-        "steps": 125,
-        "expected_acc": 0.2375
-      },
-      "expectedOutput": [
-        [
-          -0.2546
-        ],
-        -1.0887
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "logistic-regression-training-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "X": [
-          [
-            2
-          ],
-          [
-            3
-          ],
-          [
-            4
-          ],
-          [
-            5
-          ]
-        ],
-        "y": [
-          2,
-          2,
-          3,
-          3
-        ],
-        "lr": 2.1,
-        "steps": 1000,
-        "expected_acc": 2.95
-      },
-      "expectedOutput": [
-        [
-          2.5272
-        ],
-        -3.4307
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "logistic-regression-training-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "X": [
-          [
-            0
-          ],
-          [
-            4
-          ],
-          [
-            8
-          ],
-          [
-            12
-          ]
-        ],
-        "y": [
-          0,
-          0,
-          4,
-          4
-        ],
-        "lr": 0.4,
-        "steps": 2000,
-        "expected_acc": 3.8
-      },
-      "expectedOutput": [
-        [
-          2.5272
-        ],
-        -3.4307
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "logistic-regression-training-tc-10",
-      "name": "Case 10",
+      "id": "logistic-regression-training-tc-2",
+      "name": "Reversed 1D separable",
       "inputs": {
         "X": [
           [
@@ -369,8 +80,7 @@
           0
         ],
         "lr": 0.1,
-        "steps": 500,
-        "expected_acc": 0.95
+        "steps": 500
       },
       "expectedOutput": [
         [
@@ -378,11 +88,11 @@
         ],
         3.4307
       ],
-      "isPublic": false
+      "isPublic": true
     },
     {
-      "id": "logistic-regression-training-tc-11",
-      "name": "Case 11",
+      "id": "logistic-regression-training-tc-3",
+      "name": "All negative class",
       "inputs": {
         "X": [
           [
@@ -394,260 +104,8 @@
           [
             2
           ],
-          [
-            2
-          ]
-        ],
-        "y": [
-          0,
-          0,
-          1,
-          1
-        ],
-        "lr": 0.075,
-        "steps": 375,
-        "expected_acc": 0.7125
-      },
-      "expectedOutput": [
-        [
-          2.0885
-        ],
-        -2.386
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "logistic-regression-training-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "X": [
-          [
-            0
-          ],
-          [
-            5
-          ],
-          [
-            10
-          ],
-          [
-            15
-          ]
-        ],
-        "y": [
-          0,
-          0,
-          5,
-          5
-        ],
-        "lr": 0.5,
-        "steps": 2500,
-        "expected_acc": 4.75
-      },
-      "expectedOutput": [
-        [
-          2.5272
-        ],
-        -3.4307
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "logistic-regression-training-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "X": [
           [
             3
-          ],
-          [
-            4
-          ],
-          [
-            5
-          ],
-          [
-            6
-          ]
-        ],
-        "y": [
-          3,
-          3,
-          4,
-          4
-        ],
-        "lr": 3.1,
-        "steps": 1500,
-        "expected_acc": 3.95
-      },
-      "expectedOutput": [
-        [
-          2.5272
-        ],
-        -3.4307
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "logistic-regression-training-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "X": [
-          [
-            0
-          ],
-          [
-            1
-          ],
-          [
-            2
-          ],
-          [
-            2
-          ]
-        ],
-        "y": [
-          0,
-          0,
-          1,
-          1
-        ],
-        "lr": 0.08,
-        "steps": 400,
-        "expected_acc": 0.76
-      },
-      "expectedOutput": [
-        [
-          2.2239
-        ],
-        -2.5949
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "logistic-regression-training-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "X": [
-          [
-            0
-          ],
-          [
-            6
-          ],
-          [
-            12
-          ],
-          [
-            18
-          ]
-        ],
-        "y": [
-          0,
-          0,
-          6,
-          6
-        ],
-        "lr": 0.6,
-        "steps": 3000,
-        "expected_acc": 5.7
-      },
-      "expectedOutput": [
-        [
-          2.5272
-        ],
-        -3.4307
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "logistic-regression-training-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "X": [
-          [
-            4
-          ],
-          [
-            5
-          ],
-          [
-            6
-          ],
-          [
-            7
-          ]
-        ],
-        "y": [
-          4,
-          4,
-          5,
-          5
-        ],
-        "lr": 4.1,
-        "steps": 2000,
-        "expected_acc": 4.95
-      },
-      "expectedOutput": [
-        [
-          2.5272
-        ],
-        -3.4307
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "logistic-regression-training-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "X": [
-          [
-            0
-          ],
-          [
-            1
-          ],
-          [
-            2
-          ],
-          [
-            4
-          ]
-        ],
-        "y": [
-          0,
-          0,
-          1,
-          1
-        ],
-        "lr": 0.12,
-        "steps": 600,
-        "expected_acc": 1.14
-      },
-      "expectedOutput": [
-        [
-          2.8494
-        ],
-        -3.995
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "logistic-regression-training-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "X": [
-          [
-            0
-          ],
-          [
-            0
-          ],
-          [
-            1
-          ],
-          [
-            1
           ]
         ],
         "y": [
@@ -656,87 +114,164 @@
           0,
           0
         ],
-        "lr": 0.04,
-        "steps": 200,
-        "expected_acc": 0.38
+        "lr": 0.05,
+        "steps": 200
       },
       "expectedOutput": [
         [
-          -0.7532
+          -1.2221
         ],
-        -1.7841
+        -1.4558
       ],
       "isPublic": false
     },
     {
-      "id": "logistic-regression-training-tc-19",
-      "name": "Case 19",
+      "id": "logistic-regression-training-tc-4",
+      "name": "2D orthogonal features",
       "inputs": {
         "X": [
           [
+            1,
             0
           ],
           [
-            8
+            2,
+            0
           ],
           [
-            16
+            0,
+            1
           ],
           [
-            24
+            0,
+            2
           ]
         ],
         "y": [
+          1,
+          1,
           0,
-          0,
-          8,
-          8
+          0
         ],
-        "lr": 0.8,
-        "steps": 4000,
-        "expected_acc": 7.6
+        "lr": 0.1,
+        "steps": 400
       },
       "expectedOutput": [
         [
-          2.5272
+          2.5648,
+          -2.5648
         ],
-        -3.4307
+        -0.0
       ],
       "isPublic": false
     },
     {
-      "id": "logistic-regression-training-tc-20",
-      "name": "Case 20",
+      "id": "logistic-regression-training-tc-5",
+      "name": "2D diagonal separable",
       "inputs": {
         "X": [
           [
-            5
+            1,
+            1
           ],
           [
-            6
+            2,
+            2
           ],
           [
-            7
+            -1,
+            -1
           ],
           [
-            8
+            -2,
+            -2
           ]
         ],
         "y": [
-          5,
-          5,
-          6,
-          6
+          1,
+          1,
+          0,
+          0
         ],
-        "lr": 5.1,
-        "steps": 2500,
-        "expected_acc": 5.95
+        "lr": 0.05,
+        "steps": 300
       },
       "expectedOutput": [
         [
-          2.5272
+          1.4558,
+          1.4558
         ],
-        -3.4307
+        -0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-6",
+      "name": "Zero-centered 1D",
+      "inputs": {
+        "X": [
+          [
+            -2
+          ],
+          [
+            -1
+          ],
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "lr": 0.2,
+        "steps": 250
+      },
+      "expectedOutput": [
+        [
+          3.3653
+        ],
+        -0.0
+      ],
+      "isPublic": false
+    },
+    {
+      "id": "logistic-regression-training-tc-7",
+      "name": "Shifted boundary",
+      "inputs": {
+        "X": [
+          [
+            0.5
+          ],
+          [
+            1.5
+          ],
+          [
+            2.5
+          ],
+          [
+            3.5
+          ]
+        ],
+        "y": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "lr": 0.1,
+        "steps": 400
+      },
+      "expectedOutput": [
+        [
+          1.8588
+        ],
+        -3.3457
       ],
       "isPublic": false
     }

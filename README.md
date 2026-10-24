@@ -34,8 +34,8 @@
 - Built-in NumPy and math modules with real-time execution feedback.
 - Captures live `stdout`, `stderr`, execution timings, and detailed stack traces.
 
-### 🧪 20+ Automated Test Cases per Problem
-- Every problem features a comprehensive suite of 20+ verification test cases.
+### 🧪 7 Comprehensive Test Cases per Problem
+- Every problem features a verified suite of 7 automated test cases testing standard inputs, edge conditions, and numerical bounds.
 - Validates numerical tolerances (`atol`, `rtol`), edge cases, empty shapes, zero-division, and dimensional broadcasting.
 - Clear visual pass/fail badges with expandable input/output diffs and tolerance checks.
 

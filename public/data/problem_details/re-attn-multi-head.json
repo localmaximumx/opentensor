@@ -81,7 +81,7 @@
   "solution": "### 💡 Intuition & Approach\nVectorized, mathematically sound implementation.\n\n### ⚡ Implementation\n```python\nimport math\ndef solve(Q,K,V,num_heads):\n    # Q/K/V: sequence x d_model; split dimensions evenly across heads and concatenate outputs.\n    d=len(Q[0])\n    if d%num_heads: raise ValueError(\"d_model must divide by num_heads\")\n    dh=d//num_heads; result=[[0.0]*d for _ in Q]\n    for h in range(num_heads):\n      q=[[v[h*dh:(h+1)*dh] for v in Q][i] for i in range(len(Q))]\n      k=[v[h*dh:(h+1)*dh] for v in K]; val=[v[h*dh:(h+1)*dh] for v in V]\n      for i,row in enumerate(q):\n       scores=[sum(a*b for a,b in zip(row,kk))/math.sqrt(dh) for kk in k]\n       m=max(scores); e=[math.exp(s-m) for s in scores]; z=sum(e); p=[a/z for a in e]\n       for c in range(dh): result[i][h*dh+c]=sum(p[j]*val[j][c] for j in range(len(val)))\n    return result\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$\n- **Space Complexity**: $\\mathcal{O}(N)$",
   "testCases": [
     {
-      "id": "case-1",
+      "id": "re-attn-multi-head-tc-1",
       "name": "smoke test",
       "inputs": {
         "Q": [
@@ -118,18 +118,18 @@
       },
       "expectedOutput": [
         [
-          1.6604769013466862,
-          2.6604769013466862
+          1.6605,
+          2.6605
         ],
         [
-          2.3395230986533138,
-          3.3395230986533138
+          2.3395,
+          3.3395
         ]
       ],
       "isPublic": true
     },
     {
-      "id": "tc-hidden-2",
+      "id": "re-attn-multi-head-tc-2",
       "name": "Case 2",
       "inputs": {
         "Q": [
@@ -166,67 +166,19 @@
       },
       "expectedOutput": [
         [
-          2.071944839848366,
+          2.0719,
           6.0
         ],
         [
           4.0,
-          7.928055160151634
+          7.9281
         ]
       ],
       "isPublic": true
     },
     {
-      "id": "tc-hidden-3",
+      "id": "re-attn-multi-head-tc-3",
       "name": "Case 3",
-      "inputs": {
-        "Q": [
-          [
-            0.5,
-            0.0
-          ],
-          [
-            0.0,
-            0.5
-          ]
-        ],
-        "K": [
-          [
-            0.5,
-            0.0
-          ],
-          [
-            0.0,
-            0.5
-          ]
-        ],
-        "V": [
-          [
-            0.5,
-            1.0
-          ],
-          [
-            1.5,
-            2.0
-          ]
-        ],
-        "num_heads": 0
-      },
-      "expectedOutput": [
-        [
-          1.6604769013466862,
-          2.6604769013466862
-        ],
-        [
-          2.3395230986533138,
-          3.3395230986533138
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "tc-hidden-4",
-      "name": "Case 4",
       "inputs": {
         "Q": [
           [
@@ -273,152 +225,8 @@
       "isPublic": false
     },
     {
-      "id": "tc-hidden-5",
-      "name": "Case 5",
-      "inputs": {
-        "Q": [
-          [
-            3.0,
-            0.0
-          ],
-          [
-            0.0,
-            3.0
-          ]
-        ],
-        "K": [
-          [
-            3.0,
-            0.0
-          ],
-          [
-            0.0,
-            3.0
-          ]
-        ],
-        "V": [
-          [
-            3.0,
-            6.0
-          ],
-          [
-            9.0,
-            12.0
-          ]
-        ],
-        "num_heads": 3
-      },
-      "expectedOutput": [
-        [
-          1.6604769013466862,
-          2.6604769013466862
-        ],
-        [
-          2.3395230986533138,
-          3.3395230986533138
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "tc-hidden-6",
-      "name": "Case 6",
-      "inputs": {
-        "Q": [
-          [
-            2.0,
-            1.0
-          ],
-          [
-            1.0,
-            2.0
-          ]
-        ],
-        "K": [
-          [
-            2.0,
-            1.0
-          ],
-          [
-            1.0,
-            2.0
-          ]
-        ],
-        "V": [
-          [
-            2.0,
-            3.0
-          ],
-          [
-            4.0,
-            5.0
-          ]
-        ],
-        "num_heads": 2.0
-      },
-      "expectedOutput": [
-        [
-          1.6604769013466862,
-          2.6604769013466862
-        ],
-        [
-          2.3395230986533138,
-          3.3395230986533138
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "tc-hidden-7",
-      "name": "Case 7",
-      "inputs": {
-        "Q": [
-          [
-            -1.0,
-            -2.0
-          ],
-          [
-            -2.0,
-            -1.0
-          ]
-        ],
-        "K": [
-          [
-            -1.0,
-            -2.0
-          ],
-          [
-            -2.0,
-            -1.0
-          ]
-        ],
-        "V": [
-          [
-            -1.0,
-            0.0
-          ],
-          [
-            1.0,
-            2.0
-          ]
-        ],
-        "num_heads": -1.0
-      },
-      "expectedOutput": [
-        [
-          1.6604769013466862,
-          2.6604769013466862
-        ],
-        [
-          2.3395230986533138,
-          3.3395230986533138
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "tc-hidden-8",
-      "name": "Case 8",
+      "id": "re-attn-multi-head-tc-4",
+      "name": "Case 4",
       "inputs": {
         "Q": [
           [
@@ -454,211 +262,19 @@
       },
       "expectedOutput": [
         [
-          2.6604769013466862,
-          1.6604769013466862
+          2.6605,
+          1.6605
         ],
         [
-          3.3395230986533138,
-          2.3395230986533138
+          3.3395,
+          2.3395
         ]
       ],
       "isPublic": false
     },
     {
-      "id": "tc-hidden-9",
-      "name": "Case 9",
-      "inputs": {
-        "Q": [
-          [
-            -1.0,
-            -0.0
-          ],
-          [
-            -0.0,
-            -1.0
-          ]
-        ],
-        "K": [
-          [
-            -1.0,
-            -0.0
-          ],
-          [
-            -0.0,
-            -1.0
-          ]
-        ],
-        "V": [
-          [
-            -1.0,
-            -2.0
-          ],
-          [
-            -3.0,
-            -4.0
-          ]
-        ],
-        "num_heads": -1
-      },
-      "expectedOutput": [
-        [
-          0.0,
-          0.0
-        ],
-        [
-          0.0,
-          0.0
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "tc-hidden-10",
-      "name": "Case 10",
-      "inputs": {
-        "Q": [
-          [
-            10.0,
-            0.0
-          ],
-          [
-            0.0,
-            10.0
-          ]
-        ],
-        "K": [
-          [
-            10.0,
-            0.0
-          ],
-          [
-            0.0,
-            10.0
-          ]
-        ],
-        "V": [
-          [
-            10.0,
-            20.0
-          ],
-          [
-            30.0,
-            40.0
-          ]
-        ],
-        "num_heads": 10
-      },
-      "expectedOutput": [
-        [
-          1.6604769013466862,
-          2.6604769013466862
-        ],
-        [
-          2.3395230986533138,
-          3.3395230986533138
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "tc-hidden-11",
-      "name": "Case 11",
-      "inputs": {
-        "Q": [
-          [
-            0.1,
-            0.0
-          ],
-          [
-            0.0,
-            0.1
-          ]
-        ],
-        "K": [
-          [
-            0.1,
-            0.0
-          ],
-          [
-            0.0,
-            0.1
-          ]
-        ],
-        "V": [
-          [
-            0.1,
-            0.2
-          ],
-          [
-            0.3,
-            0.4
-          ]
-        ],
-        "num_heads": 0
-      },
-      "expectedOutput": [
-        [
-          1.6604769013466862,
-          2.6604769013466862
-        ],
-        [
-          2.3395230986533138,
-          3.3395230986533138
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "tc-hidden-12",
-      "name": "Case 12",
-      "inputs": {
-        "Q": [
-          [
-            6.0,
-            5.0
-          ],
-          [
-            5.0,
-            6.0
-          ]
-        ],
-        "K": [
-          [
-            6.0,
-            5.0
-          ],
-          [
-            5.0,
-            6.0
-          ]
-        ],
-        "V": [
-          [
-            6.0,
-            7.0
-          ],
-          [
-            8.0,
-            9.0
-          ]
-        ],
-        "num_heads": 6.0
-      },
-      "expectedOutput": [
-        [
-          1.6604769013466862,
-          2.6604769013466862
-        ],
-        [
-          2.3395230986533138,
-          3.3395230986533138
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "tc-hidden-13",
-      "name": "Case 13",
+      "id": "re-attn-multi-head-tc-5",
+      "name": "Case 5",
       "inputs": {
         "Q": [
           [
@@ -694,19 +310,19 @@
       },
       "expectedOutput": [
         [
-          1.7860483946973287,
+          1.786,
           4.5
         ],
         [
           3.0,
-          5.713951605302672
+          5.714
         ]
       ],
       "isPublic": false
     },
     {
-      "id": "tc-hidden-14",
-      "name": "Case 14",
+      "id": "re-attn-multi-head-tc-6",
+      "name": "Case 6",
       "inputs": {
         "Q": [
           [
@@ -753,152 +369,8 @@
       "isPublic": false
     },
     {
-      "id": "tc-hidden-15",
-      "name": "Case 15",
-      "inputs": {
-        "Q": [
-          [
-            0.25,
-            0.0
-          ],
-          [
-            0.0,
-            0.25
-          ]
-        ],
-        "K": [
-          [
-            0.25,
-            0.0
-          ],
-          [
-            0.0,
-            0.25
-          ]
-        ],
-        "V": [
-          [
-            0.25,
-            0.5
-          ],
-          [
-            0.75,
-            1.0
-          ]
-        ],
-        "num_heads": 0
-      },
-      "expectedOutput": [
-        [
-          1.6604769013466862,
-          2.6604769013466862
-        ],
-        [
-          2.3395230986533138,
-          3.3395230986533138
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "tc-hidden-16",
-      "name": "Case 16",
-      "inputs": {
-        "Q": [
-          [
-            0.0,
-            -1.0
-          ],
-          [
-            -1.0,
-            0.0
-          ]
-        ],
-        "K": [
-          [
-            0.0,
-            -1.0
-          ],
-          [
-            -1.0,
-            0.0
-          ]
-        ],
-        "V": [
-          [
-            0.0,
-            1.0
-          ],
-          [
-            2.0,
-            3.0
-          ]
-        ],
-        "num_heads": 0.0
-      },
-      "expectedOutput": [
-        [
-          1.6604769013466862,
-          2.6604769013466862
-        ],
-        [
-          2.3395230986533138,
-          3.3395230986533138
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "tc-hidden-17",
-      "name": "Case 17",
-      "inputs": {
-        "Q": [
-          [
-            4.0,
-            0.0
-          ],
-          [
-            0.0,
-            4.0
-          ]
-        ],
-        "K": [
-          [
-            4.0,
-            0.0
-          ],
-          [
-            0.0,
-            4.0
-          ]
-        ],
-        "V": [
-          [
-            4.0,
-            8.0
-          ],
-          [
-            12.0,
-            16.0
-          ]
-        ],
-        "num_heads": 4
-      },
-      "expectedOutput": [
-        [
-          1.6604769013466862,
-          2.6604769013466862
-        ],
-        [
-          2.3395230986533138,
-          3.3395230986533138
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "tc-hidden-18",
-      "name": "Case 18",
+      "id": "re-attn-multi-head-tc-7",
+      "name": "Case 7",
       "inputs": {
         "Q": [
           [
@@ -934,108 +406,12 @@
       },
       "expectedOutput": [
         [
-          1.3527804477509764,
-          2.1027804477509764
+          1.3528,
+          2.1028
         ],
         [
-          1.6472195522490236,
-          2.3972195522490236
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "tc-hidden-19",
-      "name": "Case 19",
-      "inputs": {
-        "Q": [
-          [
-            5.0,
-            0.0
-          ],
-          [
-            0.0,
-            5.0
-          ]
-        ],
-        "K": [
-          [
-            5.0,
-            0.0
-          ],
-          [
-            0.0,
-            5.0
-          ]
-        ],
-        "V": [
-          [
-            5.0,
-            10.0
-          ],
-          [
-            15.0,
-            20.0
-          ]
-        ],
-        "num_heads": 5
-      },
-      "expectedOutput": [
-        [
-          1.6604769013466862,
-          2.6604769013466862
-        ],
-        [
-          2.3395230986533138,
-          3.3395230986533138
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "tc-hidden-20",
-      "name": "Case 20",
-      "inputs": {
-        "Q": [
-          [
-            11.0,
-            10.0
-          ],
-          [
-            10.0,
-            11.0
-          ]
-        ],
-        "K": [
-          [
-            11.0,
-            10.0
-          ],
-          [
-            10.0,
-            11.0
-          ]
-        ],
-        "V": [
-          [
-            11.0,
-            12.0
-          ],
-          [
-            13.0,
-            14.0
-          ]
-        ],
-        "num_heads": 11.0
-      },
-      "expectedOutput": [
-        [
-          1.6604769013466862,
-          2.6604769013466862
-        ],
-        [
-          2.3395230986533138,
-          3.3395230986533138
+          1.6472,
+          2.3972
         ]
       ],
       "isPublic": false

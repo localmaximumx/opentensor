@@ -32,7 +32,7 @@
   "solution": "### 💡 Intuition & Approach\nApply Rotary Position Embedding transformations to query or key token vectors in Triton using precomputed cosine and sine frequencies.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef triton_rope(x: list, freqs_cos: list, freqs_sin: list) -> list:\n    arr = np.array(x, dtype=float)\n    cos, sin = np.array(freqs_cos, dtype=float), np.array(freqs_sin, dtype=float)\n    d = arr.shape[-1]\n    x1, x2 = arr[..., :d//2], arr[..., d//2:]\n    rotated = np.concatenate([-x2, x1], axis=-1)\n    return np.round(arr * cos + rotated * sin, 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
   "testCases": [
     {
-      "id": "triton-rope-test-1",
+      "id": "triton-rope-tc-1",
       "name": "Standard Test Case 1",
       "inputs": {
         "x": [
@@ -63,8 +63,8 @@
       "isPublic": true
     },
     {
-      "id": "triton-rope-test-2",
-      "name": "Standard Test Case 2",
+      "id": "triton-rope-tc-2",
+      "name": "Case 2",
       "inputs": {
         "x": [
           1.0,
@@ -98,16 +98,16 @@
       "name": "Case 3",
       "inputs": {
         "x": [
-          1.0,
-          2.0,
+          1.5,
           3.0,
-          4.0
+          4.5,
+          6.0
         ],
         "freqs_cos": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
+          1.5,
+          1.5,
+          1.5,
+          1.5
         ],
         "freqs_sin": [
           0.0,
@@ -117,10 +117,10 @@
         ]
       },
       "expectedOutput": [
-        1.0,
-        2.0,
-        3.0,
-        4.0
+        2.25,
+        4.5,
+        6.75,
+        9.0
       ],
       "isPublic": false
     },
@@ -129,29 +129,29 @@
       "name": "Case 4",
       "inputs": {
         "x": [
+          0.5,
           1.0,
-          0.0,
-          0.0,
-          1.0
+          1.5,
+          2.0
         ],
         "freqs_cos": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ],
+        "freqs_sin": [
           0.0,
           0.0,
           0.0,
           0.0
-        ],
-        "freqs_sin": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
         ]
       },
       "expectedOutput": [
-        0.0,
-        -1.0,
-        1.0,
-        0.0
+        0.25,
+        0.5,
+        0.75,
+        1.0
       ],
       "isPublic": false
     },
@@ -160,16 +160,16 @@
       "name": "Case 5",
       "inputs": {
         "x": [
-          1.0,
           2.0,
-          3.0,
-          4.0
+          4.0,
+          6.0,
+          8.0
         ],
         "freqs_cos": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
+          2.0,
+          2.0,
+          2.0,
+          2.0
         ],
         "freqs_sin": [
           0.0,
@@ -179,10 +179,10 @@
         ]
       },
       "expectedOutput": [
-        1.0,
-        2.0,
-        3.0,
-        4.0
+        4.0,
+        8.0,
+        12.0,
+        16.0
       ],
       "isPublic": false
     },
@@ -191,29 +191,29 @@
       "name": "Case 6",
       "inputs": {
         "x": [
-          1.0,
-          0.0,
-          0.0,
-          1.0
+          -1.0,
+          -2.0,
+          -3.0,
+          -4.0
         ],
         "freqs_cos": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
+          -1.0,
+          -1.0,
+          -1.0,
+          -1.0
         ],
         "freqs_sin": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
+          -0.0,
+          -0.0,
+          -0.0,
+          -0.0
         ]
       },
       "expectedOutput": [
-        0.0,
-        -1.0,
         1.0,
-        0.0
+        2.0,
+        3.0,
+        4.0
       ],
       "isPublic": false
     },
@@ -222,16 +222,16 @@
       "name": "Case 7",
       "inputs": {
         "x": [
-          1.0,
-          2.0,
-          3.0,
-          4.0
+          0.8,
+          1.6,
+          2.4,
+          3.2
         ],
         "freqs_cos": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
+          0.8,
+          0.8,
+          0.8,
+          0.8
         ],
         "freqs_sin": [
           0.0,
@@ -241,413 +241,10 @@
         ]
       },
       "expectedOutput": [
-        1.0,
-        2.0,
-        3.0,
-        4.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-rope-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "x": [
-          1.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "freqs_cos": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        "freqs_sin": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "expectedOutput": [
-        0.0,
-        -1.0,
-        1.0,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-rope-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "x": [
-          1.0,
-          2.0,
-          3.0,
-          4.0
-        ],
-        "freqs_cos": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
-        "freqs_sin": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        1.0,
-        2.0,
-        3.0,
-        4.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-rope-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "x": [
-          1.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "freqs_cos": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        "freqs_sin": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "expectedOutput": [
-        0.0,
-        -1.0,
-        1.0,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-rope-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "x": [
-          1.0,
-          2.0,
-          3.0,
-          4.0
-        ],
-        "freqs_cos": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
-        "freqs_sin": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        1.0,
-        2.0,
-        3.0,
-        4.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-rope-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "x": [
-          1.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "freqs_cos": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        "freqs_sin": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "expectedOutput": [
-        0.0,
-        -1.0,
-        1.0,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-rope-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "x": [
-          1.0,
-          2.0,
-          3.0,
-          4.0
-        ],
-        "freqs_cos": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
-        "freqs_sin": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        1.0,
-        2.0,
-        3.0,
-        4.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-rope-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "x": [
-          1.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "freqs_cos": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        "freqs_sin": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "expectedOutput": [
-        0.0,
-        -1.0,
-        1.0,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-rope-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "x": [
-          1.0,
-          2.0,
-          3.0,
-          4.0
-        ],
-        "freqs_cos": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
-        "freqs_sin": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        1.0,
-        2.0,
-        3.0,
-        4.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-rope-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "x": [
-          1.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "freqs_cos": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        "freqs_sin": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "expectedOutput": [
-        0.0,
-        -1.0,
-        1.0,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-rope-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "x": [
-          1.0,
-          2.0,
-          3.0,
-          4.0
-        ],
-        "freqs_cos": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
-        "freqs_sin": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        1.0,
-        2.0,
-        3.0,
-        4.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-rope-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "x": [
-          1.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "freqs_cos": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        "freqs_sin": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "expectedOutput": [
-        0.0,
-        -1.0,
-        1.0,
-        0.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-rope-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "x": [
-          1.0,
-          2.0,
-          3.0,
-          4.0
-        ],
-        "freqs_cos": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
-        "freqs_sin": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        1.0,
-        2.0,
-        3.0,
-        4.0
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-rope-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "x": [
-          1.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "freqs_cos": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        "freqs_sin": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "expectedOutput": [
-        0.0,
-        -1.0,
-        1.0,
-        0.0
+        0.64,
+        1.28,
+        1.92,
+        2.56
       ],
       "isPublic": false
     }

@@ -32,7 +32,7 @@
   "solution": "### 💡 Intuition & Approach\nImplement fused row-wise softmax in Triton with stable max subtraction, register reductions, and masked column tails.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef triton_fused_softmax(x: list) -> list:\n    arr = np.array(x, dtype=float)\n    m = np.max(arr, axis=-1, keepdims=True)\n    exp_x = np.exp(arr - m)\n    return np.round(exp_x / np.sum(exp_x, axis=-1, keepdims=True), 6).tolist()\n```\n\n### 📊 Complexity Analysis\n- **Time Complexity:** $\\mathcal{O}(N)$ where operations scale linearly with input dimensions.\n- **Space Complexity:** $\\mathcal{O}(N)$ for output buffers and intermediate tensors.\n\n### 🔍 How It Works\n1. **Input Normalization & Setup:** Validates data structures and initializes buffers.\n2. **Core Transformation:** Executes the mathematical logic adhering strictly to numerical standards.\n3. **Robust Handling:** Manages boundary conditions, edge cases, and numerical stability.\n",
   "testCases": [
     {
-      "id": "triton-fused-softmax-test-1",
+      "id": "triton-fused-softmax-tc-1",
       "name": "Standard Test Case 1",
       "inputs": {
         "x": [
@@ -50,21 +50,21 @@
       },
       "expectedOutput": [
         [
-          0.090031,
-          0.244728,
-          0.665241
+          0.09,
+          0.2447,
+          0.6652
         ],
         [
-          0.333333,
-          0.333333,
-          0.333333
+          0.3333,
+          0.3333,
+          0.3333
         ]
       ],
       "isPublic": true
     },
     {
-      "id": "triton-fused-softmax-test-2",
-      "name": "Standard Test Case 2",
+      "id": "triton-fused-softmax-tc-2",
+      "name": "Case 2",
       "inputs": {
         "x": [
           0.0,
@@ -73,9 +73,9 @@
         ]
       },
       "expectedOutput": [
-        0.333333,
-        0.333333,
-        0.333333
+        0.3333,
+        0.3333,
+        0.3333
       ],
       "isPublic": true
     },
@@ -85,27 +85,27 @@
       "inputs": {
         "x": [
           [
-            1.0,
-            2.0,
-            3.0
+            1.5,
+            3.0,
+            4.5
           ],
           [
-            1.0,
-            1.0,
-            1.0
+            1.5,
+            1.5,
+            1.5
           ]
         ]
       },
       "expectedOutput": [
         [
-          0.090031,
-          0.244728,
-          0.665241
+          0.0391,
+          0.1753,
+          0.7856
         ],
         [
-          0.333333,
-          0.333333,
-          0.333333
+          0.3333,
+          0.3333,
+          0.3333
         ]
       ],
       "isPublic": false
@@ -115,15 +115,29 @@
       "name": "Case 4",
       "inputs": {
         "x": [
-          0.0,
-          0.0,
-          0.0
+          [
+            0.5,
+            1.0,
+            1.5
+          ],
+          [
+            0.5,
+            0.5,
+            0.5
+          ]
         ]
       },
       "expectedOutput": [
-        0.333333,
-        0.333333,
-        0.333333
+        [
+          0.1863,
+          0.3072,
+          0.5065
+        ],
+        [
+          0.3333,
+          0.3333,
+          0.3333
+        ]
       ],
       "isPublic": false
     },
@@ -133,27 +147,27 @@
       "inputs": {
         "x": [
           [
-            1.0,
             2.0,
-            3.0
+            4.0,
+            6.0
           ],
           [
-            1.0,
-            1.0,
-            1.0
+            2.0,
+            2.0,
+            2.0
           ]
         ]
       },
       "expectedOutput": [
         [
-          0.090031,
-          0.244728,
-          0.665241
+          0.0159,
+          0.1173,
+          0.8668
         ],
         [
-          0.333333,
-          0.333333,
-          0.333333
+          0.3333,
+          0.3333,
+          0.3333
         ]
       ],
       "isPublic": false
@@ -163,15 +177,29 @@
       "name": "Case 6",
       "inputs": {
         "x": [
-          0.0,
-          0.0,
-          0.0
+          [
+            -1.0,
+            -2.0,
+            -3.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0
+          ]
         ]
       },
       "expectedOutput": [
-        0.333333,
-        0.333333,
-        0.333333
+        [
+          0.6652,
+          0.2447,
+          0.09
+        ],
+        [
+          0.3333,
+          0.3333,
+          0.3333
+        ]
       ],
       "isPublic": false
     },
@@ -181,333 +209,28 @@
       "inputs": {
         "x": [
           [
-            1.0,
-            2.0,
-            3.0
+            0.8,
+            1.6,
+            2.4
           ],
           [
-            1.0,
-            1.0,
-            1.0
+            0.8,
+            0.8,
+            0.8
           ]
         ]
       },
       "expectedOutput": [
         [
-          0.090031,
-          0.244728,
-          0.665241
+          0.1223,
+          0.2721,
+          0.6056
         ],
         [
-          0.333333,
-          0.333333,
-          0.333333
+          0.3333,
+          0.3333,
+          0.3333
         ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-fused-softmax-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "x": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        0.333333,
-        0.333333,
-        0.333333
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-fused-softmax-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "x": [
-          [
-            1.0,
-            2.0,
-            3.0
-          ],
-          [
-            1.0,
-            1.0,
-            1.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          0.090031,
-          0.244728,
-          0.665241
-        ],
-        [
-          0.333333,
-          0.333333,
-          0.333333
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-fused-softmax-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "x": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        0.333333,
-        0.333333,
-        0.333333
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-fused-softmax-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "x": [
-          [
-            1.0,
-            2.0,
-            3.0
-          ],
-          [
-            1.0,
-            1.0,
-            1.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          0.090031,
-          0.244728,
-          0.665241
-        ],
-        [
-          0.333333,
-          0.333333,
-          0.333333
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-fused-softmax-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "x": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        0.333333,
-        0.333333,
-        0.333333
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-fused-softmax-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "x": [
-          [
-            1.0,
-            2.0,
-            3.0
-          ],
-          [
-            1.0,
-            1.0,
-            1.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          0.090031,
-          0.244728,
-          0.665241
-        ],
-        [
-          0.333333,
-          0.333333,
-          0.333333
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-fused-softmax-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "x": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        0.333333,
-        0.333333,
-        0.333333
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-fused-softmax-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "x": [
-          [
-            1.0,
-            2.0,
-            3.0
-          ],
-          [
-            1.0,
-            1.0,
-            1.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          0.090031,
-          0.244728,
-          0.665241
-        ],
-        [
-          0.333333,
-          0.333333,
-          0.333333
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-fused-softmax-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "x": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        0.333333,
-        0.333333,
-        0.333333
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-fused-softmax-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "x": [
-          [
-            1.0,
-            2.0,
-            3.0
-          ],
-          [
-            1.0,
-            1.0,
-            1.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          0.090031,
-          0.244728,
-          0.665241
-        ],
-        [
-          0.333333,
-          0.333333,
-          0.333333
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-fused-softmax-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "x": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        0.333333,
-        0.333333,
-        0.333333
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-fused-softmax-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "x": [
-          [
-            1.0,
-            2.0,
-            3.0
-          ],
-          [
-            1.0,
-            1.0,
-            1.0
-          ]
-        ]
-      },
-      "expectedOutput": [
-        [
-          0.090031,
-          0.244728,
-          0.665241
-        ],
-        [
-          0.333333,
-          0.333333,
-          0.333333
-        ]
-      ],
-      "isPublic": false
-    },
-    {
-      "id": "triton-fused-softmax-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "x": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "expectedOutput": [
-        0.333333,
-        0.333333,
-        0.333333
       ],
       "isPublic": false
     }

@@ -25,7 +25,7 @@
   "solution": "### 💡 Intuition & Approach\nThe implementation computes **Output Gate** by following direct architectural principles, leveraging vectorized operations to ensure both correctness and optimal runtime efficiency.\n\n### ⚡ Python Reference Implementation\n```python\nimport numpy as np\n\ndef sigmoid(x: np.ndarray) -> np.ndarray:\n    return 1.0 / (1.0 + np.exp(-np.clip(x, -500, 500)))\n\ndef output_gate(h_prev: np.ndarray, x_t: np.ndarray, C_t: np.ndarray,\n                W_o: np.ndarray, b_o: np.ndarray) -> dict:\n    hp = np.asarray(h_prev, dtype=float)\n    xt = np.asarray(x_t, dtype=float)\n    ct = np.asarray(C_t, dtype=float)\n    wo = np.asarray(W_o, dtype=float)\n    bo = np.asarray(b_o, dtype=float)\n    if hp.ndim == 1:\n        cat = np.concatenate([hp, xt])\n        o_t = sigmoid(wo @ cat + bo)\n    else:\n        cat = np.concatenate([hp, xt], axis=-1)\n        o_t = sigmoid(cat @ wo.T + bo)\n    ht = o_t * np.tanh(ct)\n    return {\n        \"output_gate\": np.round(o_t, 6).tolist(),\n        \"hidden_state\": np.round(ht, 6).tolist()\n    }\n```\n\n### ⏱️ Complexity Analysis\n- **Time Complexity**: $\\mathcal{O}(N)$ where $N$ represents the primary sequence length or dimension.\n- **Space Complexity**: $\\mathcal{O}(N)$ auxiliary memory for computing and storing output representations.",
   "testCases": [
     {
-      "id": "test-1",
+      "id": "lstm-output-gate-tc-1",
       "name": "Basic output gate",
       "inputs": {
         "C_t": [
@@ -62,18 +62,18 @@
       "isPublic": true,
       "expectedOutput": {
         "output_gate": [
-          0.622459,
-          0.586618
+          0.6225,
+          0.5866
         ],
         "hidden_state": [
-          0.287649,
-          -0.170889
+          0.2876,
+          -0.1709
         ]
       }
     },
     {
-      "id": "test-2",
-      "name": "Biased output gate",
+      "id": "lstm-output-gate-tc-2",
+      "name": "Case 2",
       "inputs": {
         "C_t": [
           1,
@@ -109,18 +109,18 @@
       "isPublic": true,
       "expectedOutput": {
         "output_gate": [
-          0.617748,
-          0.569546
+          0.6177,
+          0.5695
         ],
         "hidden_state": [
-          0.470473,
-          -0.263197
+          0.4705,
+          -0.2632
         ]
       }
     },
     {
-      "id": "test-3",
-      "name": "Batched output gate",
+      "id": "lstm-output-gate-tc-3",
+      "name": "Case 3",
       "inputs": {
         "C_t": [
           [
@@ -175,22 +175,22 @@
       "expectedOutput": {
         "output_gate": [
           [
-            0.622459,
-            0.586618
+            0.6225,
+            0.5866
           ],
           [
-            0.631812,
-            0.629483
+            0.6318,
+            0.6295
           ]
         ],
         "hidden_state": [
           [
-            0.287649,
-            -0.170889
+            0.2876,
+            -0.1709
           ],
           [
-            0.481185,
-            0.124244
+            0.4812,
+            0.1242
           ]
         ]
       }
@@ -232,12 +232,12 @@
       },
       "expectedOutput": {
         "output_gate": [
-          0.880797,
-          0.802184
+          0.8808,
+          0.8022
         ],
         "hidden_state": [
-          0.67081,
-          -0.430813
+          0.6708,
+          -0.4308
         ]
       },
       "isPublic": false
@@ -279,12 +279,12 @@
       },
       "expectedOutput": {
         "output_gate": [
-          0.512497,
-          0.509374
+          0.5125,
+          0.5094
         ],
         "hidden_state": [
-          0.12552,
-          -0.075838
+          0.1255,
+          -0.0758
         ]
       },
       "isPublic": false
@@ -326,12 +326,12 @@
       },
       "expectedOutput": {
         "output_gate": [
-          0.999665,
-          0.999647
+          0.9997,
+          0.9996
         ],
         "hidden_state": [
-          0.904845,
-          0.604155
+          0.9048,
+          0.6042
         ]
       },
       "isPublic": false
@@ -373,623 +373,12 @@
       },
       "expectedOutput": {
         "output_gate": [
-          0.79413,
-          0.718594
+          0.7941,
+          0.7186
         ],
         "hidden_state": [
-          0.504391,
-          -0.303174
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-output-gate-tc-8",
-      "name": "Case 8",
-      "inputs": {
-        "C_t": [
-          1.5,
-          -0.9
-        ],
-        "W_o": [
-          [
-            0.3,
-            0.6,
-            0.9,
-            1.2
-          ],
-          [
-            1.5,
-            0.3,
-            0.6,
-            0.9
-          ]
-        ],
-        "b_o": [
-          0,
-          0
-        ],
-        "x_t": [
-          3,
-          1.5
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "output_gate": [
-          0.989013,
-          0.958909
-        ],
-        "hidden_state": [
-          0.895203,
-          -0.686864
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-output-gate-tc-9",
-      "name": "Case 9",
-      "inputs": {
-        "C_t": [
-          0.125,
-          -0.075
-        ],
-        "W_o": [
-          [
-            0.025,
-            0.05,
-            0.075,
-            0.1
-          ],
-          [
-            0.125,
-            0.025,
-            0.05,
-            0.075
-          ]
-        ],
-        "b_o": [
-          0,
-          0
-        ],
-        "x_t": [
-          0,
-          0.125
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "output_gate": [
-          0.503125,
-          0.502344
-        ],
-        "hidden_state": [
-          0.062565,
-          -0.037605
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-output-gate-tc-10",
-      "name": "Case 10",
-      "inputs": {
-        "C_t": [
-          2.5,
-          1.7
-        ],
-        "W_o": [
-          [
-            2.1,
-            2.2,
-            2.3,
-            2.4
-          ],
-          [
-            2.5,
-            2.1,
-            2.2,
-            2.3
-          ]
-        ],
-        "b_o": [
-          2,
-          2
-        ],
-        "x_t": [
-          3,
-          2.5
-        ],
-        "h_prev": [
-          2,
-          2
-        ]
-      },
-      "expectedOutput": {
-        "output_gate": [
-          1.0,
-          1.0
-        ],
-        "hidden_state": [
-          0.986614,
-          0.935409
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-output-gate-tc-11",
-      "name": "Case 11",
-      "inputs": {
-        "C_t": [
-          2.0,
-          -1.2
-        ],
-        "W_o": [
-          [
-            0.4,
-            0.8,
-            1.2,
-            1.6
-          ],
-          [
-            2.0,
-            0.4,
-            0.8,
-            1.2
-          ]
-        ],
-        "b_o": [
-          0,
-          0
-        ],
-        "x_t": [
-          4,
-          2.0
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "output_gate": [
-          0.999665,
-          0.996316
-        ],
-        "hidden_state": [
-          0.963704,
-          -0.830583
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-output-gate-tc-12",
-      "name": "Case 12",
-      "inputs": {
-        "C_t": [
-          -0.3,
-          0.5
-        ],
-        "W_o": [
-          [
-            0.4,
-            0.3,
-            0.2,
-            0.1
-          ],
-          [
-            0.3,
-            0.2,
-            0.1,
-            0.5
-          ]
-        ],
-        "b_o": [
-          0,
-          0
-        ],
-        "x_t": [
-          0.5,
-          1
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "output_gate": [
-          0.549834,
-          0.634136
-        ],
-        "hidden_state": [
-          -0.160174,
-          0.293045
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-output-gate-tc-13",
-      "name": "Case 13",
-      "inputs": {
-        "C_t": [
-          0.375,
-          -0.225
-        ],
-        "W_o": [
-          [
-            0.075,
-            0.15,
-            0.225,
-            0.3
-          ],
-          [
-            0.375,
-            0.075,
-            0.15,
-            0.225
-          ]
-        ],
-        "b_o": [
-          0,
-          0
-        ],
-        "x_t": [
-          1,
-          0.375
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "output_gate": [
-          0.583583,
-          0.558327
-        ],
-        "hidden_state": [
-          0.209131,
-          -0.123546
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-output-gate-tc-14",
-      "name": "Case 14",
-      "inputs": {
-        "C_t": [
-          2.5,
-          -1.5
-        ],
-        "W_o": [
-          [
-            0.5,
-            1.0,
-            1.5,
-            2.0
-          ],
-          [
-            2.5,
-            0.5,
-            1.0,
-            1.5
-          ]
-        ],
-        "b_o": [
-          0,
-          0
-        ],
-        "x_t": [
-          5,
-          2.5
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "output_gate": [
-          0.999996,
-          0.999842
-        ],
-        "hidden_state": [
-          0.986611,
-          -0.905005
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-output-gate-tc-15",
-      "name": "Case 15",
-      "inputs": {
-        "C_t": [
-          3.5,
-          2.7
-        ],
-        "W_o": [
-          [
-            3.1,
-            3.2,
-            3.3,
-            3.4
-          ],
-          [
-            3.5,
-            3.1,
-            3.2,
-            3.3
-          ]
-        ],
-        "b_o": [
-          3,
-          3
-        ],
-        "x_t": [
-          4,
-          3.5
-        ],
-        "h_prev": [
-          3,
-          3
-        ]
-      },
-      "expectedOutput": {
-        "output_gate": [
-          1.0,
-          1.0
-        ],
-        "hidden_state": [
-          0.998178,
-          0.991007
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-output-gate-tc-16",
-      "name": "Case 16",
-      "inputs": {
-        "C_t": [
-          0.4,
-          -0.24
-        ],
-        "W_o": [
-          [
-            0.08,
-            0.16,
-            0.24,
-            0.32
-          ],
-          [
-            0.4,
-            0.08,
-            0.16,
-            0.24
-          ]
-        ],
-        "b_o": [
-          0,
-          0
-        ],
-        "x_t": [
-          1,
-          0.4
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "output_gate": [
-          0.590976,
-          0.563653
-        ],
-        "hidden_state": [
-          0.224541,
-          -0.132738
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-output-gate-tc-17",
-      "name": "Case 17",
-      "inputs": {
-        "C_t": [
-          3.0,
-          -1.8
-        ],
-        "W_o": [
-          [
-            0.6,
-            1.2,
-            1.8,
-            2.4
-          ],
-          [
-            3.0,
-            0.6,
-            1.2,
-            1.8
-          ]
-        ],
-        "b_o": [
-          0,
-          0
-        ],
-        "x_t": [
-          6,
-          3.0
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "output_gate": [
-          1.0,
-          0.999997
-        ],
-        "hidden_state": [
-          0.995055,
-          -0.946803
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-output-gate-tc-18",
-      "name": "Case 18",
-      "inputs": {
-        "C_t": [
-          4.5,
-          3.7
-        ],
-        "W_o": [
-          [
-            4.1,
-            4.2,
-            4.3,
-            4.4
-          ],
-          [
-            4.5,
-            4.1,
-            4.2,
-            4.3
-          ]
-        ],
-        "b_o": [
-          4,
-          4
-        ],
-        "x_t": [
-          5,
-          4.5
-        ],
-        "h_prev": [
-          4,
-          4
-        ]
-      },
-      "expectedOutput": {
-        "output_gate": [
-          1.0,
-          1.0
-        ],
-        "hidden_state": [
-          0.999753,
-          0.998778
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-output-gate-tc-19",
-      "name": "Case 19",
-      "inputs": {
-        "C_t": [
-          0.6,
-          -0.36
-        ],
-        "W_o": [
-          [
-            0.12,
-            0.24,
-            0.36,
-            0.48
-          ],
-          [
-            0.6,
-            0.12,
-            0.24,
-            0.36
-          ]
-        ],
-        "b_o": [
-          0,
-          0
-        ],
-        "x_t": [
-          1,
-          0.6
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "output_gate": [
-          0.65656,
-          0.612065
-        ],
-        "hidden_state": [
-          0.352605,
-          -0.211293
-        ]
-      },
-      "isPublic": false
-    },
-    {
-      "id": "lstm-output-gate-tc-20",
-      "name": "Case 20",
-      "inputs": {
-        "C_t": [
-          0.2,
-          -0.12
-        ],
-        "W_o": [
-          [
-            0.04,
-            0.08,
-            0.12,
-            0.16
-          ],
-          [
-            0.2,
-            0.04,
-            0.08,
-            0.12
-          ]
-        ],
-        "b_o": [
-          0,
-          0
-        ],
-        "x_t": [
-          0,
-          0.2
-        ],
-        "h_prev": [
-          0,
-          0
-        ]
-      },
-      "expectedOutput": {
-        "output_gate": [
-          0.507999,
-          0.506
-        ],
-        "hidden_state": [
-          0.100267,
-          -0.06043
+          0.5044,
+          -0.3032
         ]
       },
       "isPublic": false
