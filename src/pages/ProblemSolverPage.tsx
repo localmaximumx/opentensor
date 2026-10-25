@@ -148,6 +148,25 @@ export const ProblemSolverPage: React.FC = () => {
   const [solutionCopied, setSolutionCopied] = useState<boolean>(false);
   const [solutionApplied, setSolutionApplied] = useState<boolean>(false);
   const [mobileActivePanel, setMobileActivePanel] = useState<'problem' | 'code'>('problem');
+  const [isDarkTheme, setIsDarkTheme] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return document.documentElement.classList.contains('dark');
+  });
+
+  useEffect(() => {
+    const syncDark = () => {
+      setIsDarkTheme(document.documentElement.classList.contains('dark'));
+    };
+    window.addEventListener('toniclite_theme_change', syncDark);
+    window.addEventListener('storage', syncDark);
+    const observer = new MutationObserver(() => syncDark());
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => {
+      window.removeEventListener('toniclite_theme_change', syncDark);
+      window.removeEventListener('storage', syncDark);
+      observer.disconnect();
+    };
+  }, []);
 
   // Prev / Next navigation & Drawer State
   const [prevSlug, setPrevSlug] = useState<string | null>(null);
@@ -1422,7 +1441,7 @@ export const ProblemSolverPage: React.FC = () => {
           <Editor
             height="100%"
             language="python"
-            theme="vs-dark"
+            theme={isDarkTheme ? "vs-dark" : "light"}
             value={code}
             onChange={handleEditorChange}
             onMount={handleEditorDidMount}

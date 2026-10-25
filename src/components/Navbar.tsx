@@ -39,7 +39,8 @@ export const Navbar: React.FC = () => {
   const [isDark, setIsDark] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     const saved = localStorage.getItem('toniclite_theme') || localStorage.getItem('opentensor_theme');
-    return saved ? saved === 'dark' : true;
+    if (saved) return saved === 'dark';
+    return document.documentElement.classList.contains('dark');
   });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
@@ -65,23 +66,33 @@ export const Navbar: React.FC = () => {
   useEffect(() => {
     refreshAuth();
     syncUserSession().then(() => refreshAuth());
-    const savedTheme = localStorage.getItem('toniclite_theme') || localStorage.getItem('opentensor_theme');
-    if (savedTheme === 'light') {
-      document.documentElement.classList.remove('dark');
-      setIsDark(false);
-    } else {
-      document.documentElement.classList.add('dark');
-      setIsDark(true);
-      if (!savedTheme) {
-        localStorage.setItem('toniclite_theme', 'dark');
+
+    const syncTheme = () => {
+      const savedTheme = localStorage.getItem('toniclite_theme') || localStorage.getItem('opentensor_theme');
+      if (savedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+        setIsDark(false);
+      } else if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+        setIsDark(true);
+      } else {
+        const isDomDark = document.documentElement.classList.contains('dark');
+        setIsDark(isDomDark);
       }
-    }
+    };
+
+    syncTheme();
+
     const handleAuthChange = () => refreshAuth();
+    const handleThemeChange = () => syncTheme();
+
     window.addEventListener('tensortonic_auth_change', handleAuthChange);
-    window.addEventListener('storage', handleAuthChange);
+    window.addEventListener('toniclite_theme_change', handleThemeChange);
+    window.addEventListener('storage', handleThemeChange);
     return () => {
       window.removeEventListener('tensortonic_auth_change', handleAuthChange);
-      window.removeEventListener('storage', handleAuthChange);
+      window.removeEventListener('toniclite_theme_change', handleThemeChange);
+      window.removeEventListener('storage', handleThemeChange);
     };
   }, []);
 
@@ -107,14 +118,18 @@ export const Navbar: React.FC = () => {
   }, []);
 
   const toggleTheme = () => {
-    if (isDark) {
-      document.documentElement.classList.remove('dark');
-      setIsDark(false);
-      localStorage.setItem('toniclite_theme', 'light');
-    } else {
+    const nextDark = !isDark;
+    setIsDark(nextDark);
+    if (nextDark) {
       document.documentElement.classList.add('dark');
-      setIsDark(true);
       localStorage.setItem('toniclite_theme', 'dark');
+      localStorage.setItem('opentensor_theme', 'dark');
+      window.dispatchEvent(new CustomEvent('toniclite_theme_change', { detail: 'dark' }));
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('toniclite_theme', 'light');
+      localStorage.setItem('opentensor_theme', 'light');
+      window.dispatchEvent(new CustomEvent('toniclite_theme_change', { detail: 'light' }));
     }
   };
 
@@ -253,10 +268,10 @@ export const Navbar: React.FC = () => {
 
                   {/* Dropdown Menu */}
                   {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-[#111614] border border-[#27382d] rounded-2xl shadow-2xl py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
+                    <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-card dark:bg-[#111614] border border-border dark:border-[#27382d] rounded-2xl shadow-2xl py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
                       
                       {/* User Header */}
-                      <div className="px-4 py-2.5 border-b border-[#27382d]">
+                      <div className="px-4 py-2.5 border-b border-border dark:border-[#27382d]">
                         <div className="flex items-center gap-2.5 mb-1">
                           <div 
                             className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-black shrink-0"
@@ -265,7 +280,7 @@ export const Navbar: React.FC = () => {
                             {getInitials(currentUser.displayName || currentUser.username)}
                           </div>
                           <div className="truncate">
-                            <div className="font-bold text-white truncate">{currentUser.displayName}</div>
+                            <div className="font-bold text-foreground dark:text-white truncate">{currentUser.displayName}</div>
                             <div className="text-[10px] text-muted-foreground font-mono truncate">@{currentUser.username}</div>
                           </div>
                         </div>
@@ -276,11 +291,11 @@ export const Navbar: React.FC = () => {
                       </div>
 
                       {/* Storage Usage Widget (Matches user-provided screenshot design) */}
-                      <div className="px-4 py-3 border-b border-[#27382d] bg-black/25">
+                      <div className="px-4 py-3 border-b border-border dark:border-[#27382d] bg-secondary/30 dark:bg-black/25">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-1.5">
                             <Database className="w-3.5 h-3.5 text-[#38bdf8]" />
-                            <span className="font-bold text-white text-[11px] tracking-wide">Storage Usage</span>
+                            <span className="font-bold text-foreground dark:text-white text-[11px] tracking-wide">Storage Usage</span>
                           </div>
                           <span className="text-[10px] font-mono text-muted-foreground font-medium">
                             {storageUsage.usedFormatted} / {storageUsage.maxFormatted}
@@ -288,7 +303,7 @@ export const Navbar: React.FC = () => {
                         </div>
 
                         {/* Striped Progress Bar */}
-                        <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden border border-white/10 relative shadow-inner">
+                        <div className="w-full h-2 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden border border-border/60 dark:border-white/10 relative shadow-inner">
                           <div 
                             className="h-full rounded-full transition-all duration-300"
                             style={{ 
@@ -303,23 +318,23 @@ export const Navbar: React.FC = () => {
                         <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-2.5">
                           <div className="flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-[#38bdf8] shrink-0 shadow-xs" />
-                            <span>Already used: <strong className="text-white font-mono">{storageUsage.usedFormatted}</strong></span>
+                            <span>Already used: <strong className="text-foreground dark:text-white font-mono">{storageUsage.usedFormatted}</strong></span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-[#1d4ed8] shrink-0 shadow-xs" />
-                            <span>Available: <strong className="text-white font-mono">{storageUsage.remainingFormatted}</strong></span>
+                            <span>Available: <strong className="text-foreground dark:text-white font-mono">{storageUsage.remainingFormatted}</strong></span>
                           </div>
                         </div>
 
                         {/* Plan details indicator */}
-                        <div className="flex items-center justify-between text-[9px] text-muted-foreground/80 mt-2 pt-1.5 border-t border-white/5 font-mono">
+                        <div className="flex items-center justify-between text-[9px] text-muted-foreground/80 mt-2 pt-1.5 border-t border-border/40 dark:border-white/5 font-mono">
                           <span>Plan: <strong className="text-[#93C572]">Free Tier (5.0 MB DB)</strong></span>
                           <span>{storageUsage.percentage}% used</span>
                         </div>
                       </div>
 
                       {/* Stats */}
-                      <div className="px-4 py-2 border-b border-[#27382d] flex items-center justify-between text-muted-foreground font-mono text-[11px]">
+                      <div className="px-4 py-2 border-b border-border dark:border-[#27382d] flex items-center justify-between text-muted-foreground font-mono text-[11px]">
                         <span>Solved Problems</span>
                         <span className="text-[#93C572] font-bold">{currentUser.solvedProblems?.length || 0}</span>
                       </div>
@@ -328,21 +343,21 @@ export const Navbar: React.FC = () => {
                       <div className="py-1">
                         <button
                           onClick={handleExportBackup}
-                          className="w-full text-left px-4 py-2 hover:bg-[#1a241f] text-gray-300 hover:text-white flex items-center gap-2.5 transition-colors"
+                          className="w-full text-left px-4 py-2 hover:bg-secondary dark:hover:bg-[#1a241f] text-foreground/80 dark:text-gray-300 hover:text-foreground dark:hover:text-white flex items-center gap-2.5 transition-colors"
                         >
                           <Download className="w-3.5 h-3.5 text-[#93C572]" />
                           <span>Export Account Backup (JSON)</span>
                         </button>
                         <button
                           onClick={() => { setIsUserMenuOpen(false); setIsAuthModalOpen(true); }}
-                          className="w-full text-left px-4 py-2 hover:bg-[#1a241f] text-gray-300 hover:text-white flex items-center gap-2.5 transition-colors"
+                          className="w-full text-left px-4 py-2 hover:bg-secondary dark:hover:bg-[#1a241f] text-foreground/80 dark:text-gray-300 hover:text-foreground dark:hover:text-white flex items-center gap-2.5 transition-colors"
                         >
                           <Users className="w-3.5 h-3.5 text-sky-400" />
                           <span>Switch Account / New User</span>
                         </button>
                         <button
                           onClick={() => { logoutUser(); setIsUserMenuOpen(false); }}
-                          className="w-full text-left px-4 py-2 hover:bg-rose-950/20 text-rose-400 hover:text-rose-300 flex items-center gap-2.5 transition-colors"
+                          className="w-full text-left px-4 py-2 hover:bg-rose-500/10 dark:hover:bg-rose-950/20 text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 flex items-center gap-2.5 transition-colors"
                         >
                           <LogOut className="w-3.5 h-3.5" />
                           <span>Sign Out</span>
