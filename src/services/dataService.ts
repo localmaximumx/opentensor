@@ -401,3 +401,23 @@ export function saveCode(slug: string, code: string): void {
     console.error(e);
   }
 }
+
+export function getSavedNotes(slug: string, userId?: string): string {
+  try {
+    const key = userId ? `toniclite_notes_${userId}_${slug}` : `toniclite_notes_${slug}`;
+    return localStorage.getItem(key) || '';
+  } catch {
+    return '';
+  }
+}
+
+export function saveNotes(slug: string, notes: string, userId?: string): void {
+  try {
+    const key = userId ? `toniclite_notes_${userId}_${slug}` : `toniclite_notes_${slug}`;
+    if (notes.trim()) {
+      localStorage.setItem(key, notes);
+    } else {
+      localStorage.removeItem(key);
+    }
+  } catch {}
+}

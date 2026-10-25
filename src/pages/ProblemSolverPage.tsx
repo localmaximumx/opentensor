@@ -22,7 +22,11 @@ import {
   PanelLeft,
   ShieldCheck,
   Plus,
-  X
+  X,
+  NotebookPen,
+  Pencil,
+  Eye,
+  Trash2
 } from 'lucide-react';
 import { 
   getProblemDetail, 
@@ -31,6 +35,8 @@ import {
   getAssessmentForProblem,
   getSavedCode, 
   saveCode, 
+  getSavedNotes,
+  saveNotes,
   markProblemSolved, 
   unmarkProblemSolved,
   getSolvedProblems 
@@ -121,6 +127,11 @@ export const ProblemSolverPage: React.FC = () => {
   const [problem, setProblem] = useState<ProblemDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'description' | 'theory' | 'solution' | 'notes'>('description');
+  
+  // Personal Notes state
+  const [notes, setNotes] = useState<string>('');
+  const [notesMode, setNotesMode] = useState<'write' | 'preview'>('write');
+  const [notesCopied, setNotesCopied] = useState<boolean>(false);
   
   // Editor state
   const [code, setCode] = useState<string>('');
@@ -239,6 +250,10 @@ export const ProblemSolverPage: React.FC = () => {
         setCode(u ? getUserSavedCode(slug!, initialCode, u.id) : getSavedCode(slug!, initialCode));
       }
 
+      // Load personal notes
+      const uCurrent = getCurrentUser();
+      setNotes(getSavedNotes(slug!, uCurrent?.id));
+
       // Check solved status
       const u = getCurrentUser();
       const solved = u ? getUserSolvedProblems(u.id) : getSolvedProblems();
@@ -314,11 +329,37 @@ export const ProblemSolverPage: React.FC = () => {
         if (problem?.starterCode) {
           setCode(u ? getUserSavedCode(slug, problem.starterCode, u.id) : getSavedCode(slug, problem.starterCode));
         }
+        setNotes(getSavedNotes(slug, u?.id));
       }
     };
     window.addEventListener('tensortonic_auth_change', handleAuthChange);
     return () => window.removeEventListener('tensortonic_auth_change', handleAuthChange);
   }, [slug, problem]);
+
+  // Personal Notes handlers
+  const handleNotesChange = (value: string) => {
+    setNotes(value);
+    if (slug) {
+      saveNotes(slug, value, currentUser?.id);
+    }
+  };
+
+  const handleCopyNotes = () => {
+    if (!notes.trim()) return;
+    navigator.clipboard.writeText(notes);
+    setNotesCopied(true);
+    setTimeout(() => setNotesCopied(false), 2000);
+  };
+
+  const handleClearNotes = () => {
+    if (!notes.trim()) return;
+    if (window.confirm('Are you sure you want to clear your notes for this problem?')) {
+      setNotes('');
+      if (slug) {
+        saveNotes(slug, '', currentUser?.id);
+      }
+    }
+  };
 
   // Handle Code Change
   const handleEditorChange = (value: string | undefined) => {
@@ -962,6 +1003,21 @@ export const ProblemSolverPage: React.FC = () => {
                 <Lightbulb className="w-3.5 h-3.5" />
                 <span>Solution</span>
               </button>
+              <button
+                onClick={() => setActiveTab('notes')}
+                className={`h-full border-b-2 font-medium transition-colors flex items-center gap-1 sm:gap-1.5 px-2 sm:px-1 relative ${
+                  activeTab === 'notes'
+                    ? 'border-[#93C572] text-foreground font-semibold'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+                title="Personal Notes"
+              >
+                <NotebookPen className="w-3.5 h-3.5" />
+                <span>Notes</span>
+                {notes.trim().length > 0 && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#93C572] ml-0.5" title="Has notes" />
+                )}
+              </button>
             </div>
 
             {/* Prev / Next controls in side panel */}
@@ -1154,6 +1210,122 @@ export const ProblemSolverPage: React.FC = () => {
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     Solution walkthrough is being formulated for this problem.
                   </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'notes' && (
+            <div className="flex flex-col h-full space-y-4">
+              {/* Notes Header Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/60">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-[#93C572]/10 border border-[#93C572]/20 text-[#93C572]">
+                    <NotebookPen className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-bold text-foreground">Personal Notes</h2>
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1 bg-secondary/50 px-2 py-0.5 rounded-full border border-border/50">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Auto-saved
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Scratchpad for insights, formulas, and edge cases · Supports Markdown & LaTeX math
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right controls: Write/Preview toggle, Copy, Clear */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* Write / Preview segmented switch */}
+                  <div className="flex items-center bg-secondary/60 border border-border/70 rounded-lg p-0.5 text-xs">
+                    <button
+                      onClick={() => setNotesMode('write')}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all ${
+                        notesMode === 'write'
+                          ? 'bg-card text-foreground font-semibold shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Pencil className="w-3 h-3" />
+                      <span>Write</span>
+                    </button>
+                    <button
+                      onClick={() => setNotesMode('preview')}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all ${
+                        notesMode === 'preview'
+                          ? 'bg-card text-foreground font-semibold shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Eye className="w-3 h-3" />
+                      <span>Preview</span>
+                    </button>
+                  </div>
+
+                  {/* Copy Notes */}
+                  <button
+                    onClick={handleCopyNotes}
+                    disabled={!notes.trim()}
+                    className="p-1.5 rounded-md border border-border/70 text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title={notesCopied ? 'Copied to clipboard' : 'Copy notes'}
+                  >
+                    {notesCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+
+                  {/* Clear Notes */}
+                  <button
+                    onClick={handleClearNotes}
+                    disabled={!notes.trim()}
+                    className="p-1.5 rounded-md border border-border/70 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Clear notes"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Mode Views */}
+              {notesMode === 'write' ? (
+                <div className="space-y-2 flex-1 flex flex-col min-h-0">
+                  <textarea
+                    value={notes}
+                    onChange={(e) => handleNotesChange(e.target.value)}
+                    placeholder={`Write your personal notes, reminders, edge cases, or LaTeX formulas here...\n\nExample:\n### Edge Cases to Remember\n- Ensure eps > 0 to prevent division by zero in $\\sqrt{\\hat{v}_t} + \\epsilon$\n- When axis=None, preserve flat vector dimensions\n\n### Math\n$$L_{BCE} = -\\frac{1}{N} \\sum_{i=1}^N \\left[ y_i \\log(\\hat{y}_i) + (1 - y_i) \\log(1 - \\hat{y}_i) \\right]$$`}
+                    className="w-full flex-1 min-h-[340px] p-3.5 rounded-xl border border-border/80 bg-background/60 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-[#93C572] focus:border-[#93C572] resize-y leading-relaxed"
+                  />
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
+                    <span className="flex items-center gap-1.5">
+                      <span>💡 <strong>Tip:</strong> Use <code className="px-1 py-0.5 bg-secondary/80 rounded text-[10px]">$...$</code> for inline math and <code className="px-1 py-0.5 bg-secondary/80 rounded text-[10px]">$$...$$</code> for blocks.</span>
+                    </span>
+                    <span>
+                      {notes.trim().split(/\s+/).filter(Boolean).length} words · {notes.length} characters
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 min-h-[300px] p-4 rounded-xl border border-border/80 bg-card/40">
+                  {notes.trim() ? (
+                    <div className="prose prose-invert max-w-none text-xs sm:text-sm">
+                      <MathView content={notes} allowPureCode={false} />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-16 text-center space-y-2 text-muted-foreground">
+                      <NotebookPen className="w-8 h-8 opacity-40 mb-1" />
+                      <p className="text-sm font-medium">No notes written yet</p>
+                      <p className="text-xs max-w-sm">
+                        Switch to <strong>Write</strong> mode to jot down your notes, edge case observations, or mathematical formulas.
+                      </p>
+                      <button
+                        onClick={() => setNotesMode('write')}
+                        className="mt-3 px-3 py-1.5 text-xs rounded-lg bg-[#93C572]/15 text-[#93C572] hover:bg-[#93C572]/25 border border-[#93C572]/30 transition-colors"
+                      >
+                        Start writing notes
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
