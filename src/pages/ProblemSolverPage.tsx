@@ -1221,72 +1221,54 @@ export const ProblemSolverPage: React.FC = () => {
 
           {activeTab === 'notes' && (
             <div className="flex flex-col flex-1 min-h-0 space-y-2.5">
-              {/* Notes Header Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-border/60 flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <div className="p-1 rounded-md bg-[#93C572]/10 border border-[#93C572]/20 text-[#93C572]">
-                    <NotebookPen className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-sm font-bold text-foreground">Personal Notes</h2>
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1 bg-secondary/50 px-1.5 py-0.5 rounded-full border border-border/50">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                        Auto-saved
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">
-                      Scratchpad for insights, formulas, and edge cases · Supports Markdown & LaTeX math
-                    </p>
-                  </div>
+              {/* Notes Toolbar: Write, Preview, Copy, Delete */}
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-border/60 flex-shrink-0">
+                {/* Write / Preview segmented switch */}
+                <div className="flex items-center bg-secondary/60 border border-border/70 rounded-md p-0.5 text-xs">
+                  <button
+                    onClick={() => setNotesMode('write')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-all text-xs ${
+                      notesMode === 'write'
+                        ? 'bg-card text-foreground font-semibold shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Pencil className="w-3 h-3" />
+                    <span>Write</span>
+                  </button>
+                  <button
+                    onClick={() => setNotesMode('preview')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-all text-xs ${
+                      notesMode === 'preview'
+                        ? 'bg-card text-foreground font-semibold shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Eye className="w-3 h-3" />
+                    <span>Preview</span>
+                  </button>
                 </div>
 
-                {/* Right controls: Write/Preview toggle, Copy, Clear */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {/* Write / Preview segmented switch */}
-                  <div className="flex items-center bg-secondary/60 border border-border/70 rounded-md p-0.5 text-xs">
-                    <button
-                      onClick={() => setNotesMode('write')}
-                      className={`flex items-center gap-1 px-2 py-0.5 rounded transition-all text-xs ${
-                        notesMode === 'write'
-                          ? 'bg-card text-foreground font-semibold shadow-xs'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <Pencil className="w-3 h-3" />
-                      <span>Write</span>
-                    </button>
-                    <button
-                      onClick={() => setNotesMode('preview')}
-                      className={`flex items-center gap-1 px-2 py-0.5 rounded transition-all text-xs ${
-                        notesMode === 'preview'
-                          ? 'bg-card text-foreground font-semibold shadow-xs'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <Eye className="w-3 h-3" />
-                      <span>Preview</span>
-                    </button>
-                  </div>
-
-                  {/* Copy Notes */}
+                {/* Right controls: Copy and Delete */}
+                <div className="flex items-center gap-1.5">
                   <button
                     onClick={handleCopyNotes}
                     disabled={!notes.trim()}
-                    className="p-1.5 rounded-md border border-border/70 text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/70 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     title={notesCopied ? 'Copied to clipboard' : 'Copy notes'}
                   >
                     {notesCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{notesCopied ? 'Copied' : 'Copy'}</span>
                   </button>
 
-                  {/* Clear Notes */}
                   <button
                     onClick={handleClearNotes}
                     disabled={!notes.trim()}
-                    className="p-1.5 rounded-md border border-border/70 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    title="Clear notes"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/70 text-xs text-muted-foreground hover:text-red-400 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Delete notes"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Delete</span>
                   </button>
                 </div>
               </div>
