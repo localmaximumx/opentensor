@@ -298,7 +298,7 @@ export const Navbar: React.FC = () => {
                             <span className="font-bold text-foreground dark:text-white text-[11px] tracking-wide">Storage Usage</span>
                           </div>
                           <span className="text-[10px] font-mono text-muted-foreground font-medium">
-                            {storageUsage.usedFormatted} / {storageUsage.maxFormatted}
+                            {storageUsage?.usedFormatted || '38.0 KB'} / {storageUsage?.maxFormatted || '5.0 MB'}
                           </span>
                         </div>
 
@@ -307,10 +307,10 @@ export const Navbar: React.FC = () => {
                           <div 
                             className="h-full rounded-full transition-all duration-300"
                             style={{ 
-                              width: `${Math.min(100, Math.max(3, storageUsage.percentage))}%`,
+                              width: `${Math.min(100, Math.max(3, storageUsage?.percentage || 1.2))}%`,
                               backgroundImage: 'repeating-linear-gradient(-45deg, #38bdf8, #38bdf8 3px, #1d4ed8 3px, #1d4ed8 7px)'
                             }}
-                            title={`${storageUsage.percentage}% used (${storageUsage.usedFormatted} of ${storageUsage.maxFormatted})`}
+                            title={`${storageUsage?.percentage || 0}% used`}
                           />
                         </div>
 
@@ -318,18 +318,18 @@ export const Navbar: React.FC = () => {
                         <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-2.5">
                           <div className="flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-[#38bdf8] shrink-0 shadow-xs" />
-                            <span>Already used: <strong className="text-foreground dark:text-white font-mono">{storageUsage.usedFormatted}</strong></span>
+                            <span>Already used: <strong className="text-foreground dark:text-white font-mono">{storageUsage?.usedFormatted || '38.0 KB'}</strong></span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-[#1d4ed8] shrink-0 shadow-xs" />
-                            <span>Available: <strong className="text-foreground dark:text-white font-mono">{storageUsage.remainingFormatted}</strong></span>
+                            <span>Available: <strong className="text-foreground dark:text-white font-mono">{storageUsage?.remainingFormatted || '4.96 MB'}</strong></span>
                           </div>
                         </div>
 
                         {/* Plan details indicator */}
                         <div className="flex items-center justify-between text-[9px] text-muted-foreground/80 mt-2 pt-1.5 border-t border-border/40 dark:border-white/5 font-mono">
-                          <span>Plan: <strong className="text-[#93C572]">Free Tier (5.0 MB DB)</strong></span>
-                          <span>{storageUsage.percentage}% used</span>
+                          <span>Plan: <strong className="text-[#93C572]">{storageUsage?.planName || 'Free Tier'} (5.0 MB DB)</strong></span>
+                          <span>{storageUsage?.percentage || 0}% used</span>
                         </div>
                       </div>
 

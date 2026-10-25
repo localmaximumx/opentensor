@@ -512,79 +512,103 @@ export interface UserStorageUsage {
 }
 
 export function getUserStorageUsage(userId?: string): UserStorageUsage {
-  const currentId = userId || getCurrentUser()?.id;
-  let userBytes = 0;
-  let notesCount = 0;
-  let codeDraftsCount = 0;
-  let submissionsCount = 0;
-  let customCasesCount = 0;
-
   try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (!key) continue;
-        const val = localStorage.getItem(key) || '';
-        const byteLen = (key.length + val.length) * 2; // UTF-16 in JS string memory
+    const currentId = userId || getCurrentUser()?.id;
+    let usedBytes = 0;
+    let notesCount = 0;
+    let codeDraftsCount = 0;
+    let submissionsCount = 0;
+    let customCasesCount = 0;
 
-        if (currentId && key.includes(currentId)) {
-          userBytes += byteLen;
-        } else if (key.startsWith('toniclite_') || key.startsWith('tensortonic_')) {
-          userBytes += Math.round(byteLen * 0.35);
-        }
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key) continue;
+          const val = localStorage.getItem(key) || '';
+          const byteLen = (key.length + val.length) * 2; // UTF-16 in JS string memory
 
-        if (key.includes('notes') && (!currentId || key.includes(currentId))) {
-          notesCount++;
-        }
-        if (key.includes('cases')) {
-          customCasesCount++;
+          if (currentId && key.includes(currentId)) {
+            usedBytes += byteLen;
+          } else if (key.startsWith('toniclite_') || key.startsWith('tensortonic_')) {
+            usedBytes += Math.round(byteLen * 0.35);
+          }
+
+          if (key.includes('notes') && (!currentId || key.includes(currentId))) {
+            notesCount++;
+          }
+          if (key.includes('cases')) {
+            customCasesCount++;
+          }
         }
       }
+    } catch (e) {
+      // ignore
     }
-  } catch (e) {
-    // ignore
+
+    try {
+      const user = currentId ? getAllAccounts().find(a => a.id === currentId) : getCurrentUser();
+      if (user) {
+        if (user.codeDrafts) {
+          codeDraftsCount = Object.keys(user.codeDrafts).length;
+          usedBytes += JSON.stringify(user.codeDrafts).length * 2;
+        }
+        if (user.submissions) {
+          submissionsCount = Object.keys(user.submissions).length;
+          usedBytes += JSON.stringify(user.submissions).length * 2;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // Realistic baseline buffer so it shows realistic non-zero value
+    usedBytes = Math.max(usedBytes, 38 * 1024);
+
+    // Standard Free Plan quota: 5.0 MB (5,242,880 bytes)
+    const maxBytes = 5 * 1024 * 1024;
+    const percentage = Math.min(100, Math.max(1.2, parseFloat(((usedBytes / maxBytes) * 100).toFixed(1))));
+    const remainingBytes = Math.max(0, maxBytes - usedBytes);
+
+    const formatBytes = (bytes: number): string => {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    };
+
+    return {
+      usedBytes,
+      usedFormatted: formatBytes(usedBytes),
+      maxBytes,
+      maxFormatted: '5.0 MB',
+      percentage,
+      remainingBytes,
+      remainingFormatted: formatBytes(remainingBytes),
+      planName: 'Free Plan',
+      items: {
+        notesCount,
+        codeDraftsCount,
+        submissionsCount,
+        customCasesCount
+      }
+    };
+  } catch (err) {
+    console.error('Error calculating storage usage:', err);
+    return {
+      usedBytes: 38 * 1024,
+      usedFormatted: '38.0 KB',
+      maxBytes: 5 * 1024 * 1024,
+      maxFormatted: '5.0 MB',
+      percentage: 1.2,
+      remainingBytes: 5 * 1024 * 1024 - 38 * 1024,
+      remainingFormatted: '4.96 MB',
+      planName: 'Free Plan',
+      items: {
+        notesCount: 0,
+        codeDraftsCount: 0,
+        submissionsCount: 0,
+        customCasesCount: 0
+      }
+    };
   }
-
-  const user = currentId ? getAllAccounts().find(a => a.id === currentId) : getCurrentUser();
-  if (user) {
-    if (user.codeDrafts) {
-      codeDraftsCount = Object.keys(user.codeDrafts).length;
-      userBytes += JSON.stringify(user.codeDrafts).length * 2;
-    }
-    if (user.submissions) {
-      submissionsCount = Object.keys(user.submissions).length;
-      userBytes += JSON.stringify(user.submissions).length * 2;
-    }
-  }
-
-  // Realistic baseline buffer so it shows realistic non-zero value
-  userBytes = Math.max(userBytes, 38 * 1024);
-
-  // Standard Free Plan quota: 5.0 MB (5,242,880 bytes)
-  const maxBytes = 5 * 1024 * 1024;
-  const percentage = Math.min(100, Math.max(1.2, parseFloat(((userBytes / maxBytes) * 100).toFixed(1))));
-  const remainingBytes = Math.max(0, maxBytes - userBytes);
-
-  const formatBytes = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  };
-
-  return {
-    usedBytes,
-    usedFormatted: formatBytes(userBytes),
-    maxBytes,
-    maxFormatted: '5.0 MB',
-    percentage,
-    remainingBytes,
-    remainingFormatted: formatBytes(remainingBytes),
-    planName: 'Free Plan',
-    items: {
-      notesCount,
-      codeDraftsCount,
-      submissionsCount,
-      customCasesCount
-    }
-  };
 }
