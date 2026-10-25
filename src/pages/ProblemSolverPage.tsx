@@ -1049,7 +1049,11 @@ export const ProblemSolverPage: React.FC = () => {
           </nav>
 
           {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto p-3 sm:p-5 md:p-6 pb-24 sm:pb-20 md:pb-8 problem-scrollbar">
+          <div className={`flex-1 overflow-y-auto problem-scrollbar ${
+            activeTab === 'notes'
+              ? 'p-2.5 sm:p-3.5 md:p-4 pb-2.5 sm:pb-3 md:pb-3 flex flex-col'
+              : 'p-3 sm:p-5 md:p-6 pb-24 sm:pb-20 md:pb-8'
+          }`}>
             {activeTab === 'description' && (
               <div className="space-y-4 sm:space-y-6">
                 
@@ -1216,22 +1220,22 @@ export const ProblemSolverPage: React.FC = () => {
           )}
 
           {activeTab === 'notes' && (
-            <div className="flex flex-col h-full space-y-4">
+            <div className="flex flex-col flex-1 min-h-0 space-y-2.5">
               {/* Notes Header Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/60">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-border/60 flex-shrink-0">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-[#93C572]/10 border border-[#93C572]/20 text-[#93C572]">
-                    <NotebookPen className="w-4 h-4" />
+                  <div className="p-1 rounded-md bg-[#93C572]/10 border border-[#93C572]/20 text-[#93C572]">
+                    <NotebookPen className="w-3.5 h-3.5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h2 className="text-base font-bold text-foreground">Personal Notes</h2>
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1 bg-secondary/50 px-2 py-0.5 rounded-full border border-border/50">
+                      <h2 className="text-sm font-bold text-foreground">Personal Notes</h2>
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1 bg-secondary/50 px-1.5 py-0.5 rounded-full border border-border/50">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                         Auto-saved
                       </span>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-[10px] text-muted-foreground">
                       Scratchpad for insights, formulas, and edge cases · Supports Markdown & LaTeX math
                     </p>
                   </div>
@@ -1240,12 +1244,12 @@ export const ProblemSolverPage: React.FC = () => {
                 {/* Right controls: Write/Preview toggle, Copy, Clear */}
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {/* Write / Preview segmented switch */}
-                  <div className="flex items-center bg-secondary/60 border border-border/70 rounded-lg p-0.5 text-xs">
+                  <div className="flex items-center bg-secondary/60 border border-border/70 rounded-md p-0.5 text-xs">
                     <button
                       onClick={() => setNotesMode('write')}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all ${
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded transition-all text-xs ${
                         notesMode === 'write'
-                          ? 'bg-card text-foreground font-semibold shadow-sm'
+                          ? 'bg-card text-foreground font-semibold shadow-xs'
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -1254,9 +1258,9 @@ export const ProblemSolverPage: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setNotesMode('preview')}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all ${
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded transition-all text-xs ${
                         notesMode === 'preview'
-                          ? 'bg-card text-foreground font-semibold shadow-sm'
+                          ? 'bg-card text-foreground font-semibold shadow-xs'
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -1289,14 +1293,14 @@ export const ProblemSolverPage: React.FC = () => {
 
               {/* Mode Views */}
               {notesMode === 'write' ? (
-                <div className="space-y-2 flex-1 flex flex-col min-h-0">
+                <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
                   <textarea
                     value={notes}
                     onChange={(e) => handleNotesChange(e.target.value)}
                     placeholder={`Write your personal notes, reminders, edge cases, or LaTeX formulas here...\n\nExample:\n### Edge Cases to Remember\n- Ensure eps > 0 to prevent division by zero in $\\sqrt{\\hat{v}_t} + \\epsilon$\n- When axis=None, preserve flat vector dimensions\n\n### Math\n$$L_{BCE} = -\\frac{1}{N} \\sum_{i=1}^N \\left[ y_i \\log(\\hat{y}_i) + (1 - y_i) \\log(1 - \\hat{y}_i) \\right]$$`}
-                    className="w-full flex-1 min-h-[340px] p-3.5 rounded-xl border border-border/80 bg-background/60 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-[#93C572] focus:border-[#93C572] resize-y leading-relaxed"
+                    className="w-full flex-1 min-h-[200px] p-3 rounded-lg border border-border/80 bg-background/60 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-[#93C572] focus:border-[#93C572] resize-y leading-relaxed"
                   />
-                  <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5 flex-shrink-0">
                     <span className="flex items-center gap-1.5">
                       <span>💡 <strong>Tip:</strong> Use <code className="px-1 py-0.5 bg-secondary/80 rounded text-[10px]">$...$</code> for inline math and <code className="px-1 py-0.5 bg-secondary/80 rounded text-[10px]">$$...$$</code> for blocks.</span>
                     </span>
@@ -1306,21 +1310,21 @@ export const ProblemSolverPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="flex-1 min-h-[300px] p-4 rounded-xl border border-border/80 bg-card/40">
+                <div className="flex-1 min-h-[200px] p-3 rounded-lg border border-border/80 bg-card/40 overflow-y-auto">
                   {notes.trim() ? (
                     <div className="prose prose-invert max-w-none text-xs sm:text-sm">
                       <MathView content={notes} allowPureCode={false} />
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-16 text-center space-y-2 text-muted-foreground">
-                      <NotebookPen className="w-8 h-8 opacity-40 mb-1" />
-                      <p className="text-sm font-medium">No notes written yet</p>
-                      <p className="text-xs max-w-sm">
+                    <div className="flex flex-col items-center justify-center py-10 text-center space-y-2 text-muted-foreground">
+                      <NotebookPen className="w-7 h-7 opacity-40 mb-1" />
+                      <p className="text-xs font-medium">No notes written yet</p>
+                      <p className="text-[11px] max-w-sm">
                         Switch to <strong>Write</strong> mode to jot down your notes, edge case observations, or mathematical formulas.
                       </p>
                       <button
                         onClick={() => setNotesMode('write')}
-                        className="mt-3 px-3 py-1.5 text-xs rounded-lg bg-[#93C572]/15 text-[#93C572] hover:bg-[#93C572]/25 border border-[#93C572]/30 transition-colors"
+                        className="mt-2 px-2.5 py-1 text-xs rounded-md bg-[#93C572]/15 text-[#93C572] hover:bg-[#93C572]/25 border border-[#93C572]/30 transition-colors"
                       >
                         Start writing notes
                       </button>
