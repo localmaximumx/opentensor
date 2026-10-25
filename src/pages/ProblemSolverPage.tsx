@@ -241,6 +241,10 @@ export const ProblemSolverPage: React.FC = () => {
     if (!slug) return;
     async function load() {
       setLoading(true);
+      setActiveTab('description');
+      setBottomTab('testcase');
+      setActiveCaseIdx(0);
+      setResultCaseIdx(0);
       const data = await getProblemDetail(slug!);
       setProblem(data);
 
@@ -694,12 +698,14 @@ export const ProblemSolverPage: React.FC = () => {
   const navigateToPrev = useCallback(() => {
     const target = prevSlugRef.current;
     if (!target) return;
+    setActiveTab('description');
     navigate(target.startsWith('/') ? target : `/problems/${target}`);
   }, [navigate]);
 
   const navigateToNext = useCallback(() => {
     const target = nextSlugRef.current;
     if (!target) return;
+    setActiveTab('description');
     navigate(target.startsWith('/') ? target : `/problems/${target}`);
   }, [navigate]);
 
@@ -1025,6 +1031,7 @@ export const ProblemSolverPage: React.FC = () => {
               {prevSlug ? (
                 <Link
                   to={prevSlug.startsWith('/') ? prevSlug : `/problems/${prevSlug}`}
+                  onClick={() => setActiveTab('description')}
                   className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   title="Previous problem (Alt + Left)"
                 >
@@ -1037,6 +1044,7 @@ export const ProblemSolverPage: React.FC = () => {
               {nextSlug ? (
                 <Link
                   to={nextSlug.startsWith('/') ? nextSlug : `/problems/${nextSlug}`}
+                  onClick={() => setActiveTab('description')}
                   className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   title="Next problem (Alt + Right)"
                 >
