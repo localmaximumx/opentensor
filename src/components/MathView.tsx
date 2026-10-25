@@ -59,39 +59,6 @@ export const MathView: React.FC<MathViewProps> = ({ content, className = '', all
       return placeholder;
     });
 
-    // Step 1.5: Normalize and auto-detect LaTeX math syntax (e.g. \sqrt{...}, \sqrt(...), \frac{...}{...}, Greek symbols)
-    // 1.5a: Convert \sqrt(argument) to \sqrt{argument}
-    formatted = formatted.replace(/\\sqrt\(([^)]+)\)/g, '\\sqrt{$1}');
-
-    // 1.5b: Protect existing math ($$...$$, $...$, `...`) while normalizing internal bare \sqrt commands
-    const mathPlaceholders: string[] = [];
-    formatted = formatted.replace(/(\$\$[\s\S]*?\$\$|\$(?!\$)[\s\S]*?(?<!\$)\$|`[^`]+`|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g, (match) => {
-      let inner = match;
-      if (inner.startsWith('$') || inner.startsWith('\\[')) {
-        inner = inner.replace(/\\sqrt\(([^)]+)\)/g, '\\sqrt{$1}');
-        inner = inner.replace(/\\sqrt(?![{\[\w])/g, '\\sqrt{}');
-      }
-      const ph = `%%%MATH_PROT_${mathPlaceholders.length}%%%`;
-      mathPlaceholders.push(inner);
-      return ph;
-    });
-
-    // 1.5c: In unprotected text, fix bare \sqrt -> \sqrt{}
-    formatted = formatted.replace(/\\sqrt(?![{\[\w])/g, '\\sqrt{}');
-
-    // 1.5d: Auto-wrap unwrapped braced LaTeX commands (\sqrt{...}, \frac{...}{...}, etc.) so users don't need manual $...$
-    const bracedCommandRegex = /(\\(?:sqrt|frac|dfrac|cfrac|tfrac|mathbf|mathbb|mathcal|mathrm|text|hat|bar|tilde|vec|dot|ddot|overline|underline)(?:\[[^\]]*\])?(?:\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})+)/g;
-    formatted = formatted.replace(bracedCommandRegex, '$$$1$$');
-
-    // 1.5e: Auto-wrap standalone Greek letters and math operators
-    const greekAndSymbols = /(\\(?:alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega|infty|partial|nabla|approx|neq|leq|geq|cdot|times)\b)/g;
-    formatted = formatted.replace(greekAndSymbols, '$$$1$$');
-
-    // 1.5f: Restore protected math blocks
-    mathPlaceholders.forEach((phBlock, idx) => {
-      formatted = formatted.replace(`%%%MATH_PROT_${idx}%%%`, phBlock);
-    });
-
     // Step 2: Render display math $$...$$ or \[...\]
     formatted = formatted.replace(/(?:\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\])/g, (_, m1, m2) => {
       const math = (m1 || m2 || '').trim();
