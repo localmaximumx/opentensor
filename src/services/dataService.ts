@@ -84,7 +84,34 @@ export async function getProblemDetail(slug: string): Promise<ProblemDetail | nu
                 description: `Implement **${cleanTitle}** from the ${set.name || 'Assessment'} curriculum.`,
                 examples: [`Input: x = [1, 2, 3]\nOutput: [1, 2, 3]`],
                 requirements: `* Implement ${funcName}\n* Optimized for algorithmic performance\n* Handles all boundary cases`,
-                theory: `## ${cleanTitle}\n\nCore component tested in **${assessment.name || 'Assessment'}** under **${set.name || ''}**.\n\n$$\\mathcal{L}(x) = f(x)$$`,
+                theory: `# Understanding ${cleanTitle}
+
+## 1. What Is It?
+The **${cleanTitle}** is a core computational task tested in **${assessment.name || 'Assessment'}** under **${set.name || 'Core'}**. It evaluates fundamental algorithmic reasoning and vectorized tensor transformations.
+
+## 2. How Does It Work?
+- **What happens:** Applies the specified mathematical and algorithmic operations across inputs.
+- **Why it happens:** Derives the target output state deterministically.
+- **How it works:** Executes vectorized operations without Python loops.
+
+## 3. Walk Through an Example
+- **Input:** \`x = [1, 2, 3]\`
+- **Output:** \`[1, 2, 3]\`
+
+## 4. Understanding the Expected Output
+The function must return the computed result matching the problem specification.
+
+## 5. Important Edge Cases
+- Handles zero and boundary values smoothly.
+- Preserves correct array shapes and dimensions.
+
+## 6. Implementation Considerations
+- Vectorize operations using NumPy.
+- Avoid in-place mutations of inputs.
+- Maintain floating-point precision.
+
+## 7. Key Takeaway
+**${cleanTitle}** verifies reliable implementation of numerical data transformations using vectorized primitives.`,
                 hints: [`Review the problem requirements and function signatures.`],
                 constraints: `* Standard Python 3 & NumPy library conventions`,
                 difficulty: diffStr as Difficulty,
@@ -121,7 +148,34 @@ export async function getProblemDetail(slug: string): Promise<ProblemDetail | nu
       `Input: x = 0\nOutput: result`
     ],
     requirements: `* Vectorized implementation\n* Preserves dimensions\n* Handles numeric edge cases`,
-    theory: `## ${summary.title}\n\nThis algorithm is a core component of ${summary.tags.join(', ') || 'Machine Learning'}.\n\n### Mathematical Formulation\n$$\\mathcal{L}(y, \\hat{y}) = f(x)$$\n\nImplement the logic efficiently using standard ${summary.category.toUpperCase()} operations.`,
+    theory: `# Understanding ${summary.title}
+
+## 1. What Is It?
+The **${summary.title}** is an essential primitive in ${summary.category.toUpperCase()}. It addresses core numerical modeling and data transformation requirements in machine learning workflows.
+
+## 2. How Does It Work?
+- **What happens:** Evaluates the mathematical formulation across the input tensors.
+- **Why it happens:** Computes the required analytical objective.
+- **How it works:** Uses vectorized array operations to transform inputs into target representations.
+
+## 3. Walk Through an Example
+- **Input:** \`x = 0\`
+- **Output:** \`0\`
+
+## 4. Understanding the Expected Output
+The function must return the computed output adhering to the required return type and dimension.
+
+## 5. Important Edge Cases
+- Zero values and empty dimensions if permitted.
+- Numerical stability constants (such as $\\varepsilon > 0$).
+
+## 6. Implementation Considerations
+- Pure vectorized NumPy operations.
+- Avoid mutating caller inputs.
+- Precision integrity.
+
+## 7. Key Takeaway
+**${summary.title}** delivers a clean, efficient implementation of the core ${summary.category.toUpperCase()} operation.`,
     hints: [
       `Review standard ${summary.category} documentation for vectorized primitives.`,
       `Verify numerical stability with large magnitude inputs.`
