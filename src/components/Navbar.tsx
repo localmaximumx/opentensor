@@ -17,7 +17,8 @@ import {
   Home,
   Code2,
   BookOpen,
-  Radio
+  Radio,
+  Database
 } from 'lucide-react';
 import { 
   getCurrentUser, 
@@ -25,6 +26,8 @@ import {
   getUserSolvedProblems, 
   syncUserSession,
   exportAccountBackup, 
+  getUserStorageUsage,
+  UserStorageUsage,
   UserAccount 
 } from '../services/authService';
 import { AuthModal } from './AuthModal';
@@ -41,6 +44,7 @@ export const Navbar: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [storageUsage, setStorageUsage] = useState<UserStorageUsage>(() => getUserStorageUsage());
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,6 +59,7 @@ export const Navbar: React.FC = () => {
     } else {
       setSolvedCount(0);
     }
+    setStorageUsage(getUserStorageUsage(user?.id));
   };
 
   useEffect(() => {
@@ -225,7 +230,13 @@ export const Navbar: React.FC = () => {
               {currentUser ? (
                 <div className="relative" ref={menuRef}>
                   <button
-                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    onClick={() => {
+                      const next = !isUserMenuOpen;
+                      setIsUserMenuOpen(next);
+                      if (next) {
+                        setStorageUsage(getUserStorageUsage(currentUser.id));
+                      }
+                    }}
                     className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-secondary/60 hover:bg-secondary border border-border/70 transition-colors text-xs font-semibold text-foreground group"
                   >
                     <div 
@@ -242,7 +253,7 @@ export const Navbar: React.FC = () => {
 
                   {/* Dropdown Menu */}
                   {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-64 bg-[#111614] border border-[#27382d] rounded-2xl shadow-2xl py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
+                    <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-[#111614] border border-[#27382d] rounded-2xl shadow-2xl py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
                       
                       {/* User Header */}
                       <div className="px-4 py-2.5 border-b border-[#27382d]">
@@ -261,6 +272,49 @@ export const Navbar: React.FC = () => {
                         <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#93C572]/15 text-[#93C572] text-[10px] font-semibold mt-1">
                           <ShieldCheck className="w-3 h-3" />
                           <span>{currentUser.role}</span>
+                        </div>
+                      </div>
+
+                      {/* Storage Usage Widget (Matches user-provided screenshot design) */}
+                      <div className="px-4 py-3 border-b border-[#27382d] bg-black/25">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-1.5">
+                            <Database className="w-3.5 h-3.5 text-[#38bdf8]" />
+                            <span className="font-bold text-white text-[11px] tracking-wide">Storage Usage</span>
+                          </div>
+                          <span className="text-[10px] font-mono text-muted-foreground font-medium">
+                            {storageUsage.usedFormatted} / {storageUsage.maxFormatted}
+                          </span>
+                        </div>
+
+                        {/* Striped Progress Bar */}
+                        <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden border border-white/10 relative shadow-inner">
+                          <div 
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{ 
+                              width: `${Math.min(100, Math.max(3, storageUsage.percentage))}%`,
+                              backgroundImage: 'repeating-linear-gradient(-45deg, #38bdf8, #38bdf8 3px, #1d4ed8 3px, #1d4ed8 7px)'
+                            }}
+                            title={`${storageUsage.percentage}% used (${storageUsage.usedFormatted} of ${storageUsage.maxFormatted})`}
+                          />
+                        </div>
+
+                        {/* Legend row matching user design */}
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-2.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-[#38bdf8] shrink-0 shadow-xs" />
+                            <span>Already used: <strong className="text-white font-mono">{storageUsage.usedFormatted}</strong></span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-[#1d4ed8] shrink-0 shadow-xs" />
+                            <span>Available: <strong className="text-white font-mono">{storageUsage.remainingFormatted}</strong></span>
+                          </div>
+                        </div>
+
+                        {/* Plan details indicator */}
+                        <div className="flex items-center justify-between text-[9px] text-muted-foreground/80 mt-2 pt-1.5 border-t border-white/5 font-mono">
+                          <span>Plan: <strong className="text-[#93C572]">Free Tier (5.0 MB DB)</strong></span>
+                          <span>{storageUsage.percentage}% used</span>
                         </div>
                       </div>
 
