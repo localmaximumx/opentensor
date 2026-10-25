@@ -643,6 +643,25 @@ export const ProblemSolverPage: React.FC = () => {
     }
   };
 
+  // Navigation refs & handlers for Alt+Left / Alt+Right question switching
+  const prevSlugRef = useRef(prevSlug);
+  prevSlugRef.current = prevSlug;
+
+  const nextSlugRef = useRef(nextSlug);
+  nextSlugRef.current = nextSlug;
+
+  const navigateToPrev = useCallback(() => {
+    const target = prevSlugRef.current;
+    if (!target) return;
+    navigate(target.startsWith('/') ? target : `/problems/${target}`);
+  }, [navigate]);
+
+  const navigateToNext = useCallback(() => {
+    const target = nextSlugRef.current;
+    if (!target) return;
+    navigate(target.startsWith('/') ? target : `/problems/${target}`);
+  }, [navigate]);
+
   // Stable refs & debounced triggers for keyboard shortcuts
   const handleRunRef = useRef(handleRun);
   handleRunRef.current = handleRun;
@@ -666,9 +685,24 @@ export const ProblemSolverPage: React.FC = () => {
     handleSubmitRef.current();
   }, []);
 
-  // Global keyboard shortcuts: Ctrl+Enter (Run) & Ctrl+Alt+Enter (Submit)
+  // Global keyboard shortcuts: Alt+Left / Alt+Right (Navigate) & Ctrl+Enter (Run) & Ctrl+Alt+Enter (Submit)
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Alt + Left Arrow -> Previous Question
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'ArrowLeft' || e.code === 'ArrowLeft')) {
+        e.preventDefault();
+        navigateToPrev();
+        return;
+      }
+
+      // Alt + Right Arrow -> Next Question
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'ArrowRight' || e.code === 'ArrowRight')) {
+        e.preventDefault();
+        navigateToNext();
+        return;
+      }
+
+      // Enter keys for Run / Submit
       if (e.key !== 'Enter' && e.code !== 'Enter' && e.code !== 'NumpadEnter') return;
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
       if (!isCtrlOrCmd) return;
@@ -684,11 +718,31 @@ export const ProblemSolverPage: React.FC = () => {
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [triggerRun, triggerSubmit]);
+  }, [triggerRun, triggerSubmit, navigateToPrev, navigateToNext]);
 
   // Monaco editor mount handler: registers editor-level actions & keybindings
   const handleEditorDidMount = useCallback((editor: any, monaco: any) => {
     editorRef.current = editor;
+
+    // Previous Problem: Alt + Left
+    editor.addAction({
+      id: 'prev-problem',
+      label: 'Previous Problem (Alt+Left)',
+      keybindings: [monaco.KeyMod.Alt | monaco.KeyCode.LeftArrow],
+      run: () => {
+        navigateToPrev();
+      }
+    });
+
+    // Next Problem: Alt + Right
+    editor.addAction({
+      id: 'next-problem',
+      label: 'Next Problem (Alt+Right)',
+      keybindings: [monaco.KeyMod.Alt | monaco.KeyCode.RightArrow],
+      run: () => {
+        navigateToNext();
+      }
+    });
 
     // Run Code: Ctrl/Cmd + Enter
     editor.addAction({
@@ -709,7 +763,7 @@ export const ProblemSolverPage: React.FC = () => {
         triggerSubmit();
       }
     });
-  }, [triggerRun, triggerSubmit]);
+  }, [triggerRun, triggerSubmit, navigateToPrev, navigateToNext]);
 
   const getDifficultyBadge = (diff: Difficulty) => {
     switch (diff) {
@@ -916,7 +970,7 @@ export const ProblemSolverPage: React.FC = () => {
                 <Link
                   to={prevSlug.startsWith('/') ? prevSlug : `/problems/${prevSlug}`}
                   className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                  title="Previous problem"
+                  title="Previous problem (Alt + Left)"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Link>
@@ -928,7 +982,7 @@ export const ProblemSolverPage: React.FC = () => {
                 <Link
                   to={nextSlug.startsWith('/') ? nextSlug : `/problems/${nextSlug}`}
                   className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                  title="Next problem"
+                  title="Next problem (Alt + Right)"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Link>
