@@ -23,7 +23,11 @@ import {
   Check, 
   Users,
   HardDrive,
-  BarChart3
+  BarChart3,
+  Trophy,
+  Zap,
+  Brain,
+  Target
 } from 'lucide-react';
 import { 
   getCurrentUser, 
@@ -33,6 +37,7 @@ import {
   getUserRecentActivity, 
   getUserEloRating, 
   getUserStorageUsage, 
+  getUserAchievements,
   updateUserProfile, 
   updateUserPassword, 
   exportAccountBackup, 
@@ -41,7 +46,8 @@ import {
   UserStreakData, 
   ActivityHeatmapData, 
   UserActivityItem, 
-  UserStorageUsage 
+  UserStorageUsage,
+  AchievementBadge
 } from '../services/authService';
 import { getProblemCatalog } from '../services/dataService';
 import { ProblemSummary } from '../types';
@@ -180,6 +186,13 @@ export const ProfilePage: React.FC = () => {
       elo
     };
   }, [currentUser, catalogProblems]);
+
+  // Compute Achievements & Badges
+  const badges = useMemo(() => {
+    return getUserAchievements(currentUser?.id, solvedStats.hard);
+  }, [currentUser, solvedStats.hard]);
+
+  const unlockedBadgesCount = useMemo(() => badges.filter(b => b.unlocked).length, [badges]);
 
   // Handle saving profile info
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -650,7 +663,106 @@ export const ProfilePage: React.FC = () => {
                 )}
               </div>
 
-              {/* 3. USER STORAGE & DATABASE USAGE (Moved from Navbar dropdown as requested) */}
+              {/* 3. ACHIEVEMENTS & MILESTONES SHOWCASE */}
+              <div className="p-5 sm:p-6 rounded-3xl border border-border/80 dark:border-[#1d3326] bg-card dark:bg-[#0a1611] shadow-lg relative">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center font-bold">
+                      <Trophy className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg font-extrabold text-foreground dark:text-white flex items-center gap-2 flex-wrap">
+                        <span>Achievements & Milestones</span>
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] bg-amber-500/15 text-amber-400 font-mono font-bold border border-amber-500/30">
+                          {unlockedBadgesCount} / {badges.length} Unlocked
+                        </span>
+                      </h2>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Earn milestone badges as you conquer algorithms, maintain streaks, and write optimal code
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Badges Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+                  {badges.map((b) => {
+                    const isUnlocked = b.unlocked;
+
+                    const renderIcon = () => {
+                      if (b.icon === 'flame') return <Flame className="w-5 h-5 fill-amber-500/40 text-amber-500" />;
+                      if (b.icon === 'trophy') return <Trophy className="w-5 h-5 text-amber-400" />;
+                      if (b.icon === 'zap') return <Zap className="w-5 h-5 text-sky-400" />;
+                      if (b.icon === 'brain') return <Brain className="w-5 h-5 text-purple-400" />;
+                      if (b.icon === 'target') return <Target className="w-5 h-5 text-rose-400" />;
+                      if (b.icon === 'shield') return <ShieldCheck className="w-5 h-5 text-emerald-400" />;
+                      return <Award className="w-5 h-5 text-[#93C572]" />;
+                    };
+
+                    const tierBorder = 
+                      b.tier === 'platinum' ? 'border-cyan-500/40' :
+                      b.tier === 'gold' ? 'border-amber-500/40' :
+                      b.tier === 'silver' ? 'border-sky-500/40' :
+                      'border-emerald-500/40';
+
+                    return (
+                      <div
+                        key={b.id}
+                        className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between ${
+                          isUnlocked
+                            ? `bg-secondary/40 dark:bg-[#12231b] ${tierBorder} shadow-sm hover:scale-102`
+                            : 'bg-secondary/15 dark:bg-[#0d1612]/60 border-border/40 dark:border-white/5 opacity-60 grayscale hover:grayscale-0 hover:opacity-80'
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                              isUnlocked ? 'bg-black/30 dark:bg-black/50 shadow-inner' : 'bg-secondary/50'
+                            }`}>
+                              {renderIcon()}
+                            </div>
+
+                            <span className={`text-[10px] uppercase font-bold font-mono px-2 py-0.5 rounded-full ${
+                              isUnlocked
+                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-secondary text-muted-foreground'
+                            }`}>
+                              {isUnlocked ? 'Unlocked' : 'Locked'}
+                            </span>
+                          </div>
+
+                          <div>
+                            <h3 className="text-xs font-bold text-foreground dark:text-white truncate" title={b.title}>
+                              {b.title}
+                            </h3>
+                            <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5 leading-snug" title={b.description}>
+                              {b.description}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="mt-3 pt-2 border-t border-border/40 dark:border-white/5 space-y-1">
+                          <div className="flex justify-between text-[9px] font-mono text-muted-foreground">
+                            <span>Progress</span>
+                            <span className="font-bold text-foreground dark:text-white">{b.progress} / {b.target}</span>
+                          </div>
+                          <div className="w-full h-1.5 rounded-full bg-secondary/80 dark:bg-black/50 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                isUnlocked ? 'bg-[#93C572]' : 'bg-muted-foreground/40'
+                              }`}
+                              style={{ width: `${Math.min(100, (b.progress / b.target) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 4. USER STORAGE & DATABASE USAGE (Moved from Navbar dropdown as requested) */}
               <div className="p-5 sm:p-6 rounded-3xl border border-border/80 dark:border-[#1d3326] bg-card dark:bg-[#0a1611] shadow-lg">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                   <div className="flex items-center gap-2.5">

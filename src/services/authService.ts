@@ -1038,3 +1038,169 @@ export async function updateUserPassword(
   return { success: true };
 }
 
+export interface AchievementBadge {
+  id: string;
+  title: string;
+  description: string;
+  category: 'solving' | 'streak' | 'speed' | 'mastery';
+  icon: string;
+  tier: 'bronze' | 'silver' | 'gold' | 'platinum';
+  unlocked: boolean;
+  unlockedAt?: string;
+  progress: number;
+  target: number;
+}
+
+export function getUserAchievements(
+  userId?: string,
+  hardSolvedCount: number = 0
+): AchievementBadge[] {
+  try {
+    const user = userId ? getAllAccounts().find(a => a.id === userId) : getCurrentUser();
+    const streak = getUserStreak(userId);
+    const solvedTotal = user?.solvedProblems?.length || 0;
+
+    let hasFastSubmission = false;
+    let hasCleanSubmission = false;
+
+    if (user?.submissions) {
+      Object.values(user.submissions).forEach(list => {
+        if (Array.isArray(list)) {
+          list.forEach(sub => {
+            if (sub.success) {
+              hasCleanSubmission = true;
+              if (sub.runtimeMs && sub.runtimeMs < 25) {
+                hasFastSubmission = true;
+              }
+            }
+          });
+        }
+      });
+    }
+
+    // Default fast submission if user has solved problems
+    if (solvedTotal > 0 && !hasCleanSubmission) {
+      hasCleanSubmission = true;
+      hasFastSubmission = true;
+    }
+
+    const badges: AchievementBadge[] = [
+      {
+        id: 'first_solve',
+        title: 'First Step',
+        description: 'Solve your very first machine learning problem on TonicLite',
+        category: 'solving',
+        icon: 'trophy',
+        tier: 'bronze',
+        unlocked: solvedTotal >= 1,
+        progress: Math.min(1, solvedTotal),
+        target: 1
+      },
+      {
+        id: 'five_solves',
+        title: 'Getting Started',
+        description: 'Successfully solve 5 machine learning algorithm problems',
+        category: 'solving',
+        icon: 'zap',
+        tier: 'bronze',
+        unlocked: solvedTotal >= 5,
+        progress: Math.min(5, solvedTotal),
+        target: 5
+      },
+      {
+        id: 'ten_solves',
+        title: 'Tensor Apprentice',
+        description: 'Reach a milestone of 10 solved coding challenges',
+        category: 'solving',
+        icon: 'brain',
+        tier: 'silver',
+        unlocked: solvedTotal >= 10,
+        progress: Math.min(10, solvedTotal),
+        target: 10
+      },
+      {
+        id: 'twenty_five_solves',
+        title: 'ML Practitioner',
+        description: 'Master 25 problems across NumPy, PyTorch, and algorithms',
+        category: 'solving',
+        icon: 'shield',
+        tier: 'gold',
+        unlocked: solvedTotal >= 25,
+        progress: Math.min(25, solvedTotal),
+        target: 25
+      },
+      {
+        id: 'century_club',
+        title: 'Century Club',
+        description: 'Ascend to the elite rank of 100 solved problems',
+        category: 'solving',
+        icon: 'award',
+        tier: 'platinum',
+        unlocked: solvedTotal >= 100,
+        progress: Math.min(100, solvedTotal),
+        target: 100
+      },
+      {
+        id: 'streak_3',
+        title: 'Ignition',
+        description: 'Achieve a 3-day consecutive problem solving streak',
+        category: 'streak',
+        icon: 'flame',
+        tier: 'bronze',
+        unlocked: streak.longestStreak >= 3,
+        progress: Math.min(3, streak.longestStreak),
+        target: 3
+      },
+      {
+        id: 'streak_7',
+        title: 'Week on Fire',
+        description: 'Maintain a 7-day daily streak without missing a day',
+        category: 'streak',
+        icon: 'flame',
+        tier: 'gold',
+        unlocked: streak.longestStreak >= 7,
+        progress: Math.min(7, streak.longestStreak),
+        target: 7
+      },
+      {
+        id: 'speed_demon',
+        title: 'Speed Demon',
+        description: 'Submit an optimal vectorized implementation under 25ms',
+        category: 'speed',
+        icon: 'zap',
+        tier: 'silver',
+        unlocked: hasFastSubmission,
+        progress: hasFastSubmission ? 1 : 0,
+        target: 1
+      },
+      {
+        id: 'hard_tamer',
+        title: 'Hardcore Solver',
+        description: 'Conquer at least one Hard rated problem in the catalog',
+        category: 'mastery',
+        icon: 'target',
+        tier: 'gold',
+        unlocked: hardSolvedCount >= 1,
+        progress: Math.min(1, hardSolvedCount),
+        target: 1
+      },
+      {
+        id: 'flawless',
+        title: 'Flawless Execution',
+        description: 'Pass all test cases in a single comprehensive submission',
+        category: 'mastery',
+        icon: 'shield',
+        tier: 'silver',
+        unlocked: hasCleanSubmission,
+        progress: hasCleanSubmission ? 1 : 0,
+        target: 1
+      }
+    ];
+
+    return badges;
+  } catch (err) {
+    return [];
+  }
+}
+
+

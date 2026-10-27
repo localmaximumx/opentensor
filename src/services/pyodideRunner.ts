@@ -966,6 +966,73 @@ export async function getPyodide(): Promise<any> {
   return pyodideLoadingPromise;
 }
 
+export async function runPythonRepl(
+  snippet: string,
+  userCode?: string
+): Promise<{ output: string; error?: string }> {
+  try {
+    const pyodide = await getPyodide();
+
+    // If userCode is provided, pre-evaluate it so user functions & classes exist
+    if (userCode && userCode.trim()) {
+      try {
+        await pyodide.runPythonAsync(userCode);
+      } catch (e) {
+        // Continue even if starter code has minor syntax issues
+      }
+    }
+
+    // Set snippet safely into pyodide globals to avoid escaping issues
+    pyodide.globals.set('__repl_snippet', snippet.trim());
+
+    const evalCode = `
+import sys
+import io
+import ast
+
+__buf = io.StringIO()
+__old_stdout = sys.stdout
+sys.stdout = __buf
+__err = ""
+
+try:
+    __code_str = globals().get('__repl_snippet', '').strip()
+    if __code_str:
+        # Check if it's a single expression (e.g. x.shape, 2+2)
+        try:
+            __parsed = ast.parse(__code_str, mode='eval')
+            __val = eval(compile(__parsed, '<repl>', 'eval'), globals())
+            if __val is not None:
+                # Format numpy arrays and tensors nicely
+                if hasattr(__val, 'shape'):
+                    print(f"{repr(__val)}\n# Shape: {__val.shape}, dtype: {getattr(__val, 'dtype', 'unknown')}")
+                else:
+                    print(repr(__val))
+        except SyntaxError:
+            # Multi-statement code or assignment (e.g. a = np.zeros((3, 3)))
+            exec(__code_str, globals())
+except Exception as __e:
+    __err = f"{type(__e).__name__}: {__e}"
+finally:
+    sys.stdout = __old_stdout
+
+__repl_output = __buf.getvalue().strip()
+if __err:
+    if __repl_output:
+        __repl_output += f"\\n{__err}"
+    else:
+        __repl_output = __err
+__repl_output
+`;
+
+    const out = await pyodide.runPythonAsync(evalCode);
+    return { output: out || '(executed with no output)' };
+  } catch (err: any) {
+    return { output: '', error: err.message || String(err) };
+  }
+}
+
+
 export interface TestCaseExecutionResult {
   id: string;
   name: string;

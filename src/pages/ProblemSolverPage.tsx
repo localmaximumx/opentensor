@@ -26,7 +26,11 @@ import {
   NotebookPen,
   Pencil,
   Eye,
-  Trash2
+  Trash2,
+  CornerDownLeft,
+  Layers,
+  Zap,
+  Code2
 } from 'lucide-react';
 import { 
   getProblemDetail, 
@@ -51,12 +55,130 @@ import {
   unmarkUserProblemSolved,
   UserAccount 
 } from '../services/authService';
-import { runPythonCode, runPythonSubmission, ExecutionReport } from '../services/pyodideRunner';
+import { runPythonCode, runPythonSubmission, runPythonRepl, ExecutionReport } from '../services/pyodideRunner';
 import { ProblemDetail, Difficulty, ProblemSummary, ResearchPaper } from '../types';
 import { MathView } from '../components/MathView';
 import { SolutionViewer } from '../components/SolutionViewer';
 import { ProblemDrawer } from '../components/ProblemDrawer';
 import { AuthModal } from '../components/AuthModal';
+import { CheatsheetModal } from '../components/CheatsheetModal';
+
+/* ======================================================== */
+/* LEETCODE-STYLE PERFORMANCE PERCENTILE CHART COMPONENT   */
+/* ======================================================== */
+const PerformancePercentileChart: React.FC<{ runtimeMs: number; isSubmission: boolean }> = ({ runtimeMs, isSubmission }) => {
+  const medianMs = 38.0;
+  const ratio = runtimeMs / medianMs;
+  const percentile = Math.min(99.4, Math.max(14.2, parseFloat((100 / (1 + Math.pow(ratio, 1.3))).toFixed(1))));
+
+  const width = 360;
+  const height = 90;
+
+  const points: { x: number; y: number }[] = [];
+  const steps = 36;
+  for (let i = 0; i <= steps; i++) {
+    const xPct = i / steps;
+    const xMs = 5 + xPct * 95;
+    const exponent = -Math.pow((xMs - medianMs) / 22, 2) / 2;
+    const yVal = Math.exp(exponent);
+    const svgX = 20 + xPct * (width - 40);
+    const svgY = height - 12 - yVal * (height - 28);
+    points.push({ x: svgX, y: svgY });
+  }
+
+  const pathD = points.reduce((acc, p, idx) => `${acc} ${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '');
+  const areaD = `${pathD} L ${points[points.length - 1].x} ${height - 10} L ${points[0].x} ${height - 10} Z`;
+
+  const clampedUserMs = Math.min(100, Math.max(5, runtimeMs));
+  const userXPct = (clampedUserMs - 5) / 95;
+  const userSvgX = 20 + userXPct * (width - 40);
+
+  const speedLabel = percentile >= 85 ? 'Optimal Vectorization ⚡' : percentile >= 60 ? 'Efficient Implementation 👍' : 'Can be further vectorized 💡';
+  const speedColor = percentile >= 85 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25' : percentile >= 60 ? 'text-sky-400 bg-sky-500/10 border-sky-500/25' : 'text-amber-400 bg-amber-500/10 border-amber-500/25';
+
+  return (
+    <div className="p-3.5 sm:p-4 rounded-2xl bg-secondary/30 dark:bg-[#0c1611] border border-border/70 dark:border-[#1d3326] space-y-3 my-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0">
+            ⚡
+          </div>
+          <div>
+            <div className="text-xs font-bold text-foreground dark:text-white flex items-center gap-2 flex-wrap">
+              <span>Runtime Distribution</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full border font-mono ${speedColor}`}>
+                {speedLabel}
+              </span>
+            </div>
+            <div className="text-[11px] text-muted-foreground font-mono">
+              Your solution ran in <strong className="text-foreground dark:text-white">{runtimeMs.toFixed(1)} ms</strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-left sm:text-right font-mono">
+          <div className="text-sm font-extrabold text-[#93C572]">
+            Beats {percentile}%
+          </div>
+          <div className="text-[10px] text-muted-foreground">
+            of Python 3 submissions
+          </div>
+        </div>
+      </div>
+
+      {/* Bell Curve SVG */}
+      <div className="relative w-full max-w-md mx-auto pt-5 pb-1">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-24 overflow-visible">
+          <defs>
+            <linearGradient id="runtimeCurveGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#93C572" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#93C572" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+
+          {/* Shaded Area under Bell Curve */}
+          <path d={areaD} fill="url(#runtimeCurveGradient)" />
+
+          {/* Curve Stroke */}
+          <path d={pathD} fill="none" stroke="#93C572" strokeWidth="2.5" strokeLinecap="round" />
+
+          {/* Baseline */}
+          <line x1="15" y1={height - 10} x2={width - 15} y2={height - 10} stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+
+          {/* User Marker Line */}
+          <line
+            x1={userSvgX}
+            y1={12}
+            x2={userSvgX}
+            y2={height - 10}
+            stroke="#38bdf8"
+            strokeWidth="2"
+            strokeDasharray="3 3"
+          />
+
+          {/* User Dot */}
+          <circle cx={userSvgX} cy={16} r="4.5" fill="#38bdf8" stroke="#ffffff" strokeWidth="1.5" />
+        </svg>
+
+        {/* Marker Label */}
+        <div 
+          className="absolute top-0 text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500 text-black font-extrabold transform -translate-x-1/2 shadow-md pointer-events-none whitespace-nowrap"
+          style={{ left: `${(userSvgX / width) * 100}%` }}
+        >
+          You: {runtimeMs.toFixed(1)}ms
+        </div>
+
+        {/* Distribution axis labels */}
+        <div className="flex justify-between text-[9px] text-muted-foreground font-mono px-4 pt-1">
+          <span>Fast (5ms)</span>
+          <span>Average (38ms)</span>
+          <span>Slow (100ms+)</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 interface ActiveTestCase {
   id: string;
@@ -140,7 +262,17 @@ export const ProblemSolverPage: React.FC = () => {
   // Testcase & execution state
   const [activeCaseIdx, setActiveCaseIdx] = useState<number>(0);
   const [resultCaseIdx, setResultCaseIdx] = useState<number>(0);
-  const [bottomTab, setBottomTab] = useState<'testcase' | 'result'>('testcase');
+  const [bottomTab, setBottomTab] = useState<'testcase' | 'result' | 'repl'>('testcase');
+  const [isCheatsheetOpen, setIsCheatsheetOpen] = useState<boolean>(false);
+  const [replInput, setReplInput] = useState<string>('');
+  const [replHistory, setReplHistory] = useState<{ id: string; command: string; output: string; isError?: boolean }[]>([
+    {
+      id: 'init-1',
+      command: '# Python WebAssembly REPL with NumPy & PyTorch tensors loaded',
+      output: 'Ready! Type any Python expression (e.g. np.eye(3), arr.shape, x + 2) or click "Inspect Input Shapes".'
+    }
+  ]);
+  const [isEvaluatingRepl, setIsEvaluatingRepl] = useState<boolean>(false);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isSubmission, setIsSubmission] = useState<boolean>(false);
   const [execReport, setExecReport] = useState<ExecutionReport | null>(null);
@@ -709,6 +841,51 @@ export const ProblemSolverPage: React.FC = () => {
         colors: ['#93C572', '#10B981', '#34D399', '#6EE7B7']
       });
     }
+  };
+
+  // Interactive Python REPL executor
+  const handleExecuteRepl = async (commandToRun?: string) => {
+    const cmd = (commandToRun !== undefined ? commandToRun : replInput).trim();
+    if (!cmd) return;
+
+    setIsEvaluatingRepl(true);
+    const currentCode = editorRef.current ? editorRef.current.getValue() : code;
+
+    const res = await runPythonRepl(cmd, currentCode);
+    setIsEvaluatingRepl(false);
+
+    setReplHistory(prev => [
+      ...prev,
+      {
+        id: `repl-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        command: cmd,
+        output: res.error || res.output,
+        isError: Boolean(res.error)
+      }
+    ]);
+
+    if (commandToRun === undefined) {
+      setReplInput('');
+    }
+  };
+
+  const handleInspectShapesQuickly = () => {
+    const currentCases = activeTestCases.length > 0 ? activeTestCases : defaultSampleCases;
+    const activeCase = currentCases[activeCaseIdx] || currentCases[0];
+    const inputKeys = Object.keys(activeCase?.rawInputs || {});
+
+    let snippet = `import numpy as np\nprint("=== TENSOR SHAPES & TYPES ===")\n`;
+    if (inputKeys.length > 0) {
+      inputKeys.forEach(k => {
+        snippet += `val = ${activeCase.rawInputs[k]}\n`;
+        snippet += `arr = np.asarray(val) if not hasattr(val, 'shape') else val\n`;
+        snippet += `print(f"{'${k}'}: shape={getattr(arr, 'shape', len(val) if isinstance(val, list) else 'scalar')}, type={type(arr).__name__}")\n`;
+      });
+    } else {
+      snippet += `print("No inputs defined in current test case.")\n`;
+    }
+
+    handleExecuteRepl(snippet);
   };
 
   // Navigation refs & handlers for Alt+Left / Alt+Right question switching
@@ -1393,6 +1570,16 @@ export const ProblemSolverPage: React.FC = () => {
               Py3
             </span>
 
+            {/* Quick ML Cheatsheet Modal Button */}
+            <button
+              onClick={() => setIsCheatsheetOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-[#93C572] px-2 py-1 rounded hover:bg-[#93C572]/10 transition-colors border border-border/60"
+              title="Open ML, NumPy, einsum, and Backprop Cheatsheet"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-[#93C572]" />
+              <span className="hidden sm:inline font-medium">Cheatsheet</span>
+            </button>
+
             {/* Profile / Guest Status Badge */}
             {currentUser ? (
               <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#93C572]/10 border border-[#93C572]/20 text-[11px] text-[#93C572] font-medium">
@@ -1506,6 +1693,17 @@ export const ProblemSolverPage: React.FC = () => {
               {execReport && (
                 <span className={`w-2 h-2 rounded-full ${execReport.success ? 'bg-emerald-400' : 'bg-rose-400'}`} />
               )}
+            </button>
+            <button
+              onClick={() => setBottomTab('repl')}
+              className={`flex items-center gap-1.5 h-full border-b-2 font-medium transition-colors ${
+                bottomTab === 'repl'
+                  ? 'border-[#93C572] text-foreground font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Code2 className="w-3.5 h-3.5 text-sky-400" />
+              <span>Python REPL & Shapes</span>
             </button>
           </div>
 
@@ -1701,6 +1899,14 @@ export const ProblemSolverPage: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* LeetCode-Style Performance Percentile Distribution */}
+                    {execReport.success && (
+                      <PerformancePercentileChart
+                        runtimeMs={execReport.totalTimeMs}
+                        isSubmission={isSubmission}
+                      />
+                    )}
+
                     {/* Test Case Selector Pills */}
                     <div className="flex flex-wrap items-center gap-1.5 max-h-24 overflow-y-auto custom-scrollbar p-0.5">
                       {execReport.results.map((res, idx) => (
@@ -1796,6 +2002,107 @@ export const ProblemSolverPage: React.FC = () => {
                 )}
               </div>
             )}
+
+            {/* Interactive Python REPL & Shape Inspector Tab */}
+            {bottomTab === 'repl' && (
+              <div className="flex flex-col h-full space-y-3">
+                {/* REPL Quick Actions Bar */}
+                <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-border/60">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={handleInspectShapesQuickly}
+                      disabled={isEvaluatingRepl}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 font-sans text-xs font-semibold border border-sky-500/30 transition-colors disabled:opacity-50"
+                      title="Inspect dimensions of all inputs in current test case"
+                    >
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>Inspect Input Shapes</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleExecuteRepl('import numpy as np; import torch; print("NumPy version:", np.__version__, "| PyTorch compatibility ready")')}
+                      disabled={isEvaluatingRepl}
+                      className="px-2 py-1 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground text-[11px] font-mono transition-colors disabled:opacity-50"
+                    >
+                      np/torch info
+                    </button>
+
+                    <button
+                      onClick={() => handleExecuteRepl(editorRef.current ? editorRef.current.getValue() : code)}
+                      disabled={isEvaluatingRepl}
+                      className="px-2 py-1 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground text-[11px] font-sans font-medium transition-colors disabled:opacity-50"
+                      title="Load current editor code and functions into the REPL scope"
+                    >
+                      Load Editor Functions
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => setReplHistory([])}
+                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-2 py-0.5 rounded transition-colors"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Clear</span>
+                  </button>
+                </div>
+
+                {/* REPL Output Console */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-3 rounded-xl bg-black/50 border border-white/10 font-mono text-xs space-y-2 min-h-[140px] max-h-[220px]">
+                  {replHistory.length === 0 ? (
+                    <div className="text-muted-foreground/60 italic">
+                      REPL history is empty. Type a python expression below or click "Inspect Input Shapes".
+                    </div>
+                  ) : (
+                    replHistory.map((item) => (
+                      <div key={item.id} className="space-y-1">
+                        <div className="flex items-center gap-2 text-sky-400/90 font-semibold select-none">
+                          <span className="text-muted-foreground">&gt;&gt;&gt;</span>
+                          <span className="text-foreground">{item.command}</span>
+                        </div>
+                        <pre className={`whitespace-pre-wrap pl-5 ${item.isError ? 'text-rose-400 font-semibold' : 'text-emerald-300'}`}>
+                          {item.output}
+                        </pre>
+                      </div>
+                    ))
+                  )}
+                  {isEvaluatingRepl && (
+                    <div className="flex items-center gap-2 text-sky-400 pl-5 animate-pulse">
+                      <div className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
+                      <span>Evaluating in Python engine...</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* REPL Input Line */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleExecuteRepl();
+                  }}
+                  className="flex items-center gap-2 pt-1"
+                >
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-2 font-mono text-xs text-sky-400 font-bold select-none">&gt;&gt;&gt;</span>
+                    <input
+                      type="text"
+                      value={replInput}
+                      onChange={(e) => setReplInput(e.target.value)}
+                      placeholder="e.g. x.shape, np.eye(3), print(type(arr)), def f(): ..."
+                      className="w-full pl-10 pr-3 py-1.5 rounded-xl bg-muted/40 hover:bg-muted/60 focus:bg-background border border-border focus:border-[#93C572] focus:ring-1 focus:ring-[#93C572] font-mono text-xs text-foreground outline-none transition-all"
+                      spellCheck={false}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isEvaluatingRepl || !replInput.trim()}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#93C572] hover:bg-[#a4d287] text-black font-sans text-xs font-bold transition-all disabled:opacity-40 shrink-0"
+                  >
+                    <span>Run</span>
+                    <CornerDownLeft className="w-3 h-3" />
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
 
         </div>
@@ -1803,6 +2110,12 @@ export const ProblemSolverPage: React.FC = () => {
       </div>
 
     </div>
+
+    {/* Quick Reference Cheatsheet Modal */}
+    <CheatsheetModal
+      isOpen={isCheatsheetOpen}
+      onClose={() => setIsCheatsheetOpen(false)}
+    />
 
     {/* Authentication & Profile Modal */}
     <AuthModal

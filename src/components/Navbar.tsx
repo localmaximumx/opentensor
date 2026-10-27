@@ -35,6 +35,7 @@ import {
   UserAccount 
 } from '../services/authService';
 import { AuthModal } from './AuthModal';
+import { CheatsheetModal } from './CheatsheetModal';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
@@ -47,6 +48,7 @@ export const Navbar: React.FC = () => {
     return document.documentElement.classList.contains('dark');
   });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [isCheatsheetOpen, setIsCheatsheetOpen] = useState<boolean>(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [storageUsage, setStorageUsage] = useState<UserStorageUsage>(() => getUserStorageUsage());
@@ -173,6 +175,10 @@ export const Navbar: React.FC = () => {
         onClose={() => setIsAuthModalOpen(false)}
         onSuccess={() => refreshAuth()}
       />
+      <CheatsheetModal
+        isOpen={isCheatsheetOpen}
+        onClose={() => setIsCheatsheetOpen(false)}
+      />
 
       <nav className="text-foreground sticky top-0 z-50 w-full pt-3 pb-1 flex-shrink-0">
         <div className="container mx-auto px-4 max-w-7xl relative">
@@ -246,6 +252,16 @@ export const Navbar: React.FC = () => {
                 <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500 shrink-0" />
                 <span className="tabular-nums font-mono">{streakData.currentStreak}</span>
               </Link>
+
+              {/* Quick ML Cheatsheet Button */}
+              <button
+                onClick={() => setIsCheatsheetOpen(true)}
+                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground border border-border/80 transition-colors shadow-xs"
+                title="Open ML & Tensor Cheatsheet"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-[#93C572]" />
+                <span className="hidden lg:inline">Cheatsheet</span>
+              </button>
 
               {/* Theme Toggle Button (Desktop visible, on mobile moved into hamburger menu) */}
               <button
@@ -450,6 +466,20 @@ export const Navbar: React.FC = () => {
                   <span>{streakData.currentStreak}d</span>
                 </span>
               </Link>
+
+              {/* Mobile Cheatsheet Button */}
+              <button
+                onClick={() => { setIsMobileMenuOpen(false); setIsCheatsheetOpen(true); }}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold text-foreground/80 hover:text-foreground hover:bg-secondary/60 transition-colors"
+              >
+                <span className="flex items-center gap-3">
+                  <BookOpen className="w-4 h-4 text-[#93C572]" />
+                  <span>ML & Tensor Cheatsheet</span>
+                </span>
+                <span className="text-[10px] font-mono text-[#93C572] px-2 py-0.5 rounded-full bg-[#93C572]/15 font-semibold">
+                  Ref
+                </span>
+              </button>
 
               {/* Theme Toggle Button Inside Mobile Menu */}
               <div className="pt-2 mt-2 border-t border-border/60">
