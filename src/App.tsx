@@ -11,8 +11,6 @@ import { AssessmentsPage } from './pages/AssessmentsPage';
 import { InterviewPage } from './pages/InterviewPage';
 import { MLDesignPage } from './pages/MLDesignPage';
 import { ProfilePage } from './pages/ProfilePage';
-import { FlashcardsPage } from './pages/FlashcardsPage';
-import { MockInterviewPage } from './pages/MockInterviewPage';
 
 export const App: React.FC = () => {
   return (
@@ -26,10 +24,9 @@ export const App: React.FC = () => {
             <Route path="/problems/:slug" element={<ProblemSolverPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<ProfilePage />} />
-            <Route path="/flashcards" element={<FlashcardsPage />} />
-            <Route path="/mock-interview" element={<MockInterviewPage />} />
-            <Route path="/interview/simulator" element={<MockInterviewPage />} />
             <Route path="/interview" element={<InterviewPage />} />
+            <Route path="/mock-interview" element={<Navigate to="/interview" replace />} />
+            <Route path="/flashcards" element={<Navigate to="/interview" replace />} />
             <Route path="/interview/solve/:slug" element={<ProblemSolverPage />} />
             <Route path="/interview/:slug" element={<ProblemSolverPage />} />
             <Route path="/assessments" element={<Navigate to="/interview" replace />} />

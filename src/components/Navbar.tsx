@@ -20,8 +20,7 @@ import {
   Radio,
   Database,
   Flame,
-  Settings,
-  Zap
+  Settings
 } from 'lucide-react';
 import { 
   getCurrentUser, 
@@ -157,9 +156,7 @@ export const Navbar: React.FC = () => {
     { label: 'Home', path: '/', icon: Home },
     { label: 'Problems', path: '/problems', icon: Code2 },
     { label: 'Research', path: '/research', icon: BookOpen },
-    { label: 'Interview', path: '/interview', icon: Radio },
-    { label: 'Mock Simulator', path: '/mock-interview', icon: ShieldCheck },
-    { label: 'Flashcards', path: '/flashcards', icon: Zap }
+    { label: 'Interview', path: '/interview', icon: Radio }
   ];
 
   const getInitials = (name: string) => {
@@ -198,14 +195,8 @@ export const Navbar: React.FC = () => {
 
               <div className="hidden lg:flex items-center gap-6">
                 {navLinks.map((link) => {
-                  const isMock = link.path === '/mock-interview' && (
-                    location.pathname.startsWith('/mock-interview') ||
-                    location.pathname.startsWith('/interview/simulator')
-                  );
-                  const isFlashcards = link.path === '/flashcards' && location.pathname.startsWith('/flashcards');
-                  const isInterview = link.path === '/interview' && !isMock && (
-                    location.pathname === '/interview' ||
-                    location.pathname.startsWith('/interview/solve') ||
+                  const isInterview = link.path === '/interview' && (
+                    location.pathname.startsWith('/interview') ||
                     location.search.includes('assessment=')
                   );
                   const isResearch = link.path === '/research' && location.pathname.startsWith('/research');
@@ -213,7 +204,7 @@ export const Navbar: React.FC = () => {
                     location.pathname.startsWith('/problems') && !location.search.includes('assessment=')
                   );
                   const isHome = link.path === '/' && location.pathname === '/';
-                  const isActive = isMock || isFlashcards || isInterview || isResearch || isProblems || isHome;
+                  const isActive = isInterview || isResearch || isProblems || isHome;
 
                   return (
                     <Link
@@ -413,14 +404,8 @@ export const Navbar: React.FC = () => {
             <div className="lg:hidden absolute top-[calc(100%+0.5rem)] left-4 right-4 z-50 p-3 bg-card/98 dark:bg-[#121212]/98 backdrop-blur-2xl border border-border/80 dark:border-border/60 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[calc(100dvh-5.5rem)] overflow-y-auto custom-scrollbar">
               {navLinks.map((link) => {
                 const Icon = link.icon;
-                const isMock = link.path === '/mock-interview' && (
-                  location.pathname.startsWith('/mock-interview') ||
-                  location.pathname.startsWith('/interview/simulator')
-                );
-                const isFlashcards = link.path === '/flashcards' && location.pathname.startsWith('/flashcards');
-                const isInterview = link.path === '/interview' && !isMock && (
-                  location.pathname === '/interview' ||
-                  location.pathname.startsWith('/interview/solve') ||
+                const isInterview = link.path === '/interview' && (
+                  location.pathname.startsWith('/interview') ||
                   location.search.includes('assessment=')
                 );
                 const isResearch = link.path === '/research' && location.pathname.startsWith('/research');
@@ -428,7 +413,7 @@ export const Navbar: React.FC = () => {
                   location.pathname.startsWith('/problems') && !location.search.includes('assessment=')
                 );
                 const isHome = link.path === '/' && location.pathname === '/';
-                const isActive = isMock || isFlashcards || isInterview || isResearch || isProblems || isHome;
+                const isActive = isInterview || isResearch || isProblems || isHome;
 
                 return (
                   <Link
