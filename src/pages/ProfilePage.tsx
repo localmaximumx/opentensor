@@ -54,12 +54,12 @@ import { ProblemSummary } from '../types';
 import { AuthModal } from '../components/AuthModal';
 
 const AVATAR_COLORS = [
-  { name: 'Tonic Green', hex: '#93C572' },
+  { name: 'Electric Violet', hex: '#8B5CF6' },
   { name: 'Sky Blue', hex: '#38BDF8' },
   { name: 'Purple', hex: '#A78BFA' },
-  { name: 'Rose', hex: '#F472B6' },
+  { name: 'Rose', hex: '#F87171' },
   { name: 'Amber', hex: '#FBBF24' },
-  { name: 'Emerald', hex: '#34D399' },
+  { name: 'Lime', hex: '#C4F75B' },
   { name: 'Indigo', hex: '#818CF8' },
   { name: 'Coral', hex: '#FB923C' }
 ];
@@ -84,7 +84,7 @@ export const ProfilePage: React.FC = () => {
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [usernameInput, setUsernameInput] = useState('');
   const [roleInput, setRoleInput] = useState<UserAccount['role']>('Machine Learning Engineer');
-  const [avatarColorInput, setAvatarColorInput] = useState('#93C572');
+  const [avatarColorInput, setAvatarColorInput] = useState('#8B5CF6');
   const [profileSaveMsg, setProfileSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
@@ -125,7 +125,7 @@ export const ProfilePage: React.FC = () => {
       setDisplayNameInput(user.displayName || user.username);
       setUsernameInput(user.username);
       setRoleInput(user.role || 'Machine Learning Engineer');
-      setAvatarColorInput(user.avatarColor || '#93C572');
+      setAvatarColorInput(user.avatarColor || '#8B5CF6');
     }
   };
 
@@ -340,41 +340,41 @@ export const ProfilePage: React.FC = () => {
         onSuccess={() => refreshUserData()}
       />
 
-      <div className="h-full overflow-y-auto custom-scrollbar bg-[#f8faf8] dark:bg-[#070e0a] text-foreground transition-colors py-6 px-3 sm:px-6 lg:px-8">
+      <div className="h-full overflow-y-auto custom-scrollbar bg-[#0B0B12] text-[#F4F4FA] transition-colors py-6 px-3 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto space-y-6">
 
           {/* ======================================================== */}
           {/* 1. TOP PROFILE HEADER BANNER (Matches template image)   */}
           {/* ======================================================== */}
-          <div className="relative rounded-3xl border border-border/80 dark:border-[#1d3326] bg-card dark:bg-[#0a1611] p-5 sm:p-7 shadow-xl overflow-hidden backdrop-blur-xl">
-            {/* Ambient emerald backlight glow */}
-            <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-[#93C572]/10 dark:bg-[#93C572]/15 blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-emerald-500/5 dark:bg-emerald-500/10 blur-3xl pointer-events-none" />
+          <div className="relative rounded-3xl border border-[#303041] bg-[#191925] p-5 sm:p-7 shadow-xl overflow-hidden backdrop-blur-xl">
+            {/* Ambient violet backlight glow */}
+            <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-[#8B5CF6]/15 blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-[#7C3AED]/10 blur-3xl pointer-events-none" />
 
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
               {/* User Avatar + Identity Info */}
               <div className="flex items-center gap-4 sm:gap-5">
                 <div 
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-xl sm:text-2xl font-black text-black shadow-lg shrink-0 ring-2 ring-white/10"
-                  style={{ backgroundColor: currentUser?.avatarColor || '#93C572' }}
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-xl sm:text-2xl font-black text-[#0B0B12] shadow-lg shrink-0 ring-2 ring-white/10"
+                  style={{ backgroundColor: currentUser?.avatarColor || '#8B5CF6' }}
                 >
                   {getInitials(currentUser?.displayName || currentUser?.username || 'Guest')}
                 </div>
 
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground dark:text-white">
+                    <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#F4F4FA]">
                       {currentUser?.displayName || currentUser?.username || 'Guest User'}
                     </h1>
                     {currentUser && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#93C572]/15 text-[#93C572] text-xs font-semibold border border-[#93C572]/30">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#251B3B] text-[#8B5CF6] text-xs font-semibold border border-[#45455B]/60">
                         <ShieldCheck className="w-3.5 h-3.5" />
                         <span>{currentUser.role || 'Machine Learning Engineer'}</span>
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs sm:text-sm text-muted-foreground font-mono">
+                  <div className="flex items-center gap-3 text-xs sm:text-sm text-[#9292A8] font-mono">
                     <span>@{currentUser?.username || 'guest'}</span>
                     <span>•</span>
                     <span>{currentUser?.createdAt ? `Joined ${new Date(currentUser.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : 'TonicLite Member'}</span>
@@ -385,24 +385,24 @@ export const ProfilePage: React.FC = () => {
               {/* Badges: Elo Rating + Day Streak Badge (Matches template top-right) */}
               <div className="flex items-center gap-3 self-start md:self-center">
                 {/* Elo Rating Badge */}
-                <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-secondary/80 dark:bg-[#12231b] border border-border/80 dark:border-[#223d2e] shadow-sm">
-                  <div className="w-7 h-7 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center font-bold">
-                    <Sparkles className="w-4 h-4 fill-amber-400/20" />
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-[#13131D] border border-[#303041] shadow-sm">
+                  <div className="w-7 h-7 rounded-xl bg-[#302719] text-[#FBBF24] flex items-center justify-center font-bold">
+                    <Sparkles className="w-4 h-4 fill-[#FBBF24]/20" />
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground font-mono">Rating</div>
-                    <div className="text-sm font-extrabold text-foreground dark:text-white font-mono">{solvedStats.elo} Elo</div>
+                    <div className="text-[10px] uppercase font-bold tracking-wider text-[#9292A8] font-mono">Rating</div>
+                    <div className="text-sm font-extrabold text-[#F4F4FA] font-mono">{solvedStats.elo} Elo</div>
                   </div>
                 </div>
 
                 {/* Day Streak Flame Badge */}
-                <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 shadow-sm">
-                  <div className="w-7 h-7 rounded-xl bg-amber-500 text-black flex items-center justify-center font-bold shadow-xs">
-                    <Flame className="w-4 h-4 fill-black" />
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-[#251B3B] border border-[#45455B]/60 shadow-sm">
+                  <div className="w-7 h-7 rounded-xl bg-[#C4F75B] text-[#0B0B12] flex items-center justify-center font-bold shadow-xs">
+                    <Flame className="w-4 h-4 fill-[#0B0B12]" />
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase font-bold tracking-wider text-amber-500/80 font-mono">Streak</div>
-                    <div className="text-sm font-extrabold text-amber-500 dark:text-amber-400 font-mono">
+                    <div className="text-[10px] uppercase font-bold tracking-wider text-[#C4F75B] font-mono">Streak</div>
+                    <div className="text-sm font-extrabold text-[#C4F75B] font-mono">
                       {streakData.currentStreak} {streakData.currentStreak === 1 ? 'Day' : 'Days'}
                     </div>
                   </div>
@@ -411,7 +411,7 @@ export const ProfilePage: React.FC = () => {
                 {!currentUser && (
                   <button
                     onClick={() => setIsAuthModalOpen(true)}
-                    className="px-4 py-2 rounded-2xl bg-[#93C572] hover:bg-[#a4d287] text-black font-bold text-xs shadow-md transition-all shrink-0"
+                    className="px-4 py-2 rounded-2xl bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold text-xs shadow-md transition-all shrink-0"
                   >
                     Sign In
                   </button>
@@ -420,13 +420,13 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             {/* Navigation Tabs Header */}
-            <div className="flex items-center gap-2 mt-6 pt-5 border-t border-border/60 dark:border-[#1d3326]">
+            <div className="flex items-center gap-2 mt-6 pt-5 border-t border-[#303041]">
               <button
                 onClick={() => switchTab('overview')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                   activeTab === 'overview'
-                    ? 'bg-[#93C572] text-black shadow-md'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                    ? 'bg-[#7C3AED] text-white shadow-md'
+                    : 'text-[#B5B5C8] hover:text-[#F4F4FA] hover:bg-[#272738]'
                 }`}
               >
                 <Activity className="w-4 h-4" />
@@ -436,8 +436,8 @@ export const ProfilePage: React.FC = () => {
                 onClick={() => switchTab('settings')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                   activeTab === 'settings'
-                    ? 'bg-[#93C572] text-black shadow-md'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                    ? 'bg-[#7C3AED] text-white shadow-md'
+                    : 'text-[#B5B5C8] hover:text-[#F4F4FA] hover:bg-[#272738]'
                 }`}
               >
                 <Settings className="w-4 h-4" />
@@ -456,92 +456,92 @@ export const ProfilePage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 
                 {/* Total Solved Card */}
-                <div className="p-5 rounded-2xl border border-border/80 dark:border-[#1d3326] bg-card dark:bg-[#0a1611] shadow-md flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2 font-mono">
+                <div className="p-5 rounded-2xl border border-[#303041] bg-[#191925] shadow-md flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-[#9292A8] text-xs font-semibold uppercase tracking-wider mb-2 font-mono">
                     <span>Solved Total</span>
-                    <CheckCircle2 className="w-4 h-4 text-[#93C572]" />
+                    <CheckCircle2 className="w-4 h-4 text-[#4ADE80]" />
                   </div>
                   <div className="flex items-baseline gap-2 mb-3">
-                    <span className="text-3xl font-black text-foreground dark:text-white font-mono">{solvedStats.totalSolved}</span>
-                    <span className="text-sm text-muted-foreground font-mono">/ {solvedStats.totalCatalog}</span>
+                    <span className="text-3xl font-black text-[#F4F4FA] font-mono">{solvedStats.totalSolved}</span>
+                    <span className="text-sm text-[#9292A8] font-mono">/ {solvedStats.totalCatalog}</span>
                   </div>
                   <div className="space-y-1.5">
-                    <div className="w-full h-2 rounded-full bg-secondary/80 dark:bg-black/40 overflow-hidden">
+                    <div className="w-full h-2 rounded-full bg-[#13131D] overflow-hidden">
                       <div 
-                        className="h-full rounded-full bg-[#93C572] transition-all duration-500"
+                        className="h-full rounded-full bg-[#7C3AED] transition-all duration-500"
                         style={{ width: `${Math.min(100, (solvedStats.totalSolved / solvedStats.totalCatalog) * 100)}%` }}
                       />
                     </div>
-                    <div className="text-[11px] text-muted-foreground font-mono text-right">
+                    <div className="text-[11px] text-[#9292A8] font-mono text-right">
                       {((solvedStats.totalSolved / solvedStats.totalCatalog) * 100).toFixed(1)}% solved
                     </div>
                   </div>
                 </div>
 
                 {/* Easy Card (0/300) */}
-                <div className="p-5 rounded-2xl border border-border/80 dark:border-[#1d3326] bg-card dark:bg-[#0a1611] shadow-md flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2 font-mono">
-                    <span className="text-emerald-500 font-bold">Easy</span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <div className="p-5 rounded-2xl border border-[#303041] bg-[#191925] shadow-md flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-[#9292A8] text-xs font-semibold uppercase tracking-wider mb-2 font-mono">
+                    <span className="text-[#4ADE80] font-bold">Easy</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#4ADE80]" />
                   </div>
                   <div className="flex items-baseline gap-2 mb-3">
-                    <span className="text-3xl font-black text-emerald-500 dark:text-emerald-400 font-mono">{solvedStats.easy}</span>
-                    <span className="text-sm text-muted-foreground font-mono">/ {solvedStats.easyTotal}</span>
+                    <span className="text-3xl font-black text-[#4ADE80] font-mono">{solvedStats.easy}</span>
+                    <span className="text-sm text-[#9292A8] font-mono">/ {solvedStats.easyTotal}</span>
                   </div>
                   <div className="space-y-1.5">
-                    <div className="w-full h-2 rounded-full bg-secondary/80 dark:bg-black/40 overflow-hidden">
+                    <div className="w-full h-2 rounded-full bg-[#13131D] overflow-hidden">
                       <div 
-                        className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                        className="h-full rounded-full bg-[#4ADE80] transition-all duration-500"
                         style={{ width: `${Math.min(100, (solvedStats.easy / solvedStats.easyTotal) * 100)}%` }}
                       />
                     </div>
-                    <div className="text-[11px] text-muted-foreground font-mono text-right">
+                    <div className="text-[11px] text-[#9292A8] font-mono text-right">
                       {((solvedStats.easy / solvedStats.easyTotal) * 100).toFixed(1)}% solved
                     </div>
                   </div>
                 </div>
 
                 {/* Medium Card (0/355) */}
-                <div className="p-5 rounded-2xl border border-border/80 dark:border-[#1d3326] bg-card dark:bg-[#0a1611] shadow-md flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2 font-mono">
-                    <span className="text-amber-500 font-bold">Medium</span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                <div className="p-5 rounded-2xl border border-[#303041] bg-[#191925] shadow-md flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-[#9292A8] text-xs font-semibold uppercase tracking-wider mb-2 font-mono">
+                    <span className="text-[#FBBF24] font-bold">Medium</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#FBBF24]" />
                   </div>
                   <div className="flex items-baseline gap-2 mb-3">
-                    <span className="text-3xl font-black text-amber-500 dark:text-amber-400 font-mono">{solvedStats.medium}</span>
-                    <span className="text-sm text-muted-foreground font-mono">/ {solvedStats.mediumTotal}</span>
+                    <span className="text-3xl font-black text-[#FBBF24] font-mono">{solvedStats.medium}</span>
+                    <span className="text-sm text-[#9292A8] font-mono">/ {solvedStats.mediumTotal}</span>
                   </div>
                   <div className="space-y-1.5">
-                    <div className="w-full h-2 rounded-full bg-secondary/80 dark:bg-black/40 overflow-hidden">
+                    <div className="w-full h-2 rounded-full bg-[#13131D] overflow-hidden">
                       <div 
-                        className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                        className="h-full rounded-full bg-[#FBBF24] transition-all duration-500"
                         style={{ width: `${Math.min(100, (solvedStats.medium / solvedStats.mediumTotal) * 100)}%` }}
                       />
                     </div>
-                    <div className="text-[11px] text-muted-foreground font-mono text-right">
+                    <div className="text-[11px] text-[#9292A8] font-mono text-right">
                       {((solvedStats.medium / solvedStats.mediumTotal) * 100).toFixed(1)}% solved
                     </div>
                   </div>
                 </div>
 
                 {/* Hard Card (0/135) */}
-                <div className="p-5 rounded-2xl border border-border/80 dark:border-[#1d3326] bg-card dark:bg-[#0a1611] shadow-md flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2 font-mono">
-                    <span className="text-rose-500 font-bold">Hard</span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                <div className="p-5 rounded-2xl border border-[#303041] bg-[#191925] shadow-md flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-[#9292A8] text-xs font-semibold uppercase tracking-wider mb-2 font-mono">
+                    <span className="text-[#F87171] font-bold">Hard</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#F87171]" />
                   </div>
                   <div className="flex items-baseline gap-2 mb-3">
-                    <span className="text-3xl font-black text-rose-500 dark:text-rose-400 font-mono">{solvedStats.hard}</span>
-                    <span className="text-sm text-muted-foreground font-mono">/ {solvedStats.hardTotal}</span>
+                    <span className="text-3xl font-black text-[#F87171] font-mono">{solvedStats.hard}</span>
+                    <span className="text-sm text-[#9292A8] font-mono">/ {solvedStats.hardTotal}</span>
                   </div>
                   <div className="space-y-1.5">
-                    <div className="w-full h-2 rounded-full bg-secondary/80 dark:bg-black/40 overflow-hidden">
+                    <div className="w-full h-2 rounded-full bg-[#13131D] overflow-hidden">
                       <div 
-                        className="h-full rounded-full bg-rose-500 transition-all duration-500"
+                        className="h-full rounded-full bg-[#F87171] transition-all duration-500"
                         style={{ width: `${Math.min(100, (solvedStats.hard / solvedStats.hardTotal) * 100)}%` }}
                       />
                     </div>
-                    <div className="text-[11px] text-muted-foreground font-mono text-right">
+                    <div className="text-[11px] text-[#9292A8] font-mono text-right">
                       {((solvedStats.hard / solvedStats.hardTotal) * 100).toFixed(1)}% solved
                     </div>
                   </div>
@@ -550,27 +550,27 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               {/* 2. ACTIVITY CALENDAR HEATMAP (Matches LeetCode / Template style) */}
-              <div className="p-5 sm:p-6 rounded-3xl border border-border/80 dark:border-[#1d3326] bg-card dark:bg-[#0a1611] shadow-lg relative">
+              <div className="p-5 sm:p-6 rounded-3xl border border-[#303041] bg-[#191925] shadow-lg relative">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
                   <div>
-                    <h2 className="text-base sm:text-lg font-extrabold text-foreground dark:text-white flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-[#93C572]" />
+                    <h2 className="text-base sm:text-lg font-extrabold text-[#F4F4FA] flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-[#8B5CF6]" />
                       <span>Activity Calendar</span>
                     </h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-xs text-[#9292A8] mt-0.5">
                       Submissions and problem solving activity in the last 12 months
                     </p>
                   </div>
 
                   {/* Summary badges */}
                   <div className="flex items-center gap-3 text-xs font-mono">
-                    <div className="px-3 py-1 rounded-xl bg-secondary/60 dark:bg-[#12231b] border border-border/60 dark:border-[#223d2e]">
-                      <span className="text-muted-foreground mr-1">Active Days:</span>
-                      <strong className="text-foreground dark:text-white">{streakData.totalActiveDays}</strong>
+                    <div className="px-3 py-1 rounded-xl bg-[#13131D] border border-[#303041]">
+                      <span className="text-[#9292A8] mr-1">Active Days:</span>
+                      <strong className="text-[#F4F4FA]">{streakData.totalActiveDays}</strong>
                     </div>
-                    <div className="px-3 py-1 rounded-xl bg-secondary/60 dark:bg-[#12231b] border border-border/60 dark:border-[#223d2e]">
-                      <span className="text-muted-foreground mr-1">Max Streak:</span>
-                      <strong className="text-amber-500">{streakData.longestStreak} days</strong>
+                    <div className="px-3 py-1 rounded-xl bg-[#13131D] border border-[#303041]">
+                      <span className="text-[#9292A8] mr-1">Max Streak:</span>
+                      <strong className="text-[#C4F75B]">{streakData.longestStreak} days</strong>
                     </div>
                   </div>
                 </div>
@@ -579,7 +579,7 @@ export const ProfilePage: React.FC = () => {
                 <div className="relative overflow-x-auto pb-2 custom-scrollbar">
                   <div className="min-w-[760px]">
                     {/* Month labels along top */}
-                    <div className="flex text-[10px] text-muted-foreground font-mono mb-2 pl-7 relative h-4">
+                    <div className="flex text-[10px] text-[#9292A8] font-mono mb-2 pl-7 relative h-4">
                       {heatmapData.months.map((m, idx) => (
                         <span 
                           key={idx} 
@@ -594,7 +594,7 @@ export const ProfilePage: React.FC = () => {
                     {/* Heatmap rows */}
                     <div className="flex gap-1">
                       {/* Weekday labels on left */}
-                      <div className="flex flex-col justify-between text-[9px] text-muted-foreground font-mono pr-2 py-0.5 select-none w-7 shrink-0">
+                      <div className="flex flex-col justify-between text-[9px] text-[#9292A8] font-mono pr-2 py-0.5 select-none w-7 shrink-0">
                         <span>Sun</span>
                         <span>Tue</span>
                         <span>Thu</span>
@@ -606,11 +606,11 @@ export const ProfilePage: React.FC = () => {
                         {heatmapData.weeks.map((week, wIdx) => (
                           <div key={wIdx} className="flex flex-col gap-1">
                             {week.map((day, dIdx) => {
-                              let levelClass = 'bg-secondary/40 dark:bg-[#121c16] border-border/30 dark:border-[#1d2b22]';
-                              if (day.level === 1) levelClass = 'bg-emerald-900/60 dark:bg-[#1a402a] border-emerald-700/50';
-                              else if (day.level === 2) levelClass = 'bg-emerald-700/80 dark:bg-[#256c3f] border-emerald-600/60';
-                              else if (day.level === 3) levelClass = 'bg-emerald-500 dark:bg-[#34a853] border-emerald-400/70';
-                              else if (day.level === 4) levelClass = 'bg-[#93C572] dark:bg-[#93C572] border-[#a4d287] shadow-[0_0_8px_rgba(147,197,114,0.4)]';
+                              let levelClass = 'bg-[#13131D] border-[#303041]';
+                              if (day.level === 1) levelClass = 'bg-[#251B3B] border-[#45455B]/60';
+                              else if (day.level === 2) levelClass = 'bg-[#493276] border-[#6D28D9]/70';
+                              else if (day.level === 3) levelClass = 'bg-[#7C3AED] border-[#8B5CF6]/80';
+                              else if (day.level === 4) levelClass = 'bg-[#8B5CF6] border-[#A78BFA] shadow-[0_0_8px_rgba(139,92,246,0.5)]';
 
                               return (
                                 <div
@@ -635,17 +635,17 @@ export const ProfilePage: React.FC = () => {
                     </div>
 
                     {/* Legend */}
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-4 pt-3 border-t border-border/40 dark:border-[#1d3326]">
+                    <div className="flex items-center justify-between text-[11px] text-[#9292A8] mt-4 pt-3 border-t border-[#303041]">
                       <span className="font-mono">
                         {heatmapData.totalCount} submission{heatmapData.totalCount === 1 ? '' : 's'} logged
                       </span>
                       <div className="flex items-center gap-1.5 font-mono text-[10px]">
                         <span>Less</span>
-                        <div className="w-2.5 h-2.5 rounded-[2px] bg-secondary/40 dark:bg-[#121c16] border border-border/30 dark:border-[#1d2b22]" />
-                        <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-900/60 dark:bg-[#1a402a] border border-emerald-700/50" />
-                        <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-700/80 dark:bg-[#256c3f] border border-emerald-600/60" />
-                        <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500 dark:bg-[#34a853] border border-emerald-400/70" />
-                        <div className="w-2.5 h-2.5 rounded-[2px] bg-[#93C572] dark:bg-[#93C572] border border-[#a4d287]" />
+                        <div className="w-2.5 h-2.5 rounded-[2px] bg-[#13131D] border border-[#303041]" />
+                        <div className="w-2.5 h-2.5 rounded-[2px] bg-[#251B3B] border border-[#45455B]/60" />
+                        <div className="w-2.5 h-2.5 rounded-[2px] bg-[#493276] border border-[#6D28D9]/70" />
+                        <div className="w-2.5 h-2.5 rounded-[2px] bg-[#7C3AED] border border-[#8B5CF6]/80" />
+                        <div className="w-2.5 h-2.5 rounded-[2px] bg-[#8B5CF6] border border-[#A78BFA]" />
                         <span>More</span>
                       </div>
                     </div>
@@ -664,20 +664,20 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               {/* 3. ACHIEVEMENTS & MILESTONES SHOWCASE */}
-              <div className="p-5 sm:p-6 rounded-3xl border border-border/80 dark:border-[#1d3326] bg-card dark:bg-[#0a1611] shadow-lg relative">
+              <div className="p-5 sm:p-6 rounded-3xl border border-[#303041] bg-[#191925] shadow-lg relative">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center font-bold">
                       <Trophy className="w-4 h-4 text-amber-400" />
                     </div>
                     <div>
-                      <h2 className="text-base sm:text-lg font-extrabold text-foreground dark:text-white flex items-center gap-2 flex-wrap">
+                      <h2 className="text-base sm:text-lg font-extrabold text-[#F4F4FA] flex items-center gap-2 flex-wrap">
                         <span>Achievements & Milestones</span>
                         <span className="px-2.5 py-0.5 rounded-full text-[11px] bg-amber-500/15 text-amber-400 font-mono font-bold border border-amber-500/30">
                           {unlockedBadgesCount} / {badges.length} Unlocked
                         </span>
                       </h2>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-xs text-[#9292A8] mt-0.5">
                         Earn milestone badges as you conquer algorithms, maintain streaks, and write optimal code
                       </p>
                     </div>
@@ -695,62 +695,62 @@ export const ProfilePage: React.FC = () => {
                       if (b.icon === 'zap') return <Zap className="w-5 h-5 text-sky-400" />;
                       if (b.icon === 'brain') return <Brain className="w-5 h-5 text-purple-400" />;
                       if (b.icon === 'target') return <Target className="w-5 h-5 text-rose-400" />;
-                      if (b.icon === 'shield') return <ShieldCheck className="w-5 h-5 text-emerald-400" />;
-                      return <Award className="w-5 h-5 text-[#93C572]" />;
+                      if (b.icon === 'shield') return <ShieldCheck className="w-5 h-5 text-[#4ADE80]" />;
+                      return <Award className="w-5 h-5 text-[#8B5CF6]" />;
                     };
 
                     const tierBorder = 
                       b.tier === 'platinum' ? 'border-cyan-500/40' :
                       b.tier === 'gold' ? 'border-amber-500/40' :
                       b.tier === 'silver' ? 'border-sky-500/40' :
-                      'border-emerald-500/40';
+                      'border-[#8B5CF6]/40';
 
                     return (
                       <div
                         key={b.id}
                         className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between ${
                           isUnlocked
-                            ? `bg-secondary/40 dark:bg-[#12231b] ${tierBorder} shadow-sm hover:scale-102`
-                            : 'bg-secondary/15 dark:bg-[#0d1612]/60 border-border/40 dark:border-white/5 opacity-60 grayscale hover:grayscale-0 hover:opacity-80'
+                            ? `bg-[#251B3B]/40 ${tierBorder} shadow-sm hover:scale-102`
+                            : 'bg-[#13131D]/60 border-[#303041]/50 opacity-60 grayscale hover:grayscale-0 hover:opacity-80'
                         }`}
                       >
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                              isUnlocked ? 'bg-black/30 dark:bg-black/50 shadow-inner' : 'bg-secondary/50'
+                              isUnlocked ? 'bg-black/40 shadow-inner' : 'bg-[#13131D]'
                             }`}>
                               {renderIcon()}
                             </div>
 
                             <span className={`text-[10px] uppercase font-bold font-mono px-2 py-0.5 rounded-full ${
                               isUnlocked
-                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                                : 'bg-secondary text-muted-foreground'
+                                ? 'bg-[#14291D] text-[#4ADE80] border border-[#28633D]'
+                                : 'bg-[#13131D] text-[#9292A8]'
                             }`}>
                               {isUnlocked ? 'Unlocked' : 'Locked'}
                             </span>
                           </div>
 
                           <div>
-                            <h3 className="text-xs font-bold text-foreground dark:text-white truncate" title={b.title}>
+                            <h3 className="text-xs font-bold text-[#F4F4FA] truncate" title={b.title}>
                               {b.title}
                             </h3>
-                            <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5 leading-snug" title={b.description}>
+                            <p className="text-[10px] text-[#9292A8] line-clamp-2 mt-0.5 leading-snug" title={b.description}>
                               {b.description}
                             </p>
                           </div>
                         </div>
 
                         {/* Progress bar */}
-                        <div className="mt-3 pt-2 border-t border-border/40 dark:border-white/5 space-y-1">
-                          <div className="flex justify-between text-[9px] font-mono text-muted-foreground">
+                        <div className="mt-3 pt-2 border-t border-[#303041]/50 space-y-1">
+                          <div className="flex justify-between text-[9px] font-mono text-[#9292A8]">
                             <span>Progress</span>
-                            <span className="font-bold text-foreground dark:text-white">{b.progress} / {b.target}</span>
+                            <span className="font-bold text-[#F4F4FA]">{b.progress} / {b.target}</span>
                           </div>
-                          <div className="w-full h-1.5 rounded-full bg-secondary/80 dark:bg-black/50 overflow-hidden">
+                          <div className="w-full h-1.5 rounded-full bg-[#13131D] overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all duration-300 ${
-                                isUnlocked ? 'bg-[#93C572]' : 'bg-muted-foreground/40'
+                                isUnlocked ? 'bg-[#8B5CF6]' : 'bg-[#303041]'
                               }`}
                               style={{ width: `${Math.min(100, (b.progress / b.target) * 100)}%` }}
                             />
@@ -763,25 +763,25 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               {/* 4. USER STORAGE & DATABASE USAGE (Moved from Navbar dropdown as requested) */}
-              <div className="p-5 sm:p-6 rounded-3xl border border-border/80 dark:border-[#1d3326] bg-card dark:bg-[#0a1611] shadow-lg">
+              <div className="p-5 sm:p-6 rounded-3xl border border-[#303041] bg-[#191925] shadow-lg">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-xl bg-sky-500/15 text-sky-400 flex items-center justify-center font-bold">
                       <Database className="w-4 h-4 text-sky-400" />
                     </div>
                     <div>
-                      <h2 className="text-base sm:text-lg font-extrabold text-foreground dark:text-white">
+                      <h2 className="text-base sm:text-lg font-extrabold text-[#F4F4FA]">
                         Database & Storage Quota
                       </h2>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-[#9292A8]">
                         Your account storage usage and free-tier allocation
                       </p>
                     </div>
                   </div>
 
                   <div className="text-right font-mono">
-                    <div className="text-sm font-extrabold text-foreground dark:text-white">
-                      {storageUsage.usedFormatted} <span className="text-muted-foreground font-normal">/ {storageUsage.maxFormatted}</span>
+                    <div className="text-sm font-extrabold text-[#F4F4FA]">
+                      {storageUsage.usedFormatted} <span className="text-[#9292A8] font-normal">/ {storageUsage.maxFormatted}</span>
                     </div>
                     <div className="text-[11px] text-sky-400 font-semibold">
                       {storageUsage.percentage}% used
@@ -790,7 +790,7 @@ export const ProfilePage: React.FC = () => {
                 </div>
 
                 {/* Striped Progress Bar (Matching user requirement) */}
-                <div className="w-full h-3 rounded-full bg-secondary/80 dark:bg-black/50 overflow-hidden border border-border/60 dark:border-white/10 relative shadow-inner mb-4">
+                <div className="w-full h-3 rounded-full bg-[#13131D] overflow-hidden border border-[#303041] relative shadow-inner mb-4">
                   <div 
                     className="h-full rounded-full transition-all duration-500"
                     style={{ 
@@ -803,55 +803,55 @@ export const ProfilePage: React.FC = () => {
 
                 {/* Legend & Allocation details */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
-                  <div className="p-3 rounded-xl bg-secondary/40 dark:bg-[#12231b] border border-border/40 dark:border-[#223d2e] flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-[#13131D] border border-[#303041] flex items-center gap-3">
                     <span className="w-3 h-3 rounded-full bg-[#38bdf8] shrink-0 shadow-sm" />
                     <div>
-                      <div className="text-[10px] text-muted-foreground font-mono uppercase">Already Used</div>
-                      <div className="text-xs font-bold font-mono text-foreground dark:text-white">{storageUsage.usedFormatted}</div>
+                      <div className="text-[10px] text-[#9292A8] font-mono uppercase">Already Used</div>
+                      <div className="text-xs font-bold font-mono text-[#F4F4FA]">{storageUsage.usedFormatted}</div>
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-secondary/40 dark:bg-[#12231b] border border-border/40 dark:border-[#223d2e] flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-[#13131D] border border-[#303041] flex items-center gap-3">
                     <span className="w-3 h-3 rounded-full bg-[#1d4ed8] shrink-0 shadow-sm" />
                     <div>
-                      <div className="text-[10px] text-muted-foreground font-mono uppercase">Available Space</div>
-                      <div className="text-xs font-bold font-mono text-foreground dark:text-white">{storageUsage.remainingFormatted}</div>
+                      <div className="text-[10px] text-[#9292A8] font-mono uppercase">Available Space</div>
+                      <div className="text-xs font-bold font-mono text-[#F4F4FA]">{storageUsage.remainingFormatted}</div>
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-secondary/40 dark:bg-[#12231b] border border-border/40 dark:border-[#223d2e] flex items-center gap-3">
-                    <Code2 className="w-4 h-4 text-[#93C572] shrink-0" />
+                  <div className="p-3 rounded-xl bg-[#13131D] border border-[#303041] flex items-center gap-3">
+                    <Code2 className="w-4 h-4 text-[#8B5CF6] shrink-0" />
                     <div>
-                      <div className="text-[10px] text-muted-foreground font-mono uppercase">Code Drafts</div>
-                      <div className="text-xs font-bold font-mono text-foreground dark:text-white">{storageUsage.items.codeDraftsCount} saved</div>
+                      <div className="text-[10px] text-[#9292A8] font-mono uppercase">Code Drafts</div>
+                      <div className="text-xs font-bold font-mono text-[#F4F4FA]">{storageUsage.items.codeDraftsCount} saved</div>
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-secondary/40 dark:bg-[#12231b] border border-border/40 dark:border-[#223d2e] flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-[#13131D] border border-[#303041] flex items-center gap-3">
                     <HardDrive className="w-4 h-4 text-purple-400 shrink-0" />
                     <div>
-                      <div className="text-[10px] text-muted-foreground font-mono uppercase">Submissions Log</div>
-                      <div className="text-xs font-bold font-mono text-foreground dark:text-white">{storageUsage.items.submissionsCount} logged</div>
+                      <div className="text-[10px] text-[#9292A8] font-mono uppercase">Submissions Log</div>
+                      <div className="text-xs font-bold font-mono text-[#F4F4FA]">{storageUsage.items.submissionsCount} logged</div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-4 pt-3 border-t border-border/40 dark:border-[#1d3326] font-mono">
-                  <span>Current Plan: <strong className="text-[#93C572] font-semibold">{storageUsage.planName}</strong> (5.0 MB Free Browser DB)</span>
+                <div className="flex items-center justify-between text-[11px] text-[#9292A8] mt-4 pt-3 border-t border-[#303041] font-mono">
+                  <span>Current Plan: <strong className="text-[#8B5CF6] font-semibold">{storageUsage.planName}</strong> (5.0 MB Free Browser DB)</span>
                   <span>Data auto-syncs with local storage & cloud session</span>
                 </div>
               </div>
 
-              {/* 4. RECENT ACTIVITY LIST (Matching template bottom section) */}
-              <div className="p-5 sm:p-6 rounded-3xl border border-border/80 dark:border-[#1d3326] bg-card dark:bg-[#0a1611] shadow-lg">
+              {/* 5. RECENT ACTIVITY LIST (Matching template bottom section) */}
+              <div className="p-5 sm:p-6 rounded-3xl border border-[#303041] bg-[#191925] shadow-lg">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-base sm:text-lg font-extrabold text-foreground dark:text-white flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-[#93C572]" />
+                  <h2 className="text-base sm:text-lg font-extrabold text-[#F4F4FA] flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-[#8B5CF6]" />
                     <span>Recent Activity</span>
                   </h2>
                   <Link 
                     to="/problems" 
-                    className="text-xs text-[#93C572] hover:underline font-semibold flex items-center gap-1"
+                    className="text-xs text-[#8B5CF6] hover:text-[#A78BFA] hover:underline font-semibold flex items-center gap-1"
                   >
                     <span>Browse All Problems</span>
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -859,42 +859,42 @@ export const ProfilePage: React.FC = () => {
                 </div>
 
                 {recentActivity.length === 0 ? (
-                  <div className="text-center py-10 px-4 rounded-2xl bg-secondary/20 dark:bg-[#12231b]/40 border border-dashed border-border/60 dark:border-[#223d2e]">
-                    <Code2 className="w-10 h-10 text-muted-foreground/50 mx-auto mb-2" />
-                    <p className="text-sm font-semibold text-foreground dark:text-white">No submissions recorded yet</p>
-                    <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                  <div className="text-center py-10 px-4 rounded-2xl bg-[#13131D]/50 border border-dashed border-[#303041]">
+                    <Code2 className="w-10 h-10 text-[#9292A8]/50 mx-auto mb-2" />
+                    <p className="text-sm font-semibold text-[#F4F4FA]">No submissions recorded yet</p>
+                    <p className="text-xs text-[#9292A8] mt-1 max-w-sm mx-auto">
                       Start coding machine learning algorithms to build your daily streak and earn ratings!
                     </p>
                     <Link
                       to="/problems"
-                      className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-xl bg-[#93C572] text-black font-bold text-xs hover:bg-[#a4d287] transition-all shadow-sm"
+                      className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6] text-white font-bold text-xs transition-all shadow-sm"
                     >
                       <span>Explore Problems</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
                 ) : (
-                  <div className="divide-y divide-border/60 dark:divide-[#1d3326]">
+                  <div className="divide-y divide-[#303041]">
                     {recentActivity.map((sub) => {
                       const title = getProblemTitle(sub.slug);
                       const diff = getProblemDifficulty(sub.slug);
-                      const diffColor = diff === 'Easy' ? 'text-emerald-500' : diff === 'Medium' ? 'text-amber-500' : 'text-rose-500';
+                      const diffColor = diff === 'Easy' ? 'text-[#4ADE80]' : diff === 'Medium' ? 'text-[#FBBF24]' : 'text-[#F87171]';
 
                       return (
                         <div 
                           key={sub.id} 
-                          className="py-3 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-secondary/30 dark:hover:bg-[#12231b]/50 px-3 -mx-3 rounded-xl transition-colors"
+                          className="py-3 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-[#272738]/50 px-3 -mx-3 rounded-xl transition-colors"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className={`w-2 h-2 rounded-full shrink-0 ${sub.success ? 'bg-[#93C572]' : 'bg-amber-400'}`} />
+                            <div className={`w-2 h-2 rounded-full shrink-0 ${sub.success ? 'bg-[#4ADE80]' : 'bg-[#FBBF24]'}`} />
                             <div className="min-w-0">
                               <Link 
                                 to={`/problems/${sub.slug}`}
-                                className="font-bold text-xs sm:text-sm text-foreground dark:text-white hover:text-[#93C572] dark:hover:text-[#93C572] transition-colors truncate block"
+                                className="font-bold text-xs sm:text-sm text-[#F4F4FA] hover:text-[#8B5CF6] transition-colors truncate block"
                               >
                                 {title}
                               </Link>
-                              <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono mt-0.5">
+                              <div className="flex items-center gap-2 text-[11px] text-[#9292A8] font-mono mt-0.5">
                                 <span className={`font-semibold ${diffColor}`}>{diff}</span>
                                 <span>•</span>
                                 <span>{sub.passedCount} / {sub.totalCount} tests</span>
@@ -907,17 +907,17 @@ export const ProfilePage: React.FC = () => {
                           <div className="flex items-center gap-3 self-end sm:self-center font-mono text-xs shrink-0">
                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                               sub.success
-                                ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
-                                : 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
+                                ? 'bg-[#14291D] text-[#4ADE80] border border-[#28633D]'
+                                : 'bg-[#302719] text-[#FBBF24] border border-[#70521D]'
                             }`}>
                               {sub.success ? 'Accepted' : 'Attempted'}
                             </span>
-                            <span className="text-[11px] text-muted-foreground">
+                            <span className="text-[11px] text-[#9292A8]">
                               {formatRelativeTime(sub.timestamp)}
                             </span>
                             <Link
                               to={`/problems/${sub.slug}`}
-                              className="px-2.5 py-1 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground text-[11px] font-semibold transition-colors"
+                              className="px-2.5 py-1 rounded-lg bg-[#13131D] hover:bg-[#272738] border border-[#303041] text-[#F4F4FA] text-[11px] font-semibold transition-colors"
                             >
                               Code
                             </Link>
@@ -939,16 +939,16 @@ export const ProfilePage: React.FC = () => {
             <div className="space-y-6">
 
               {/* 1. EDIT PROFILE FORM */}
-              <div className="p-5 sm:p-7 rounded-3xl border border-border/80 dark:border-[#1d3326] bg-card dark:bg-[#0a1611] shadow-lg">
-                <div className="flex items-center gap-2.5 mb-5 pb-4 border-b border-border/60 dark:border-[#1d3326]">
-                  <div className="w-8 h-8 rounded-xl bg-[#93C572]/15 text-[#93C572] flex items-center justify-center font-bold">
+              <div className="p-5 sm:p-7 rounded-3xl border border-[#303041] bg-[#191925] shadow-lg">
+                <div className="flex items-center gap-2.5 mb-5 pb-4 border-b border-[#303041]">
+                  <div className="w-8 h-8 rounded-xl bg-[#251B3B] text-[#8B5CF6] flex items-center justify-center font-bold">
                     <User className="w-4 h-4" />
                   </div>
                   <div>
-                    <h2 className="text-base sm:text-lg font-extrabold text-foreground dark:text-white">
+                    <h2 className="text-base sm:text-lg font-extrabold text-[#F4F4FA]">
                       Profile Information
                     </h2>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-[#9292A8]">
                       Update your display name, username, machine learning role, and avatar color
                     </p>
                   </div>
@@ -958,7 +958,7 @@ export const ProfilePage: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     {/* Display Name */}
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground dark:text-white uppercase tracking-wider font-mono">
+                      <label className="text-xs font-bold text-[#F4F4FA] uppercase tracking-wider font-mono">
                         Display Name
                       </label>
                       <input
@@ -967,24 +967,24 @@ export const ProfilePage: React.FC = () => {
                         onChange={(e) => setDisplayNameInput(e.target.value)}
                         placeholder="e.g. Biniyam"
                         required
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-secondary/50 dark:bg-[#12231b] border border-border dark:border-[#223d2e] text-foreground dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#93C572]"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#13131D] border border-[#303041] text-[#F4F4FA] text-sm focus:outline-none focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6]"
                       />
                     </div>
 
                     {/* Username */}
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground dark:text-white uppercase tracking-wider font-mono">
+                      <label className="text-xs font-bold text-[#F4F4FA] uppercase tracking-wider font-mono">
                         Username Handle
                       </label>
                       <div className="relative">
-                        <span className="absolute left-3.5 top-2.5 text-muted-foreground font-mono text-sm">@</span>
+                        <span className="absolute left-3.5 top-2.5 text-[#9292A8] font-mono text-sm">@</span>
                         <input
                           type="text"
                           value={usernameInput}
                           onChange={(e) => setUsernameInput(e.target.value)}
                           placeholder="username"
                           required
-                          className="w-full pl-8 pr-3.5 py-2.5 rounded-xl bg-secondary/50 dark:bg-[#12231b] border border-border dark:border-[#223d2e] text-foreground dark:text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#93C572]"
+                          className="w-full pl-8 pr-3.5 py-2.5 rounded-xl bg-[#13131D] border border-[#303041] text-[#F4F4FA] text-sm font-mono focus:outline-none focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6]"
                         />
                       </div>
                     </div>
@@ -992,13 +992,13 @@ export const ProfilePage: React.FC = () => {
 
                   {/* Role Selector */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground dark:text-white uppercase tracking-wider font-mono">
+                    <label className="text-xs font-bold text-[#F4F4FA] uppercase tracking-wider font-mono">
                       Specialization / Role
                     </label>
                     <select
                       value={roleInput}
                       onChange={(e) => setRoleInput(e.target.value as any)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-secondary/50 dark:bg-[#12231b] border border-border dark:border-[#223d2e] text-foreground dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#93C572]"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#13131D] border border-[#303041] text-[#F4F4FA] text-sm focus:outline-none focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6]"
                     >
                       <option value="Machine Learning Engineer">Machine Learning Engineer</option>
                       <option value="Research Engineer">Research Engineer</option>
@@ -1009,7 +1009,7 @@ export const ProfilePage: React.FC = () => {
 
                   {/* Avatar Color Swatches */}
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-foreground dark:text-white uppercase tracking-wider font-mono">
+                    <label className="text-xs font-bold text-[#F4F4FA] uppercase tracking-wider font-mono">
                       Avatar Theme Color
                     </label>
                     <div className="flex items-center gap-3 flex-wrap">
@@ -1036,8 +1036,8 @@ export const ProfilePage: React.FC = () => {
                   {profileSaveMsg && (
                     <div className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
                       profileSaveMsg.type === 'success'
-                        ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
-                        : 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
+                        ? 'bg-[#14291D] text-[#4ADE80] border border-[#28633D]'
+                        : 'bg-[#30191E] text-[#F87171] border border-[#70303A]'
                     }`}>
                       {profileSaveMsg.type === 'success' ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                       <span>{profileSaveMsg.text}</span>
@@ -1048,7 +1048,7 @@ export const ProfilePage: React.FC = () => {
                     <button
                       type="submit"
                       disabled={isSavingProfile || !currentUser}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#93C572] hover:bg-[#a4d287] text-black font-bold text-sm shadow-md transition-all disabled:opacity-50"
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6] text-white font-bold text-sm shadow-md transition-all disabled:opacity-50"
                     >
                       <Save className="w-4 h-4" />
                       <span>{isSavingProfile ? 'Saving Changes...' : 'Save Profile Changes'}</span>
@@ -1058,16 +1058,16 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               {/* 2. CHANGE PASSWORD */}
-              <div className="p-5 sm:p-7 rounded-3xl border border-border/80 dark:border-[#1d3326] bg-card dark:bg-[#0a1611] shadow-lg">
-                <div className="flex items-center gap-2.5 mb-5 pb-4 border-b border-border/60 dark:border-[#1d3326]">
+              <div className="p-5 sm:p-7 rounded-3xl border border-[#303041] bg-[#191925] shadow-lg">
+                <div className="flex items-center gap-2.5 mb-5 pb-4 border-b border-[#303041]">
                   <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center font-bold">
                     <Lock className="w-4 h-4" />
                   </div>
                   <div>
-                    <h2 className="text-base sm:text-lg font-extrabold text-foreground dark:text-white">
+                    <h2 className="text-base sm:text-lg font-extrabold text-[#F4F4FA]">
                       Security & Password
                     </h2>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-[#9292A8]">
                       Change your password to keep your TonicLite progress secure
                     </p>
                   </div>
@@ -1075,7 +1075,7 @@ export const ProfilePage: React.FC = () => {
 
                 <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-lg">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground dark:text-white uppercase tracking-wider font-mono">
+                    <label className="text-xs font-bold text-[#F4F4FA] uppercase tracking-wider font-mono">
                       Current Password
                     </label>
                     <input
@@ -1084,13 +1084,13 @@ export const ProfilePage: React.FC = () => {
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       required
                       placeholder="••••••••"
-                      className="w-full px-3.5 py-2 rounded-xl bg-secondary/50 dark:bg-[#12231b] border border-border dark:border-[#223d2e] text-foreground dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#93C572]"
+                      className="w-full px-3.5 py-2 rounded-xl bg-[#13131D] border border-[#303041] text-[#F4F4FA] text-sm focus:outline-none focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6]"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground dark:text-white uppercase tracking-wider font-mono">
+                      <label className="text-xs font-bold text-[#F4F4FA] uppercase tracking-wider font-mono">
                         New Password
                       </label>
                       <input
@@ -1099,11 +1099,11 @@ export const ProfilePage: React.FC = () => {
                         onChange={(e) => setNewPassword(e.target.value)}
                         required
                         placeholder="••••••••"
-                        className="w-full px-3.5 py-2 rounded-xl bg-secondary/50 dark:bg-[#12231b] border border-border dark:border-[#223d2e] text-foreground dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#93C572]"
+                        className="w-full px-3.5 py-2 rounded-xl bg-[#13131D] border border-[#303041] text-[#F4F4FA] text-sm focus:outline-none focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6]"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground dark:text-white uppercase tracking-wider font-mono">
+                      <label className="text-xs font-bold text-[#F4F4FA] uppercase tracking-wider font-mono">
                         Confirm New Password
                       </label>
                       <input
@@ -1112,7 +1112,7 @@ export const ProfilePage: React.FC = () => {
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
                         placeholder="••••••••"
-                        className="w-full px-3.5 py-2 rounded-xl bg-secondary/50 dark:bg-[#12231b] border border-border dark:border-[#223d2e] text-foreground dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#93C572]"
+                        className="w-full px-3.5 py-2 rounded-xl bg-[#13131D] border border-[#303041] text-[#F4F4FA] text-sm focus:outline-none focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6]"
                       />
                     </div>
                   </div>
@@ -1120,8 +1120,8 @@ export const ProfilePage: React.FC = () => {
                   {passwordMsg && (
                     <div className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
                       passwordMsg.type === 'success'
-                        ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
-                        : 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
+                        ? 'bg-[#14291D] text-[#4ADE80] border border-[#28633D]'
+                        : 'bg-[#30191E] text-[#F87171] border border-[#70303A]'
                     }`}>
                       {passwordMsg.type === 'success' ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                       <span>{passwordMsg.text}</span>
@@ -1132,7 +1132,7 @@ export const ProfilePage: React.FC = () => {
                     <button
                       type="submit"
                       disabled={isUpdatingPassword || !currentUser}
-                      className="px-5 py-2.5 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground font-bold text-sm border border-border/80 transition-all disabled:opacity-50"
+                      className="px-5 py-2.5 rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6] text-white font-bold text-sm shadow-md transition-all disabled:opacity-50"
                     >
                       {isUpdatingPassword ? 'Updating...' : 'Update Password'}
                     </button>
@@ -1141,16 +1141,16 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               {/* 3. BACKUP & DATA PORTABILITY */}
-              <div className="p-5 sm:p-7 rounded-3xl border border-border/80 dark:border-[#1d3326] bg-card dark:bg-[#0a1611] shadow-lg">
-                <div className="flex items-center gap-2.5 mb-4 pb-4 border-b border-border/60 dark:border-[#1d3326]">
-                  <div className="w-8 h-8 rounded-xl bg-purple-500/15 text-purple-400 flex items-center justify-center font-bold">
+              <div className="p-5 sm:p-7 rounded-3xl border border-[#303041] bg-[#191925] shadow-lg">
+                <div className="flex items-center gap-2.5 mb-4 pb-4 border-b border-[#303041]">
+                  <div className="w-8 h-8 rounded-xl bg-[#251B3B] text-[#8B5CF6] flex items-center justify-center font-bold">
                     <Download className="w-4 h-4" />
                   </div>
                   <div>
-                    <h2 className="text-base sm:text-lg font-extrabold text-foreground dark:text-white">
+                    <h2 className="text-base sm:text-lg font-extrabold text-[#F4F4FA]">
                       Account Portability & Backup
                     </h2>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-[#9292A8]">
                       Export your solved problems, code drafts, and test logs as a single JSON file
                     </p>
                   </div>
@@ -1160,13 +1160,13 @@ export const ProfilePage: React.FC = () => {
                   <button
                     onClick={handleExport}
                     disabled={!currentUser}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground font-bold text-xs border border-border transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#13131D] hover:bg-[#272738] text-[#F4F4FA] font-bold text-xs border border-[#303041] transition-colors disabled:opacity-50"
                   >
-                    <Download className="w-4 h-4 text-[#93C572]" />
+                    <Download className="w-4 h-4 text-[#8B5CF6]" />
                     <span>Export Account JSON</span>
                   </button>
 
-                  <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground font-bold text-xs border border-border transition-colors cursor-pointer">
+                  <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#13131D] hover:bg-[#272738] text-[#F4F4FA] font-bold text-xs border border-[#303041] transition-colors cursor-pointer">
                     <Upload className="w-4 h-4 text-sky-400" />
                     <span>Import Backup File</span>
                     <input
@@ -1180,8 +1180,8 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               {/* 4. DANGER ZONE / SIGN OUT */}
-              <div className="p-5 sm:p-7 rounded-3xl border border-rose-500/30 dark:border-rose-900/40 bg-rose-500/5 dark:bg-rose-950/10 shadow-lg">
-                <div className="flex items-center gap-2.5 mb-4 pb-4 border-b border-rose-500/20">
+              <div className="p-5 sm:p-7 rounded-3xl border border-[#70303A] bg-[#30191E]/30 shadow-lg">
+                <div className="flex items-center gap-2.5 mb-4 pb-4 border-b border-[#70303A]/40">
                   <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-500 flex items-center justify-center font-bold">
                     <LogOut className="w-4 h-4" />
                   </div>

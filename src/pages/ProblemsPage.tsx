@@ -108,37 +108,19 @@ export const ProblemsPage: React.FC = () => {
     switch (diff) {
       case 'Easy':
         return (
-          <span
-            className="inline-flex rounded-md border px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-[#10B981]"
-            style={{
-              background: 'linear-gradient(135deg, #10B98140, #10B98116)',
-              borderColor: '#10B98180'
-            }}
-          >
+          <span className="inline-flex rounded-md border border-[#28633D] bg-[#14291D] px-2 py-0.5 text-xs font-medium text-[#4ADE80]">
             Easy
           </span>
         );
       case 'Medium':
         return (
-          <span
-            className="inline-flex rounded-md border px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-[#FACC15]"
-            style={{
-              background: 'linear-gradient(135deg, #FACC1540, #FACC1516)',
-              borderColor: '#FACC1580'
-            }}
-          >
+          <span className="inline-flex rounded-md border border-[#70521D] bg-[#302719] px-2 py-0.5 text-xs font-medium text-[#FBBF24]">
             Medium
           </span>
         );
       case 'Hard':
         return (
-          <span
-            className="inline-flex rounded-md border px-2 py-0.5 text-xs font-medium text-rose-700 dark:text-[#F43F5E]"
-            style={{
-              background: 'linear-gradient(135deg, #F43F5E40, #F43F5E16)',
-              borderColor: '#F43F5E80'
-            }}
-          >
+          <span className="inline-flex rounded-md border border-[#70303A] bg-[#30191E] px-2 py-0.5 text-xs font-medium text-[#F87171]">
             Hard
           </span>
         );
@@ -146,7 +128,7 @@ export const ProblemsPage: React.FC = () => {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-background text-foreground custom-scrollbar">
+    <div className="h-full overflow-y-auto bg-[#0B0B12] text-[#F4F4FA] custom-scrollbar">
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-24 sm:pb-8 grid grid-cols-12 gap-4 lg:gap-10 max-w-7xl">
         
         {/* Left Sidebar */}
@@ -156,49 +138,49 @@ export const ProblemsPage: React.FC = () => {
           <ExplorePanel />
 
           {/* Your Progress */}
-          <div className="bg-card dark:bg-background/50 backdrop-blur-xl border border-border/70 dark:border-white/[0.06] rounded-xl p-4">
+          <div className="bg-[#191925] border border-[#303041] rounded-xl p-4">
             <div className="flex items-center gap-2 mb-4">
-              <div className="p-1.5 bg-emerald-600/10 rounded-lg border border-emerald-700/25 dark:border-emerald-500/15">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+              <div className="p-1.5 bg-[#251B3B] rounded-lg border border-[#45455B]/60">
+                <TrendingUp className="w-3.5 h-3.5 text-[#C4F75B]" />
               </div>
-              <h3 className="text-sm font-semibold text-foreground">Your Progress</h3>
-              <span className="ml-auto text-[11px] font-mono text-[#93C572] font-semibold">Active</span>
+              <h3 className="text-sm font-semibold text-[#F4F4FA]">Your Progress</h3>
+              <span className="ml-auto text-[11px] font-mono text-[#C4F75B] font-semibold">Active</span>
             </div>
 
             {/* Circular Ring Progress */}
             <div className="flex justify-center py-2">
               <div className="relative flex items-center justify-center">
-                <div className="w-28 h-28 rounded-full border-2 border-border/60 flex flex-col items-center justify-center bg-card/60">
-                  <span className="text-2xl font-bold font-mono text-foreground">{solvedStats.total}</span>
-                  <span className="text-[10px] text-muted-foreground">solved</span>
+                <div className="w-28 h-28 rounded-full border-2 border-[#303041] flex flex-col items-center justify-center bg-[#13131D]">
+                  <span className="text-2xl font-bold font-mono text-[#F4F4FA]">{solvedStats.total}</span>
+                  <span className="text-[10px] text-[#9292A8]">solved</span>
                 </div>
               </div>
             </div>
 
             {/* Difficulty breakdown */}
-            <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border/60 text-center">
+            <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-[#303041] text-center">
               <div>
-                <div className="text-[11px] text-emerald-400 font-medium">Easy</div>
-                <div className="text-sm font-bold font-mono text-foreground">{solvedStats.easy}</div>
+                <div className="text-[11px] text-[#4ADE80] font-medium">Easy</div>
+                <div className="text-sm font-bold font-mono text-[#F4F4FA]">{solvedStats.easy}</div>
               </div>
               <div>
-                <div className="text-[11px] text-amber-400 font-medium">Med</div>
-                <div className="text-sm font-bold font-mono text-foreground">{solvedStats.medium}</div>
+                <div className="text-[11px] text-[#FBBF24] font-medium">Med</div>
+                <div className="text-sm font-bold font-mono text-[#F4F4FA]">{solvedStats.medium}</div>
               </div>
               <div>
-                <div className="text-[11px] text-rose-400 font-medium">Hard</div>
-                <div className="text-sm font-bold font-mono text-foreground">{solvedStats.hard}</div>
+                <div className="text-[11px] text-[#F87171] font-medium">Hard</div>
+                <div className="text-sm font-bold font-mono text-[#F4F4FA]">{solvedStats.hard}</div>
               </div>
             </div>
           </div>
 
           {/* Pro Unlocked Banner */}
-          <div className="bg-card dark:bg-background/50 backdrop-blur-xl border border-emerald-500/20 rounded-xl p-4 relative overflow-hidden">
-            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 mb-1">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
+          <div className="bg-[#191925] border border-[#303041] rounded-xl p-4 relative overflow-hidden">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#8B5CF6] mb-1">
+              <Sparkles className="w-4 h-4 text-[#8B5CF6]" />
               <span>Full Free Access</span>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+            <p className="text-xs text-[#9292A8] leading-relaxed mt-1">
               All 790 problems and landmark research papers are fully unlocked. No subscription required.
             </p>
           </div>
@@ -214,8 +196,8 @@ export const ProblemsPage: React.FC = () => {
               onClick={() => { setSelectedTopic('All'); setCurrentPage(1); }}
               className={`inline-flex h-7 shrink-0 whitespace-nowrap items-center rounded-full px-3 text-xs font-medium transition-colors ${
                 selectedTopic === 'All'
-                  ? 'bg-brand-soft bg-[#93C572]/15 text-[#93C572] font-semibold border border-[#93C572]/30'
-                  : 'bg-secondary/40 text-muted-foreground hover:bg-secondary hover:text-foreground'
+                  ? 'bg-[#251B3B] text-[#8B5CF6] font-semibold border border-[#45455B]'
+                  : 'bg-[#13131D] text-[#B5B5C8] hover:bg-[#272738] hover:text-[#F4F4FA] border border-[#303041]'
               }`}
             >
               All topics
@@ -226,32 +208,32 @@ export const ProblemsPage: React.FC = () => {
                 onClick={() => { setSelectedTopic(t.name); setCurrentPage(1); }}
                 className={`inline-flex h-7 shrink-0 whitespace-nowrap items-center gap-1.5 rounded-full px-3 text-xs transition-colors ${
                   selectedTopic === t.name
-                    ? 'bg-brand-soft bg-[#93C572]/15 text-[#93C572] font-semibold border border-[#93C572]/30'
-                    : 'bg-secondary/40 text-foreground/75 hover:bg-secondary hover:text-foreground'
+                    ? 'bg-[#251B3B] text-[#8B5CF6] font-semibold border border-[#45455B]'
+                    : 'bg-[#13131D] text-[#B5B5C8] hover:bg-[#272738] hover:text-[#F4F4FA] border border-[#303041]'
                 }`}
               >
                 {t.name}
-                <span className="text-[10px] tabular-nums text-muted-foreground/70">{t.count}</span>
+                <span className="text-[10px] tabular-nums text-[#9292A8]">{t.count}</span>
               </button>
             ))}
           </div>
 
           {/* Mobile Progress Summary Card (< lg) */}
-          <div className="lg:hidden mb-4 p-3.5 rounded-xl bg-card border border-border/80 flex items-center justify-between shadow-xs">
+          <div className="lg:hidden mb-4 p-3.5 rounded-xl bg-[#191925] border border-[#303041] flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-[#93C572]/15 text-[#93C572] rounded-lg">
+              <div className="p-2 bg-[#251B3B] text-[#C4F75B] rounded-lg border border-[#45455B]/60">
                 <TrendingUp className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-foreground">Your Solved Progress</div>
-                <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                  Easy: <span className="text-emerald-400 font-semibold">{solvedStats.easy}</span> · Med: <span className="text-amber-400 font-semibold">{solvedStats.medium}</span> · Hard: <span className="text-rose-400 font-semibold">{solvedStats.hard}</span>
+                <div className="text-xs font-bold text-[#F4F4FA]">Your Solved Progress</div>
+                <div className="text-[10px] text-[#9292A8] font-mono mt-0.5">
+                  Easy: <span className="text-[#4ADE80] font-semibold">{solvedStats.easy}</span> · Med: <span className="text-[#FBBF24] font-semibold">{solvedStats.medium}</span> · Hard: <span className="text-[#F87171] font-semibold">{solvedStats.hard}</span>
                 </div>
               </div>
             </div>
             <div className="text-right">
-              <span className="font-mono text-lg font-black text-[#93C572]">{solvedStats.total}</span>
-              <span className="text-[11px] text-muted-foreground"> / 790</span>
+              <span className="font-mono text-lg font-black text-[#C4F75B]">{solvedStats.total}</span>
+              <span className="text-[11px] text-[#9292A8]"> / 790</span>
             </div>
           </div>
 
@@ -265,8 +247,8 @@ export const ProblemsPage: React.FC = () => {
                   onClick={() => { setSelectedCategory(c.id as Category); setCurrentPage(1); }}
                   className={`relative inline-flex h-9 shrink-0 whitespace-nowrap min-w-0 items-center gap-1.5 rounded-full text-[13px] font-medium transition-colors px-3 ${
                     active
-                      ? 'ring-1 ring-inset bg-[#e9eee9] dark:bg-[#181d19] ring-[#879688]/40 dark:ring-[#dde5de]/30 text-foreground'
-                      : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+                      ? 'bg-[#251B3B] text-[#8B5CF6] border border-[#45455B] font-semibold'
+                      : 'bg-[#13131D] text-[#B5B5C8] hover:bg-[#272738] hover:text-[#F4F4FA] border border-[#303041]'
                   }`}
                 >
                   {c.icon && (
@@ -287,13 +269,13 @@ export const ProblemsPage: React.FC = () => {
           {/* Search Bar + Filters */}
           <div className="flex flex-col xl:flex-row xl:items-center gap-2 mb-4">
             <div className="relative min-w-0 flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9292A8]" />
               <input
                 type="text"
                 placeholder="Search problems by name, topic, or category..."
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                className="w-full bg-card border border-border rounded-lg pl-10 pr-8 py-2 text-sm placeholder-muted-foreground focus:outline-none focus:border-[#93C572]/50 focus:ring-2 focus:ring-[#93C572]/10 transition-colors"
+                className="w-full bg-[#13131D] border border-[#303041] rounded-lg pl-10 pr-8 py-2 text-sm text-[#F4F4FA] placeholder-[#9292A8] focus:outline-none focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] transition-colors"
               />
             </div>
 
@@ -302,7 +284,7 @@ export const ProblemsPage: React.FC = () => {
               <select
                 value={selectedStatus}
                 onChange={(e) => { setSelectedStatus(e.target.value); setCurrentPage(1); }}
-                className="px-3 py-2 bg-card rounded-lg border border-border text-xs text-foreground/80 focus:outline-none cursor-pointer"
+                className="px-3 py-2 bg-[#13131D] rounded-lg border border-[#303041] text-xs text-[#F4F4FA] focus:outline-none cursor-pointer"
               >
                 <option value="All">Status: All</option>
                 <option value="Solved">Status: Solved</option>
@@ -313,7 +295,7 @@ export const ProblemsPage: React.FC = () => {
               <select
                 value={selectedDifficulty}
                 onChange={(e) => { setSelectedDifficulty(e.target.value); setCurrentPage(1); }}
-                className="px-3 py-2 bg-card rounded-lg border border-border text-xs text-foreground/80 focus:outline-none cursor-pointer"
+                className="px-3 py-2 bg-[#13131D] rounded-lg border border-[#303041] text-xs text-[#F4F4FA] focus:outline-none cursor-pointer"
               >
                 <option value="All">Difficulty: All</option>
                 <option value="Easy">Easy</option>
@@ -324,8 +306,8 @@ export const ProblemsPage: React.FC = () => {
           </div>
 
           {/* Problems Table */}
-          <div className="bg-card dark:bg-background/50 backdrop-blur-xl border border-border/70 dark:border-white/[0.06] rounded-xl overflow-hidden shadow-sm">
-            <div className="grid grid-cols-[1.5rem_1fr_1.5rem] md:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1fr)_5rem] gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-3.5 sm:py-3 bg-secondary/70 dark:bg-muted/30 border-b border-border text-xs font-semibold text-foreground/65 dark:text-muted-foreground">
+          <div className="bg-[#191925] border border-[#303041] rounded-xl overflow-hidden shadow-sm">
+            <div className="grid grid-cols-[1.5rem_1fr_1.5rem] md:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1fr)_5rem] gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-3.5 sm:py-3 bg-[#13131D] border-b border-[#303041] text-xs font-semibold text-[#9292A8]">
               <div className="text-center">#</div>
               <div className="min-w-0">Problem</div>
               <div className="hidden md:block min-w-0">Topics</div>
@@ -333,41 +315,41 @@ export const ProblemsPage: React.FC = () => {
             </div>
 
             {loading ? (
-              <div className="p-12 text-center text-muted-foreground text-sm">
-                <div className="w-6 h-6 border-2 border-[#93C572] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+              <div className="p-12 text-center text-[#9292A8] text-sm">
+                <div className="w-6 h-6 border-2 border-[#8B5CF6] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
                 Loading problems...
               </div>
             ) : displayedProblems.length === 0 ? (
-              <div className="p-12 text-center text-muted-foreground text-sm">
+              <div className="p-12 text-center text-[#9292A8] text-sm">
                 No problems matched your current filters.
               </div>
             ) : (
-              <div className="divide-y divide-border/80 dark:divide-border">
+              <div className="divide-y divide-[#303041]">
                 {displayedProblems.map((p) => {
                   const isSolved = solvedSet.has(p.slug);
                   return (
                     <div
                       key={p.slug}
-                      className="relative grid grid-cols-[1.5rem_1fr_1.5rem] md:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1fr)_5rem] gap-2.5 sm:gap-3 px-3.5 sm:px-4 h-[60px] sm:h-14 items-center hover:bg-secondary/40 dark:hover:bg-accent/40 transition-colors group"
+                      className="relative grid grid-cols-[1.5rem_1fr_1.5rem] md:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1fr)_5rem] gap-2.5 sm:gap-3 px-3.5 sm:px-4 h-[60px] sm:h-14 items-center hover:bg-[#272738] transition-colors group"
                     >
                       {/* Left accent bar on hover */}
-                      <span className="absolute left-0 top-2.5 bottom-2.5 w-0.5 rounded-r-full bg-[#93C572] opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <span className="absolute left-0 top-2.5 bottom-2.5 w-0.5 rounded-r-full bg-[#8B5CF6] opacity-0 group-hover:opacity-100 transition-opacity" />
 
                       {/* Status Icon */}
                       <div className="flex justify-center">
                         {isSolved ? (
-                          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <Check className="w-4 h-4 text-[#4ADE80] shrink-0" />
                         ) : (
-                          <span className="text-sm text-muted-foreground/60">-</span>
+                          <span className="text-sm text-[#9292A8]/60">-</span>
                         )}
                       </div>
 
                       {/* Problem Number + Title */}
                       <div className="min-w-0 flex items-center gap-2">
-                        <span className="text-muted-foreground text-sm font-mono shrink-0">{p.sortOrder}.</span>
+                        <span className="text-[#9292A8] text-sm font-mono shrink-0">{p.sortOrder}.</span>
                         <Link
                           to={`/problems/${p.slug}`}
-                          className="min-w-0 flex-1 text-foreground text-sm hover:text-[#93C572] transition-colors truncate font-medium py-1"
+                          className="min-w-0 flex-1 text-[#F4F4FA] text-sm hover:text-[#8B5CF6] transition-colors truncate font-medium py-1"
                           title={p.title}
                         >
                           {p.title}
@@ -380,13 +362,13 @@ export const ProblemsPage: React.FC = () => {
                           {p.tags.slice(0, 2).map((tag) => (
                             <span
                               key={tag}
-                              className="max-w-full truncate rounded-full bg-secondary/50 px-2.5 py-0.5 text-[11px] text-muted-foreground"
+                              className="max-w-full truncate rounded-full bg-[#13131D] border border-[#303041] px-2.5 py-0.5 text-[11px] text-[#B5B5C8]"
                             >
                               {tag}
                             </span>
                           ))}
                           {p.tags.length > 2 && (
-                            <span className="text-[10px] text-muted-foreground/70">
+                            <span className="text-[10px] text-[#9292A8]">
                               +{p.tags.length - 2}
                             </span>
                           )}
@@ -398,10 +380,10 @@ export const ProblemsPage: React.FC = () => {
                         <span
                           className={`md:hidden w-2.5 h-2.5 rounded-full shrink-0 ${
                             p.difficulty === 'Easy'
-                              ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]'
+                              ? 'bg-[#4ADE80]'
                               : p.difficulty === 'Medium'
-                              ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.7)]'
-                              : 'bg-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.7)]'
+                              ? 'bg-[#FBBF24]'
+                              : 'bg-[#F87171]'
                           }`}
                           title={p.difficulty}
                         />
@@ -421,10 +403,10 @@ export const ProblemsPage: React.FC = () => {
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-border bg-card hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded-lg border border-[#303041] bg-[#191925] hover:bg-[#272738] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               aria-label="Previous page"
             >
-              <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+              <ChevronLeft className="w-4 h-4 text-[#9292A8]" />
             </button>
 
             {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
@@ -445,8 +427,8 @@ export const ProblemsPage: React.FC = () => {
                   onClick={() => setCurrentPage(pageNum)}
                   className={`min-w-8 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-[#93C572] text-black font-semibold'
-                      : 'bg-card text-muted-foreground border border-border hover:bg-muted'
+                      ? 'bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold'
+                      : 'bg-[#191925] text-[#B5B5C8] border border-[#303041] hover:bg-[#272738]'
                   }`}
                 >
                   {pageNum}
@@ -457,10 +439,10 @@ export const ProblemsPage: React.FC = () => {
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-border bg-card hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded-lg border border-[#303041] bg-[#191925] hover:bg-[#272738] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               aria-label="Next page"
             >
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              <ChevronRight className="w-4 h-4 text-[#9292A8]" />
             </button>
           </div>
 

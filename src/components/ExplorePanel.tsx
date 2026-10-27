@@ -35,7 +35,7 @@ const paperNameMap: Record<string, string> = {
 
 // Exact paper SVG icon component matching TensorTonic production chunk
 const PaperIcon: React.FC<{ paperId: string }> = ({ paperId }) => {
-  const hoverClass = 'group-hover:stroke-[#93C572] dark:group-hover:stroke-emerald-400 transition-colors duration-300';
+  const hoverClass = 'group-hover:stroke-[#8B5CF6] transition-colors duration-300';
 
   const renderContent = () => {
     switch (paperId) {
@@ -285,7 +285,7 @@ const PaperIcon: React.FC<{ paperId: string }> = ({ paperId }) => {
 
 // Project Spot Art SVG component
 const ProjectSpotArt: React.FC<{ slug: string }> = ({ slug }) => {
-  const accentColor = '#93C572';
+  const accentColor = '#8B5CF6';
 
   switch (slug) {
     case 'rag-agent':
@@ -419,7 +419,7 @@ export const ExplorePanel: React.FC = () => {
         <h3 className="text-sm font-semibold text-foreground">Research Papers</h3>
         <Link
           to="/research"
-          className="text-xs text-[#93C572] hover:underline font-medium transition-colors"
+          className="text-xs text-[#8B5CF6] hover:text-[#A78BFA] hover:underline font-medium transition-colors"
         >
           See all papers →
         </Link>
@@ -442,7 +442,7 @@ export const ExplorePanel: React.FC = () => {
             >
               <PaperIcon paperId={p.id} />
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-medium text-foreground group-hover:text-[#93C572] transition-colors truncate">
+                <div className="text-[13px] font-medium text-foreground group-hover:text-[#8B5CF6] transition-colors truncate">
                   {displayName}
                 </div>
                 <div className="text-[10px] text-muted-foreground font-mono">

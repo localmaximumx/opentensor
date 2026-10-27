@@ -127,19 +127,19 @@ const CardIllustration: React.FC<{ type: string }> = ({ type }) => {
         <svg viewBox="0 0 100 100" className="w-16 h-16 shrink-0 opacity-90 drop-shadow-md" fill="none">
           <rect x="25" y="15" width="50" height="70" rx="6" fill="#1E293B" stroke="#475569" strokeWidth="2" />
           <rect x="32" y="25" width="36" height="8" rx="2" fill="#64748B" />
-          <rect x="32" y="38" width="36" height="8" rx="2" fill="#93C572" opacity="0.8" />
+          <rect x="32" y="38" width="36" height="8" rx="2" fill="#8B5CF6" opacity="0.8" />
           <rect x="32" y="51" width="36" height="8" rx="2" fill="#64748B" />
-          <rect x="32" y="64" width="36" height="8" rx="2" fill="#93C572" opacity="0.8" />
-          <path d="M78 50l12-8v16z" fill="#FBBF24" />
+          <rect x="32" y="64" width="36" height="8" rx="2" fill="#8B5CF6" opacity="0.8" />
+          <path d="M78 50l12-8v16z" fill="#C4F75B" />
         </svg>
       );
     case 'target':
       return (
         <svg viewBox="0 0 100 100" className="w-16 h-16 shrink-0 opacity-90 drop-shadow-md" fill="none">
-          <ellipse cx="50" cy="50" rx="38" ry="38" fill="#EA580C" opacity="0.8" />
-          <ellipse cx="50" cy="50" rx="26" ry="26" fill="#FB923C" />
-          <ellipse cx="50" cy="50" rx="14" ry="14" fill="#FED7AA" />
-          <ellipse cx="50" cy="50" rx="5" ry="5" fill="#C2410C" />
+          <ellipse cx="50" cy="50" rx="38" ry="38" fill="#7C3AED" opacity="0.8" />
+          <ellipse cx="50" cy="50" rx="26" ry="26" fill="#8B5CF6" />
+          <ellipse cx="50" cy="50" rx="14" ry="14" fill="#A78BFA" />
+          <ellipse cx="50" cy="50" rx="5" ry="5" fill="#C4F75B" />
         </svg>
       );
     case 'infinity':
@@ -147,7 +147,7 @@ const CardIllustration: React.FC<{ type: string }> = ({ type }) => {
         <svg viewBox="0 0 100 100" className="w-16 h-16 shrink-0 opacity-90 drop-shadow-md" fill="none">
           <path 
             d="M32 35 C18 35 18 65 32 65 C44 65 56 35 68 35 C82 35 82 65 68 65 C56 65 44 35 32 35 Z" 
-            stroke="#A855F7" 
+            stroke="#8B5CF6" 
             strokeWidth="8" 
             strokeLinecap="round" 
             strokeLinejoin="round"
@@ -157,8 +157,8 @@ const CardIllustration: React.FC<{ type: string }> = ({ type }) => {
     default:
       return (
         <svg viewBox="0 0 100 100" className="w-16 h-16 shrink-0 opacity-90 drop-shadow-md" fill="none">
-          <rect x="25" y="25" width="50" height="50" rx="8" fill="#93C572" opacity="0.2" stroke="#93C572" strokeWidth="3" />
-          <circle cx="50" cy="50" r="14" fill="#93C572" />
+          <rect x="25" y="25" width="50" height="50" rx="8" fill="#8B5CF6" opacity="0.2" stroke="#8B5CF6" strokeWidth="3" />
+          <circle cx="50" cy="50" r="14" fill="#8B5CF6" />
         </svg>
       );
   }
@@ -223,36 +223,36 @@ export const InterviewPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-[#070a08]">
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-[#0B0B12]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-[#93C572] border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs font-mono text-muted-foreground">Loading Interview tracks...</span>
+          <div className="w-8 h-8 border-2 border-[#8B5CF6] border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-mono text-[#9292A8]">Loading Interview tracks...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-64px)] overflow-y-auto bg-[#070a08] text-foreground custom-scrollbar select-none">
+    <div className="h-[calc(100vh-64px)] overflow-y-auto bg-[#0B0B12] text-[#F4F4FA] custom-scrollbar select-none">
       <div className="container mx-auto px-4 md:px-8 py-8 max-w-7xl">
         
         {/* ===================================================================== */}
         {/* HEADER SECTION (Matches interview_landingpage.png)                    */}
         {/* ===================================================================== */}
         <div className="mb-10 space-y-3">
-          {/* Green Top Pill Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30 shadow-xs">
-            <Radio className="w-3.5 h-3.5 text-[#93C572]" />
+          {/* Violet Top Pill Badge */}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#251B3B] text-[#8B5CF6] border border-[#45455B]/60 shadow-xs">
+            <Radio className="w-3.5 h-3.5 text-[#8B5CF6]" />
             <span>Interview Preparation</span>
           </div>
 
           {/* Main Title */}
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-[#F4F4FA]">
             Interview Preparation
           </h1>
 
           {/* Subtitle */}
-          <p className="text-sm text-[#9ca3af] max-w-3xl leading-relaxed">
+          <p className="text-sm text-[#B5B5C8] max-w-3xl leading-relaxed">
             Mock interviews on real conditions. Timed, scored, analyzed at the end. Built to the bar set by FAANG, frontier AI labs, fast startups, and quant.
           </p>
         </div>
@@ -275,27 +275,27 @@ export const InterviewPage: React.FC = () => {
                     {/* Category Icon */}
                     <div className="mt-0.5">
                       {isMock ? (
-                        <Sparkles className="w-5 h-5 text-[#93C572]" />
+                        <Sparkles className="w-5 h-5 text-[#8B5CF6]" />
                       ) : isDS ? (
                         <BarChart3 className="w-5 h-5 text-rose-400" />
                       ) : isRE ? (
-                        <Atom className="w-5 h-5 text-amber-400" />
+                        <Atom className="w-5 h-5 text-[#FBBF24]" />
                       ) : (
-                        <Brain className="w-5 h-5 text-purple-400" />
+                        <Brain className="w-5 h-5 text-[#8B5CF6]" />
                       )}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h2 className="text-lg font-bold text-white tracking-tight">
+                        <h2 className="text-lg font-bold text-[#F4F4FA] tracking-tight">
                           {cat.name}
                         </h2>
                         {isMock && (
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30 font-bold">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#251B3B] text-[#C4F75B] border border-[#45455B]/60 font-bold">
                             RECOMMENDED
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-[#9ca3af]">
+                      <p className="text-xs text-[#9292A8]">
                         {cat.description || (isDS 
                           ? 'Assessments for data science interview prep: SQL, pandas, NumPy, math, and ML.' 
                           : isRE 
@@ -309,14 +309,14 @@ export const InterviewPage: React.FC = () => {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => handleScroll(cat.id, 'left')}
-                      className="w-7 h-7 rounded-full bg-[#141a17] hover:bg-[#1d2622] border border-[#26332b] flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                      className="w-7 h-7 rounded-full bg-[#191925] hover:bg-[#272738] border border-[#303041] flex items-center justify-center text-[#B5B5C8] hover:text-[#F4F4FA] transition-colors"
                       title="Scroll left"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleScroll(cat.id, 'right')}
-                      className="w-7 h-7 rounded-full bg-[#141a17] hover:bg-[#1d2622] border border-[#26332b] flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                      className="w-7 h-7 rounded-full bg-[#191925] hover:bg-[#272738] border border-[#303041] flex items-center justify-center text-[#B5B5C8] hover:text-[#F4F4FA] transition-colors"
                       title="Scroll right"
                     >
                       <ChevronRight className="w-4 h-4" />
@@ -339,16 +339,16 @@ export const InterviewPage: React.FC = () => {
                       <div
                         key={item.id}
                         onClick={() => setSelectedTrack(item)}
-                        className="w-[280px] sm:w-[320px] shrink-0 snap-start bg-[#141414] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#383838] rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 cursor-pointer shadow-lg hover:shadow-2xl hover:-translate-y-0.5 group relative overflow-hidden"
+                        className="w-[280px] sm:w-[320px] shrink-0 snap-start bg-[#191925] hover:bg-[#272738] border border-[#303041] hover:border-[#8B5CF6]/50 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 cursor-pointer shadow-lg hover:shadow-2xl hover:-translate-y-0.5 group relative overflow-hidden"
                       >
                         {/* Top: Tag + Company Logos + Pro Badge */}
                         <div className="flex items-center justify-between mb-3 gap-2">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] font-mono tracking-wider font-bold text-[#a1a1aa] uppercase">
+                            <span className="text-[10px] font-mono tracking-wider font-bold text-[#9292A8] uppercase">
                               {tagInfo.label}
                             </span>
                             {tagInfo.companies.length > 0 && (
-                              <div className="flex items-center gap-1 pl-1 border-l border-border/40">
+                              <div className="flex items-center gap-1 pl-1 border-l border-[#303041]">
                                 {tagInfo.companies.map(c => (
                                   <CompanyLogo key={c} name={c} />
                                 ))}
@@ -356,8 +356,8 @@ export const InterviewPage: React.FC = () => {
                             )}
                           </div>
 
-                          {/* Green PRO Badge */}
-                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30">
+                          {/* Violet/Lime PRO Badge */}
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#251B3B] text-[#C4F75B] border border-[#45455B]/60">
                             <Lock className="w-2.5 h-2.5" />
                             <span>PRO</span>
                           </div>
@@ -366,10 +366,10 @@ export const InterviewPage: React.FC = () => {
                         {/* Middle: Title & 3D Illustration */}
                         <div className="flex items-center justify-between gap-3 my-2">
                           <div className="space-y-1">
-                            <h3 className="text-base font-bold text-white group-hover:text-[#93C572] transition-colors leading-snug">
+                            <h3 className="text-base font-bold text-[#F4F4FA] group-hover:text-[#8B5CF6] transition-colors leading-snug">
                               {item.name}
                             </h3>
-                            <p className="text-[11px] text-[#71717a] font-mono">
+                            <p className="text-[11px] text-[#9292A8] font-mono">
                               {totalQuestions} questions · {item.sets?.length || 0} sets
                             </p>
                           </div>
@@ -379,13 +379,13 @@ export const InterviewPage: React.FC = () => {
                         </div>
 
                         {/* Bottom: Duration & Launch Arrow */}
-                        <div className="pt-3 border-t border-[#222222] flex items-center justify-between text-xs text-[#a1a1aa] mt-2">
+                        <div className="pt-3 border-t border-[#303041] flex items-center justify-between text-xs text-[#B5B5C8] mt-2">
                           <span className="flex items-center gap-1.5 font-mono text-[11px]">
-                            <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                            <Clock className="w-3.5 h-3.5 text-[#9292A8]" />
                             {item.durationMin || 45} min
                           </span>
-                          <span className="p-1 rounded-md text-gray-400 group-hover:text-white group-hover:translate-x-0.5 transition-all">
-                            <ChevronRight className="w-4 h-4 text-[#93C572]" />
+                          <span className="p-1 rounded-md text-[#9292A8] group-hover:text-[#F4F4FA] group-hover:translate-x-0.5 transition-all">
+                            <ChevronRight className="w-4 h-4 text-[#8B5CF6]" />
                           </span>
                         </div>
                       </div>
@@ -410,25 +410,25 @@ export const InterviewPage: React.FC = () => {
             onClick={() => setSelectedTrack(null)}
           />
 
-          <div className="relative w-full max-w-xl bg-[#0f1412] border border-[#243329] rounded-2xl shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150">
+          <div className="relative w-full max-w-xl bg-[#191925] border border-[#303041] rounded-2xl shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="p-5 border-b border-[#243329] flex items-center justify-between bg-[#131a16]">
+            <div className="p-5 border-b border-[#303041] flex items-center justify-between bg-[#13131D]">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[#93C572]/20 border border-[#93C572]/40 flex items-center justify-center text-[#93C572]">
+                <div className="w-9 h-9 rounded-xl bg-[#251B3B] border border-[#45455B] flex items-center justify-center text-[#8B5CF6]">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">{selectedTrack.name}</h3>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono">
+                  <h3 className="text-base font-bold text-[#F4F4FA]">{selectedTrack.name}</h3>
+                  <div className="flex items-center gap-3 text-xs text-[#9292A8] font-mono">
                     <span>{selectedTrack.durationMin || 45} mins</span>
                     <span>·</span>
-                    <span className="text-[#93C572] font-semibold">{selectedTrack.sets?.reduce((a, s) => a + (s.problems?.length || 0), 0)} Questions</span>
+                    <span className="text-[#8B5CF6] font-semibold">{selectedTrack.sets?.reduce((a, s) => a + (s.problems?.length || 0), 0)} Questions</span>
                   </div>
                 </div>
               </div>
               <button 
                 onClick={() => setSelectedTrack(null)}
-                className="p-1 rounded-md text-muted-foreground hover:text-white"
+                className="p-1 rounded-md text-[#9292A8] hover:text-[#F4F4FA]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -436,31 +436,31 @@ export const InterviewPage: React.FC = () => {
 
             {/* Sets & Questions Breakdown */}
             <div className="p-5 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-4">
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <p className="text-xs text-[#9292A8] leading-relaxed">
                 {selectedTrack.description}
               </p>
 
               <div className="space-y-3 pt-2">
                 {(selectedTrack.sets || []).map((set, sIdx) => (
-                  <div key={set.id || sIdx} className="bg-[#151c19] rounded-xl p-3 border border-[#26382c]">
+                  <div key={set.id || sIdx} className="bg-[#13131D] rounded-xl p-3 border border-[#303041]">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-white">{set.name}</span>
-                      <span className="text-[10px] text-[#93C572] font-mono">{set.problems?.length || 0} questions</span>
+                      <span className="text-xs font-bold text-[#F4F4FA]">{set.name}</span>
+                      <span className="text-[10px] text-[#8B5CF6] font-mono">{set.problems?.length || 0} questions</span>
                     </div>
                     <div className="space-y-1">
                       {(set.problems || []).map((prob, pIdx) => (
                         <Link
                           key={prob.slug || pIdx}
                           to={`/interview/solve/${prob.slug}?assessment=${selectedTrack.id}`}
-                          className="flex items-center justify-between p-2 rounded-lg hover:bg-[#1a2420] text-xs transition-colors group"
+                          className="flex items-center justify-between p-2 rounded-lg hover:bg-[#251B3B] text-xs transition-colors group"
                         >
-                          <span className="text-muted-foreground group-hover:text-[#93C572] truncate max-w-[340px]">
+                          <span className="text-[#B5B5C8] group-hover:text-[#8B5CF6] truncate max-w-[340px]">
                             {prob.title?.replace(/<[^>]*>?/gm, '')}
                           </span>
                           <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                            prob.difficulty?.toLowerCase() === 'easy' ? 'text-emerald-400 bg-emerald-500/10' :
-                            prob.difficulty?.toLowerCase() === 'hard' ? 'text-rose-400 bg-rose-500/10' :
-                            'text-amber-400 bg-amber-500/10'
+                            prob.difficulty?.toLowerCase() === 'easy' ? 'text-[#4ADE80] bg-[#14291D] border border-[#28633D]' :
+                            prob.difficulty?.toLowerCase() === 'hard' ? 'text-[#F87171] bg-[#30191E] border border-[#70303A]' :
+                            'text-[#FBBF24] bg-[#302719] border border-[#70521D]'
                           }`}>
                             {prob.difficulty}
                           </span>
@@ -473,15 +473,15 @@ export const InterviewPage: React.FC = () => {
             </div>
 
             {/* Footer: Start Interview Button */}
-            <div className="p-4 border-t border-[#243329] bg-[#111714] flex items-center justify-between">
-              <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+            <div className="p-4 border-t border-[#303041] bg-[#13131D] flex items-center justify-between">
+              <span className="text-xs text-[#C4F75B] font-semibold flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" />
                 Pro Interview Free Unlocked
               </span>
               {selectedTrack.sets?.[0]?.problems?.[0] ? (
                 <Link
                   to={`/interview/solve/${selectedTrack.sets[0].problems[0].slug}?assessment=${selectedTrack.id}`}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#93C572] hover:bg-[#A4D287] text-black text-xs font-bold transition-colors shadow-md"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6] text-white text-xs font-bold transition-colors shadow-md"
                 >
                   <span>Start Interview</span>
                   <ArrowRight className="w-4 h-4" />

@@ -93,33 +93,33 @@ const PerformancePercentileChart: React.FC<{ runtimeMs: number; isSubmission: bo
   const userSvgX = 20 + userXPct * (width - 40);
 
   const speedLabel = percentile >= 85 ? 'Optimal Vectorization ⚡' : percentile >= 60 ? 'Efficient Implementation 👍' : 'Can be further vectorized 💡';
-  const speedColor = percentile >= 85 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25' : percentile >= 60 ? 'text-sky-400 bg-sky-500/10 border-sky-500/25' : 'text-amber-400 bg-amber-500/10 border-amber-500/25';
+  const speedColor = percentile >= 85 ? 'text-[#4ADE80] bg-[#14291D] border-[#28633D]' : percentile >= 60 ? 'text-[#38BDF8] bg-[#132A38] border-[#24516B]' : 'text-[#FBBF24] bg-[#302719] border-[#70521D]';
 
   return (
-    <div className="p-3.5 sm:p-4 rounded-2xl bg-secondary/30 dark:bg-[#0c1611] border border-border/70 dark:border-[#1d3326] space-y-3 my-2">
+    <div className="p-3.5 sm:p-4 rounded-2xl bg-[#191925] border border-[#303041] space-y-3 my-2">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0">
+          <div className="w-6 h-6 rounded-lg bg-[#251B3B] text-[#C4F75B] flex items-center justify-center font-bold text-xs shrink-0">
             ⚡
           </div>
           <div>
-            <div className="text-xs font-bold text-foreground dark:text-white flex items-center gap-2 flex-wrap">
+            <div className="text-xs font-bold text-[#F4F4FA] flex items-center gap-2 flex-wrap">
               <span>Runtime Distribution</span>
               <span className={`text-[10px] px-2 py-0.5 rounded-full border font-mono ${speedColor}`}>
                 {speedLabel}
               </span>
             </div>
-            <div className="text-[11px] text-muted-foreground font-mono">
-              Your solution ran in <strong className="text-foreground dark:text-white">{runtimeMs.toFixed(1)} ms</strong>
+            <div className="text-[11px] text-[#9292A8] font-mono">
+              Your solution ran in <strong className="text-[#F4F4FA]">{runtimeMs.toFixed(1)} ms</strong>
             </div>
           </div>
         </div>
 
         <div className="text-left sm:text-right font-mono">
-          <div className="text-sm font-extrabold text-[#93C572]">
+          <div className="text-sm font-extrabold text-[#C4F75B]">
             Beats {percentile}%
           </div>
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-[10px] text-[#9292A8]">
             of Python 3 submissions
           </div>
         </div>
@@ -130,8 +130,8 @@ const PerformancePercentileChart: React.FC<{ runtimeMs: number; isSubmission: bo
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-24 overflow-visible">
           <defs>
             <linearGradient id="runtimeCurveGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#93C572" stopOpacity="0.45" />
-              <stop offset="100%" stopColor="#93C572" stopOpacity="0.02" />
+              <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.02" />
             </linearGradient>
           </defs>
 
@@ -139,10 +139,10 @@ const PerformancePercentileChart: React.FC<{ runtimeMs: number; isSubmission: bo
           <path d={areaD} fill="url(#runtimeCurveGradient)" />
 
           {/* Curve Stroke */}
-          <path d={pathD} fill="none" stroke="#93C572" strokeWidth="2.5" strokeLinecap="round" />
+          <path d={pathD} fill="none" stroke="#8B5CF6" strokeWidth="2.5" strokeLinecap="round" />
 
           {/* Baseline */}
-          <line x1="15" y1={height - 10} x2={width - 15} y2={height - 10} stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+          <line x1="15" y1={height - 10} x2={width - 15} y2={height - 10} stroke="#303041" strokeWidth="1" />
 
           {/* User Marker Line */}
           <line
@@ -150,25 +150,25 @@ const PerformancePercentileChart: React.FC<{ runtimeMs: number; isSubmission: bo
             y1={12}
             x2={userSvgX}
             y2={height - 10}
-            stroke="#38bdf8"
+            stroke="#C4F75B"
             strokeWidth="2"
             strokeDasharray="3 3"
           />
 
           {/* User Dot */}
-          <circle cx={userSvgX} cy={16} r="4.5" fill="#38bdf8" stroke="#ffffff" strokeWidth="1.5" />
+          <circle cx={userSvgX} cy={16} r="4.5" fill="#C4F75B" stroke="#0B0B12" strokeWidth="1.5" />
         </svg>
 
         {/* Marker Label */}
         <div 
-          className="absolute top-0 text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500 text-black font-extrabold transform -translate-x-1/2 shadow-md pointer-events-none whitespace-nowrap"
+          className="absolute top-0 text-[10px] font-mono px-2 py-0.5 rounded bg-[#C4F75B] text-[#0B0B12] font-extrabold transform -translate-x-1/2 shadow-md pointer-events-none whitespace-nowrap"
           style={{ left: `${(userSvgX / width) * 100}%` }}
         >
-          You: {runtimeMs.toFixed(1)}ms
+          You ({runtimeMs.toFixed(1)} ms)
         </div>
 
         {/* Distribution axis labels */}
-        <div className="flex justify-between text-[9px] text-muted-foreground font-mono px-4 pt-1">
+        <div className="flex justify-between text-[9px] text-[#9292A8] font-mono px-4 pt-1">
           <span>Fast (5ms)</span>
           <span>Average (38ms)</span>
           <span>Slow (100ms+)</span>
@@ -839,7 +839,7 @@ export const ProblemSolverPage: React.FC = () => {
         particleCount: 100,
         spread: 70,
         origin: { y: 0.8 },
-        colors: ['#93C572', '#10B981', '#34D399', '#6EE7B7']
+        colors: ['#8B5CF6', '#A78BFA', '#7C3AED', '#C4F75B', '#4ADE80']
       });
     }
   };
@@ -1004,6 +1004,34 @@ export const ProblemSolverPage: React.FC = () => {
   const handleEditorDidMount = useCallback((editor: any, monaco: any) => {
     editorRef.current = editor;
 
+    // Register Electric Violet Monaco theme
+    monaco.editor.defineTheme('electric-violet', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: 'comment', foreground: '77778D', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'A78BFA' },
+        { token: 'identifier', foreground: 'F4F4FA' },
+        { token: 'string', foreground: 'C4F75B' },
+        { token: 'number', foreground: '38BDF8' },
+        { token: 'type', foreground: '8B5CF6' },
+      ],
+      colors: {
+        'editor.background': '#0E0E16',
+        'editor.foreground': '#F4F4FA',
+        'editor.lineHighlightBackground': '#1B1B29',
+        'editorLineNumber.foreground': '#77778D',
+        'editorLineNumber.activeForeground': '#F4F4FA',
+        'editor.selectionBackground': '#493276',
+        'editor.inactiveSelectionBackground': '#251B3B',
+        'editorCursor.foreground': '#C4F75B',
+        'editorIndentGuide.background1': '#303041',
+        'editorIndentGuide.activeBackground1': '#45455B',
+        'editorGutter.background': '#0E0E16',
+      }
+    });
+    monaco.editor.setTheme('electric-violet');
+
     // Previous Problem: Alt + Left
     editor.addAction({
       id: 'prev-problem',
@@ -1049,21 +1077,21 @@ export const ProblemSolverPage: React.FC = () => {
     switch (diff) {
       case 'Easy':
         return (
-          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium border-[#28633D] bg-[#14291D] text-[#4ADE80]">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-80" />
             Easy
           </span>
         );
       case 'Medium':
         return (
-          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium border-amber-500/20 bg-amber-500/10 text-amber-400">
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium border-[#70521D] bg-[#302719] text-[#FBBF24]">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-80" />
             Medium
           </span>
         );
       case 'Hard':
         return (
-          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium border-rose-500/20 bg-rose-500/10 text-rose-400">
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium border-[#70303A] bg-[#30191E] text-[#F87171]">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-80" />
             Hard
           </span>
@@ -1073,10 +1101,10 @@ export const ProblemSolverPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-background">
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-[#0B0B12]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-[#93C572] border-t-transparent rounded-full animate-spin" />
-          <div className="text-sm text-muted-foreground font-mono">Loading problem specification...</div>
+          <div className="w-8 h-8 border-2 border-[#8B5CF6] border-t-transparent rounded-full animate-spin" />
+          <div className="text-sm text-[#9292A8] font-mono">Loading problem specification...</div>
         </div>
       </div>
     );
@@ -1084,11 +1112,11 @@ export const ProblemSolverPage: React.FC = () => {
 
   if (!problem) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] bg-background gap-4">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] bg-[#0B0B12] text-[#F4F4FA] gap-4">
         <h2 className="text-xl font-bold">Problem not found</h2>
         <Link 
           to={paperId ? `/research?paper=${paperId}` : "/problems"} 
-          className="px-4 py-2 rounded-lg bg-[#93C572] text-black font-semibold text-sm hover:opacity-90 transition-opacity"
+          className="px-4 py-2 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-semibold text-sm transition-colors"
         >
           {paperId ? "Return to Paper Curriculum" : "Return to Problems Catalog"}
         </Link>
@@ -1123,14 +1151,14 @@ export const ProblemSolverPage: React.FC = () => {
         )}
 
         {/* Mobile View Selector & Action Bar (< md) */}
-        <div className="md:hidden flex items-center justify-between px-3 sm:px-4 py-2 bg-card border-b border-border/80 text-xs shrink-0 z-20">
-          <div className="flex items-center gap-1 bg-secondary/80 p-0.5 rounded-lg border border-border/60">
+        <div className="md:hidden flex items-center justify-between px-3 sm:px-4 py-2 bg-[#191925] border-b border-[#303041] text-xs shrink-0 z-20">
+          <div className="flex items-center gap-1 bg-[#13131D] p-0.5 rounded-lg border border-[#303041]">
             <button
               onClick={() => setMobileActivePanel('problem')}
               className={`px-3 py-1 rounded-md font-semibold transition-all ${
                 mobileActivePanel === 'problem'
-                  ? 'bg-background text-[#93C572] shadow-xs'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-[#251B3B] text-[#8B5CF6] shadow-xs'
+                  : 'text-[#B5B5C8] hover:text-[#F4F4FA]'
               }`}
             >
               Description
@@ -1139,8 +1167,8 @@ export const ProblemSolverPage: React.FC = () => {
               onClick={() => setMobileActivePanel('code')}
               className={`px-3 py-1 rounded-md font-semibold transition-all ${
                 mobileActivePanel === 'code'
-                  ? 'bg-background text-[#38BDF8] shadow-xs'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-[#251B3B] text-[#38BDF8] shadow-xs'
+                  : 'text-[#B5B5C8] hover:text-[#F4F4FA]'
               }`}
             >
               Code
@@ -1151,16 +1179,16 @@ export const ProblemSolverPage: React.FC = () => {
             <button
               onClick={handleRun}
               disabled={isRunning}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-secondary hover:bg-accent border border-border text-foreground text-xs font-medium disabled:opacity-50"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-[#13131D] hover:bg-[#272738] border border-[#303041] text-[#F4F4FA] text-xs font-semibold disabled:opacity-50 transition-colors"
               title="Run code (Ctrl + Enter)"
             >
-              <Play className="w-3 h-3 fill-current text-[#93C572]" />
+              <Play className="w-3 h-3 fill-current text-[#8B5CF6]" />
               <span>Run</span>
             </button>
             <button
               onClick={handleSubmit}
               disabled={isRunning}
-              className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-md bg-[#93C572] hover:bg-[#85b964] text-black text-xs font-bold disabled:opacity-50 shadow-xs mr-1"
+              className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-md bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6] text-white text-xs font-bold disabled:opacity-50 shadow-xs mr-1 transition-colors"
               title="Submit code (Ctrl + Alt + Enter)"
             >
               <Send className="w-3 h-3" />
@@ -1173,17 +1201,17 @@ export const ProblemSolverPage: React.FC = () => {
         <div
           className={`${
             mobileActivePanel === 'problem' ? 'flex' : 'hidden md:flex'
-          } w-full md:w-auto h-full flex-col border-r border-border bg-card flex-shrink-0 overflow-hidden`}
+          } w-full md:w-auto h-full flex-col border-r border-[#303041] bg-[#191925] flex-shrink-0 overflow-hidden`}
           style={{ width: typeof window !== 'undefined' && window.innerWidth >= 768 ? `${leftWidthPct}%` : undefined }}
         >
           
           {/* Navigation / Tab bar */}
-          <nav className="flex items-center justify-between px-3 md:px-4 h-12 border-b border-border text-xs sm:text-sm bg-secondary/30 flex-shrink-0">
+          <nav className="flex items-center justify-between px-3 md:px-4 h-12 border-b border-[#303041] text-xs sm:text-sm bg-[#13131D] flex-shrink-0">
             <div className="flex items-center gap-1.5 sm:gap-3 h-full">
               {/* Browse Problems Sidebar Button (Handles Assessment, Research paper, and Problems catalog) */}
               <button
                 onClick={() => setIsDrawerOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/80 bg-background/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors text-xs font-medium shadow-xs"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#303041] bg-[#191925] hover:bg-[#272738] text-[#B5B5C8] hover:text-[#F4F4FA] transition-colors text-xs font-medium shadow-xs"
                 title={
                   currentAssessment
                     ? `Assessment: ${currentAssessment.name}`
@@ -1193,28 +1221,28 @@ export const ProblemSolverPage: React.FC = () => {
                 }
               >
                 {currentAssessment ? (
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#93C572]" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#8B5CF6]" />
                 ) : (
-                  <PanelLeft className="w-3.5 h-3.5 text-[#93C572]" />
+                  <PanelLeft className="w-3.5 h-3.5 text-[#8B5CF6]" />
                 )}
                 <span className="hidden sm:inline font-semibold truncate max-w-[170px]">
                   {currentAssessment ? currentAssessment.name : paperId ? (currentPaper?.title || 'Paper') : 'Problems'}
                 </span>
                 {currentIndex !== -1 && (
-                  <span className="hidden sm:inline-block text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded border border-border/40">
+                  <span className="hidden sm:inline-block text-[10px] font-mono text-[#9292A8] bg-[#13131D] px-1.5 py-0.5 rounded border border-[#303041]">
                     #{currentIndex + 1}/{totalItems || (paperId || currentAssessment ? '' : catalogProblems.length || 790)}
                   </span>
                 )}
               </button>
 
-              <div className="h-4 w-px bg-border/60" />
+              <div className="h-4 w-px bg-[#303041]" />
 
               <button
                 onClick={() => setActiveTab('description')}
                 className={`h-full border-b-2 font-medium transition-colors flex items-center gap-1 sm:gap-1.5 px-2 sm:px-1 ${
                   activeTab === 'description'
-                    ? 'border-[#93C572] text-foreground font-semibold'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                    ? 'border-[#8B5CF6] text-[#F4F4FA] font-semibold'
+                    : 'border-transparent text-[#B5B5C8] hover:text-[#F4F4FA]'
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
@@ -1224,8 +1252,8 @@ export const ProblemSolverPage: React.FC = () => {
                 onClick={() => setActiveTab('theory')}
                 className={`h-full border-b-2 font-medium transition-colors flex items-center gap-1 sm:gap-1.5 px-2 sm:px-1 ${
                   activeTab === 'theory'
-                    ? 'border-[#93C572] text-foreground font-semibold'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                    ? 'border-[#8B5CF6] text-[#F4F4FA] font-semibold'
+                    : 'border-transparent text-[#B5B5C8] hover:text-[#F4F4FA]'
                 }`}
               >
                 <BookOpen className="w-3.5 h-3.5" />
@@ -1235,8 +1263,8 @@ export const ProblemSolverPage: React.FC = () => {
                 onClick={() => setActiveTab('solution')}
                 className={`h-full border-b-2 font-medium transition-colors flex items-center gap-1 sm:gap-1.5 px-2 sm:px-1 ${
                   activeTab === 'solution'
-                    ? 'border-[#93C572] text-foreground font-semibold'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                    ? 'border-[#8B5CF6] text-[#F4F4FA] font-semibold'
+                    : 'border-transparent text-[#B5B5C8] hover:text-[#F4F4FA]'
                 }`}
               >
                 <Lightbulb className="w-3.5 h-3.5" />
@@ -1246,15 +1274,15 @@ export const ProblemSolverPage: React.FC = () => {
                 onClick={() => setActiveTab('notes')}
                 className={`h-full border-b-2 font-medium transition-colors flex items-center gap-1 sm:gap-1.5 px-2 sm:px-1 relative ${
                   activeTab === 'notes'
-                    ? 'border-[#93C572] text-foreground font-semibold'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                    ? 'border-[#8B5CF6] text-[#F4F4FA] font-semibold'
+                    : 'border-transparent text-[#B5B5C8] hover:text-[#F4F4FA]'
                 }`}
                 title="Personal Notes"
               >
                 <NotebookPen className="w-3.5 h-3.5" />
                 <span>Notes</span>
                 {notes.trim().length > 0 && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#93C572] ml-0.5" title="Has notes" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#8B5CF6] ml-0.5" title="Has notes" />
                 )}
               </button>
             </div>
@@ -1400,13 +1428,13 @@ export const ProblemSolverPage: React.FC = () => {
               {/* Hints */}
               {problem.hints && problem.hints.length > 0 && (
                 <div className="space-y-2 pt-2">
-                  <h3 className="font-semibold text-foreground text-sm mb-2">Hints</h3>
+                  <h3 className="font-semibold text-[#F4F4FA] text-sm mb-2">Hints</h3>
                   {problem.hints.map((hint, i) => (
-                    <details key={i} className="group border border-border/70 rounded-lg p-3 bg-secondary/20">
-                      <summary className="cursor-pointer text-xs font-semibold text-foreground hover:text-[#93C572] transition-colors select-none">
+                    <details key={i} className="group border border-[#303041] rounded-lg p-3 bg-[#13131D]">
+                      <summary className="cursor-pointer text-xs font-semibold text-[#F4F4FA] hover:text-[#8B5CF6] transition-colors select-none">
                         Hint {i + 1}
                       </summary>
-                      <div className="mt-2 text-xs text-muted-foreground leading-relaxed pl-2 border-l-2 border-[#93C572]">
+                      <div className="mt-2 text-xs text-[#B5B5C8] leading-relaxed pl-2 border-l-2 border-[#8B5CF6]">
                         {typeof hint === 'string' ? hint : JSON.stringify(hint)}
                       </div>
                     </details>
@@ -1419,28 +1447,28 @@ export const ProblemSolverPage: React.FC = () => {
 
           {activeTab === 'theory' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b border-border/60">
-                <BookOpen className="w-4 h-4 text-[#93C572]" />
-                <h2 className="text-base font-bold text-foreground">Theory & Mathematical Derivation</h2>
+              <div className="flex items-center gap-2 pb-2 border-b border-[#303041]">
+                <BookOpen className="w-4 h-4 text-[#8B5CF6]" />
+                <h2 className="text-base font-bold text-[#F4F4FA]">Theory & Mathematical Derivation</h2>
               </div>
               {problem.theory ? (
                 <MathView content={problem.theory} allowPureCode={false} />
               ) : (
-                <p className="text-sm text-muted-foreground">Theory notes are available in the course curriculum.</p>
+                <p className="text-sm text-[#9292A8]">Theory notes are available in the course curriculum.</p>
               )}
             </div>
           )}
 
           {activeTab === 'solution' && (
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/60">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#303041]">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                  <div className="p-1.5 rounded-md bg-[#251B3B] border border-[#45455B] text-[#8B5CF6]">
                     <Lightbulb className="w-4 h-4" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold text-foreground">Reference Solution & Walkthrough</h2>
-                    <p className="text-[11px] text-muted-foreground">Optimal vectorized Python & NumPy implementation</p>
+                    <h2 className="text-base font-bold text-[#F4F4FA]">Reference Solution & Walkthrough</h2>
+                    <p className="text-[11px] text-[#9292A8]">Optimal vectorized Python & NumPy implementation</p>
                   </div>
                 </div>
               </div>
@@ -1451,8 +1479,8 @@ export const ProblemSolverPage: React.FC = () => {
                   onApplySolution={handleApplySolution}
                 />
               ) : (
-                <div className="p-4 rounded-xl border border-border/80 bg-muted/20">
-                  <p className="text-xs text-muted-foreground leading-relaxed">
+                <div className="p-4 rounded-xl border border-[#303041] bg-[#13131D]">
+                  <p className="text-xs text-[#9292A8] leading-relaxed">
                     Solution walkthrough is being formulated for this problem.
                   </p>
                 </div>
@@ -1463,15 +1491,15 @@ export const ProblemSolverPage: React.FC = () => {
           {activeTab === 'notes' && (
             <div className="flex flex-col flex-1 min-h-0 space-y-2.5">
               {/* Notes Toolbar: Write, Preview, Copy, Delete */}
-              <div className="flex items-center justify-between gap-2 pb-2 border-b border-border/60 flex-shrink-0">
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#303041] flex-shrink-0">
                 {/* Write / Preview segmented switch */}
-                <div className="flex items-center bg-secondary/60 border border-border/70 rounded-md p-0.5 text-xs">
+                <div className="flex items-center bg-[#13131D] border border-[#303041] rounded-md p-0.5 text-xs">
                   <button
                     onClick={() => setNotesMode('write')}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-all text-xs ${
                       notesMode === 'write'
-                        ? 'bg-card text-foreground font-semibold shadow-xs'
-                        : 'text-muted-foreground hover:text-foreground'
+                        ? 'bg-[#251B3B] text-[#8B5CF6] font-semibold shadow-xs'
+                        : 'text-[#B5B5C8] hover:text-[#F4F4FA]'
                     }`}
                   >
                     <Pencil className="w-3 h-3" />
@@ -1481,8 +1509,8 @@ export const ProblemSolverPage: React.FC = () => {
                     onClick={() => setNotesMode('preview')}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-all text-xs ${
                       notesMode === 'preview'
-                        ? 'bg-card text-foreground font-semibold shadow-xs'
-                        : 'text-muted-foreground hover:text-foreground'
+                        ? 'bg-[#251B3B] text-[#8B5CF6] font-semibold shadow-xs'
+                        : 'text-[#B5B5C8] hover:text-[#F4F4FA]'
                     }`}
                   >
                     <Eye className="w-3 h-3" />
@@ -1495,17 +1523,17 @@ export const ProblemSolverPage: React.FC = () => {
                   <button
                     onClick={handleCopyNotes}
                     disabled={!notes.trim()}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/70 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-[#303041] text-xs text-[#B5B5C8] hover:text-[#F4F4FA] hover:bg-[#272738] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     title={notesCopied ? 'Copied to clipboard' : 'Copy notes'}
                   >
-                    {notesCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {notesCopied ? <Check className="w-3.5 h-3.5 text-[#4ADE80]" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{notesCopied ? 'Copied' : 'Copy'}</span>
                   </button>
 
                   <button
                     onClick={handleClearNotes}
                     disabled={!notes.trim()}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/70 text-xs text-muted-foreground hover:text-red-400 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-[#303041] text-xs text-[#B5B5C8] hover:text-[#F87171] hover:bg-[#30191E] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     title="Delete notes"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -1521,11 +1549,11 @@ export const ProblemSolverPage: React.FC = () => {
                     value={notes}
                     onChange={(e) => handleNotesChange(e.target.value)}
                     placeholder={`Write your personal notes, reminders, edge cases, or LaTeX formulas here...\n\nExample:\n### Edge Cases to Remember\n- Ensure eps > 0 to prevent division by zero in $\\sqrt{\\hat{v}_t} + \\epsilon$\n- When axis=None, preserve flat vector dimensions\n\n### Math\n$$L_{BCE} = -\\frac{1}{N} \\sum_{i=1}^N \\left[ y_i \\log(\\hat{y}_i) + (1 - y_i) \\log(1 - \\hat{y}_i) \\right]$$`}
-                    className="w-full flex-1 min-h-[200px] p-3 rounded-lg border border-border/80 bg-background/60 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-[#93C572] focus:border-[#93C572] resize-y leading-relaxed"
+                    className="w-full flex-1 min-h-[200px] p-3 rounded-lg border border-[#303041] bg-[#0E0E16] font-mono text-xs text-[#F4F4FA] placeholder:text-[#9292A8]/60 focus:outline-none focus:ring-1 focus:ring-[#8B5CF6] focus:border-[#8B5CF6] resize-y leading-relaxed"
                   />
-                  <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5 flex-shrink-0">
+                  <div className="flex items-center justify-between text-[11px] text-[#9292A8] pt-0.5 flex-shrink-0">
                     <span className="flex items-center gap-1.5">
-                      <span>💡 <strong>Tip:</strong> Use <code className="px-1 py-0.5 bg-secondary/80 rounded text-[10px]">$...$</code> for inline math and <code className="px-1 py-0.5 bg-secondary/80 rounded text-[10px]">$$...$$</code> for blocks.</span>
+                      <span>💡 <strong>Tip:</strong> Use <code className="px-1 py-0.5 bg-[#13131D] rounded text-[10px] text-[#8B5CF6]">$...$</code> for inline math and <code className="px-1 py-0.5 bg-[#13131D] rounded text-[10px] text-[#8B5CF6]">$$...$$</code> for blocks.</span>
                     </span>
                     <span>
                       {notes.trim().split(/\s+/).filter(Boolean).length} words · {notes.length} characters
@@ -1533,13 +1561,13 @@ export const ProblemSolverPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="flex-1 min-h-[200px] p-3 rounded-lg border border-border/80 bg-card/40 overflow-y-auto">
+                <div className="flex-1 min-h-[200px] p-3 rounded-lg border border-[#303041] bg-[#13131D] overflow-y-auto">
                   {notes.trim() ? (
                     <div className="prose prose-invert max-w-none text-xs sm:text-sm">
                       <MathView content={notes} allowPureCode={false} />
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-10 text-center space-y-2 text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center py-10 text-center space-y-2 text-[#9292A8]">
                       <NotebookPen className="w-7 h-7 opacity-40 mb-1" />
                       <p className="text-xs font-medium">No notes written yet</p>
                       <p className="text-[11px] max-w-sm">
@@ -1547,7 +1575,7 @@ export const ProblemSolverPage: React.FC = () => {
                       </p>
                       <button
                         onClick={() => setNotesMode('write')}
-                        className="mt-2 px-2.5 py-1 text-xs rounded-md bg-[#93C572]/15 text-[#93C572] hover:bg-[#93C572]/25 border border-[#93C572]/30 transition-colors"
+                        className="mt-2 px-2.5 py-1 text-xs rounded-md bg-[#251B3B] text-[#8B5CF6] hover:bg-[#272738] border border-[#45455B] transition-colors"
                       >
                         Start writing notes
                       </button>
@@ -1563,28 +1591,28 @@ export const ProblemSolverPage: React.FC = () => {
       {/* VERTICAL SPLITTER: Left Panel (Problems/Theory/Notes) vs Right Panel (Editor/TestCases) */}
       <div
         onMouseDown={handleMouseDownH}
-        className={`hidden md:flex w-1.5 hover:w-2 cursor-col-resize bg-border/60 hover:bg-[#93C572] transition-colors items-center justify-center select-none z-20 group relative flex-shrink-0 ${
-          isDraggingH ? 'bg-[#93C572] w-2' : ''
+        className={`hidden md:flex w-1.5 hover:w-2 cursor-col-resize bg-[#303041] hover:bg-[#8B5CF6] transition-colors items-center justify-center select-none z-20 group relative flex-shrink-0 ${
+          isDraggingH ? 'bg-[#8B5CF6] w-2' : ''
         }`}
         title="Drag to resize problem description and code editor panels"
       >
-        <div className="w-0.5 h-8 bg-muted-foreground/40 group-hover:bg-black rounded-full" />
+        <div className="w-0.5 h-8 bg-[#9292A8]/50 group-hover:bg-[#F4F4FA] rounded-full" />
       </div>
 
       {/* RIGHT PANEL: Code Editor & Test Cases */}
       <div
         className={`${
           mobileActivePanel !== 'problem' ? 'flex' : 'hidden md:flex'
-        } w-full md:w-auto flex-1 h-full flex-col bg-[#1e1e1e] overflow-hidden min-w-0`}
+        } w-full md:w-auto flex-1 h-full flex-col bg-[#0E0E16] overflow-hidden min-w-0`}
         style={{ width: typeof window !== 'undefined' && window.innerWidth >= 768 ? `${100 - leftWidthPct}%` : undefined }}
       >
         
         {/* Editor Toolbar */}
-        <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b border-border/80 bg-card flex-shrink-0">
+        <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b border-[#303041] bg-[#191925] flex-shrink-0">
           <div className="flex items-center gap-2">
             <button
               onClick={handleResetCode}
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-[#B5B5C8] hover:text-[#F4F4FA] px-2 py-1 rounded hover:bg-[#272738] transition-colors"
               title="Reset to starter code"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -1592,21 +1620,21 @@ export const ProblemSolverPage: React.FC = () => {
             </button>
             <button
               onClick={handleCopyCode}
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-[#B5B5C8] hover:text-[#F4F4FA] px-2 py-1 rounded hover:bg-[#272738] transition-colors"
               title="Copy code"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-[#4ADE80]" /> : <Copy className="w-3.5 h-3.5" />}
               <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
             </button>
 
-            <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30">
+            <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#251B3B] text-[#8B5CF6] border border-[#45455B]/60">
               Py3
             </span>
 
             {/* Profile / Guest Status Badge */}
             {currentUser ? (
-              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#93C572]/10 border border-[#93C572]/20 text-[11px] text-[#93C572] font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#93C572]" />
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#251B3B] border border-[#45455B]/60 text-[11px] text-[#8B5CF6] font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#8B5CF6]" />
                 <span className="truncate max-w-[120px]">{currentUser.username}</span>
               </div>
             ) : (
@@ -1615,10 +1643,10 @@ export const ProblemSolverPage: React.FC = () => {
                   setAuthPromptMessage('Create a profile or sign in with username and password to save your solutions and track solved problems.');
                   setIsAuthModalOpen(true);
                 }}
-                className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 text-[11px] text-amber-300 font-medium transition-colors"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#302719] hover:bg-[#3d3221] border border-[#70521D] text-[11px] text-[#FBBF24] font-medium transition-colors"
                 title="Click to sign in or create an account"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#FBBF24] animate-pulse" />
                 <span>Guest · Sign In</span>
               </button>
             )}
@@ -1630,10 +1658,10 @@ export const ProblemSolverPage: React.FC = () => {
             <button
               onClick={handleRun}
               disabled={isRunning}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border border-input bg-card hover:bg-accent text-foreground transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border border-[#303041] bg-[#191925] hover:bg-[#272738] active:bg-[#251B3B] text-[#F4F4FA] transition-colors disabled:opacity-50"
               title="Run code (Ctrl + Enter)"
             >
-              <Play className="w-3.5 h-3.5 text-[#93C572] fill-current" />
+              <Play className="w-3.5 h-3.5 text-[#8B5CF6] fill-[#8B5CF6]" />
               <span>Run</span>
             </button>
 
@@ -1641,7 +1669,7 @@ export const ProblemSolverPage: React.FC = () => {
             <button
               onClick={handleSubmit}
               disabled={isRunning}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold bg-[#93C572] hover:bg-[#A4D287] text-black transition-colors shadow-sm disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6] text-white transition-colors shadow-sm disabled:opacity-50"
               title="Submit code (Ctrl + Alt + Enter)"
             >
               <Send className="w-3.5 h-3.5" />
@@ -1655,7 +1683,7 @@ export const ProblemSolverPage: React.FC = () => {
           <Editor
             height="100%"
             language="python"
-            theme={isDarkTheme ? "vs-dark" : "light"}
+            theme="electric-violet"
             value={code}
             onChange={handleEditorChange}
             onMount={handleEditorDidMount}
@@ -1676,28 +1704,28 @@ export const ProblemSolverPage: React.FC = () => {
         <div
           onMouseDown={handleMouseDownV}
           onTouchStart={handleMouseDownV}
-          className={`flex h-2.5 sm:h-1.5 hover:h-2 cursor-row-resize bg-border/60 hover:bg-[#93C572] transition-colors items-center justify-center select-none z-20 group relative flex-shrink-0 touch-none ${
-            isDraggingV ? 'bg-[#93C572] h-2.5 sm:h-2' : ''
+          className={`flex h-2.5 sm:h-1.5 hover:h-2 cursor-row-resize bg-[#303041] hover:bg-[#8B5CF6] transition-colors items-center justify-center select-none z-20 group relative flex-shrink-0 touch-none ${
+            isDraggingV ? 'bg-[#8B5CF6] h-2.5 sm:h-2' : ''
           }`}
           title="Drag to resize code editor and test case panels"
         >
-          <div className="h-1 w-10 sm:h-0.5 sm:w-8 bg-muted-foreground/50 group-hover:bg-black rounded-full" />
+          <div className="h-1 w-10 sm:h-0.5 sm:w-8 bg-[#9292A8]/50 group-hover:bg-[#F4F4FA] rounded-full" />
         </div>
 
         {/* BOTTOM PANEL: Test Cases & Test Result */}
         <div
-          className="flex flex-col border-t border-border bg-card flex-shrink-0 overflow-hidden"
+          className="flex flex-col border-t border-[#303041] bg-[#191925] flex-shrink-0 overflow-hidden"
           style={{ height: `${bottomHeightPx}px` }}
         >
           
           {/* Bottom Tabs */}
-          <div className="flex items-center gap-4 px-4 h-10 border-b border-border/80 bg-secondary/20 flex-shrink-0 text-xs">
+          <div className="flex items-center gap-4 px-4 h-10 border-b border-[#303041] bg-[#13131D] flex-shrink-0 text-xs">
             <button
               onClick={() => setBottomTab('testcase')}
               className={`flex items-center gap-1.5 h-full border-b-2 font-medium transition-colors ${
                 bottomTab === 'testcase'
-                  ? 'border-[#93C572] text-foreground font-semibold'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'border-[#8B5CF6] text-[#F4F4FA] font-semibold'
+                  : 'border-transparent text-[#B5B5C8] hover:text-[#F4F4FA]'
               }`}
             >
               <ListChecks className="w-3.5 h-3.5" />
@@ -1707,25 +1735,25 @@ export const ProblemSolverPage: React.FC = () => {
               onClick={() => setBottomTab('result')}
               className={`flex items-center gap-1.5 h-full border-b-2 font-medium transition-colors ${
                 bottomTab === 'result'
-                  ? 'border-[#93C572] text-foreground font-semibold'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'border-[#8B5CF6] text-[#F4F4FA] font-semibold'
+                  : 'border-transparent text-[#B5B5C8] hover:text-[#F4F4FA]'
               }`}
             >
               <Terminal className="w-3.5 h-3.5" />
               Test Result
               {execReport && (
-                <span className={`w-2 h-2 rounded-full ${execReport.success ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                <span className={`w-2 h-2 rounded-full ${execReport.success ? 'bg-[#4ADE80]' : 'bg-[#F87171]'}`} />
               )}
             </button>
             <button
               onClick={() => setBottomTab('repl')}
               className={`flex items-center gap-1.5 h-full border-b-2 font-medium transition-colors ${
                 bottomTab === 'repl'
-                  ? 'border-[#93C572] text-foreground font-semibold'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'border-[#8B5CF6] text-[#F4F4FA] font-semibold'
+                  : 'border-transparent text-[#B5B5C8] hover:text-[#F4F4FA]'
               }`}
             >
-              <Code2 className="w-3.5 h-3.5 text-sky-400" />
+              <Code2 className="w-3.5 h-3.5 text-[#38BDF8]" />
               <span>Python REPL & Shapes</span>
             </button>
           </div>
@@ -1750,13 +1778,13 @@ export const ProblemSolverPage: React.FC = () => {
                             onClick={() => setActiveCaseIdx(idx)}
                             className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono transition-colors ${
                               activeCaseIdx === idx
-                                ? 'bg-secondary text-foreground font-semibold border border-border shadow-xs'
-                                : 'text-muted-foreground hover:bg-secondary/40 hover:text-foreground border border-transparent'
+                                ? 'bg-[#251B3B] text-[#8B5CF6] font-semibold border border-[#45455B] shadow-xs'
+                                : 'text-[#B5B5C8] hover:bg-[#272738] hover:text-[#F4F4FA] border border-transparent'
                             }`}
                           >
                             <span>Case {idx + 1}</span>
                             {tc.isCustom && (
-                              <span className="text-[10px] px-1 py-0.2 rounded bg-[#93C572]/15 text-[#93C572] font-sans font-medium">
+                              <span className="text-[10px] px-1 py-0.2 rounded bg-[#251B3B] text-[#8B5CF6] font-sans font-medium">
                                 Custom
                               </span>
                             )}
@@ -1767,7 +1795,7 @@ export const ProblemSolverPage: React.FC = () => {
                                 e.stopPropagation();
                                 handleRemoveTestCase(idx);
                               }}
-                              className="opacity-0 group-hover/tab:opacity-100 absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center transition-opacity shadow-xs"
+                              className="opacity-0 group-hover/tab:opacity-100 absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[#F87171] hover:bg-[#ef4444] text-white flex items-center justify-center transition-opacity shadow-xs"
                               title="Delete test case"
                             >
                               <X className="w-2.5 h-2.5" />
@@ -1779,7 +1807,7 @@ export const ProblemSolverPage: React.FC = () => {
                       {/* + Icon beside the list of cases */}
                       <button
                         onClick={handleAddTestCase}
-                        className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-dashed border-border hover:border-[#93C572] text-muted-foreground hover:text-[#93C572] hover:bg-[#93C572]/10 transition-colors"
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-dashed border-[#303041] hover:border-[#8B5CF6] text-[#B5B5C8] hover:text-[#8B5CF6] hover:bg-[#251B3B]/40 transition-colors"
                         title="Add your own test case"
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -1789,7 +1817,7 @@ export const ProblemSolverPage: React.FC = () => {
                     {hasModifications && (
                       <button
                         onClick={handleResetTestCases}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-[#B5B5C8] hover:text-[#F4F4FA] hover:bg-[#272738] transition-colors"
                         title="Reset to default sample test cases"
                       >
                         <RotateCcw className="w-3 h-3" />
@@ -1803,18 +1831,18 @@ export const ProblemSolverPage: React.FC = () => {
                     <div className="space-y-3 mt-3">
                       {/* Inputs List */}
                       <div className="space-y-2.5">
-                        <div className="text-[11px] text-muted-foreground font-sans font-semibold uppercase tracking-wider">
+                        <div className="text-[11px] text-[#9292A8] font-sans font-semibold uppercase tracking-wider">
                           Inputs
                         </div>
                         {Object.entries(activeCase.rawInputs || {}).map(([key, val]) => (
                           <div key={key} className="space-y-1">
                             <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground font-mono font-medium">{key} =</span>
+                              <span className="text-[#9292A8] font-mono font-medium">{key} =</span>
                               {activeCase.isCustom && Object.keys(activeCase.rawInputs).length > 1 && (
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveParam(key)}
-                                  className="text-muted-foreground/50 hover:text-rose-400 text-[11px] transition-colors"
+                                  className="text-[#9292A8]/50 hover:text-[#F87171] text-[11px] transition-colors"
                                   title={`Remove parameter ${key}`}
                                 >
                                   <X className="w-3 h-3" />
@@ -1825,7 +1853,7 @@ export const ProblemSolverPage: React.FC = () => {
                               value={val}
                               onChange={(e) => handleUpdateInput(key, e.target.value)}
                               rows={typeof val === 'string' && val.includes('\n') ? 3 : 1}
-                              className="w-full px-3 py-1.5 rounded-md bg-muted/40 hover:bg-muted/60 focus:bg-background border border-border focus:border-[#93C572] focus:ring-1 focus:ring-[#93C572] font-mono text-xs text-foreground outline-none transition-all resize-y min-h-[32px]"
+                              className="w-full px-3 py-1.5 rounded-md bg-[#13131D] hover:bg-[#191925] focus:bg-[#0E0E16] border border-[#303041] focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] font-mono text-xs text-[#F4F4FA] outline-none transition-all resize-y min-h-[32px]"
                               placeholder={`Enter value for ${key}...`}
                               spellCheck={false}
                             />
@@ -1837,7 +1865,7 @@ export const ProblemSolverPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={handleAddParam}
-                              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-[#93C572] font-medium transition-colors"
+                              className="inline-flex items-center gap-1 text-[11px] text-[#B5B5C8] hover:text-[#8B5CF6] font-medium transition-colors"
                             >
                               <Plus className="w-3 h-3" />
                               <span>Add parameter</span>
@@ -1847,16 +1875,16 @@ export const ProblemSolverPage: React.FC = () => {
                       </div>
 
                       {/* Expected Output */}
-                      <div className="space-y-1.5 pt-3 border-t border-border/60">
+                      <div className="space-y-1.5 pt-3 border-t border-[#303041]">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground font-mono font-medium">Expected Output =</span>
-                          <span className="text-[10px] text-muted-foreground/60 font-sans">(optional, compares when Run)</span>
+                          <span className="text-[#9292A8] font-mono font-medium">Expected Output =</span>
+                          <span className="text-[10px] text-[#9292A8]/60 font-sans">(optional, compares when Run)</span>
                         </div>
                         <textarea
                           value={activeCase.rawExpectedOutput}
                           onChange={(e) => handleUpdateExpected(e.target.value)}
                           rows={typeof activeCase.rawExpectedOutput === 'string' && activeCase.rawExpectedOutput.includes('\n') ? 3 : 1}
-                          className="w-full px-3 py-1.5 rounded-md bg-muted/40 hover:bg-muted/60 focus:bg-background border border-border focus:border-[#93C572] focus:ring-1 focus:ring-[#93C572] font-mono text-xs text-foreground outline-none transition-all resize-y min-h-[32px]"
+                          className="w-full px-3 py-1.5 rounded-md bg-[#13131D] hover:bg-[#191925] focus:bg-[#0E0E16] border border-[#303041] focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] font-mono text-xs text-[#F4F4FA] outline-none transition-all resize-y min-h-[32px]"
                           placeholder="e.g. [0.5, 0.88, 0.12] or (w, b) or 42"
                           spellCheck={false}
                         />
@@ -1870,8 +1898,8 @@ export const ProblemSolverPage: React.FC = () => {
             {bottomTab === 'result' && (
               <div>
                 {isRunning ? (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <div className="w-4 h-4 border-2 border-[#93C572] border-t-transparent rounded-full animate-spin" />
+                  <div className="flex items-center gap-2 text-[#9292A8]">
+                    <div className="w-4 h-4 border-2 border-[#8B5CF6] border-t-transparent rounded-full animate-spin" />
                     <span>
                       {isSubmission 
                         ? 'Evaluating against 7 comprehensive test cases in Python WebAssembly engine...' 
@@ -1879,25 +1907,25 @@ export const ProblemSolverPage: React.FC = () => {
                     </span>
                   </div>
                 ) : !execReport ? (
-                  <div className="text-muted-foreground">Click "Run" for sample checks or "Submit" to evaluate over 7 test cases.</div>
+                  <div className="text-[#9292A8]">Click "Run" for sample checks or "Submit" to evaluate over 7 test cases.</div>
                 ) : execReport.stderr ? (
-                  <div className="space-y-2 text-rose-400">
+                  <div className="space-y-2 text-[#F87171]">
                     <div className="font-bold flex items-center gap-1.5">
                       <AlertCircle className="w-4 h-4" />
                       Runtime Error
                     </div>
-                    <pre className="whitespace-pre-wrap bg-rose-950/20 p-3 rounded border border-rose-800/40 text-[11px]">
+                    <pre className="whitespace-pre-wrap bg-[#30191E] p-3 rounded border border-[#70303A] text-[11px]">
                       {execReport.stderr}
                     </pre>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                    <div className="flex items-center justify-between border-b border-[#303041] pb-2">
                       <div className="flex items-center gap-2">
                         {execReport.success ? (
                           <>
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                            <span className="font-bold text-sm text-emerald-400">
+                            <CheckCircle2 className="w-4 h-4 text-[#4ADE80]" />
+                            <span className="font-bold text-sm text-[#4ADE80]">
                               {isSubmission
                                 ? `Accepted (${execReport.results.length}/${execReport.results.length} test cases passed)`
                                 : `Sample Test Cases Passed (${execReport.results.length}/${execReport.results.length})`}
@@ -1905,8 +1933,8 @@ export const ProblemSolverPage: React.FC = () => {
                           </>
                         ) : (
                           <>
-                            <AlertCircle className="w-4 h-4 text-rose-400" />
-                            <span className="font-bold text-sm text-rose-400">
+                            <AlertCircle className="w-4 h-4 text-[#F87171]" />
+                            <span className="font-bold text-sm text-[#F87171]">
                               {isSubmission
                                 ? `Wrong Answer (${execReport.results.filter(r => r.passed).length}/${execReport.results.length} test cases passed)`
                                 : `Sample Test Failed`}
@@ -1914,9 +1942,9 @@ export const ProblemSolverPage: React.FC = () => {
                           </>
                         )}
                       </div>
-                      <div className="text-muted-foreground text-[11px] flex items-center gap-2">
+                      <div className="text-[#9292A8] text-[11px] flex items-center gap-2">
                         {isSubmission && (
-                          <span className="px-2 py-0.5 rounded bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30 font-semibold font-mono">
+                          <span className="px-2 py-0.5 rounded bg-[#251B3B] text-[#8B5CF6] border border-[#45455B]/60 font-semibold font-mono">
                             {execReport.results.length} Test Cases Evaluated
                           </span>
                         )}
@@ -1941,14 +1969,14 @@ export const ProblemSolverPage: React.FC = () => {
                           className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono transition-colors border ${
                             resultCaseIdx === idx
                               ? res.passed
-                                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-bold'
-                                : 'bg-rose-500/15 border-rose-500/40 text-rose-300 font-bold'
+                                ? 'bg-[#14291D] border-[#28633D] text-[#4ADE80] font-bold'
+                                : 'bg-[#30191E] border-[#70303A] text-[#F87171] font-bold'
                               : res.passed
-                              ? 'bg-secondary/40 border-border/50 text-muted-foreground hover:text-foreground'
-                              : 'bg-rose-950/20 border-rose-800/40 text-rose-400 hover:text-rose-300'
+                              ? 'bg-[#13131D] border-[#303041] text-[#B5B5C8] hover:text-[#F4F4FA]'
+                              : 'bg-[#30191E]/50 border-[#70303A]/60 text-[#F87171]'
                           }`}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full ${res.passed ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                          <span className={`w-1.5 h-1.5 rounded-full ${res.passed ? 'bg-[#4ADE80]' : 'bg-[#F87171]'}`} />
                           <span>Case {idx + 1}</span>
                         </button>
                       ))}
@@ -1961,12 +1989,12 @@ export const ProblemSolverPage: React.FC = () => {
                         <div className="space-y-3">
                           {/* Inputs */}
                           <div>
-                            <div className="text-[11px] text-muted-foreground mb-1 font-semibold">Inputs:</div>
-                            <div className="p-2.5 rounded-lg bg-muted/40 border border-border space-y-1">
+                            <div className="text-[11px] text-[#9292A8] mb-1 font-semibold">Inputs:</div>
+                            <div className="p-2.5 rounded-lg bg-[#13131D] border border-[#303041] space-y-1">
                               {Object.entries(activeRes.inputs || {}).map(([k, v]) => (
                                 <div key={k} className="text-xs">
-                                  <span className="text-muted-foreground font-semibold">{k} = </span>
-                                  <span className="text-foreground">{JSON.stringify(v)}</span>
+                                  <span className="text-[#9292A8] font-semibold">{k} = </span>
+                                  <span className="text-[#F4F4FA]">{JSON.stringify(v)}</span>
                                 </div>
                               ))}
                             </div>
@@ -1975,14 +2003,14 @@ export const ProblemSolverPage: React.FC = () => {
                           {/* Output vs Expected */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div>
-                              <div className="text-[11px] text-muted-foreground mb-1 font-semibold flex items-center justify-between">
+                              <div className="text-[11px] text-[#9292A8] mb-1 font-semibold flex items-center justify-between">
                                 <span>Your Output:</span>
-                                <span className={activeRes.passed ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
+                                <span className={activeRes.passed ? 'text-[#4ADE80] font-semibold' : 'text-[#F87171] font-semibold'}>
                                   {activeRes.passed ? 'Passed' : 'Failed'}
                                 </span>
                               </div>
                               <div className={`p-2.5 rounded-lg font-mono text-xs border ${
-                                activeRes.passed ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300' : 'bg-rose-950/20 border-rose-800/40 text-rose-300'
+                                activeRes.passed ? 'bg-[#14291D] border-[#28633D] text-[#4ADE80]' : 'bg-[#30191E] border-[#70303A] text-[#F87171]'
                               }`}>
                                 {activeRes.actualOutput !== undefined && activeRes.actualOutput !== null
                                   ? JSON.stringify(activeRes.actualOutput)
@@ -1992,13 +2020,13 @@ export const ProblemSolverPage: React.FC = () => {
                             </div>
 
                             <div>
-                              <div className="text-[11px] text-muted-foreground mb-1 font-semibold">
+                              <div className="text-[11px] text-[#9292A8] mb-1 font-semibold">
                                 Expected Output:
                               </div>
-                              <div className="p-2.5 rounded-lg bg-muted/40 border border-border font-mono text-xs text-foreground">
+                              <div className="p-2.5 rounded-lg bg-[#13131D] border border-[#303041] font-mono text-xs text-[#F4F4FA]">
                                 {activeRes.expectedOutput !== undefined
                                   ? JSON.stringify(activeRes.expectedOutput)
-                                  : <span className="text-muted-foreground italic">N/A</span>
+                                  : <span className="text-[#9292A8] italic">N/A</span>
                                 }
                               </div>
                             </div>
@@ -2006,7 +2034,7 @@ export const ProblemSolverPage: React.FC = () => {
 
                           {/* Error / Failure Message */}
                           {activeRes.error && (
-                            <div className="p-2.5 rounded-lg bg-rose-950/20 border border-rose-800/40 text-rose-400 text-xs">
+                            <div className="p-2.5 rounded-lg bg-[#30191E] border border-[#70303A] text-[#F87171] text-xs">
                               <span className="font-semibold">Reason: </span>
                               {activeRes.error}
                             </div>
@@ -2017,8 +2045,8 @@ export const ProblemSolverPage: React.FC = () => {
 
                     {execReport.stdout && (
                       <div>
-                        <div className="text-muted-foreground mb-1">Standard Output:</div>
-                        <pre className="p-2 rounded bg-muted/30 border border-border whitespace-pre-wrap text-[11px]">
+                        <div className="text-[#9292A8] mb-1">Standard Output:</div>
+                        <pre className="p-2 rounded bg-[#13131D] border border-[#303041] whitespace-pre-wrap text-[11px]">
                           {execReport.stdout}
                         </pre>
                       </div>
@@ -2032,12 +2060,12 @@ export const ProblemSolverPage: React.FC = () => {
             {bottomTab === 'repl' && (
               <div className="flex flex-col h-full space-y-2">
                 {/* REPL Quick Actions Bar */}
-                <div className="flex items-center justify-between gap-2 flex-wrap pb-1.5 border-b border-border/60">
+                <div className="flex items-center justify-between gap-2 flex-wrap pb-1.5 border-b border-[#303041]">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                       onClick={handleInspectShapesQuickly}
                       disabled={isEvaluatingRepl}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 font-sans text-xs font-semibold border border-sky-500/30 transition-colors disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-[#251B3B] hover:bg-[#272738] text-[#8B5CF6] font-sans text-xs font-semibold border border-[#45455B] transition-colors disabled:opacity-50"
                       title="Inspect dimensions of all inputs in current test case"
                     >
                       <Layers className="w-3.5 h-3.5" />
@@ -2047,7 +2075,7 @@ export const ProblemSolverPage: React.FC = () => {
                     <button
                       onClick={() => handleExecuteRepl('import numpy as np; import torch; print("NumPy version:", np.__version__, "| PyTorch compatibility ready")')}
                       disabled={isEvaluatingRepl}
-                      className="px-2 py-0.5 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground text-[11px] font-mono transition-colors disabled:opacity-50"
+                      className="px-2 py-0.5 rounded-lg bg-[#13131D] hover:bg-[#272738] text-[#B5B5C8] hover:text-[#F4F4FA] text-[11px] font-mono transition-colors disabled:opacity-50 border border-[#303041]"
                     >
                       np/torch info
                     </button>
@@ -2055,7 +2083,7 @@ export const ProblemSolverPage: React.FC = () => {
                     <button
                       onClick={() => handleExecuteRepl(editorRef.current ? editorRef.current.getValue() : code)}
                       disabled={isEvaluatingRepl}
-                      className="px-2 py-0.5 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground text-[11px] font-sans font-medium transition-colors disabled:opacity-50"
+                      className="px-2 py-0.5 rounded-lg bg-[#13131D] hover:bg-[#272738] text-[#B5B5C8] hover:text-[#F4F4FA] text-[11px] font-sans font-medium transition-colors disabled:opacity-50 border border-[#303041]"
                       title="Load current editor code and functions into the REPL scope"
                     >
                       Load Editor Functions
@@ -2064,7 +2092,7 @@ export const ProblemSolverPage: React.FC = () => {
 
                   <button
                     onClick={() => setReplHistory([])}
-                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-2 py-0.5 rounded transition-colors"
+                    className="inline-flex items-center gap-1 text-[11px] text-[#9292A8] hover:text-[#F4F4FA] px-2 py-0.5 rounded hover:bg-[#272738] transition-colors"
                   >
                     <Trash2 className="w-3 h-3" />
                     <span>Clear</span>
@@ -2074,28 +2102,28 @@ export const ProblemSolverPage: React.FC = () => {
                 {/* REPL Output Console */}
                 <div 
                   ref={replConsoleRef}
-                  className="flex-1 overflow-y-auto custom-scrollbar p-2.5 rounded-xl bg-black/50 border border-white/10 font-mono text-xs space-y-1.5 min-h-[85px] max-h-[160px]"
+                  className="flex-1 overflow-y-auto custom-scrollbar p-2.5 rounded-xl bg-[#0E0E16] border border-[#303041] font-mono text-xs space-y-1.5 min-h-[85px] max-h-[160px]"
                 >
                   {replHistory.length === 0 ? (
-                    <div className="text-muted-foreground/60 italic text-[11px]">
+                    <div className="text-[#9292A8]/60 italic text-[11px]">
                       REPL history is empty. Type a python expression below or click "Inspect Input Shapes".
                     </div>
                   ) : (
                     replHistory.map((item) => (
                       <div key={item.id} className="space-y-0.5">
-                        <div className="flex items-center gap-2 text-sky-400/90 font-semibold select-none text-[11px]">
-                          <span className="text-muted-foreground">&gt;&gt;&gt;</span>
-                          <span className="text-foreground">{item.command}</span>
+                        <div className="flex items-center gap-2 text-[#38BDF8] font-semibold select-none text-[11px]">
+                          <span className="text-[#9292A8]">&gt;&gt;&gt;</span>
+                          <span className="text-[#F4F4FA]">{item.command}</span>
                         </div>
-                        <pre className={`whitespace-pre-wrap pl-4 text-[11px] ${item.isError ? 'text-rose-400 font-semibold' : 'text-emerald-300'}`}>
+                        <pre className={`whitespace-pre-wrap pl-4 text-[11px] ${item.isError ? 'text-[#F87171] font-semibold' : 'text-[#4ADE80]'}`}>
                           {item.output}
                         </pre>
                       </div>
                     ))
                   )}
                   {isEvaluatingRepl && (
-                    <div className="flex items-center gap-2 text-sky-400 pl-4 text-[11px] animate-pulse">
-                      <div className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
+                    <div className="flex items-center gap-2 text-[#38BDF8] pl-4 text-[11px] animate-pulse">
+                      <div className="w-3 h-3 border-2 border-[#38BDF8] border-t-transparent rounded-full animate-spin" />
                       <span>Evaluating in Python engine...</span>
                     </div>
                   )}
@@ -2111,21 +2139,21 @@ export const ProblemSolverPage: React.FC = () => {
                   className="flex items-center gap-2 pt-0"
                 >
                   <div className="relative flex-1">
-                    <span className="absolute left-3 top-1.5 font-mono text-xs text-sky-400 font-bold select-none">&gt;&gt;&gt;</span>
+                    <span className="absolute left-3 top-1.5 font-mono text-xs text-[#38BDF8] font-bold select-none">&gt;&gt;&gt;</span>
                     <input
                       ref={replInputRef}
                       type="text"
                       value={replInput}
                       onChange={(e) => setReplInput(e.target.value)}
                       placeholder="e.g. x.shape, np.eye(3), print(type(arr)), def f(): ..."
-                      className="w-full pl-9 pr-3 py-1 rounded-lg bg-muted/40 hover:bg-muted/60 focus:bg-background border border-border focus:border-[#93C572] focus:ring-1 focus:ring-[#93C572] font-mono text-xs text-foreground outline-none transition-all"
+                      className="w-full pl-9 pr-3 py-1 rounded-lg bg-[#13131D] hover:bg-[#191925] focus:bg-[#0E0E16] border border-[#303041] focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] font-mono text-xs text-[#F4F4FA] outline-none transition-all"
                       spellCheck={false}
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={isEvaluatingRepl || !replInput.trim()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#93C572] hover:bg-[#a4d287] text-black font-sans text-xs font-bold transition-all disabled:opacity-40 shrink-0"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6] text-white font-sans text-xs font-bold transition-all disabled:opacity-40 shrink-0"
                   >
                     <span>Run</span>
                     <CornerDownLeft className="w-3 h-3" />

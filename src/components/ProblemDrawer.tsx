@@ -141,7 +141,7 @@ export const ProblemDrawer: React.FC<ProblemDrawerProps> = ({
       />
 
       {/* Drawer content */}
-      <div className="relative w-full sm:w-[320px] md:w-[340px] bg-[#0c0c0c] border-r border-[#262626] shadow-2xl flex flex-col h-full z-10 animate-in slide-in-from-left duration-200 ease-out select-none">
+      <div className="relative w-full sm:w-[320px] md:w-[340px] bg-[#13131D] border-r border-[#303041] shadow-2xl flex flex-col h-full z-10 animate-in slide-in-from-left duration-200 ease-out select-none">
         
         {/* ========================================================================= */}
         {/* MODE 1: RESEARCH SIDEBAR (Template: research_sidebar_template.png)         */}
@@ -149,7 +149,7 @@ export const ProblemDrawer: React.FC<ProblemDrawerProps> = ({
         {isResearchMode ? (
           <>
             {/* Header: Paper Title & Close Button */}
-            <div className="px-4 py-3.5 border-b border-[#262626] flex items-center justify-between">
+            <div className="px-4 py-3.5 border-b border-[#303041] flex items-center justify-between">
               <h2 className="text-sm font-bold text-white truncate max-w-[250px]" title={currentPaper?.title}>
                 {currentPaper?.title || 'Paper Curriculum'}
               </h2>
@@ -179,21 +179,21 @@ export const ProblemDrawer: React.FC<ProblemDrawerProps> = ({
                     }}
                     className={`w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors ${
                       isCurrent
-                        ? 'bg-[#2a2a2a] text-white font-bold'
-                        : 'hover:bg-[#1a1a1a] text-[#9ca3af] hover:text-white font-normal'
+                        ? 'bg-[#251B3B] text-[#8B5CF6] font-bold border-l-2 border-[#8B5CF6]'
+                        : 'hover:bg-[#191925] text-[#B5B5C8] hover:text-white font-normal'
                     }`}
                   >
                     {/* Circle / Solved Icon */}
                     <div className="shrink-0 flex items-center justify-center w-4 h-4">
                       {isSolved ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <CheckCircle2 className="w-4 h-4 text-[#4ADE80]" />
                       ) : (
-                        <Circle className={`w-3.5 h-3.5 ${isCurrent ? 'text-white' : 'text-[#555555]'}`} />
+                        <Circle className={`w-3.5 h-3.5 ${isCurrent ? 'text-[#8B5CF6]' : 'text-[#45455B]'}`} />
                       )}
                     </div>
 
                     {/* Step Number in Monospace */}
-                    <span className={`text-xs font-mono shrink-0 ${isCurrent ? 'text-white font-bold' : 'text-[#6b7280]'}`}>
+                    <span className={`text-xs font-mono shrink-0 ${isCurrent ? 'text-[#8B5CF6] font-bold' : 'text-[#9292A8]'}`}>
                       {stepNum}
                     </span>
 
@@ -207,13 +207,13 @@ export const ProblemDrawer: React.FC<ProblemDrawerProps> = ({
             </div>
 
             {/* Bottom Link to return to Research Paper landing page */}
-            <div className="p-3 border-t border-[#262626] bg-[#080808] flex items-center justify-between text-xs">
+            <div className="p-3 border-t border-[#303041] bg-[#0B0B12] flex items-center justify-between text-xs">
               <button
                 onClick={() => {
                   navigate(`/research?paper=${paperId || currentPaper?.id}`);
                   onClose();
                 }}
-                className="text-[11px] text-[#93C572] hover:underline flex items-center gap-1.5"
+                className="text-[11px] text-[#8B5CF6] hover:text-[#A78BFA] hover:underline flex items-center gap-1.5"
               >
                 <span>Paper Architecture Overview</span>
                 <ExternalLink className="w-3 h-3" />
@@ -226,9 +226,9 @@ export const ProblemDrawer: React.FC<ProblemDrawerProps> = ({
           /* ========================================================================= */
           <>
             {/* Header: Assessment Title & Close Button */}
-            <div className="px-4 py-3.5 border-b border-[#262626] flex items-center justify-between">
+            <div className="px-4 py-3.5 border-b border-[#303041] flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-[#93C572]">Interview Track</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[#8B5CF6]">Interview Track</span>
                 <h2 className="text-sm font-bold text-white truncate max-w-[240px]" title={currentAssessment.name}>
                   {currentAssessment.name}
                 </h2>
@@ -248,7 +248,7 @@ export const ProblemDrawer: React.FC<ProblemDrawerProps> = ({
                 <div key={set.id || sIdx} className="space-y-1">
                   <div className="px-2 py-1 text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
                     <span>{set.name}</span>
-                    <span className="text-[10px] font-mono text-[#93C572]">{set.problems?.length || 0} Qs</span>
+                    <span className="text-[10px] font-mono text-[#8B5CF6]">{set.problems?.length || 0} Qs</span>
                   </div>
                   <div className="space-y-0.5">
                     {(set.problems || []).map((prob: any, pIdx: number) => {
@@ -264,8 +264,8 @@ export const ProblemDrawer: React.FC<ProblemDrawerProps> = ({
                           }}
                           className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between gap-2 transition-colors ${
                             isCurrent
-                              ? 'bg-[#2a2a2a] text-white font-bold border border-[#93C572]/40'
-                              : 'hover:bg-[#181818] text-[#9ca3af] hover:text-white font-normal'
+                              ? 'bg-[#251B3B] text-[#8B5CF6] font-bold border border-[#8B5CF6]/40'
+                              : 'hover:bg-[#191925] text-[#B5B5C8] hover:text-white font-normal'
                           }`}
                         >
                           <div className="flex items-center gap-2 truncate">
@@ -294,13 +294,13 @@ export const ProblemDrawer: React.FC<ProblemDrawerProps> = ({
             </div>
 
             {/* Bottom Link to return to Interview page */}
-            <div className="p-3 border-t border-[#262626] bg-[#080808] flex items-center justify-between text-xs">
+            <div className="p-3 border-t border-[#303041] bg-[#0B0B12] flex items-center justify-between text-xs">
               <button
                 onClick={() => {
                   navigate('/interview');
                   onClose();
                 }}
-                className="text-[11px] text-[#93C572] hover:underline flex items-center gap-1.5"
+                className="text-[11px] text-[#8B5CF6] hover:text-[#A78BFA] hover:underline flex items-center gap-1.5"
               >
                 <span>← All Interview Tracks</span>
               </button>
@@ -326,7 +326,7 @@ export const ProblemDrawer: React.FC<ProblemDrawerProps> = ({
             </div>
 
             {/* Filter controls */}
-            <div className="p-3.5 space-y-2.5 border-b border-[#262626] bg-[#0c0c0c]">
+            <div className="p-3.5 space-y-2.5 border-b border-[#303041] bg-[#0B0B12]">
               {/* Search problems... */}
               <div className="relative">
                 <input
@@ -334,7 +334,7 @@ export const ProblemDrawer: React.FC<ProblemDrawerProps> = ({
                   placeholder="Search problems..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#141414] border border-[#2a2a2a] rounded-md px-3 py-1.5 text-xs text-white placeholder-[#6b7280] focus:outline-none focus:border-[#93C572]/60 transition-colors"
+                  className="w-full bg-[#13131D] border border-[#303041] rounded-md px-3 py-1.5 text-xs text-white placeholder-[#9292A8] focus:outline-none focus:border-[#8B5CF6] transition-colors"
                 />
               </div>
 
@@ -344,10 +344,10 @@ export const ProblemDrawer: React.FC<ProblemDrawerProps> = ({
                 <select
                   value={selectedTag}
                   onChange={(e) => setSelectedTag(e.target.value)}
-                  className="w-full bg-[#141414] border border-[#2a2a2a] rounded-md px-2.5 py-1.5 text-xs text-[#d1d5db] focus:outline-none focus:border-[#93C572]/60 cursor-pointer transition-colors"
+                  className="w-full bg-[#13131D] border border-[#303041] rounded-md px-2.5 py-1.5 text-xs text-[#d1d5db] focus:outline-none focus:border-[#8B5CF6] cursor-pointer transition-colors"
                 >
                   {allTags.map((t) => (
-                    <option key={t} value={t} className="bg-[#141414] text-white">
+                    <option key={t} value={t} className="bg-[#13131D] text-white">
                       {t}
                     </option>
                   ))}
@@ -357,17 +357,17 @@ export const ProblemDrawer: React.FC<ProblemDrawerProps> = ({
                 <select
                   value={selectedDifficulty}
                   onChange={(e) => setSelectedDifficulty(e.target.value)}
-                  className="w-full bg-[#141414] border border-[#2a2a2a] rounded-md px-2.5 py-1.5 text-xs text-[#d1d5db] focus:outline-none focus:border-[#93C572]/60 cursor-pointer transition-colors"
+                  className="w-full bg-[#13131D] border border-[#303041] rounded-md px-2.5 py-1.5 text-xs text-[#d1d5db] focus:outline-none focus:border-[#8B5CF6] cursor-pointer transition-colors"
                 >
-                  <option value="All" className="bg-[#141414] text-white">All</option>
-                  <option value="Easy" className="bg-[#141414] text-white">Easy</option>
-                  <option value="Medium" className="bg-[#141414] text-white">Medium</option>
-                  <option value="Hard" className="bg-[#141414] text-white">Hard</option>
+                  <option value="All" className="bg-[#13131D] text-white">All</option>
+                  <option value="Easy" className="bg-[#13131D] text-white">Easy</option>
+                  <option value="Medium" className="bg-[#13131D] text-white">Medium</option>
+                  <option value="Hard" className="bg-[#13131D] text-white">Hard</option>
                 </select>
               </div>
 
               {/* Segmented Control: All | Solved | Unsolved */}
-              <div className="grid grid-cols-3 gap-1 p-0.5 rounded-lg bg-[#181818] border border-[#2a2a2a]">
+              <div className="grid grid-cols-3 gap-1 p-0.5 rounded-lg bg-[#13131D] border border-[#303041]">
                 {(['All', 'Solved', 'Unsolved'] as const).map((st) => (
                   <button
                     key={st}

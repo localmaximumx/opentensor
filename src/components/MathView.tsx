@@ -34,7 +34,7 @@ export const MathView: React.FC<MathViewProps> = ({ content, className = '', all
       const highlighted = highlightPythonCode(text.trim());
       return `<div class="my-3 rounded-xl bg-[#0d1117] border border-border/80 overflow-hidden shadow-sm">
         <div class="px-3 py-1.5 bg-[#161b22] border-b border-[#30363d] flex items-center justify-between text-[11px] font-mono text-muted-foreground select-none">
-          <span class="text-[#93C572] font-semibold">Python</span>
+          <span class="text-[#8B5CF6] font-semibold">Python</span>
           <span>${text.trim().split('\n').length} lines</span>
         </div>
         <pre class="p-4 overflow-x-auto text-xs font-mono leading-relaxed text-[#e6edf3] whitespace-pre custom-scrollbar"><code>${highlighted}</code></pre>
@@ -50,7 +50,7 @@ export const MathView: React.FC<MathViewProps> = ({ content, className = '', all
       codeBlocks.push(
         `<div class="my-3 rounded-xl bg-[#0d1117] border border-border/80 overflow-hidden shadow-sm not-prose">
           <div class="px-3 py-1.5 bg-[#161b22] border-b border-[#30363d] flex items-center justify-between text-[11px] font-mono text-muted-foreground select-none">
-            <span class="text-[#93C572] font-semibold">Python</span>
+            <span class="text-[#8B5CF6] font-semibold">Python</span>
             <span>${trimmed.split('\n').length} lines</span>
           </div>
           <pre class="p-4 overflow-x-auto text-xs font-mono leading-relaxed text-[#e6edf3] whitespace-pre custom-scrollbar"><code>${highlighted}</code></pre>
@@ -88,10 +88,10 @@ export const MathView: React.FC<MathViewProps> = ({ content, className = '', all
       .replace(/^# (.*$)/gim, '<h1 class="text-xl font-extrabold text-foreground mt-6 mb-2">$1</h1>')
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
       .replace(/\*(.*?)\*/g, '<em class="text-foreground/90">$1</em>')
-      .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-muted text-[#93C572] font-mono text-xs">$1</code>')
+      .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-[#251B3B] text-[#8B5CF6] font-mono text-xs">$1</code>')
       .replace(/---/g, '<hr class="my-4 border-border/60" />')
-      .replace(/^[-*]\s+(.*$)/gim, '<li class="flex items-start gap-2 my-0.5 text-muted-foreground leading-normal"><span class="text-[#93C572] select-none text-xs min-w-[0.75rem] pt-0.5">•</span><span class="flex-1">$1</span></li>')
-      .replace(/^(\d+)\.\s+(.*$)/gim, '<li class="flex items-start gap-2 my-0.5 text-muted-foreground leading-normal"><span class="text-[#93C572] font-semibold text-xs min-w-[1.25rem] select-none pt-0.5">$1.</span><span class="flex-1">$2</span></li>');
+      .replace(/^[-*]\s+(.*$)/gim, '<li class="flex items-start gap-2 my-0.5 text-muted-foreground leading-normal"><span class="text-[#8B5CF6] select-none text-xs min-w-[0.75rem] pt-0.5">•</span><span class="flex-1">$1</span></li>')
+      .replace(/^(\d+)\.\s+(.*$)/gim, '<li class="flex items-start gap-2 my-0.5 text-muted-foreground leading-normal"><span class="text-[#8B5CF6] font-semibold text-xs min-w-[1.25rem] select-none pt-0.5">$1.</span><span class="flex-1">$2</span></li>');
 
     // Group contiguous <li> items into a single clean list without excessive padding
     formatted = formatted.replace(/((?:<li[\s\S]*?<\/li>\s*)+)/g, '<ul class="my-1.5 space-y-0.5 list-none pl-0">$1</ul>');
