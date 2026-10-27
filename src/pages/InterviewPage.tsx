@@ -13,7 +13,9 @@ import {
   CheckCircle2, 
   Circle,
   Radio,
-  ExternalLink
+  ExternalLink,
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getAssessments } from '../services/dataService';
@@ -248,6 +250,71 @@ export const InterviewPage: React.FC = () => {
           <p className="text-sm text-[#9ca3af] max-w-3xl leading-relaxed">
             Mock interviews on real conditions. Timed, scored, analyzed at the end. Built to the bar set by FAANG, frontier AI labs, fast startups, and quant.
           </p>
+        </div>
+
+        {/* ===================================================================== */}
+        {/* INTERACTIVE SIMULATOR & FLASHCARDS HERO BANNER                        */}
+        {/* ===================================================================== */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
+          {/* Mock Interview Simulator Card */}
+          <Link
+            to="/mock-interview"
+            className="group p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-[#121c15] to-[#0c140f] border border-[#93C572]/30 hover:border-[#93C572]/70 transition-all flex flex-col justify-between shadow-lg relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#93C572]/10 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Timed 45-min Arena</span>
+                </span>
+                <span className="text-xs font-mono text-emerald-400 font-semibold">New Feature</span>
+              </div>
+              <h3 className="text-lg font-black text-white group-hover:text-[#93C572] transition-colors mb-1.5">
+                Mock Interview Simulator
+              </h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Take a realistic, timed screening session. Solve multi-problem challenges against live Pyodide test cases and generate an actionable hiring scorecard.
+              </p>
+            </div>
+            <div className="mt-5 pt-3 border-t border-white/5 flex items-center justify-between">
+              <span className="text-xs text-zinc-400 font-mono">L4/L5 Screening & Senior Tracks</span>
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-[#93C572] group-hover:translate-x-1 transition-transform">
+                <span>Enter Simulator</span>
+                <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
+          </Link>
+
+          {/* Spaced Repetition Theory Flashcards Card */}
+          <Link
+            to="/flashcards"
+            className="group p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-[#121820] to-[#0d1218] border border-sky-500/30 hover:border-sky-500/70 transition-all flex flex-col justify-between shadow-lg relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Rapid Theory Quizzes</span>
+                </span>
+                <span className="text-xs font-mono text-sky-400 font-semibold">Spaced Repetition</span>
+              </div>
+              <h3 className="text-lg font-black text-white group-hover:text-sky-300 transition-colors mb-1.5">
+                ML & AI Concept Flashcards
+              </h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Master 30+ high-yield interview questions on Transformers, Backprop, Attention complexity, RMSNorm, AdamW, and ML Systems with 3D flipcards.
+              </p>
+            </div>
+            <div className="mt-5 pt-3 border-t border-white/5 flex items-center justify-between">
+              <span className="text-xs text-zinc-400 font-mono">Leitner SM-2 Retention Tracking</span>
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-sky-400 group-hover:translate-x-1 transition-transform">
+                <span>Start Reviewing</span>
+                <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
+          </Link>
         </div>
 
         {/* ===================================================================== */}

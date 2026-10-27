@@ -263,6 +263,9 @@ export const ProblemSolverPage: React.FC = () => {
   const [resultCaseIdx, setResultCaseIdx] = useState<number>(0);
   const [bottomTab, setBottomTab] = useState<'testcase' | 'result' | 'repl'>('testcase');
   const [replInput, setReplInput] = useState<string>('');
+  const replConsoleRef = useRef<HTMLDivElement>(null);
+  const replOutputEndRef = useRef<HTMLDivElement>(null);
+  const replInputRef = useRef<HTMLInputElement>(null);
   const [replHistory, setReplHistory] = useState<{ id: string; command: string; output: string; isError?: boolean }[]>([
     {
       id: 'init-1',
@@ -846,7 +849,19 @@ export const ProblemSolverPage: React.FC = () => {
     const cmd = (commandToRun !== undefined ? commandToRun : replInput).trim();
     if (!cmd) return;
 
+    if (commandToRun === undefined) {
+      setReplInput('');
+    }
+
     setIsEvaluatingRepl(true);
+    // Instant scroll to bottom when evaluation starts so user sees the spinner/progress
+    setTimeout(() => {
+      if (replConsoleRef.current) {
+        replConsoleRef.current.scrollTop = replConsoleRef.current.scrollHeight;
+      }
+      replOutputEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 10);
+
     const currentCode = editorRef.current ? editorRef.current.getValue() : code;
 
     const res = await runPythonRepl(cmd, currentCode);
@@ -862,10 +877,30 @@ export const ProblemSolverPage: React.FC = () => {
       }
     ]);
 
-    if (commandToRun === undefined) {
-      setReplInput('');
-    }
+    // Keep focus on input for fast rapid-fire typing
+    setTimeout(() => {
+      replInputRef.current?.focus();
+      if (replConsoleRef.current) {
+        replConsoleRef.current.scrollTop = replConsoleRef.current.scrollHeight;
+      }
+      replOutputEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
   };
+
+  // Auto-scroll REPL console to show the newest response whenever history or evaluation state updates
+  useEffect(() => {
+    if (bottomTab === 'repl' || isEvaluatingRepl) {
+      const scrollDown = () => {
+        if (replConsoleRef.current) {
+          replConsoleRef.current.scrollTop = replConsoleRef.current.scrollHeight;
+        }
+        replOutputEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+      scrollDown();
+      const t = setTimeout(scrollDown, 60);
+      return () => clearTimeout(t);
+    }
+  }, [replHistory, isEvaluatingRepl, bottomTab]);
 
   const handleInspectShapesQuickly = () => {
     const currentCases = activeTestCases.length > 0 ? activeTestCases : defaultSampleCases;
@@ -2037,7 +2072,10 @@ export const ProblemSolverPage: React.FC = () => {
                 </div>
 
                 {/* REPL Output Console */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-2.5 rounded-xl bg-black/50 border border-white/10 font-mono text-xs space-y-1.5 min-h-[85px] max-h-[160px]">
+                <div 
+                  ref={replConsoleRef}
+                  className="flex-1 overflow-y-auto custom-scrollbar p-2.5 rounded-xl bg-black/50 border border-white/10 font-mono text-xs space-y-1.5 min-h-[85px] max-h-[160px]"
+                >
                   {replHistory.length === 0 ? (
                     <div className="text-muted-foreground/60 italic text-[11px]">
                       REPL history is empty. Type a python expression below or click "Inspect Input Shapes".
@@ -2061,6 +2099,7 @@ export const ProblemSolverPage: React.FC = () => {
                       <span>Evaluating in Python engine...</span>
                     </div>
                   )}
+                  <div ref={replOutputEndRef} />
                 </div>
 
                 {/* REPL Input Line */}
@@ -2074,6 +2113,7 @@ export const ProblemSolverPage: React.FC = () => {
                   <div className="relative flex-1">
                     <span className="absolute left-3 top-1.5 font-mono text-xs text-sky-400 font-bold select-none">&gt;&gt;&gt;</span>
                     <input
+                      ref={replInputRef}
                       type="text"
                       value={replInput}
                       onChange={(e) => setReplInput(e.target.value)}
