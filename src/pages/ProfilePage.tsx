@@ -146,17 +146,23 @@ export const ProfilePage: React.FC = () => {
     let hard = 0;
 
     if (catalogProblems.length > 0) {
+      // Build slug to difficulty map
+      const diffMap = new Map<string, 'Easy' | 'Medium' | 'Hard'>();
       catalogProblems.forEach(p => {
-        if (solvedSet.has(p.slug) || solvedSet.has(p.id)) {
-          if (p.difficulty === 'Easy') easy++;
-          else if (p.difficulty === 'Medium') medium++;
-          else if (p.difficulty === 'Hard') hard++;
+        diffMap.set(p.slug, p.difficulty);
+      });
+
+      // Iterate through unique solved problems directly so each is counted exactly once
+      solvedSet.forEach(slug => {
+        const diff = diffMap.get(slug);
+        if (diff === 'Easy') easy++;
+        else if (diff === 'Medium') medium++;
+        else if (diff === 'Hard') hard++;
+        else {
+          // If not in catalog (e.g. specialized problem), default to Medium
+          medium++;
         }
       });
-    } else {
-      // Fallback estimate if catalog is still loading
-      const count = solvedSet.size;
-      easy = Math.min(count, 300);
     }
 
     const totalSolved = solvedSet.size;
