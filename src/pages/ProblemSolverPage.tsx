@@ -691,11 +691,15 @@ export const ProblemSolverPage: React.FC = () => {
     setResultCaseIdx(firstFail !== -1 ? firstFail : 0);
     setIsRunning(false);
 
+    const passedCount = report.results.filter(r => r.passed).length;
+    const totalCount = report.results.length;
+
+    if (currentUser && slug) {
+      recordUserSubmission(slug, report.success, report.totalTimeMs, passedCount, totalCount, currentUser.id);
+    }
+
     if (report.success && slug) {
       markProblemSolved(slug);
-      if (currentUser) {
-        recordUserSubmission(slug, true, report.totalTimeMs, report.results.length, report.results.length, currentUser.id);
-      }
       setIsSolved(true);
       setSolvedSet((prev) => new Set([...prev, slug]));
       confetti({

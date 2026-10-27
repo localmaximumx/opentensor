@@ -18,7 +18,9 @@ import {
   Code2,
   BookOpen,
   Radio,
-  Database
+  Database,
+  Flame,
+  Settings
 } from 'lucide-react';
 import { 
   getCurrentUser, 
@@ -27,6 +29,8 @@ import {
   syncUserSession,
   exportAccountBackup, 
   getUserStorageUsage,
+  getUserStreak,
+  UserStreakData,
   UserStorageUsage,
   UserAccount 
 } from '../services/authService';
@@ -46,6 +50,7 @@ export const Navbar: React.FC = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [storageUsage, setStorageUsage] = useState<UserStorageUsage>(() => getUserStorageUsage());
+  const [streakData, setStreakData] = useState<UserStreakData>(() => getUserStreak());
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -61,6 +66,7 @@ export const Navbar: React.FC = () => {
       setSolvedCount(0);
     }
     setStorageUsage(getUserStorageUsage(user?.id));
+    setStreakData(getUserStreak(user?.id));
   };
 
   useEffect(() => {
@@ -231,6 +237,16 @@ export const Navbar: React.FC = () => {
                 <span className="text-[11px] opacity-70">/ 790</span>
               </Link>
 
+              {/* Daily Streak Flame Counter */}
+              <Link
+                to="/profile"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30 transition-colors shadow-xs"
+                title={`Daily Streak: ${streakData.currentStreak} day${streakData.currentStreak === 1 ? '' : 's'}`}
+              >
+                <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500 shrink-0" />
+                <span className="tabular-nums font-mono">{streakData.currentStreak}</span>
+              </Link>
+
               {/* Theme Toggle Button (Desktop visible, on mobile moved into hamburger menu) */}
               <button
                 onClick={toggleTheme}
@@ -250,6 +266,7 @@ export const Navbar: React.FC = () => {
                       setIsUserMenuOpen(next);
                       if (next) {
                         setStorageUsage(getUserStorageUsage(currentUser.id));
+                        setStreakData(getUserStreak(currentUser.id));
                       }
                     }}
                     className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-secondary/60 hover:bg-secondary border border-border/70 transition-colors text-xs font-semibold text-foreground group"
@@ -270,89 +287,72 @@ export const Navbar: React.FC = () => {
                   {isUserMenuOpen && (
                     <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-card dark:bg-[#111614] border border-border dark:border-[#27382d] rounded-2xl shadow-2xl py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
                       
-                      {/* User Header */}
-                      <div className="px-4 py-2.5 border-b border-border dark:border-[#27382d]">
-                        <div className="flex items-center gap-2.5 mb-1">
+                      {/* User Header Linking to Profile */}
+                      <Link 
+                        to="/profile"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="block px-4 py-3 border-b border-border dark:border-[#27382d] hover:bg-secondary/40 dark:hover:bg-[#15201a] transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5 mb-1.5">
                           <div 
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-black shrink-0"
+                            className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black text-black shrink-0 ring-2 ring-white/10"
                             style={{ backgroundColor: currentUser.avatarColor || '#93C572' }}
                           >
                             {getInitials(currentUser.displayName || currentUser.username)}
                           </div>
-                          <div className="truncate">
-                            <div className="font-bold text-foreground dark:text-white truncate">{currentUser.displayName}</div>
-                            <div className="text-[10px] text-muted-foreground font-mono truncate">@{currentUser.username}</div>
+                          <div className="truncate min-w-0">
+                            <div className="font-bold text-foreground dark:text-white truncate text-sm">{currentUser.displayName || currentUser.username}</div>
+                            <div className="text-[11px] text-muted-foreground font-mono truncate">@{currentUser.username}</div>
                           </div>
                         </div>
-                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#93C572]/15 text-[#93C572] text-[10px] font-semibold mt-1">
-                          <ShieldCheck className="w-3 h-3" />
-                          <span>{currentUser.role}</span>
-                        </div>
-                      </div>
-
-                      {/* Storage Usage Widget (Matches user-provided screenshot design) */}
-                      <div className="px-4 py-3 border-b border-border dark:border-[#27382d] bg-secondary/30 dark:bg-black/25">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-1.5">
-                            <Database className="w-3.5 h-3.5 text-[#38bdf8]" />
-                            <span className="font-bold text-foreground dark:text-white text-[11px] tracking-wide">Storage Usage</span>
+                        <div className="flex items-center justify-between gap-2 mt-2">
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#93C572]/15 text-[#93C572] text-[10px] font-semibold">
+                            <ShieldCheck className="w-3 h-3" />
+                            <span>{currentUser.role}</span>
                           </div>
-                          <span className="text-[10px] font-mono text-muted-foreground font-medium">
-                            {storageUsage?.usedFormatted || '38.0 KB'} / {storageUsage?.maxFormatted || '5.0 MB'}
-                          </span>
-                        </div>
-
-                        {/* Striped Progress Bar */}
-                        <div className="w-full h-2 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden border border-border/60 dark:border-white/10 relative shadow-inner">
-                          <div 
-                            className="h-full rounded-full transition-all duration-300"
-                            style={{ 
-                              width: `${Math.min(100, Math.max(3, storageUsage?.percentage || 1.2))}%`,
-                              backgroundImage: 'repeating-linear-gradient(-45deg, #38bdf8, #38bdf8 3px, #1d4ed8 3px, #1d4ed8 7px)'
-                            }}
-                            title={`${storageUsage?.percentage || 0}% used`}
-                          />
-                        </div>
-
-                        {/* Legend row matching user design */}
-                        <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-2.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-[#38bdf8] shrink-0 shadow-xs" />
-                            <span>Already used: <strong className="text-foreground dark:text-white font-mono">{storageUsage?.usedFormatted || '38.0 KB'}</strong></span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-[#1d4ed8] shrink-0 shadow-xs" />
-                            <span>Available: <strong className="text-foreground dark:text-white font-mono">{storageUsage?.remainingFormatted || '4.96 MB'}</strong></span>
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-bold font-mono">
+                            <Flame className="w-3 h-3 fill-amber-500" />
+                            <span>{streakData.currentStreak}d Streak</span>
                           </div>
                         </div>
+                      </Link>
 
-                        {/* Plan details indicator */}
-                        <div className="flex items-center justify-between text-[9px] text-muted-foreground/80 mt-2 pt-1.5 border-t border-border/40 dark:border-white/5 font-mono">
-                          <span>Plan: <strong className="text-[#93C572]">{storageUsage?.planName || 'Free Tier'} (5.0 MB DB)</strong></span>
-                          <span>{storageUsage?.percentage || 0}% used</span>
-                        </div>
-                      </div>
-
-                      {/* Stats */}
-                      <div className="px-4 py-2 border-b border-border dark:border-[#27382d] flex items-center justify-between text-muted-foreground font-mono text-[11px]">
+                      {/* Solved Stats Preview */}
+                      <div className="px-4 py-2 border-b border-border dark:border-[#27382d] flex items-center justify-between text-muted-foreground font-mono text-[11px] bg-secondary/20 dark:bg-black/20">
                         <span>Solved Problems</span>
-                        <span className="text-[#93C572] font-bold">{currentUser.solvedProblems?.length || 0}</span>
+                        <span className="text-[#93C572] font-bold">{currentUser.solvedProblems?.length || 0} / 790</span>
                       </div>
 
-                      {/* Actions */}
+                      {/* Navigation Actions */}
                       <div className="py-1">
+                        <Link
+                          to="/profile"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="w-full text-left px-4 py-2 hover:bg-secondary dark:hover:bg-[#1a241f] text-foreground/80 dark:text-gray-300 hover:text-foreground dark:hover:text-white flex items-center gap-2.5 transition-colors"
+                        >
+                          <User className="w-3.5 h-3.5 text-[#93C572]" />
+                          <span>Profile & Activity Heatmap</span>
+                        </Link>
+                        <Link
+                          to="/profile?tab=settings"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="w-full text-left px-4 py-2 hover:bg-secondary dark:hover:bg-[#1a241f] text-foreground/80 dark:text-gray-300 hover:text-foreground dark:hover:text-white flex items-center gap-2.5 transition-colors"
+                        >
+                          <Settings className="w-3.5 h-3.5 text-sky-400" />
+                          <span>Account Settings & Storage</span>
+                        </Link>
                         <button
                           onClick={handleExportBackup}
                           className="w-full text-left px-4 py-2 hover:bg-secondary dark:hover:bg-[#1a241f] text-foreground/80 dark:text-gray-300 hover:text-foreground dark:hover:text-white flex items-center gap-2.5 transition-colors"
                         >
-                          <Download className="w-3.5 h-3.5 text-[#93C572]" />
+                          <Download className="w-3.5 h-3.5 text-purple-400" />
                           <span>Export Account Backup (JSON)</span>
                         </button>
                         <button
                           onClick={() => { setIsUserMenuOpen(false); setIsAuthModalOpen(true); }}
                           className="w-full text-left px-4 py-2 hover:bg-secondary dark:hover:bg-[#1a241f] text-foreground/80 dark:text-gray-300 hover:text-foreground dark:hover:text-white flex items-center gap-2.5 transition-colors"
                         >
-                          <Users className="w-3.5 h-3.5 text-sky-400" />
+                          <Users className="w-3.5 h-3.5 text-amber-400" />
                           <span>Switch Account / New User</span>
                         </button>
                         <button
@@ -432,6 +432,24 @@ export const Navbar: React.FC = () => {
                   </Link>
                 );
               })}
+
+              {/* Profile & Streak Link in Mobile Menu */}
+              <Link
+                to="/profile"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+                  location.pathname === '/profile'
+                    ? 'bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30'
+                    : 'text-foreground/80 hover:text-foreground hover:bg-secondary/60'
+                }`}
+              >
+                <User className="w-4 h-4 text-[#93C572]" />
+                <span>Profile & Streak</span>
+                <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 text-xs font-mono font-bold">
+                  <Flame className="w-3.5 h-3.5 fill-amber-500" />
+                  <span>{streakData.currentStreak}d</span>
+                </span>
+              </Link>
 
               {/* Theme Toggle Button Inside Mobile Menu */}
               <div className="pt-2 mt-2 border-t border-border/60">

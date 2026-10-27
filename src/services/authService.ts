@@ -612,3 +612,429 @@ export function getUserStorageUsage(userId?: string): UserStorageUsage {
     };
   }
 }
+
+export interface UserStreakData {
+  currentStreak: number;
+  longestStreak: number;
+  activeToday: boolean;
+  totalActiveDays: number;
+  totalSubmissions: number;
+  lastActiveDate: string | null;
+}
+
+export interface HeatmapDay {
+  date: string;
+  count: number;
+  level: 0 | 1 | 2 | 3 | 4;
+  dayOfWeek: number; // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  month: string;
+}
+
+export interface ActivityHeatmapData {
+  weeks: HeatmapDay[][];
+  months: { label: string; weekIndex: number }[];
+  totalCount: number;
+}
+
+export interface UserActivityItem {
+  id: string;
+  slug: string;
+  timestamp: string;
+  success: boolean;
+  runtimeMs: number;
+  passedCount: number;
+  totalCount: number;
+}
+
+export function getUserStreak(userId?: string): UserStreakData {
+  try {
+    const user = userId ? getAllAccounts().find(a => a.id === userId) : getCurrentUser();
+    const dateCounts: Record<string, number> = {};
+    let totalSubmissions = 0;
+
+    // Collect dates from submissions
+    if (user && user.submissions) {
+      Object.values(user.submissions).forEach(subList => {
+        if (Array.isArray(subList)) {
+          subList.forEach(sub => {
+            totalSubmissions++;
+            if (sub.timestamp) {
+              try {
+                const d = new Date(sub.timestamp);
+                if (!isNaN(d.getTime())) {
+                  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                  dateCounts[dateStr] = (dateCounts[dateStr] || 0) + 1;
+                }
+              } catch (e) {}
+            }
+          });
+        }
+      });
+    }
+
+    // If user has solved problems or is newly created today, ensure at least today/createdAt has activity if dateCounts is empty
+    if (user && Object.keys(dateCounts).length === 0 && user.solvedProblems && user.solvedProblems.length > 0) {
+      const d = user.lastLogin ? new Date(user.lastLogin) : new Date();
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      dateCounts[dateStr] = user.solvedProblems.length;
+      totalSubmissions = user.solvedProblems.length;
+    }
+
+    const uniqueDates = Object.keys(dateCounts).sort();
+    const totalActiveDays = uniqueDates.length;
+    const lastActiveDate = uniqueDates.length > 0 ? uniqueDates[uniqueDates.length - 1] : null;
+
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const yesterdayDate = new Date(now.getTime() - 86400000);
+    const yesterdayStr = `${yesterdayDate.getFullYear()}-${String(yesterdayDate.getMonth() + 1).padStart(2, '0')}-${String(yesterdayDate.getDate()).padStart(2, '0')}`;
+
+    const dateSet = new Set(uniqueDates);
+    const activeToday = dateSet.has(todayStr);
+
+    // Calculate current streak
+    let currentStreak = 0;
+    if (activeToday) {
+      currentStreak = 1;
+      let checkDate = new Date(now.getTime() - 86400000);
+      while (true) {
+        const s = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
+        if (dateSet.has(s)) {
+          currentStreak++;
+          checkDate = new Date(checkDate.getTime() - 86400000);
+        } else {
+          break;
+        }
+      }
+    } else if (dateSet.has(yesterdayStr)) {
+      currentStreak = 1;
+      let checkDate = new Date(yesterdayDate.getTime() - 86400000);
+      while (true) {
+        const s = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
+        if (dateSet.has(s)) {
+          currentStreak++;
+          checkDate = new Date(checkDate.getTime() - 86400000);
+        } else {
+          break;
+        }
+      }
+    } else if (user && user.solvedProblems && user.solvedProblems.length > 0) {
+      currentStreak = 1;
+    }
+
+    // Calculate longest streak
+    let longestStreak = currentStreak;
+    if (uniqueDates.length > 0) {
+      let run = 1;
+      for (let i = 1; i < uniqueDates.length; i++) {
+        const prev = new Date(uniqueDates[i - 1] + 'T00:00:00');
+        const curr = new Date(uniqueDates[i] + 'T00:00:00');
+        const diffDays = Math.round((curr.getTime() - prev.getTime()) / 86400000);
+        if (diffDays === 1) {
+          run++;
+        } else if (diffDays > 1) {
+          run = 1;
+        }
+        if (run > longestStreak) {
+          longestStreak = run;
+        }
+      }
+      longestStreak = Math.max(longestStreak, currentStreak);
+    }
+
+    return {
+      currentStreak,
+      longestStreak: Math.max(longestStreak, currentStreak, user?.solvedProblems?.length ? 1 : 0),
+      activeToday,
+      totalActiveDays,
+      totalSubmissions,
+      lastActiveDate
+    };
+  } catch (err) {
+    return {
+      currentStreak: 1,
+      longestStreak: 1,
+      activeToday: true,
+      totalActiveDays: 1,
+      totalSubmissions: 1,
+      lastActiveDate: null
+    };
+  }
+}
+
+export function getUserActivityHeatmap(userId?: string): ActivityHeatmapData {
+  try {
+    const user = userId ? getAllAccounts().find(a => a.id === userId) : getCurrentUser();
+    const dateCounts: Record<string, number> = {};
+    let totalCount = 0;
+
+    if (user && user.submissions) {
+      Object.values(user.submissions).forEach(subList => {
+        if (Array.isArray(subList)) {
+          subList.forEach(sub => {
+            totalCount++;
+            if (sub.timestamp) {
+              try {
+                const d = new Date(sub.timestamp);
+                if (!isNaN(d.getTime())) {
+                  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                  dateCounts[dateStr] = (dateCounts[dateStr] || 0) + 1;
+                }
+              } catch (e) {}
+            }
+          });
+        }
+      });
+    }
+
+    // Default solved activity credit if submissions record is empty
+    if (user && Object.keys(dateCounts).length === 0 && user.solvedProblems && user.solvedProblems.length > 0) {
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      dateCounts[dateStr] = user.solvedProblems.length;
+      totalCount = user.solvedProblems.length;
+    }
+
+    // 53 weeks grid ending on coming Saturday
+    const now = new Date();
+    const endDayOfWeek = now.getDay(); // 0 is Sun, 6 is Sat
+    const daysToSaturday = (6 - endDayOfWeek + 7) % 7;
+    const gridEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysToSaturday);
+
+    const totalDays = 53 * 7;
+    const gridStart = new Date(gridEnd.getFullYear(), gridEnd.getMonth(), gridEnd.getDate() - totalDays + 1);
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const weeks: HeatmapDay[][] = [];
+    const months: { label: string; weekIndex: number }[] = [];
+    let lastRecordedMonth = -1;
+
+    let cursor = new Date(gridStart.getTime());
+    let currentWeek: HeatmapDay[] = [];
+
+    for (let dayIndex = 0; dayIndex < totalDays; dayIndex++) {
+      const y = cursor.getFullYear();
+      const m = cursor.getMonth();
+      const d = cursor.getDate();
+      const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const count = dateCounts[dateStr] || 0;
+
+      let level: 0 | 1 | 2 | 3 | 4 = 0;
+      if (count >= 7) level = 4;
+      else if (count >= 4) level = 3;
+      else if (count >= 2) level = 2;
+      else if (count >= 1) level = 1;
+
+      const dayItem: HeatmapDay = {
+        date: dateStr,
+        count,
+        level,
+        dayOfWeek: cursor.getDay(),
+        month: monthNames[m]
+      };
+
+      currentWeek.push(dayItem);
+
+      // Check month boundary
+      if (currentWeek.length === 1 && m !== lastRecordedMonth) {
+        months.push({ label: monthNames[m], weekIndex: weeks.length });
+        lastRecordedMonth = m;
+      }
+
+      if (currentWeek.length === 7) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    if (currentWeek.length > 0) {
+      weeks.push(currentWeek);
+    }
+
+    return {
+      weeks,
+      months,
+      totalCount
+    };
+  } catch (err) {
+    console.error('Heatmap calculation error:', err);
+    return {
+      weeks: [],
+      months: [],
+      totalCount: 0
+    };
+  }
+}
+
+export function getUserRecentActivity(userId?: string, limit: number = 20): UserActivityItem[] {
+  try {
+    const user = userId ? getAllAccounts().find(a => a.id === userId) : getCurrentUser();
+    if (!user || !user.submissions) return [];
+    const list: UserActivityItem[] = [];
+    Object.entries(user.submissions).forEach(([slug, subs]) => {
+      if (Array.isArray(subs)) {
+        subs.forEach(s => {
+          list.push({
+            id: `${slug}_${s.timestamp}`,
+            slug,
+            timestamp: s.timestamp,
+            success: s.success,
+            runtimeMs: s.runtimeMs,
+            passedCount: s.passedCount,
+            totalCount: s.totalCount
+          });
+        });
+      }
+    });
+    list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return list.slice(0, limit);
+  } catch (e) {
+    return [];
+  }
+}
+
+export function getUserEloRating(
+  userId?: string,
+  easySolved: number = 0,
+  mediumSolved: number = 0,
+  hardSolved: number = 0
+): number {
+  try {
+    const streak = getUserStreak(userId);
+    const user = userId ? getAllAccounts().find(a => a.id === userId) : getCurrentUser();
+    const solvedTotal = user?.solvedProblems?.length || 0;
+
+    let base = 1500;
+    if (easySolved === 0 && mediumSolved === 0 && hardSolved === 0 && solvedTotal > 0) {
+      // Approximate distribution if breakdown not provided
+      base += solvedTotal * 8;
+    } else {
+      base += easySolved * 4 + mediumSolved * 10 + hardSolved * 22;
+    }
+
+    base += Math.min(streak.currentStreak * 3, 60);
+    return Math.max(1500, base);
+  } catch {
+    return 1500;
+  }
+}
+
+export async function updateUserProfile(
+  userId: string,
+  updates: {
+    displayName?: string;
+    username?: string;
+    role?: UserAccount['role'];
+    avatarColor?: string;
+  }
+): Promise<{ success: boolean; error?: string; user?: UserAccount }> {
+  const accounts = getAllAccounts();
+  const index = accounts.findIndex(a => a.id === userId);
+  if (index === -1) {
+    return { success: false, error: 'User not found.' };
+  }
+
+  const current = accounts[index];
+
+  if (updates.username && updates.username.trim().toLowerCase() !== current.username.toLowerCase()) {
+    const cleanUsername = updates.username.trim().toLowerCase();
+    if (cleanUsername.length < 3) {
+      return { success: false, error: 'Username must be at least 3 characters.' };
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(cleanUsername)) {
+      return { success: false, error: 'Username can only contain letters, numbers, underscores, and dashes.' };
+    }
+    const exists = accounts.some(a => a.id !== userId && a.username.toLowerCase() === cleanUsername);
+    if (exists) {
+      return { success: false, error: 'Username is already taken by another account.' };
+    }
+    current.username = cleanUsername;
+  }
+
+  if (updates.displayName !== undefined) {
+    current.displayName = updates.displayName.trim() || current.username;
+  }
+  if (updates.role) {
+    current.role = updates.role;
+  }
+  if (updates.avatarColor) {
+    current.avatarColor = updates.avatarColor;
+  }
+
+  accounts[index] = current;
+  saveAccounts(accounts);
+  window.dispatchEvent(new CustomEvent('tensortonic_auth_change'));
+
+  // Sync to Vercel API if available
+  const token = getAuthToken();
+  if (token) {
+    try {
+      await fetch('/api/user/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          displayName: current.displayName,
+          username: current.username,
+          role: current.role,
+          avatarColor: current.avatarColor
+        })
+      });
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  return { success: true, user: current };
+}
+
+export async function updateUserPassword(
+  userId: string,
+  currentPasswordPlain: string,
+  newPasswordPlain: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!newPasswordPlain || newPasswordPlain.length < 4) {
+    return { success: false, error: 'New password must be at least 4 characters long.' };
+  }
+
+  const accounts = getAllAccounts();
+  const user = accounts.find(a => a.id === userId);
+  if (!user) {
+    return { success: false, error: 'User not found.' };
+  }
+
+  const currentHash = await hashPassword(currentPasswordPlain);
+  if (user.passwordHash && user.passwordHash !== currentHash) {
+    return { success: false, error: 'Current password is incorrect.' };
+  }
+
+  const newHash = await hashPassword(newPasswordPlain);
+  user.passwordHash = newHash;
+  saveAccounts(accounts);
+  window.dispatchEvent(new CustomEvent('tensortonic_auth_change'));
+
+  // Sync to backend if token exists
+  const token = getAuthToken();
+  if (token) {
+    try {
+      await fetch('/api/user/password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword: currentPasswordPlain,
+          newPassword: newPasswordPlain
+        })
+      });
+    } catch (e) {}
+  }
+
+  return { success: true };
+}
+
