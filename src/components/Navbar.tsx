@@ -35,6 +35,7 @@ import {
   UserAccount 
 } from '../services/authService';
 import { AuthModal } from './AuthModal';
+import { PaletteSwitcher } from './PaletteSwitcher';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
@@ -246,6 +247,9 @@ export const Navbar: React.FC = () => {
                 <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500 shrink-0" />
                 <span className="tabular-nums font-mono">{streakData.currentStreak}</span>
               </Link>
+
+              {/* Palette Switcher */}
+              <PaletteSwitcher />
 
               {/* Theme Toggle Button (Desktop visible, on mobile moved into hamburger menu) */}
               <button
@@ -479,6 +483,12 @@ export const Navbar: React.FC = () => {
                     )}
                   </span>
                 </button>
+              </div>
+
+              {/* Mobile Palette Switcher */}
+              <div className="pt-2 border-t border-border/60 flex items-center justify-between px-4 py-2">
+                <span className="text-sm font-semibold text-foreground/90">Color Palette</span>
+                <PaletteSwitcher />
               </div>
 
               {/* Mobile Solved Counter */}

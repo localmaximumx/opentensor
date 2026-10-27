@@ -86,12 +86,12 @@ export const PaletteSwitcher: React.FC = () => {
                       <div className="text-xs font-semibold flex items-center gap-1.5">
                         <span>{pal.name}</span>
                         {pal.isNew && (
-                          <span className="text-[9px] font-mono uppercase px-1.5 py-0.2 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
+                          <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
                             New
                           </span>
                         )}
                         {pal.isOriginal && (
-                          <span className="text-[9px] font-mono uppercase px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                          <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                             Original
                           </span>
                         )}
