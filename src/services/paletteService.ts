@@ -1,4 +1,4 @@
-export type PaletteId = 'electric-violet' | 'light-blue' | 'cyber-indigo' | 'original-emerald' | 'electric-cyan';
+export type PaletteId = 'light-blue' | 'cyber-indigo' | 'original-emerald' | 'electric-cyan';
 
 export interface PaletteOption {
   id: PaletteId;
@@ -12,19 +12,12 @@ export interface PaletteOption {
 
 export const PALETTES: PaletteOption[] = [
   {
-    id: 'electric-violet',
-    name: 'Electric Violet',
-    tagline: 'Vibrant Violet, Deep Surfaces & Lime Accent',
-    primaryHex: '#8B5CF6',
-    gradient: 'from-[#8B5CF6] via-[#A78BFA] to-[#7C3AED]',
-    isNew: true
-  },
-  {
     id: 'light-blue',
     name: 'Light Sky Blue',
     tagline: 'Vibrant Sky Blue, Cyan & Clean Azure',
     primaryHex: '#0EA5E9',
-    gradient: 'from-[#0EA5E9] via-[#38BDF8] to-[#0284C7]'
+    gradient: 'from-[#0EA5E9] via-[#38BDF8] to-[#0284C7]',
+    isNew: true
   },
   {
     id: 'original-emerald',
@@ -59,10 +52,10 @@ export function getSavedPalette(): PaletteId {
     if (saved && PALETTES.some(p => p.id === saved)) {
       return saved;
     }
-    // Default to the Electric Violet palette
-    return 'electric-violet';
+    // Default to the NEW Light Blue palette
+    return 'light-blue';
   } catch (e) {
-    return 'electric-violet';
+    return 'light-blue';
   }
 }
 

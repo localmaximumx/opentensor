@@ -181,7 +181,7 @@ export const StudyPlansPage: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-[#0b0d11]">
-        <div className="w-8 h-8 border-2 border-[#8B5CF6] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#93C572] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -258,7 +258,7 @@ export const StudyPlansPage: React.FC = () => {
   );
 
   return (
-    <div className="h-full overflow-y-auto bg-[#0B0B12] text-foreground font-sans custom-scrollbar selection:bg-[#493276] selection:text-[#F4F4FA]">
+    <div className="h-full overflow-y-auto bg-[#0b0e14] text-foreground font-sans custom-scrollbar selection:bg-[#93C572]/20 selection:text-[#93C572]">
       <div className="container mx-auto px-4 md:px-8 py-8 max-w-7xl">
         
         {/* ======================================================== */}
@@ -266,7 +266,7 @@ export const StudyPlansPage: React.FC = () => {
         {/* ======================================================== */}
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-[#251B3B] border border-[#45455B] flex items-center justify-center text-[#8B5CF6] shadow-md shadow-[#8B5CF6]/10">
+            <div className="w-10 h-10 rounded-xl bg-[#14261f] border border-[#10b981]/30 flex items-center justify-center text-[#10b981] shadow-md shadow-[#10b981]/10">
               <Sparkles className="w-5 h-5 fill-current" />
             </div>
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white">
@@ -297,12 +297,12 @@ export const StudyPlansPage: React.FC = () => {
               <div
                 key={plan.id}
                 onClick={() => navigate(`/problems?search=${encodeURIComponent(plan.targetQuery)}`)}
-                className="bg-[#191925] hover:bg-[#272738] border border-[#303041] hover:border-[#8B5CF6]/50 rounded-2xl p-5 flex flex-col justify-between cursor-pointer transition-all duration-200 group shadow-md hover:shadow-xl hover:-translate-y-0.5"
+                className="bg-[#121620] hover:bg-[#151b27] border border-[#202738] hover:border-[#38435a] rounded-2xl p-5 flex flex-col justify-between cursor-pointer transition-all duration-200 group shadow-md hover:shadow-xl hover:-translate-y-0.5"
               >
                 <div className="flex items-start gap-4">
                   {plan.art}
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-base font-bold text-white group-hover:text-[#8B5CF6] transition-colors leading-snug">
+                    <h3 className="text-base font-bold text-white group-hover:text-[#93C572] transition-colors leading-snug">
                       {plan.title}
                     </h3>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
@@ -351,12 +351,12 @@ export const StudyPlansPage: React.FC = () => {
               <div
                 key={sheet.id}
                 onClick={() => navigate(`/problems?category=${sheet.category}`)}
-                className="bg-[#191925] hover:bg-[#272738] border border-[#303041] hover:border-[#8B5CF6]/50 rounded-2xl p-5 flex flex-col justify-between cursor-pointer transition-all duration-200 group shadow-md hover:shadow-xl hover:-translate-y-0.5"
+                className="bg-[#121620] hover:bg-[#151b27] border border-[#202738] hover:border-[#38435a] rounded-2xl p-5 flex flex-col justify-between cursor-pointer transition-all duration-200 group shadow-md hover:shadow-xl hover:-translate-y-0.5"
               >
                 <div className="flex items-center gap-3">
                   {sheet.art}
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-bold text-white group-hover:text-[#8B5CF6] transition-colors">
+                    <h3 className="text-sm font-bold text-white group-hover:text-[#93C572] transition-colors">
                       {sheet.title}
                     </h3>
                     <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
@@ -403,7 +403,7 @@ export const StudyPlansPage: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{plan.icon || '📚'}</span>
                       <div>
-                        <h3 className="text-sm font-bold text-white group-hover:text-[#8B5CF6] transition-colors">
+                        <h3 className="text-sm font-bold text-white group-hover:text-[#93C572] transition-colors">
                           {plan.title}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">

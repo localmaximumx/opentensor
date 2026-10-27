@@ -138,9 +138,9 @@ export const SolutionViewer: React.FC<SolutionViewerProps> = ({ solution, onAppl
     <div className="space-y-3 sm:space-y-4 animate-fadeIn">
       {/* Explanation walkthrough if present */}
       {explanation && (
-        <div className="rounded-xl border border-[#303041] bg-[#191925]/60 p-3 sm:p-4 shadow-xs">
-          <div className="flex items-center gap-2 mb-2 sm:mb-3 pb-2 border-b border-[#303041] text-xs font-semibold text-[#F4F4FA] uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5 text-[#8B5CF6]" />
+        <div className="rounded-xl border border-border/70 bg-card/40 p-3 sm:p-4 shadow-xs">
+          <div className="flex items-center gap-2 mb-2 sm:mb-3 pb-2 border-b border-border/50 text-xs font-semibold text-foreground/90 uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5 text-[#93C572]" />
             <span>Algorithm & Approach</span>
           </div>
           <MathView content={explanation} />
@@ -149,16 +149,16 @@ export const SolutionViewer: React.FC<SolutionViewerProps> = ({ solution, onAppl
 
       {/* Code container */}
       {code ? (
-        <div className="rounded-xl border border-[#303041] bg-[#0E0E16] overflow-hidden shadow-md">
+        <div className="rounded-xl border border-border/80 bg-[#0d1117] overflow-hidden shadow-md">
           {/* Top header bar */}
-          <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 bg-[#13131D] border-b border-[#303041] select-none">
+          <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 bg-[#161b22] border-b border-[#30363d] select-none">
             <div className="flex items-center gap-2">
-              <FileCode className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8B5CF6]" />
-              <span className="font-mono text-xs font-semibold text-[#F4F4FA]">solution.py</span>
-              <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#251B3B] text-[#8B5CF6] border border-[#45455B]">
+              <FileCode className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#93C572]" />
+              <span className="font-mono text-xs font-semibold text-foreground">solution.py</span>
+              <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30">
                 Py3
               </span>
-              <span className="text-[11px] text-[#9292A8] hidden sm:inline">
+              <span className="text-[11px] text-muted-foreground/70 hidden sm:inline">
                 {lineCount} {lineCount === 1 ? 'line' : 'lines'}
               </span>
             </div>
@@ -166,11 +166,11 @@ export const SolutionViewer: React.FC<SolutionViewerProps> = ({ solution, onAppl
             <div className="flex items-center gap-1.5">
               <button
                 onClick={handleCopy}
-                className="inline-flex items-center justify-center p-1.5 rounded-md text-xs font-medium bg-[#191925] hover:bg-[#272738] text-[#9292A8] hover:text-[#F4F4FA] transition-colors border border-[#303041]"
+                className="inline-flex items-center justify-center p-1.5 rounded-md text-xs font-medium bg-[#21262d] hover:bg-[#30363d] text-muted-foreground hover:text-foreground transition-colors border border-[#30363d]"
                 title="Copy reference code"
               >
                 {copied ? (
-                  <Check className="w-3.5 h-3.5 text-[#4ADE80]" />
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
                 ) : (
                   <Copy className="w-3.5 h-3.5" />
                 )}
@@ -179,7 +179,7 @@ export const SolutionViewer: React.FC<SolutionViewerProps> = ({ solution, onAppl
               {onApplySolution && (
                 <button
                   onClick={handleApply}
-                  className="inline-flex items-center justify-center p-1.5 rounded-md text-xs font-semibold bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6] text-white transition-colors shadow-xs"
+                  className="inline-flex items-center justify-center p-1.5 rounded-md text-xs font-semibold bg-[#93C572] hover:bg-[#a5db82] text-black transition-colors shadow-xs"
                   title="Apply to Editor"
                 >
                   {applied ? (
@@ -193,10 +193,10 @@ export const SolutionViewer: React.FC<SolutionViewerProps> = ({ solution, onAppl
           </div>
 
           {/* Code Body with Line Numbers */}
-          <div className="flex overflow-x-auto p-2.5 sm:p-4 custom-scrollbar bg-[#0E0E16]">
+          <div className="flex overflow-x-auto p-2.5 sm:p-4 custom-scrollbar bg-[#0d1117]">
             {/* Line Numbers Gutter */}
             <div
-              className="select-none text-right pr-2.5 sm:pr-4 text-[#77778D] font-mono text-xs leading-relaxed border-r border-[#303041] flex flex-col shrink-0"
+              className="select-none text-right pr-2.5 sm:pr-4 text-muted-foreground/30 font-mono text-xs leading-relaxed border-r border-[#30363d]/60 flex flex-col shrink-0"
               aria-hidden="true"
             >
               {Array.from({ length: lineCount }).map((_, i) => (

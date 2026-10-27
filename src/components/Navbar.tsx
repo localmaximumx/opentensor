@@ -176,7 +176,7 @@ export const Navbar: React.FC = () => {
 
       <nav className="text-foreground sticky top-0 z-50 w-full pt-3 pb-1 flex-shrink-0">
         <div className="container mx-auto px-4 max-w-7xl relative">
-          <div className="relative z-50 h-14 flex items-center justify-between pl-5 pr-3 rounded-full border backdrop-blur-2xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] border-[#303041] bg-[#191925]/95">
+          <div className="relative z-50 h-14 flex items-center justify-between pl-5 pr-3 rounded-full border backdrop-blur-2xl shadow-[0_8px_40px_rgba(0,0,0,0.12)] border-border bg-card/95 dark:border-border/60 dark:bg-background/60">
             
             {/* Left: Brand logo & Nav links */}
             <div className="flex items-center gap-2 md:gap-8 flex-shrink-0">
@@ -188,12 +188,12 @@ export const Navbar: React.FC = () => {
                   className="h-7 w-auto flex-shrink-0 drop-shadow-sm"
                   src="/images/logos/toniclite.svg"
                 />
-                <span className="text-[#F4F4FA] font-black text-base sm:text-lg tracking-tight font-sans inline">
-                  Tonic<span className="text-[#8B5CF6]">Lite</span>
+                <span className="text-foreground font-black text-base sm:text-lg tracking-tight font-sans inline">
+                  Tonic<span className="text-[#93C572]">Lite</span>
                 </span>
               </Link>
 
-              <div className="hidden lg:flex items-center gap-2">
+              <div className="hidden lg:flex items-center gap-6">
                 {navLinks.map((link) => {
                   const isInterview = link.path === '/interview' && (
                     location.pathname.startsWith('/interview') ||
@@ -210,10 +210,10 @@ export const Navbar: React.FC = () => {
                     <Link
                       key={link.path}
                       to={link.path}
-                      className={`text-sm px-3 py-1.5 rounded-full transition-colors ${
+                      className={`text-sm transition-colors ${
                         isActive
-                          ? 'bg-[#251B3B] text-[#8B5CF6] border border-[#45455B]/60 font-semibold'
-                          : 'text-[#B5B5C8] hover:text-[#F4F4FA] hover:bg-[#272738]/50'
+                          ? 'text-brand-accent dark:text-[#93C572] font-semibold'
+                          : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       {link.label}
@@ -229,21 +229,21 @@ export const Navbar: React.FC = () => {
               {/* Solved Progress Counter */}
               <Link
                 to="/problems"
-                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#13131D] text-[#B5B5C8] hover:text-[#F4F4FA] border border-[#303041] transition-colors"
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-secondary text-muted-foreground hover:text-foreground border border-border/80 transition-colors"
                 title={currentUser ? `${currentUser.username}'s solved problems` : "Total solved problems"}
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#4ADE80]" />
-                <span className="tabular-nums font-mono font-semibold text-[#F4F4FA]">{solvedCount}</span>
-                <span className="text-[11px] text-[#9292A8]">/ 790</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#93C572]" />
+                <span className="tabular-nums font-mono font-semibold">{solvedCount}</span>
+                <span className="text-[11px] opacity-70">/ 790</span>
               </Link>
 
               {/* Daily Streak Flame Counter */}
               <Link
                 to="/profile"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-[#251B3B] hover:bg-[#272738] text-[#C4F75B] border border-[#45455B]/60 transition-colors shadow-xs"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30 transition-colors shadow-xs"
                 title={`Daily Streak: ${streakData.currentStreak} day${streakData.currentStreak === 1 ? '' : 's'}`}
               >
-                <Flame className="w-3.5 h-3.5 fill-[#C4F75B] text-[#C4F75B] shrink-0" />
+                <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500 shrink-0" />
                 <span className="tabular-nums font-mono">{streakData.currentStreak}</span>
               </Link>
 
@@ -251,7 +251,7 @@ export const Navbar: React.FC = () => {
               <button
                 onClick={toggleTheme}
                 aria-label="Toggle theme"
-                className="hidden md:inline-flex items-center justify-center h-8 w-8 rounded-lg text-[#B5B5C8] hover:text-[#F4F4FA] hover:bg-[#272738] transition-colors"
+                className="hidden md:inline-flex items-center justify-center h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                 title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
               >
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -269,58 +269,58 @@ export const Navbar: React.FC = () => {
                         setStreakData(getUserStreak(currentUser.id));
                       }
                     }}
-                    className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#13131D] hover:bg-[#272738] border border-[#303041] transition-colors text-xs font-semibold text-[#F4F4FA] group"
+                    className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-secondary/60 hover:bg-secondary border border-border/70 transition-colors text-xs font-semibold text-foreground group"
                   >
                     <div 
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black text-[#0B0B12] shadow-xs shrink-0"
-                      style={{ backgroundColor: currentUser.avatarColor || '#8B5CF6' }}
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black text-black shadow-xs shrink-0"
+                      style={{ backgroundColor: currentUser.avatarColor || '#93C572' }}
                     >
                       {getInitials(currentUser.displayName || currentUser.username)}
                     </div>
                     <span className="max-w-[100px] truncate hidden md:inline">
                       {currentUser.displayName || currentUser.username}
                     </span>
-                    <ChevronDown className="w-3 h-3 text-[#9292A8] group-hover:text-[#F4F4FA] transition-transform" />
+                    <ChevronDown className="w-3 h-3 text-muted-foreground group-hover:text-foreground transition-transform" />
                   </button>
 
                   {/* Dropdown Menu */}
                   {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-[#222231] border border-[#303041] rounded-2xl shadow-2xl py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
+                    <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-card dark:bg-[#111614] border border-border dark:border-[#27382d] rounded-2xl shadow-2xl py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
                       
                       {/* User Header Linking to Profile */}
                       <Link 
                         to="/profile"
                         onClick={() => setIsUserMenuOpen(false)}
-                        className="block px-4 py-3 border-b border-[#303041] hover:bg-[#272738] transition-colors"
+                        className="block px-4 py-3 border-b border-border dark:border-[#27382d] hover:bg-secondary/40 dark:hover:bg-[#15201a] transition-colors"
                       >
                         <div className="flex items-center gap-2.5 mb-1.5">
                           <div 
-                            className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black text-[#0B0B12] shrink-0 ring-2 ring-white/10"
-                            style={{ backgroundColor: currentUser.avatarColor || '#8B5CF6' }}
+                            className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black text-black shrink-0 ring-2 ring-white/10"
+                            style={{ backgroundColor: currentUser.avatarColor || '#93C572' }}
                           >
                             {getInitials(currentUser.displayName || currentUser.username)}
                           </div>
                           <div className="truncate min-w-0">
-                            <div className="font-bold text-[#F4F4FA] truncate text-sm">{currentUser.displayName || currentUser.username}</div>
-                            <div className="text-[11px] text-[#9292A8] font-mono truncate">@{currentUser.username}</div>
+                            <div className="font-bold text-foreground dark:text-white truncate text-sm">{currentUser.displayName || currentUser.username}</div>
+                            <div className="text-[11px] text-muted-foreground font-mono truncate">@{currentUser.username}</div>
                           </div>
                         </div>
                         <div className="flex items-center justify-between gap-2 mt-2">
-                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#251B3B] text-[#8B5CF6] border border-[#45455B]/60 text-[10px] font-semibold">
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#93C572]/15 text-[#93C572] text-[10px] font-semibold">
                             <ShieldCheck className="w-3 h-3" />
                             <span>{currentUser.role}</span>
                           </div>
-                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#251B3B] text-[#C4F75B] border border-[#45455B]/60 text-[10px] font-bold font-mono">
-                            <Flame className="w-3 h-3 fill-[#C4F75B]" />
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-bold font-mono">
+                            <Flame className="w-3 h-3 fill-amber-500" />
                             <span>{streakData.currentStreak}d Streak</span>
                           </div>
                         </div>
                       </Link>
 
                       {/* Solved Stats Preview */}
-                      <div className="px-4 py-2 border-b border-[#303041] flex items-center justify-between text-[#9292A8] font-mono text-[11px] bg-[#191925]">
+                      <div className="px-4 py-2 border-b border-border dark:border-[#27382d] flex items-center justify-between text-muted-foreground font-mono text-[11px] bg-secondary/20 dark:bg-black/20">
                         <span>Solved Problems</span>
-                        <span className="text-[#4ADE80] font-bold">{currentUser.solvedProblems?.length || 0} / 790</span>
+                        <span className="text-[#93C572] font-bold">{currentUser.solvedProblems?.length || 0} / 790</span>
                       </div>
 
                       {/* Navigation Actions */}
@@ -328,36 +328,36 @@ export const Navbar: React.FC = () => {
                         <Link
                           to="/profile"
                           onClick={() => setIsUserMenuOpen(false)}
-                          className="w-full text-left px-4 py-2 hover:bg-[#272738] text-[#B5B5C8] hover:text-[#F4F4FA] flex items-center gap-2.5 transition-colors"
+                          className="w-full text-left px-4 py-2 hover:bg-secondary dark:hover:bg-[#1a241f] text-foreground/80 dark:text-gray-300 hover:text-foreground dark:hover:text-white flex items-center gap-2.5 transition-colors"
                         >
-                          <User className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                          <User className="w-3.5 h-3.5 text-[#93C572]" />
                           <span>Profile & Activity Heatmap</span>
                         </Link>
                         <Link
                           to="/profile?tab=settings"
                           onClick={() => setIsUserMenuOpen(false)}
-                          className="w-full text-left px-4 py-2 hover:bg-[#272738] text-[#B5B5C8] hover:text-[#F4F4FA] flex items-center gap-2.5 transition-colors"
+                          className="w-full text-left px-4 py-2 hover:bg-secondary dark:hover:bg-[#1a241f] text-foreground/80 dark:text-gray-300 hover:text-foreground dark:hover:text-white flex items-center gap-2.5 transition-colors"
                         >
-                          <Settings className="w-3.5 h-3.5 text-[#38BDF8]" />
+                          <Settings className="w-3.5 h-3.5 text-sky-400" />
                           <span>Account Settings & Storage</span>
                         </Link>
                         <button
                           onClick={handleExportBackup}
-                          className="w-full text-left px-4 py-2 hover:bg-[#272738] text-[#B5B5C8] hover:text-[#F4F4FA] flex items-center gap-2.5 transition-colors"
+                          className="w-full text-left px-4 py-2 hover:bg-secondary dark:hover:bg-[#1a241f] text-foreground/80 dark:text-gray-300 hover:text-foreground dark:hover:text-white flex items-center gap-2.5 transition-colors"
                         >
-                          <Download className="w-3.5 h-3.5 text-[#A78BFA]" />
+                          <Download className="w-3.5 h-3.5 text-purple-400" />
                           <span>Export Account Backup (JSON)</span>
                         </button>
                         <button
                           onClick={() => { setIsUserMenuOpen(false); setIsAuthModalOpen(true); }}
-                          className="w-full text-left px-4 py-2 hover:bg-[#272738] text-[#B5B5C8] hover:text-[#F4F4FA] flex items-center gap-2.5 transition-colors"
+                          className="w-full text-left px-4 py-2 hover:bg-secondary dark:hover:bg-[#1a241f] text-foreground/80 dark:text-gray-300 hover:text-foreground dark:hover:text-white flex items-center gap-2.5 transition-colors"
                         >
-                          <Users className="w-3.5 h-3.5 text-[#FBBF24]" />
+                          <Users className="w-3.5 h-3.5 text-amber-400" />
                           <span>Switch Account / New User</span>
                         </button>
                         <button
                           onClick={() => { logoutUser(); setIsUserMenuOpen(false); }}
-                          className="w-full text-left px-4 py-2 hover:bg-[#30191E] text-[#F87171] hover:text-[#F87171] flex items-center gap-2.5 transition-colors"
+                          className="w-full text-left px-4 py-2 hover:bg-rose-500/10 dark:hover:bg-rose-950/20 text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 flex items-center gap-2.5 transition-colors"
                         >
                           <LogOut className="w-3.5 h-3.5" />
                           <span>Sign Out</span>
@@ -370,7 +370,7 @@ export const Navbar: React.FC = () => {
               ) : (
                 <button
                   onClick={() => setIsAuthModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6] text-white text-xs font-bold transition-colors shadow-sm"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#93C572] hover:bg-[#A4D287] text-black text-xs font-bold transition-colors shadow-sm"
                 >
                   <LogIn className="w-3.5 h-3.5" />
                   <span>Sign In</span>
@@ -381,9 +381,9 @@ export const Navbar: React.FC = () => {
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 aria-label="Toggle navigation menu"
-                className="lg:hidden inline-flex items-center justify-center h-8 w-8 rounded-lg text-[#B5B5C8] hover:text-[#F4F4FA] hover:bg-[#272738] transition-colors ml-1"
+                className="lg:hidden inline-flex items-center justify-center h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors ml-1"
               >
-                {isMobileMenuOpen ? <X className="w-5 h-5 text-[#F4F4FA]" /> : <Menu className="w-5 h-5" />}
+                {isMobileMenuOpen ? <X className="w-5 h-5 text-foreground" /> : <Menu className="w-5 h-5" />}
               </button>
 
             </div>
@@ -393,7 +393,7 @@ export const Navbar: React.FC = () => {
           {/* Backdrop overlay when mobile menu is open (dims content below, tap to dismiss) */}
           {isMobileMenuOpen && (
             <div
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden animate-in fade-in duration-200"
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden animate-in fade-in duration-200"
               onClick={() => setIsMobileMenuOpen(false)}
               aria-hidden="true"
             />
@@ -401,7 +401,7 @@ export const Navbar: React.FC = () => {
 
           {/* Mobile Navigation Dropdown - floating overlay over page text and problems list */}
           {isMobileMenuOpen && (
-            <div className="lg:hidden absolute top-[calc(100%+0.5rem)] left-4 right-4 z-50 p-3 bg-[#222231] backdrop-blur-2xl border border-[#303041] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[calc(100dvh-5.5rem)] overflow-y-auto custom-scrollbar">
+            <div className="lg:hidden absolute top-[calc(100%+0.5rem)] left-4 right-4 z-50 p-3 bg-card/98 dark:bg-[#121212]/98 backdrop-blur-2xl border border-border/80 dark:border-border/60 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[calc(100dvh-5.5rem)] overflow-y-auto custom-scrollbar">
               {navLinks.map((link) => {
                 const Icon = link.icon;
                 const isInterview = link.path === '/interview' && (
@@ -422,13 +422,13 @@ export const Navbar: React.FC = () => {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                       isActive
-                        ? 'bg-[#251B3B] text-[#8B5CF6] border border-[#45455B]'
-                        : 'text-[#B5B5C8] hover:text-[#F4F4FA] hover:bg-[#272738]'
+                        ? 'bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30'
+                        : 'text-foreground/80 hover:text-foreground hover:bg-secondary/60'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
                     <span>{link.label}</span>
-                    {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#8B5CF6]" />}
+                    {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#93C572]" />}
                   </Link>
                 );
               })}
@@ -439,41 +439,41 @@ export const Navbar: React.FC = () => {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                   location.pathname === '/profile'
-                    ? 'bg-[#251B3B] text-[#8B5CF6] border border-[#45455B]'
-                    : 'text-[#B5B5C8] hover:text-[#F4F4FA] hover:bg-[#272738]'
+                    ? 'bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30'
+                    : 'text-foreground/80 hover:text-foreground hover:bg-secondary/60'
                 }`}
               >
-                <User className="w-4 h-4 text-[#8B5CF6]" />
+                <User className="w-4 h-4 text-[#93C572]" />
                 <span>Profile & Streak</span>
-                <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#251B3B] text-[#C4F75B] border border-[#45455B]/60 text-xs font-mono font-bold">
-                  <Flame className="w-3.5 h-3.5 fill-[#C4F75B]" />
+                <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 text-xs font-mono font-bold">
+                  <Flame className="w-3.5 h-3.5 fill-amber-500" />
                   <span>{streakData.currentStreak}d</span>
                 </span>
               </Link>
 
               {/* Theme Toggle Button Inside Mobile Menu */}
-              <div className="pt-2 mt-2 border-t border-[#303041]">
+              <div className="pt-2 mt-2 border-t border-border/60">
                 <button
                   onClick={toggleTheme}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold text-[#B5B5C8] hover:text-[#F4F4FA] hover:bg-[#272738] transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold text-foreground/90 hover:text-foreground hover:bg-secondary/60 transition-colors"
                 >
                   <span className="flex items-center gap-3">
                     {isDark ? (
-                      <Moon className="w-4 h-4 text-[#8B5CF6]" />
+                      <Moon className="w-4 h-4 text-[#93C572]" />
                     ) : (
-                      <Sun className="w-4 h-4 text-[#FBBF24]" />
+                      <Sun className="w-4 h-4 text-amber-400" />
                     )}
                     <span>Theme</span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#191925] border border-[#303041]">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-secondary border border-border/60">
                     {isDark ? (
                       <>
-                        <Sun className="w-3 h-3 text-[#FBBF24]" />
+                        <Sun className="w-3 h-3 text-amber-400" />
                         <span>Dark (Tap to switch)</span>
                       </>
                     ) : (
                       <>
-                        <Moon className="w-3 h-3 text-[#8B5CF6]" />
+                        <Moon className="w-3 h-3 text-[#93C572]" />
                         <span>Light (Tap to switch)</span>
                       </>
                     )}
@@ -482,12 +482,12 @@ export const Navbar: React.FC = () => {
               </div>
 
               {/* Mobile Solved Counter */}
-              <div className="pt-2 border-t border-[#303041] flex items-center justify-between px-3 py-1.5 text-xs text-[#9292A8]">
+              <div className="pt-2 border-t border-border/60 flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#4ADE80]" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#93C572]" />
                   <span>Your Solved Problems</span>
                 </span>
-                <span className="font-mono font-bold text-[#F4F4FA]">{solvedCount} / 790</span>
+                <span className="font-mono font-bold text-foreground">{solvedCount} / 790</span>
               </div>
             </div>
           )}

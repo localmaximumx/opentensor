@@ -31,7 +31,7 @@ export const AssessmentsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-background">
-        <div className="w-8 h-8 border-2 border-[#8B5CF6] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#93C572] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -42,7 +42,7 @@ export const AssessmentsPage: React.FC = () => {
         
         {/* Header */}
         <div className="mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#251B3B] text-[#8B5CF6] border border-[#45455B] mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30 mb-3">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>24 Technical Interview Assessments (All Unlocked)</span>
           </div>
@@ -60,8 +60,8 @@ export const AssessmentsPage: React.FC = () => {
             onClick={() => setSelectedCategory('all')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
               selectedCategory === 'all'
-                ? 'bg-[#7C3AED] text-white border-[#7C3AED] shadow-sm'
-                : 'bg-[#191925] text-[#9292A8] border-[#303041] hover:border-[#8B5CF6] hover:text-[#F4F4FA]'
+                ? 'bg-[#93C572] text-black border-[#93C572] shadow-sm'
+                : 'bg-card text-muted-foreground border-border/70 hover:border-[#93C572]/40 hover:text-foreground'
             }`}
           >
             All Tracks ({allAssessments.length})
@@ -72,8 +72,8 @@ export const AssessmentsPage: React.FC = () => {
               onClick={() => setSelectedCategory(cat.id)}
               className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
                 selectedCategory === cat.id
-                  ? 'bg-[#7C3AED] text-white border-[#7C3AED] shadow-sm'
-                  : 'bg-[#191925] text-[#9292A8] border-[#303041] hover:border-[#8B5CF6] hover:text-[#F4F4FA]'
+                  ? 'bg-[#93C572] text-black border-[#93C572] shadow-sm'
+                  : 'bg-card text-muted-foreground border-border/70 hover:border-[#93C572]/40 hover:text-foreground'
               }`}
             >
               {cat.name} ({cat.assessments.length})
@@ -90,7 +90,7 @@ export const AssessmentsPage: React.FC = () => {
             return (
               <div
                 key={a.id}
-                className="bg-[#191925] border border-[#303041] rounded-2xl p-6 flex flex-col justify-between hover:border-[#8B5CF6]/50 transition-all shadow-sm"
+                className="bg-card border border-border/80 rounded-2xl p-6 flex flex-col justify-between hover:border-[#93C572]/50 transition-all shadow-sm"
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -103,7 +103,7 @@ export const AssessmentsPage: React.FC = () => {
                         {a.durationMin} mins
                       </span>
                       {totalProblems > 0 && (
-                        <span className="text-[#8B5CF6] font-semibold">{totalProblems} Problems</span>
+                        <span className="text-[#93C572] font-semibold">{totalProblems} Problems</span>
                       )}
                     </div>
                   </div>
@@ -118,7 +118,7 @@ export const AssessmentsPage: React.FC = () => {
                     <div className="mb-4">
                       <button
                         onClick={() => setExpandedAssessmentId(isExpanded ? null : a.id)}
-                        className="flex items-center gap-1.5 text-xs text-[#8B5CF6] hover:text-[#A78BFA] hover:underline font-semibold"
+                        className="flex items-center gap-1.5 text-xs text-[#93C572] hover:underline font-semibold"
                       >
                         {isExpanded ? (
                           <>Hide Questions Breakdown <ChevronUp className="w-3.5 h-3.5" /></>
@@ -142,7 +142,7 @@ export const AssessmentsPage: React.FC = () => {
                                     to={`/problems/${prob.slug}`}
                                     className="flex items-center justify-between p-1.5 rounded-lg hover:bg-background/80 transition-colors text-xs group"
                                   >
-                                    <span className="text-muted-foreground group-hover:text-[#8B5CF6] truncate max-w-[260px]">
+                                    <span className="text-muted-foreground group-hover:text-[#93C572] truncate max-w-[260px]">
                                       {prob.title.replace(/<[^>]*>?/gm, '')}
                                     </span>
                                     <div className="flex items-center gap-2">
@@ -153,7 +153,7 @@ export const AssessmentsPage: React.FC = () => {
                                       }`}>
                                         {prob.difficulty}
                                       </span>
-                                      <ArrowRight className="w-3 h-3 text-muted-foreground group-hover:text-[#8B5CF6] transition-colors" />
+                                      <ArrowRight className="w-3 h-3 text-muted-foreground group-hover:text-[#93C572] transition-colors" />
                                     </div>
                                   </Link>
                                 ))}
@@ -174,14 +174,14 @@ export const AssessmentsPage: React.FC = () => {
                   {a.sets && a.sets[0]?.problems?.[0] ? (
                     <Link
                       to={`/problems/${a.sets[0].problems[0].slug}`}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6] text-white text-xs font-semibold transition-colors shadow-sm"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#93C572] hover:bg-[#A4D287] text-black text-xs font-semibold transition-colors shadow-sm"
                     >
                       Start Assessment <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   ) : (
                     <Link
                       to="/problems"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6] text-white text-xs font-semibold transition-colors shadow-sm"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#93C572] hover:bg-[#A4D287] text-black text-xs font-semibold transition-colors shadow-sm"
                     >
                       Practice Questions <ArrowRight className="w-3.5 h-3.5" />
                     </Link>

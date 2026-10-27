@@ -309,7 +309,7 @@ export const MLDesignPage: React.FC = () => {
         
         {/* Header */}
         <div className="mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#251B3B] text-[#8B5CF6] border border-[#45455B] mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30 mb-3">
             <Sparkles className="w-3.5 h-3.5" />
             <span>21 Production ML Architectures</span>
           </div>
@@ -373,7 +373,7 @@ export const MLDesignPage: React.FC = () => {
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                   selectedCategory === cat
-                    ? 'bg-[#7C3AED] text-white font-semibold'
+                    ? 'bg-[#93C572] text-black font-semibold'
                     : 'bg-secondary/60 text-muted-foreground hover:text-foreground hover:bg-secondary'
                 }`}
               >
@@ -389,7 +389,7 @@ export const MLDesignPage: React.FC = () => {
               placeholder="Search systems by company or keyword..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#191925] border border-[#303041] rounded-lg pl-9 pr-3 py-1.5 text-xs text-[#F4F4FA] placeholder-[#9292A8] focus:outline-none focus:border-[#8B5CF6] transition-colors"
+              className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-1.5 text-xs placeholder-muted-foreground focus:outline-none focus:border-[#93C572]/50 transition-colors"
             />
           </div>
         </div>
@@ -400,7 +400,7 @@ export const MLDesignPage: React.FC = () => {
             <div
               key={sys.id}
               onClick={() => setSelectedSystem(sys)}
-              className="bg-[#191925] border border-[#303041] hover:border-[#8B5CF6]/50 rounded-2xl p-5 flex flex-col justify-between transition-all hover:shadow-lg hover:shadow-black/20 group cursor-pointer"
+              className="bg-card border border-border/80 hover:border-[#93C572]/50 rounded-2xl p-5 flex flex-col justify-between transition-all hover:shadow-lg hover:shadow-black/20 group cursor-pointer"
             >
               <div>
                 {/* Top Company & Tag */}
@@ -417,7 +417,7 @@ export const MLDesignPage: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <h3 className="font-bold text-sm text-foreground group-hover:text-[#8B5CF6] transition-colors">
+                      <h3 className="font-bold text-sm text-foreground group-hover:text-[#93C572] transition-colors">
                         {sys.name}
                       </h3>
                       <span className="text-xs text-muted-foreground">{sys.company}</span>
@@ -445,7 +445,7 @@ export const MLDesignPage: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <Activity className="w-3 h-3 text-[#8B5CF6]" /> Scale Metric
+                      <Activity className="w-3 h-3 text-[#93C572]" /> Scale Metric
                     </div>
                     <div className="font-mono text-[11px] font-semibold text-foreground mt-0.5 truncate">
                       {sys.scaleMetric}
@@ -471,7 +471,7 @@ export const MLDesignPage: React.FC = () => {
                 <span className="text-[11px] text-muted-foreground truncate max-w-[220px]">
                   Tradeoff: {sys.keyTradeoff}
                 </span>
-                <span className="text-xs text-[#8B5CF6] font-medium flex items-center gap-1 group-hover:translate-x-0.5 transition-transform shrink-0">
+                <span className="text-xs text-[#93C572] font-medium flex items-center gap-1 group-hover:translate-x-0.5 transition-transform shrink-0">
                   Inspect Spec <ChevronRight className="w-3.5 h-3.5" />
                 </span>
               </div>
@@ -531,7 +531,7 @@ export const MLDesignPage: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {selectedSystem.keyComponents.map((comp) => (
                       <div key={comp} className="p-2.5 rounded-lg bg-secondary/50 border border-border flex items-center gap-2">
-                        <Database className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                        <Database className="w-3.5 h-3.5 text-[#93C572]" />
                         <span className="font-medium text-foreground">{comp}</span>
                       </div>
                     ))}

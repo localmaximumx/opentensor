@@ -20,13 +20,13 @@ export const ProjectsPage: React.FC = () => {
   const getProjectIcon = (index: number) => {
     const icons = [Bot, Network, Wrench, Layers, Cpu, Code2];
     const IconComp = icons[index % icons.length];
-    return <IconComp className="w-5 h-5 text-[#8B5CF6]" />;
+    return <IconComp className="w-5 h-5 text-[#93C572]" />;
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-background">
-        <div className="w-8 h-8 border-2 border-[#8B5CF6] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#93C572] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -37,7 +37,7 @@ export const ProjectsPage: React.FC = () => {
         
         {/* Header */}
         <div className="mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#251B3B] text-[#8B5CF6] border border-[#45455B] mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#93C572]/15 text-[#93C572] border border-[#93C572]/30 mb-3">
             <Sparkles className="w-3.5 h-3.5" />
             <span>24 Production Machine Learning Projects</span>
           </div>
@@ -54,11 +54,11 @@ export const ProjectsPage: React.FC = () => {
           {projects.map((proj, idx) => (
             <div
               key={idx}
-              className="bg-[#191925] border border-[#303041] hover:border-[#8B5CF6]/50 rounded-2xl p-6 flex flex-col justify-between transition-all hover:shadow-lg hover:shadow-black/20 group"
+              className="bg-card border border-border/80 hover:border-[#93C572]/50 rounded-2xl p-6 flex flex-col justify-between transition-all hover:shadow-lg hover:shadow-black/20 group"
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="p-2.5 rounded-xl bg-secondary/60 border border-border group-hover:bg-[#251B3B] group-hover:border-[#8B5CF6]/40 transition-colors">
+                  <div className="p-2.5 rounded-xl bg-secondary/60 border border-border group-hover:bg-[#93C572]/10 group-hover:border-[#93C572]/30 transition-colors">
                     {getProjectIcon(idx)}
                   </div>
                   <span className="text-xs font-mono text-muted-foreground">
@@ -66,7 +66,7 @@ export const ProjectsPage: React.FC = () => {
                   </span>
                 </div>
 
-                <h3 className="font-bold text-base text-foreground group-hover:text-[#8B5CF6] transition-colors mb-2">
+                <h3 className="font-bold text-base text-foreground group-hover:text-[#93C572] transition-colors mb-2">
                   {proj.title}
                 </h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
@@ -75,10 +75,10 @@ export const ProjectsPage: React.FC = () => {
               </div>
 
               <div className="mt-6 pt-4 border-t border-border/50 flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#251B3B] text-[#C4F75B] border border-[#45455B]">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                   Unlocked & Free
                 </span>
-                <span className="text-xs text-[#8B5CF6] font-semibold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                <span className="text-xs text-[#93C572] font-semibold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
                   Explore Spec <ArrowUpRight className="w-3.5 h-3.5" />
                 </span>
               </div>

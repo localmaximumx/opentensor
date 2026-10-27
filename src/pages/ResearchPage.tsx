@@ -223,7 +223,7 @@ export const ResearchPage: React.FC = () => {
   if (loading || !activePaper) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-background">
-        <div className="w-8 h-8 border-2 border-[#8B5CF6] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#93C572] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -233,7 +233,7 @@ export const ResearchPage: React.FC = () => {
   const archImageUrl = paperArchitectureImages[activePaper.id] || paperArchitectureImages[normalizePaperId(activePaper.id)] || '/images/architectures/Transformer.png';
 
   return (
-    <div className="h-[calc(100vh-64px)] flex overflow-hidden bg-background text-foreground font-sans selection:bg-[#493276] selection:text-[#F4F4FA]">
+    <div className="h-[calc(100vh-64px)] flex overflow-hidden bg-background text-foreground font-sans selection:bg-[#93C572]/20 selection:text-[#93C572]">
       
       {/* ======================================================== */}
       {/* COLUMN 1: LEFT SIDEBAR - RESEARCH PAPERS LIST            */}
@@ -257,12 +257,12 @@ export const ResearchPage: React.FC = () => {
                 onClick={() => selectPaper(p.id)}
                 className={`w-full text-left px-3.5 py-2.5 rounded-xl transition-all duration-150 group relative ${
                   isActive
-                    ? 'bg-[#251B3B] border border-[#8B5CF6]/50 text-[#8B5CF6]'
+                    ? 'bg-[#93C572]/10 border border-[#93C572]/40 text-[#93C572]'
                     : 'text-muted-foreground hover:text-foreground hover:bg-secondary/40 border border-transparent'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className={`text-xs font-semibold tracking-wide ${isActive ? 'text-[#8B5CF6]' : 'text-foreground/90'}`}>
+                  <span className={`text-xs font-semibold tracking-wide ${isActive ? 'text-[#93C572]' : 'text-foreground/90'}`}>
                     {sidebarName}
                   </span>
                 </div>
@@ -275,8 +275,8 @@ export const ResearchPage: React.FC = () => {
                       className={`h-0.5 flex-1 rounded-full transition-colors ${
                         isActive
                           ? dIdx < 2
-                            ? 'bg-[#8B5CF6]'
-                            : 'bg-[#8B5CF6]/30'
+                            ? 'bg-[#93C572]'
+                            : 'bg-[#93C572]/30'
                           : 'bg-border/60 group-hover:bg-border'
                       }`}
                     />
@@ -301,8 +301,8 @@ export const ResearchPage: React.FC = () => {
               onClick={() => setIsDropdownOpen(prev => !prev)}
               className={`inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-card/90 backdrop-blur-xl border transition-all duration-200 text-xs shadow-md select-none ${
                 isDropdownOpen
-                  ? 'border-[#8B5CF6] ring-2 ring-[#8B5CF6]/20 shadow-[0_0_20px_rgba(139,92,246,0.25)] bg-[#191925]'
-                  : 'border-border/80 hover:border-[#8B5CF6]/50 hover:bg-secondary/60'
+                  ? 'border-[#93C572] ring-2 ring-[#93C572]/20 shadow-[0_0_20px_rgba(147,197,114,0.15)] bg-secondary/80'
+                  : 'border-border/80 hover:border-[#93C572]/50 hover:bg-secondary/60'
               }`}
             >
               {/* Paper Badge thumbnail */}
@@ -322,16 +322,16 @@ export const ResearchPage: React.FC = () => {
                 </span>
               </div>
 
-              <span className="text-[10px] font-mono text-[#8B5CF6] bg-[#251B3B] border border-[#45455B] px-1.5 py-0.5 rounded-full shrink-0">
+              <span className="text-[10px] font-mono text-[#93C572] bg-[#93C572]/10 border border-[#93C572]/20 px-1.5 py-0.5 rounded-full shrink-0">
                 {topics.length} steps
               </span>
 
-              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180 text-[#8B5CF6]' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180 text-[#93C572]' : ''}`} />
             </button>
 
             {/* Fancy Popover Menu */}
             {isDropdownOpen && (
-              <div className="absolute left-0 top-full mt-2 w-72 sm:w-80 bg-[#191925]/95 backdrop-blur-2xl border border-[#303041] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute left-0 top-full mt-2 w-72 sm:w-80 bg-[#121614]/95 backdrop-blur-2xl border border-[#93C572]/30 rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                 {/* Search Bar inside Dropdown */}
                 <div className="relative mb-2">
                   <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
@@ -340,7 +340,7 @@ export const ResearchPage: React.FC = () => {
                     value={dropdownSearch}
                     onChange={(e) => setDropdownSearch(e.target.value)}
                     placeholder="Search 23 papers..."
-                    className="w-full bg-[#0B0B12] border border-[#303041] rounded-xl pl-8 pr-3 py-1.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-[#8B5CF6] transition-colors"
+                    className="w-full bg-background/80 border border-border/80 rounded-xl pl-8 pr-3 py-1.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-[#93C572]/60 transition-colors"
                     autoFocus
                   />
                 </div>
@@ -367,7 +367,7 @@ export const ResearchPage: React.FC = () => {
                           }}
                           className={`w-full flex items-center justify-between p-2 rounded-xl text-left text-xs transition-all ${
                             isSelected
-                              ? 'bg-[#251B3B] text-[#8B5CF6] font-semibold border border-[#45455B] shadow-xs'
+                              ? 'bg-[#93C572]/15 text-[#93C572] font-semibold border border-[#93C572]/30 shadow-xs'
                               : 'text-foreground/80 hover:text-foreground hover:bg-secondary/60 border border-transparent'
                           }`}
                         >
@@ -387,7 +387,7 @@ export const ResearchPage: React.FC = () => {
                             <span className="text-[10px] font-mono text-muted-foreground bg-secondary/80 px-1.5 py-0.5 rounded border border-border/40">
                               {topicLen}
                             </span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-[#8B5CF6]" />}
+                            {isSelected && <Check className="w-3.5 h-3.5 text-[#93C572]" />}
                           </div>
                         </button>
                       );
@@ -405,7 +405,7 @@ export const ResearchPage: React.FC = () => {
             </h1>
 
             {/* Emblem Shield Badge from screenshot */}
-            <div className="flex-shrink-0 w-14 h-16 rounded-xl bg-card border border-border/80 shadow-md flex items-center justify-center p-2 relative group hover:border-[#8B5CF6]/50 transition-colors">
+            <div className="flex-shrink-0 w-14 h-16 rounded-xl bg-card border border-border/80 shadow-md flex items-center justify-center p-2 relative group hover:border-[#93C572]/50 transition-colors">
               <img
                 src={badgeUrl}
                 alt={`${activePaper.title} Badge`}
@@ -463,7 +463,7 @@ export const ResearchPage: React.FC = () => {
                       }`}
                     >
                       <div className="pr-4">
-                        <h3 className="text-sm font-semibold text-foreground group-hover:text-[#8B5CF6] transition-colors">
+                        <h3 className="text-sm font-semibold text-foreground group-hover:text-[#93C572] transition-colors">
                           {topic.name}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -532,7 +532,7 @@ export const ResearchPage: React.FC = () => {
           >
             <div className="flex items-center justify-between pb-3 border-b border-border/60 mb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6]" />
+                <div className="w-2.5 h-2.5 rounded-full bg-[#93C572]" />
                 <h3 className="text-base font-bold text-foreground">
                   {activePaper.title} — High-Resolution Architecture Graph
                 </h3>

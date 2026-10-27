@@ -213,7 +213,7 @@ export async function registerUser(
 
   const passwordHash = await hashPassword(passwordPlain);
   const now = new Date().toISOString();
-  const colors = ['#8B5CF6', '#C4F75B', '#38BDF8', '#F472B6', '#FBBF24', '#A78BFA'];
+  const colors = ['#93C572', '#38BDF8', '#A78BFA', '#F472B6', '#FBBF24', '#34D399'];
   const chosenColor = avatarColor || colors[Math.floor(Math.random() * colors.length)];
 
   const newUser: UserAccount = {
