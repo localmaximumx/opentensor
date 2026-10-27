@@ -1005,7 +1005,8 @@ try:
             if __val is not None:
                 # Format numpy arrays and tensors nicely
                 if hasattr(__val, 'shape'):
-                    print(f"{repr(__val)}\n# Shape: {__val.shape}, dtype: {getattr(__val, 'dtype', 'unknown')}")
+                    print(repr(__val))
+                    print("# Shape:", __val.shape, "| dtype:", getattr(__val, 'dtype', 'unknown'))
                 else:
                     print(repr(__val))
         except SyntaxError:
@@ -1019,7 +1020,7 @@ finally:
 __repl_output = __buf.getvalue().strip()
 if __err:
     if __repl_output:
-        __repl_output += f"\\n{__err}"
+        __repl_output = __repl_output + "\\n" + __err
     else:
         __repl_output = __err
 __repl_output

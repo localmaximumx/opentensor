@@ -61,7 +61,6 @@ import { MathView } from '../components/MathView';
 import { SolutionViewer } from '../components/SolutionViewer';
 import { ProblemDrawer } from '../components/ProblemDrawer';
 import { AuthModal } from '../components/AuthModal';
-import { CheatsheetModal } from '../components/CheatsheetModal';
 
 /* ======================================================== */
 /* LEETCODE-STYLE PERFORMANCE PERCENTILE CHART COMPONENT   */
@@ -263,7 +262,6 @@ export const ProblemSolverPage: React.FC = () => {
   const [activeCaseIdx, setActiveCaseIdx] = useState<number>(0);
   const [resultCaseIdx, setResultCaseIdx] = useState<number>(0);
   const [bottomTab, setBottomTab] = useState<'testcase' | 'result' | 'repl'>('testcase');
-  const [isCheatsheetOpen, setIsCheatsheetOpen] = useState<boolean>(false);
   const [replInput, setReplInput] = useState<string>('');
   const [replHistory, setReplHistory] = useState<{ id: string; command: string; output: string; isError?: boolean }[]>([
     {
@@ -874,18 +872,18 @@ export const ProblemSolverPage: React.FC = () => {
     const activeCase = currentCases[activeCaseIdx] || currentCases[0];
     const inputKeys = Object.keys(activeCase?.rawInputs || {});
 
-    let snippet = `import numpy as np\nprint("=== TENSOR SHAPES & TYPES ===")\n`;
+    const lines: string[] = ['import numpy as np', 'print("=== TENSOR SHAPES & TYPES ===")'];
     if (inputKeys.length > 0) {
       inputKeys.forEach(k => {
-        snippet += `val = ${activeCase.rawInputs[k]}\n`;
-        snippet += `arr = np.asarray(val) if not hasattr(val, 'shape') else val\n`;
-        snippet += `print(f"{'${k}'}: shape={getattr(arr, 'shape', len(val) if isinstance(val, list) else 'scalar')}, type={type(arr).__name__}")\n`;
+        lines.push(`__raw_${k} = ${activeCase.rawInputs[k]}`);
+        lines.push(`__arr_${k} = np.asarray(__raw_${k}) if not hasattr(__raw_${k}, 'shape') else __raw_${k}`);
+        lines.push(`print("${k}: shape =", getattr(__arr_${k}, 'shape', 'scalar'), "| type =", type(__arr_${k}).__name__)`);
       });
     } else {
-      snippet += `print("No inputs defined in current test case.")\n`;
+      lines.push('print("No inputs defined in current test case.")');
     }
 
-    handleExecuteRepl(snippet);
+    handleExecuteRepl(lines.join('\n'));
   };
 
   // Navigation refs & handlers for Alt+Left / Alt+Right question switching
@@ -1570,16 +1568,6 @@ export const ProblemSolverPage: React.FC = () => {
               Py3
             </span>
 
-            {/* Quick ML Cheatsheet Modal Button */}
-            <button
-              onClick={() => setIsCheatsheetOpen(true)}
-              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-[#93C572] px-2 py-1 rounded hover:bg-[#93C572]/10 transition-colors border border-border/60"
-              title="Open ML, NumPy, einsum, and Backprop Cheatsheet"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-[#93C572]" />
-              <span className="hidden sm:inline font-medium">Cheatsheet</span>
-            </button>
-
             {/* Profile / Guest Status Badge */}
             {currentUser ? (
               <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#93C572]/10 border border-[#93C572]/20 text-[11px] text-[#93C572] font-medium">
@@ -1708,7 +1696,9 @@ export const ProblemSolverPage: React.FC = () => {
           </div>
 
           {/* Bottom Panel Content */}
-          <div className="flex-1 p-3 sm:p-4 pb-24 md:pb-4 overflow-y-auto problem-scrollbar font-mono text-xs">
+          <div className={`flex-1 overflow-y-auto problem-scrollbar font-mono text-xs ${
+            bottomTab === 'repl' ? 'p-2 sm:p-2.5 pb-2' : 'p-3 sm:p-4 pb-24 md:pb-4'
+          }`}>
             {bottomTab === 'testcase' && (() => {
               const currentCases = activeTestCases.length > 0 ? activeTestCases : defaultSampleCases;
               const activeCase = currentCases[activeCaseIdx] || currentCases[0];
@@ -2005,14 +1995,14 @@ export const ProblemSolverPage: React.FC = () => {
 
             {/* Interactive Python REPL & Shape Inspector Tab */}
             {bottomTab === 'repl' && (
-              <div className="flex flex-col h-full space-y-3">
+              <div className="flex flex-col h-full space-y-2">
                 {/* REPL Quick Actions Bar */}
-                <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-border/60">
-                  <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center justify-between gap-2 flex-wrap pb-1.5 border-b border-border/60">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                       onClick={handleInspectShapesQuickly}
                       disabled={isEvaluatingRepl}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 font-sans text-xs font-semibold border border-sky-500/30 transition-colors disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 font-sans text-xs font-semibold border border-sky-500/30 transition-colors disabled:opacity-50"
                       title="Inspect dimensions of all inputs in current test case"
                     >
                       <Layers className="w-3.5 h-3.5" />
@@ -2022,7 +2012,7 @@ export const ProblemSolverPage: React.FC = () => {
                     <button
                       onClick={() => handleExecuteRepl('import numpy as np; import torch; print("NumPy version:", np.__version__, "| PyTorch compatibility ready")')}
                       disabled={isEvaluatingRepl}
-                      className="px-2 py-1 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground text-[11px] font-mono transition-colors disabled:opacity-50"
+                      className="px-2 py-0.5 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground text-[11px] font-mono transition-colors disabled:opacity-50"
                     >
                       np/torch info
                     </button>
@@ -2030,7 +2020,7 @@ export const ProblemSolverPage: React.FC = () => {
                     <button
                       onClick={() => handleExecuteRepl(editorRef.current ? editorRef.current.getValue() : code)}
                       disabled={isEvaluatingRepl}
-                      className="px-2 py-1 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground text-[11px] font-sans font-medium transition-colors disabled:opacity-50"
+                      className="px-2 py-0.5 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground text-[11px] font-sans font-medium transition-colors disabled:opacity-50"
                       title="Load current editor code and functions into the REPL scope"
                     >
                       Load Editor Functions
@@ -2047,26 +2037,26 @@ export const ProblemSolverPage: React.FC = () => {
                 </div>
 
                 {/* REPL Output Console */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-3 rounded-xl bg-black/50 border border-white/10 font-mono text-xs space-y-2 min-h-[140px] max-h-[220px]">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2.5 rounded-xl bg-black/50 border border-white/10 font-mono text-xs space-y-1.5 min-h-[85px] max-h-[160px]">
                   {replHistory.length === 0 ? (
-                    <div className="text-muted-foreground/60 italic">
+                    <div className="text-muted-foreground/60 italic text-[11px]">
                       REPL history is empty. Type a python expression below or click "Inspect Input Shapes".
                     </div>
                   ) : (
                     replHistory.map((item) => (
-                      <div key={item.id} className="space-y-1">
-                        <div className="flex items-center gap-2 text-sky-400/90 font-semibold select-none">
+                      <div key={item.id} className="space-y-0.5">
+                        <div className="flex items-center gap-2 text-sky-400/90 font-semibold select-none text-[11px]">
                           <span className="text-muted-foreground">&gt;&gt;&gt;</span>
                           <span className="text-foreground">{item.command}</span>
                         </div>
-                        <pre className={`whitespace-pre-wrap pl-5 ${item.isError ? 'text-rose-400 font-semibold' : 'text-emerald-300'}`}>
+                        <pre className={`whitespace-pre-wrap pl-4 text-[11px] ${item.isError ? 'text-rose-400 font-semibold' : 'text-emerald-300'}`}>
                           {item.output}
                         </pre>
                       </div>
                     ))
                   )}
                   {isEvaluatingRepl && (
-                    <div className="flex items-center gap-2 text-sky-400 pl-5 animate-pulse">
+                    <div className="flex items-center gap-2 text-sky-400 pl-4 text-[11px] animate-pulse">
                       <div className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
                       <span>Evaluating in Python engine...</span>
                     </div>
@@ -2079,23 +2069,23 @@ export const ProblemSolverPage: React.FC = () => {
                     e.preventDefault();
                     handleExecuteRepl();
                   }}
-                  className="flex items-center gap-2 pt-1"
+                  className="flex items-center gap-2 pt-0"
                 >
                   <div className="relative flex-1">
-                    <span className="absolute left-3 top-2 font-mono text-xs text-sky-400 font-bold select-none">&gt;&gt;&gt;</span>
+                    <span className="absolute left-3 top-1.5 font-mono text-xs text-sky-400 font-bold select-none">&gt;&gt;&gt;</span>
                     <input
                       type="text"
                       value={replInput}
                       onChange={(e) => setReplInput(e.target.value)}
                       placeholder="e.g. x.shape, np.eye(3), print(type(arr)), def f(): ..."
-                      className="w-full pl-10 pr-3 py-1.5 rounded-xl bg-muted/40 hover:bg-muted/60 focus:bg-background border border-border focus:border-[#93C572] focus:ring-1 focus:ring-[#93C572] font-mono text-xs text-foreground outline-none transition-all"
+                      className="w-full pl-9 pr-3 py-1 rounded-lg bg-muted/40 hover:bg-muted/60 focus:bg-background border border-border focus:border-[#93C572] focus:ring-1 focus:ring-[#93C572] font-mono text-xs text-foreground outline-none transition-all"
                       spellCheck={false}
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={isEvaluatingRepl || !replInput.trim()}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#93C572] hover:bg-[#a4d287] text-black font-sans text-xs font-bold transition-all disabled:opacity-40 shrink-0"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#93C572] hover:bg-[#a4d287] text-black font-sans text-xs font-bold transition-all disabled:opacity-40 shrink-0"
                   >
                     <span>Run</span>
                     <CornerDownLeft className="w-3 h-3" />
@@ -2110,12 +2100,6 @@ export const ProblemSolverPage: React.FC = () => {
       </div>
 
     </div>
-
-    {/* Quick Reference Cheatsheet Modal */}
-    <CheatsheetModal
-      isOpen={isCheatsheetOpen}
-      onClose={() => setIsCheatsheetOpen(false)}
-    />
 
     {/* Authentication & Profile Modal */}
     <AuthModal
