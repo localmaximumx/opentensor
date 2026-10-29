@@ -11,6 +11,7 @@ import { AssessmentsPage } from './pages/AssessmentsPage';
 import { InterviewPage } from './pages/InterviewPage';
 import { MLDesignPage } from './pages/MLDesignPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { ArrayBlitzPage } from './pages/ArrayBlitzPage';
 
 export const App: React.FC = () => {
   return (
@@ -21,6 +22,8 @@ export const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/problems" element={<ProblemsPage />} />
+            <Route path="/blitz" element={<ArrayBlitzPage />} />
+            <Route path="/speedrun" element={<Navigate to="/blitz" replace />} />
             <Route path="/problems/:slug" element={<ProblemSolverPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<ProfilePage />} />

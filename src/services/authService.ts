@@ -895,6 +895,97 @@ export function getUserRecentActivity(userId?: string, limit: number = 20): User
   }
 }
 
+export interface UserRankTierInfo {
+  tierName: string;
+  tierIcon: string;
+  badgeClass: string;
+  currentElo: number;
+  minElo: number;
+  nextTierName: string | null;
+  nextTierMinElo: number | null;
+  progressPct: number;
+}
+
+export function getUserRankTier(elo: number): UserRankTierInfo {
+  if (elo >= 2300) {
+    return {
+      tierName: 'Tensor Grandmaster',
+      tierIcon: '👑',
+      badgeClass: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+      currentElo: elo,
+      minElo: 2300,
+      nextTierName: null,
+      nextTierMinElo: null,
+      progressPct: 100
+    };
+  } else if (elo >= 2000) {
+    const range = 2300 - 2000;
+    const progress = Math.min(100, Math.max(0, ((elo - 2000) / range) * 100));
+    return {
+      tierName: 'Gradient Alchemist',
+      tierIcon: '⚡',
+      badgeClass: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+      currentElo: elo,
+      minElo: 2000,
+      nextTierName: 'Tensor Grandmaster',
+      nextTierMinElo: 2300,
+      progressPct: parseFloat(progress.toFixed(1))
+    };
+  } else if (elo >= 1800) {
+    const range = 2000 - 1800;
+    const progress = Math.min(100, Math.max(0, ((elo - 1800) / range) * 100));
+    return {
+      tierName: 'Eigen Master',
+      tierIcon: '💎',
+      badgeClass: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
+      currentElo: elo,
+      minElo: 1800,
+      nextTierName: 'Gradient Alchemist',
+      nextTierMinElo: 2000,
+      progressPct: parseFloat(progress.toFixed(1))
+    };
+  } else if (elo >= 1650) {
+    const range = 1800 - 1650;
+    const progress = Math.min(100, Math.max(0, ((elo - 1650) / range) * 100));
+    return {
+      tierName: 'Matrix Specialist',
+      tierIcon: '🥇',
+      badgeClass: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+      currentElo: elo,
+      minElo: 1650,
+      nextTierName: 'Eigen Master',
+      nextTierMinElo: 1800,
+      progressPct: parseFloat(progress.toFixed(1))
+    };
+  } else if (elo >= 1550) {
+    const range = 1650 - 1550;
+    const progress = Math.min(100, Math.max(0, ((elo - 1550) / range) * 100));
+    return {
+      tierName: 'Vector Explorer',
+      tierIcon: '🥈',
+      badgeClass: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
+      currentElo: elo,
+      minElo: 1550,
+      nextTierName: 'Matrix Specialist',
+      nextTierMinElo: 1650,
+      progressPct: parseFloat(progress.toFixed(1))
+    };
+  } else {
+    const range = 1550 - 1500;
+    const progress = Math.min(100, Math.max(0, ((elo - 1500) / range) * 100));
+    return {
+      tierName: 'Scalar Novice',
+      tierIcon: '🥉',
+      badgeClass: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
+      currentElo: elo,
+      minElo: 1500,
+      nextTierName: 'Vector Explorer',
+      nextTierMinElo: 1550,
+      progressPct: parseFloat(progress.toFixed(1))
+    };
+  }
+}
+
 export function getUserEloRating(
   userId?: string,
   easySolved: number = 0,
@@ -915,6 +1006,10 @@ export function getUserEloRating(
     }
 
     base += Math.min(streak.currentStreak * 3, 60);
+    try {
+      const blitzHigh = parseInt(localStorage.getItem('toniclite_blitz_highscore') || '0', 10);
+      if (blitzHigh > 0) base += Math.min(200, Math.floor(blitzHigh / 15));
+    } catch {}
     return Math.max(1500, base);
   } catch {
     return 1500;

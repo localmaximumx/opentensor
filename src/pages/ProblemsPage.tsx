@@ -4,6 +4,7 @@ import { Search, ChevronRight, ChevronLeft, Check, Sparkles, TrendingUp, BookOpe
 import { getProblemCatalog, getSolvedProblems } from '../services/dataService';
 import { ProblemSummary, Difficulty, Category } from '../types';
 import { ExplorePanel } from '../components/ExplorePanel';
+import { DailyChallengeBanner } from '../components/DailyChallengeBanner';
 
 export const ProblemsPage: React.FC = () => {
   const [catalog, setCatalog] = useState<{ total: number; topics: { name: string; count: number }[]; problems: ProblemSummary[] }>({
@@ -206,7 +207,9 @@ export const ProblemsPage: React.FC = () => {
         </aside>
 
         {/* Main Problems Table Section */}
-        <section className="col-span-12 lg:col-span-9">
+        <section className="col-span-12 lg:col-span-9 space-y-4">
+          {/* Daily Problem of the Day Banner */}
+          <DailyChallengeBanner />
           
           {/* Top Topics Filter */}
           <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 flex-nowrap sm:flex-wrap no-scrollbar">

@@ -36,6 +36,7 @@ import {
   getUserActivityHeatmap, 
   getUserRecentActivity, 
   getUserEloRating, 
+  getUserRankTier, 
   getUserStorageUsage, 
   getUserAchievements,
   updateUserProfile, 
@@ -387,11 +388,14 @@ export const ProfilePage: React.FC = () => {
                 {/* Elo Rating Badge */}
                 <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-secondary/80 dark:bg-[#12231b] border border-border/80 dark:border-[#223d2e] shadow-sm">
                   <div className="w-7 h-7 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center font-bold">
-                    <Sparkles className="w-4 h-4 fill-amber-400/20" />
+                    <span className="text-base">{getUserRankTier(solvedStats.elo).tierIcon}</span>
                   </div>
                   <div>
                     <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground font-mono">Rating</div>
-                    <div className="text-sm font-extrabold text-foreground dark:text-white font-mono">{solvedStats.elo} Elo</div>
+                    <div className="text-sm font-extrabold text-foreground dark:text-white font-mono flex items-center gap-1.5">
+                      <span>{solvedStats.elo} ELO</span>
+                      <span className="text-[10px] font-semibold text-primary">· {getUserRankTier(solvedStats.elo).tierName}</span>
+                    </div>
                   </div>
                 </div>
 

@@ -20,7 +20,11 @@ import {
   Radio,
   Database,
   Flame,
-  Settings
+  Settings,
+  Zap,
+  Music,
+  Layers,
+  Bookmark
 } from 'lucide-react';
 import { 
   getCurrentUser, 
@@ -36,6 +40,10 @@ import {
 } from '../services/authService';
 import { AuthModal } from './AuthModal';
 import { PaletteSwitcher } from './PaletteSwitcher';
+import { FocusRadioModal } from './FocusRadioModal';
+import { TensorVisualizerModal } from './TensorVisualizerModal';
+import { SnippetVaultModal } from './SnippetVaultModal';
+import { getUserEloRating, getUserRankTier } from '../services/authService';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
@@ -52,6 +60,10 @@ export const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [storageUsage, setStorageUsage] = useState<UserStorageUsage>(() => getUserStorageUsage());
   const [streakData, setStreakData] = useState<UserStreakData>(() => getUserStreak());
+  const [isFocusModalOpen, setIsFocusModalOpen] = useState<boolean>(false);
+  const [isVisualizerModalOpen, setIsVisualizerModalOpen] = useState<boolean>(false);
+  const [isVaultModalOpen, setIsVaultModalOpen] = useState<boolean>(false);
+  const [isSoundPlaying, setIsSoundPlaying] = useState<boolean>(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -93,6 +105,8 @@ export const Navbar: React.FC = () => {
     const handleAuthChange = () => refreshAuth();
     const handleThemeChange = () => syncTheme();
 
+    const handleSoundChange = (e: any) => { if (e?.detail) setIsSoundPlaying(e.detail.isPlaying); };
+    window.addEventListener('toniclite_soundscape_change', handleSoundChange);
     window.addEventListener('tensortonic_auth_change', handleAuthChange);
     window.addEventListener('toniclite_theme_change', handleThemeChange);
     window.addEventListener('storage', handleThemeChange);
@@ -156,6 +170,7 @@ export const Navbar: React.FC = () => {
   const navLinks = [
     { label: 'Home', path: '/', icon: Home },
     { label: 'Problems', path: '/problems', icon: Code2 },
+    { label: '3-Min Blitz ⚡', path: '/blitz', icon: Zap },
     { label: 'Research', path: '/research', icon: BookOpen },
     { label: 'Interview', path: '/interview', icon: Radio }
   ];
@@ -169,6 +184,18 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
+      <FocusRadioModal
+        isOpen={isFocusModalOpen}
+        onClose={() => setIsFocusModalOpen(false)}
+      />
+      <TensorVisualizerModal
+        isOpen={isVisualizerModalOpen}
+        onClose={() => setIsVisualizerModalOpen(false)}
+      />
+      <SnippetVaultModal
+        isOpen={isVaultModalOpen}
+        onClose={() => setIsVaultModalOpen(false)}
+      />
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
@@ -248,6 +275,40 @@ export const Navbar: React.FC = () => {
                 <span className="tabular-nums font-mono">{streakData.currentStreak}</span>
               </Link>
 
+              {/* Focus & Audio Pill */}
+              <button
+                onClick={() => setIsFocusModalOpen(true)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
+                  isSoundPlaying
+                    ? 'bg-primary/20 text-primary border-primary/40 shadow-xs ring-1 ring-primary/40'
+                    : 'bg-secondary/70 text-muted-foreground hover:text-foreground border-border/80'
+                }`}
+                title="Lo-Fi Focus Radio & Pomodoro Timer"
+              >
+                <Music className={`w-3.5 h-3.5 ${isSoundPlaying ? 'animate-pulse text-primary' : ''}`} />
+                <span className="hidden xl:inline">Focus</span>
+              </button>
+
+              {/* Tensor Visualizer Pill */}
+              <button
+                onClick={() => setIsVisualizerModalOpen(true)}
+                className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-secondary/70 text-muted-foreground hover:text-foreground border border-border/80 transition-colors"
+                title="Tensor Broadcasting & Slicing Visualizer"
+              >
+                <Layers className="w-3.5 h-3.5 text-sky-400" />
+                <span className="hidden xl:inline">Visualizer</span>
+              </button>
+
+              {/* Snippet Vault Pill */}
+              <button
+                onClick={() => setIsVaultModalOpen(true)}
+                className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-secondary/70 text-muted-foreground hover:text-foreground border border-border/80 transition-colors"
+                title="Code Snippet Vault & Recipes"
+              >
+                <Bookmark className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden xl:inline">Vault</span>
+              </button>
+
               {/* Palette Switcher */}
               <PaletteSwitcher />
 
@@ -325,6 +386,17 @@ export const Navbar: React.FC = () => {
                       <div className="px-4 py-2 border-b border-border dark:border-[#27382d] flex items-center justify-between text-muted-foreground font-mono text-[11px] bg-secondary/20 dark:bg-black/20">
                         <span>Solved Problems</span>
                         <span className="text-[#93C572] font-bold">{currentUser.solvedProblems?.length || 0} / 790</span>
+                      </div>
+
+                      {/* ELO Rank Tier Badge */}
+                      <div className="px-4 py-2 border-b border-border dark:border-[#27382d] flex items-center justify-between text-[11px] bg-secondary/10">
+                        <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+                          <span>{getUserRankTier(getUserEloRating(currentUser?.id)).tierIcon}</span>
+                          <span className="text-foreground font-semibold">{getUserRankTier(getUserEloRating(currentUser?.id)).tierName}</span>
+                        </span>
+                        <span className="font-mono font-bold text-primary">
+                          {getUserEloRating(currentUser?.id)} ELO
+                        </span>
                       </div>
 
                       {/* Navigation Actions */}
@@ -454,6 +526,31 @@ export const Navbar: React.FC = () => {
                   <span>{streakData.currentStreak}d</span>
                 </span>
               </Link>
+
+              {/* Mobile Tools Quick Actions */}
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/60">
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); setIsFocusModalOpen(true); }}
+                  className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-secondary/50 border border-border/60 text-xs font-semibold text-foreground/90 hover:bg-secondary transition-colors"
+                >
+                  <Music className="w-4 h-4 text-purple-400 mb-1" />
+                  <span>Lo-Fi Focus</span>
+                </button>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); setIsVisualizerModalOpen(true); }}
+                  className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-secondary/50 border border-border/60 text-xs font-semibold text-foreground/90 hover:bg-secondary transition-colors"
+                >
+                  <Layers className="w-4 h-4 text-sky-400 mb-1" />
+                  <span>Visualizer</span>
+                </button>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); setIsVaultModalOpen(true); }}
+                  className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-secondary/50 border border-border/60 text-xs font-semibold text-foreground/90 hover:bg-secondary transition-colors"
+                >
+                  <Bookmark className="w-4 h-4 text-amber-400 mb-1" />
+                  <span>Vault</span>
+                </button>
+              </div>
 
               {/* Theme Toggle Button Inside Mobile Menu */}
               <div className="pt-2 mt-2 border-t border-border/60">
