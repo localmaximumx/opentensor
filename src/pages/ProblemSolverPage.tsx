@@ -30,9 +30,9 @@ import {
   CornerDownLeft,
   Layers,
   Zap,
-  Code2,
-  Music,
-  Bookmark
+  Code2
+
+
 } from 'lucide-react';
 import { 
   getProblemDetail, 
@@ -63,9 +63,9 @@ import { MathView } from '../components/MathView';
 import { SolutionViewer } from '../components/SolutionViewer';
 import { ProblemDrawer } from '../components/ProblemDrawer';
 import { AuthModal } from '../components/AuthModal';
-import { FocusRadioModal } from '../components/FocusRadioModal';
-import { TensorVisualizerModal } from '../components/TensorVisualizerModal';
-import { SnippetVaultModal } from '../components/SnippetVaultModal';
+
+
+
 import { ProgressiveHintLadder } from '../components/ProgressiveHintLadder';
 
 /* ======================================================== */
@@ -250,10 +250,10 @@ export const ProblemSolverPage: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(getCurrentUser());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authPromptMessage, setAuthPromptMessage] = useState<string | undefined>(undefined);
-  const [isFocusModalOpen, setIsFocusModalOpen] = useState<boolean>(false);
-  const [isVisualizerModalOpen, setIsVisualizerModalOpen] = useState<boolean>(false);
-  const [isVaultModalOpen, setIsVaultModalOpen] = useState<boolean>(false);
-  const [isSoundPlaying, setIsSoundPlaying] = useState<boolean>(false);
+
+
+
+
 
   const [problem, setProblem] = useState<ProblemDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -302,8 +302,8 @@ export const ProblemSolverPage: React.FC = () => {
     };
     window.addEventListener('toniclite_theme_change', syncDark);
     window.addEventListener('storage', syncDark);
-    const syncSound = (e: any) => { if (e?.detail) setIsSoundPlaying(e.detail.isPlaying); };
-    window.addEventListener('toniclite_soundscape_change', syncSound);
+
+
     const observer = new MutationObserver(() => syncDark());
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     return () => {
@@ -1630,37 +1630,6 @@ export const ProblemSolverPage: React.FC = () => {
             )}
           </div>
 
-            {/* Quick Tools in Editor */}
-            <div className="hidden lg:flex items-center gap-1 border-l border-border/60 pl-2">
-              <button
-                onClick={() => setIsFocusModalOpen(true)}
-                className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
-                  isSoundPlaying ? 'text-primary font-bold bg-primary/10' : 'text-muted-foreground hover:text-foreground'
-                }`}
-                title="Open Lo-Fi Focus Player & Pomodoro"
-              >
-                <Music className={`w-3.5 h-3.5 ${isSoundPlaying ? 'animate-bounce text-primary' : ''}`} />
-                <span>Focus</span>
-              </button>
-
-              <button
-                onClick={() => setIsVisualizerModalOpen(true)}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs text-muted-foreground hover:text-foreground transition-colors"
-                title="Open Tensor Broadcasting & Slicing Visualizer"
-              >
-                <Layers className="w-3.5 h-3.5 text-sky-400" />
-                <span>Visualizer</span>
-              </button>
-
-              <button
-                onClick={() => setIsVaultModalOpen(true)}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs text-muted-foreground hover:text-foreground transition-colors"
-                title="Save current code to Personal Snippet Vault"
-              >
-                <Bookmark className="w-3.5 h-3.5 text-amber-400" />
-                <span>Vault</span>
-              </button>
-            </div>
 
           {/* Run & Submit (Hidden on mobile < md because the top mobile bar has them!) */}
           <div className="hidden md:flex items-center gap-2">
@@ -2180,21 +2149,6 @@ export const ProblemSolverPage: React.FC = () => {
     </div>
 
     {/* Authentication & Profile Modal */}
-    <FocusRadioModal
-      isOpen={isFocusModalOpen}
-      onClose={() => setIsFocusModalOpen(false)}
-    />
-    <TensorVisualizerModal
-      isOpen={isVisualizerModalOpen}
-      onClose={() => setIsVisualizerModalOpen(false)}
-    />
-    <SnippetVaultModal
-      isOpen={isVaultModalOpen}
-      onClose={() => setIsVaultModalOpen(false)}
-      initialCodeToSave={code}
-      initialTitle={problem?.title ? `${problem.title} Solution` : undefined}
-      onInsertCode={(insertedCode) => setCode(insertedCode)}
-    />
     <AuthModal
       isOpen={isAuthModalOpen}
       onClose={() => setIsAuthModalOpen(false)}
