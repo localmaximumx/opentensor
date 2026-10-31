@@ -966,12 +966,47 @@ export async function getPyodide(): Promise<any> {
   return pyodideLoadingPromise;
 }
 
+export interface TensorVariableMeta {
+  name: string;
+  shape: number[];
+  dtype: string;
+  ndim: number;
+  size: number;
+  min: number | null;
+  max: number | null;
+  mean: number | null;
+  hasNaN: boolean;
+  hasInf: boolean;
+  slice2D?: number[][] | null;
+  fullShapeStr: string;
+}
+
 export async function runPythonRepl(
   snippet: string,
-  userCode?: string
+  userCode?: string,
+  inputs?: Record<string, any>
 ): Promise<{ output: string; error?: string }> {
   try {
     const pyodide = await getPyodide();
+
+    // If inputs are provided, inject them as np.ndarray or native variables in Python scope
+    if (inputs && Object.keys(inputs).length > 0) {
+      for (const [k, v] of Object.entries(inputs)) {
+        try {
+          pyodide.globals.set(`__repl_inp_${k}`, pyodide.toPy(v));
+          pyodide.runPython(`
+try:
+    __raw_val = globals().get('__repl_inp_${k}')
+    if isinstance(__raw_val, (list, tuple)):
+        ${k} = np.asarray(__raw_val)
+    else:
+        ${k} = __raw_val
+except Exception:
+    pass
+`);
+        } catch {}
+      }
+    }
 
     // If userCode is provided, pre-evaluate it so user functions & classes exist
     if (userCode && userCode.trim()) {
@@ -1006,7 +1041,7 @@ try:
                 # Format numpy arrays and tensors nicely
                 if hasattr(__val, 'shape'):
                     print(repr(__val))
-                    print("# Shape:", __val.shape, "| dtype:", getattr(__val, 'dtype', 'unknown'))
+                    print(f"# Shape: {getattr(__val, 'shape', ())} | dtype: {getattr(__val, 'dtype', 'unknown')} | size: {getattr(__val, 'size', 'N/A')}")
                 else:
                     print(repr(__val))
         except SyntaxError:
@@ -1020,7 +1055,7 @@ finally:
 __repl_output = __buf.getvalue().strip()
 if __err:
     if __repl_output:
-        __repl_output = __repl_output + "\\n" + __err
+        __repl_output = __repl_output + "\n" + __err
     else:
         __repl_output = __err
 __repl_output
@@ -1033,6 +1068,120 @@ __repl_output
   }
 }
 
+export async function inspectTensorVariables(
+  inputs?: Record<string, any>
+): Promise<TensorVariableMeta[]> {
+  try {
+    const pyodide = await getPyodide();
+
+    if (inputs && Object.keys(inputs).length > 0) {
+      const keys = Object.keys(inputs);
+      pyodide.globals.set('__inspect_keys_json', JSON.stringify(keys));
+      for (const [k, v] of Object.entries(inputs)) {
+        try {
+          pyodide.globals.set(`__repl_inp_${k}`, pyodide.toPy(v));
+          pyodide.runPython(`
+try:
+    __raw_val = globals().get('__repl_inp_${k}')
+    if isinstance(__raw_val, (list, tuple)):
+        ${k} = np.asarray(__raw_val)
+    else:
+        ${k} = __raw_val
+except Exception:
+    pass
+`);
+        } catch {}
+      }
+    } else {
+      pyodide.globals.set('__inspect_keys_json', '[]');
+    }
+
+    const inspectPython = `
+import json
+import numpy as np
+
+def _extract_meta(k, val):
+    try:
+        arr = val if hasattr(val, 'shape') else np.asarray(val)
+        shape = [int(s) for s in getattr(arr, 'shape', ())]
+        dtype = str(getattr(arr, 'dtype', type(val).__name__))
+        ndim = int(getattr(arr, 'ndim', 0))
+        size = int(getattr(arr, 'size', 1))
+
+        val_min, val_max, val_mean = None, None, None
+        has_nan, has_inf = False, False
+
+        if hasattr(arr, 'dtype') and np.issubdtype(arr.dtype, np.number) and size > 0:
+            try:
+                has_nan = bool(np.isnan(arr).any())
+                has_inf = bool(np.isinf(arr).any())
+                val_min = round(float(np.min(arr)), 4)
+                val_max = round(float(np.max(arr)), 4)
+                val_mean = round(float(np.mean(arr)), 4)
+            except Exception:
+                pass
+
+        slice_2d = None
+        if ndim == 1:
+            try:
+                slice_2d = [[round(float(x), 4) for x in arr[:8].tolist()]]
+            except Exception:
+                pass
+        elif ndim >= 2:
+            try:
+                sub = arr
+                while getattr(sub, 'ndim', 0) > 2:
+                    sub = sub[0]
+                rows = sub[:8]
+                slice_2d = []
+                for row in rows:
+                    slice_2d.append([round(float(x), 4) for x in row[:8].tolist()])
+            except Exception:
+                pass
+
+        return {
+            "name": k,
+            "shape": shape,
+            "dtype": dtype,
+            "ndim": ndim,
+            "size": size,
+            "min": val_min,
+            "max": val_max,
+            "mean": val_mean,
+            "hasNaN": has_nan,
+            "hasInf": has_inf,
+            "slice2D": slice_2d,
+            "fullShapeStr": f"({', '.join(str(d) for d in shape)})" if shape else "scalar"
+        }
+    except Exception:
+        return None
+
+__res = []
+__keys = json.loads(globals().get('__inspect_keys_json', '[]'))
+for __k in __keys:
+    if __k in globals():
+        __m = _extract_meta(__k, globals()[__k])
+        if __m:
+            __res.append(__m)
+
+for __k, __v in list(globals().items()):
+    if not __k.startswith('_') and __k not in __keys and __k not in [
+        'np', 'numpy', 'torch', 'sys', 'io', 'json', 'ast', 'math', 'inspect', 'getPyodide'
+    ]:
+        if hasattr(__v, 'shape') or isinstance(__v, (list, tuple)):
+            __m = _extract_meta(__k, __v)
+            if __m:
+                __res.append(__m)
+
+json.dumps(__res)
+`;
+    const resJson = await pyodide.runPythonAsync(inspectPython);
+    return JSON.parse(resJson || '[]');
+  } catch (err) {
+    console.warn('Failed to inspect tensor variables:', err);
+    return [];
+  }
+}
 
 export interface TestCaseExecutionResult {
   id: string;
