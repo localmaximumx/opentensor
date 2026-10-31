@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import confetti from 'canvas-confetti';
 import { 
@@ -245,6 +245,7 @@ const serializeValue = (val: any): string => {
 export const ProblemSolverPage: React.FC = () => {
   const { paperId, slug } = useParams<{ paperId?: string; slug?: string }>();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
 
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(getCurrentUser());
@@ -432,9 +433,12 @@ export const ProblemSolverPage: React.FC = () => {
       const catalog = await getProblemCatalog();
       setCatalogProblems(catalog.problems);
 
-      // Check if this problem belongs to an assessment (either ?assessment= in URL or problem in assessment)
+      // Check if this problem belongs to an assessment (only when arriving from /interview or with ?assessment= query param)
       const urlAssessmentId = searchParams.get('assessment');
-      const assessContext = await getAssessmentForProblem(slug!, urlAssessmentId);
+      const isInterviewRoute = location.pathname.startsWith('/interview');
+      const isAssessmentMode = Boolean(urlAssessmentId || isInterviewRoute);
+
+      const assessContext = isAssessmentMode ? await getAssessmentForProblem(slug!, urlAssessmentId) : null;
 
       if (assessContext) {
         setCurrentAssessment(assessContext.assessment);
@@ -471,7 +475,7 @@ export const ProblemSolverPage: React.FC = () => {
         setCurrentAssessment(null);
         setCurrentPaper(null);
         setTotalItems(catalog.problems.length);
-        const idx = catalog.problems.findIndex(p => p.slug === slug);
+        const idx = catalog.problems.findIndex(p => p.slug === slug || p.id === slug);
         setCurrentIndex(idx);
         if (idx !== -1) {
           setPrevSlug(idx > 0 ? `/problems/${catalog.problems[idx - 1].slug}` : null);
@@ -483,7 +487,7 @@ export const ProblemSolverPage: React.FC = () => {
       setExecReport(null);
     }
     load();
-  }, [paperId, slug, searchParams]);
+  }, [paperId, slug, searchParams, location.pathname]);
 
   // Listen to profile / account changes across app
   useEffect(() => {
